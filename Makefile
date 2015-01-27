@@ -41,7 +41,7 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = -std=c++11 $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) 
+CXXFLAGS     = $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
 
@@ -72,7 +72,7 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o 
+LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o benToolsDict.o
 CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h
 BINARIES = testCorrelator testFancyTTreeInterpolator 
 
@@ -113,12 +113,12 @@ endif
 %.$(OBJSUF) : %.C
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
-	@if test $$? == 0; then git add $%.C; fi
 
-bensToolsDict.C : $(CLASS_HEADERS)
+
+benToolsDict.C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
-		rootcint $@ -c $(INC_ANITA_UTIL) FancyTTreeInterpolator.h LinkDef.h
+		rootcint $@ -c $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
 
 clean:
 	@rm -f *Dict*

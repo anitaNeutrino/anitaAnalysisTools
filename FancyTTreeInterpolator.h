@@ -26,9 +26,10 @@
 #include <iostream>
 #include <exception>
 
-class FancyTTreeInterpolator{
+class FancyTTreeInterpolator: public TObject{
 
 public:
+  FancyTTreeInterpolator();
   FancyTTreeInterpolator(TTree* t, TString xAxisText);
   ~FancyTTreeInterpolator();
 
@@ -37,19 +38,21 @@ public:
   void add(TString yAxisText, Double_t wrapValue);
   void add(TString yAxisText, TString cut, Double_t wrapValue);
   Double_t interp(TString yAxisText, Double_t xAxisValue);
-  std::shared_ptr<TGraph> get(TString yAxisText);
-  std::shared_ptr<TGraph> makeSortedTGraph(TString yAxisText);
-  std::shared_ptr<TGraph> makeSortedTGraph(TString yAxisText, TString cutString);
-  std::shared_ptr<TGraph> makeSortedTGraph(TString yAxisText, Double_t wrapValue);
-  std::shared_ptr<TGraph> makeSortedTGraph(TString yAxisText, TString cutString, Double_t wrapValue);
+  TGraph* get(TString yAxisText);
+  TGraph* makeSortedTGraph(TString yAxisText);
+  TGraph* makeSortedTGraph(TString yAxisText, TString cutString);
+  TGraph* makeSortedTGraph(TString yAxisText, Double_t wrapValue);
+  TGraph* makeSortedTGraph(TString yAxisText, TString cutString, Double_t wrapValue);
 
-  TTree* fTree = NULL;
+  TTree* fTree;
   TString fXAxisText;
-  std::map<TString,std::shared_ptr<TGraph>> fStringToGraph;
+  std::map<TString,TGraph*> fStringToGraph;
   std::map<TString, Double_t> fStringToWrapValue;
   Double_t fXmin;
   Double_t fXmax;
 
+  
+  ClassDef(FancyTTreeInterpolator, 1);
 };
 
 
