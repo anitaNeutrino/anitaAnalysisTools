@@ -57,53 +57,35 @@ LIBS += -lprofiler #-ltcmalloc
 endif
 
 
+# I use git svn and am too infrequent a commiter by nature...
+# Use this flag to prompt a local commit after every compile
+# (You probably don't actually want to commit after every compile, but the prompt is nice)
+FORCE_GIT=1 
+
+
+# For those who like really bloody pedantic compiler warnings... like me
 HARDCORE_MODE=1
 ifdef HARDCORE_MODE
 CXXFLAGS += -Wextra -Wextra -Wshadow -Werror -Wpedantic
 endif
 
 
-
-
 #ROOT stuff
-ROOT_LIBRARY = libCorrelator.${DLLSUF}
+ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o 
 CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h
+BINARIES = testCorrelator testFancyTTreeInterpolator 
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) testCorrelator testFancyTTreeInterpolator phaseCentre waisPulseReconstruction prioritizerdPerformance distanceFromWaisDivide commit
+all: $(ROOT_LIBRARY) $(BINARIES) commit
 
-testCorrelator: $(ROOT_LIBRARY) testCorrelator.$(SRCSUF)
+$(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) testCorrelator.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add testCorrelator.$(SRCSUF); fi
-
-testFancyTTreeInterpolator: $(ROOT_LIBRARY) testFancyTTreeInterpolator.$(SRCSUF)
-	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) testFancyTTreeInterpolator.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add testFancyTTreeInterpolator.$(SRCSUF); fi
-
-phaseCentre: $(ROOT_LIBRARY) phaseCentre.$(SRCSUF)
-	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) phaseCentre.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add phaseCentre.$(SRCSUF); fi
-
-waisPulseReconstruction: $(ROOT_LIBRARY) waisPulseReconstruction.$(SRCSUF)
-	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) waisPulseReconstruction.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add waisPulseReconstruction.$(SRCSUF); fi
-
-distanceFromWaisDivide: $(ROOT_LIBRARY) distanceFromWaisDivide.$(SRCSUF)
-	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) distanceFromWaisDivide.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add distanceFromWaisDivide.$(SRCSUF); fi
-
-
-prioritizerdPerformance: $(ROOT_LIBRARY) prioritizerdPerformance.$(SRCSUF)
-	@echo "<**Compiling**> "
-	$(LD) $(CXXFLAGS) $(LDFLAGS) prioritizerdPerformance.$(SRCSUF) $(ROOT_LIBRARY) $(LIBS) -o $@
-	@if test $$? == 0; then git add prioritizerdPerformance.$(SRCSUF); fi
-
+	@echo $<
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $< $(ROOT_LIBRARY) $(LIBS) -o $@
+ifdef FORCE_GIT
+	-@if test $$? == 0; then git add $<; fi
+endif
 
 #The library
 $(ROOT_LIBRARY) : $(LIB_OBJS) 
@@ -133,10 +115,9 @@ endif
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
 	@if test $$? == 0; then git add $%.C; fi
 
-correlatorDict.C : $(CLASS_HEADERS)
+bensToolsDict.C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
-#		rootcint $@ -c $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
 		rootcint $@ -c $(INC_ANITA_UTIL) FancyTTreeInterpolator.h LinkDef.h
 
 clean:
@@ -144,8 +125,20 @@ clean:
 	@rm -f *.${OBJSUF}
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
-	@rm -f testCorrelator testFancyTTreeInterpolator phaseCentre waisPulseReconstruction prioritizerdPerformance distanceFromWaisDivide
+	@rm -f testCorrelator testFancyTTreeInterpolator 
 
 commit: 
-	@git add Makefile
-	@git commit
+ifdef FORCE_GIT
+	-@git add Makefile
+	-@git commit
+endif
+
+install: $(ROOT_LIBRARY)
+ifeq ($(PLATFORM),macosx)
+	install -c -m 755 $(ROOT_LIBRARY) $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY)) $(ANITA_UTIL_LIB_DIR)
+else
+	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
+endif
+	install -c -m 644  $(CLASS_HEADERS) $(ANITA_UTIL_INC_DIR)
+	install -d $(ANITA_UTIL_CALIB_DIR)
+

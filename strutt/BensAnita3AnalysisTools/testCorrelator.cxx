@@ -33,7 +33,7 @@ int main(){
 
 void testNewCombinatorics(){
   /*
-    This function tests the cross-correlation functions which mimic what the GPU is doing on some level.
+    This function tests the combinatorics for cross-correlating channels within +- 2 phi-sectors.
    */
 
   char eventFileName[1024];
@@ -65,12 +65,12 @@ void testNewCombinatorics(){
   cc->correlateEvent(realEvent);
   int nc = -1;
   for(int ant1=0; ant1<NUM_SEAVEYS; ant1++){
-    for(int& ant2 : cc->ant2s.at(ant1)){
+    for(int& ant2 : cc->ant2s[ant1]){
       std::cout << ant1 << " " << ant2 << " "
-		<< cc->comboIndices.at(ant1).at(ant2) << "  " 
-		<< cc->comboIndices.at(ant2).at(ant1) << std::endl;
-      if(cc->comboIndices.at(ant1).at(ant2)>nc){
-	nc = cc->comboIndices.at(ant1).at(ant2);
+		<< cc->comboIndices[ant1][ant2] << "  " 
+		<< cc->comboIndices[ant2][ant1] << std::endl;
+      if(cc->comboIndices[ant1][ant2]>nc){
+	nc = cc->comboIndices[ant1][ant2];
       }
     }
   }
@@ -144,7 +144,7 @@ void testImageGPUStyle(){
 
 void testImageFullStyle(){
   /*
-    This function tests the cross-correlation functions which mimic what the GPU is doing on some level.
+    This function tests the full +-2 phi-sector reconstruction.
    */
 
   char eventFileName[1024];
