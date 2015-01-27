@@ -39,7 +39,7 @@ CrossCorrelator::CrossCorrelator(){
   correlationDeltaT = 1./2.6;
   offsetIndGPU = fillDeltaTLookupGPU();
   do5PhiSectorCombinatorics();
-  //  fillDeltaTLookupWithOffsets();
+  fillDeltaTLookup();
 }
 
 CrossCorrelator::~CrossCorrelator(){
