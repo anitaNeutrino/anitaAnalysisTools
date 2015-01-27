@@ -13,20 +13,33 @@
 *************************************************************************************************************** */
 
 #include "FancyTTreeInterpolator.h"
-// #include "TFile.h"
 
+ClassImp(FancyTTreeInterpolator)
+
+FancyTTreeInterpolator::FancyTTreeInterpolator(){
+  /* Don't use this constructor, it's only for ROOT */
+  fXAxisText = "";
+  fTree = NULL;
+  fXmin = 0;
+  fXmax = 0;
+  /* For error reporting, want precision of unsigned int ~10 digits*/
+  std::cerr.precision(10);
+}
 
 FancyTTreeInterpolator::FancyTTreeInterpolator(TTree* t, TString xAxisText){
-
+  /* Do use this constructor */
   fXAxisText = xAxisText;
   fTree = t;
-  std::shared_ptr<TGraph> gr = makeSortedTGraph(xAxisText + ":" + xAxisText);
+  TGraph* gr = makeSortedTGraph(xAxisText + ":" + xAxisText);
+  //  TGraph* gr = makeSortedTGraph(xAxisText + ":" + xAxisText);
   fXmin = gr->GetX()[0];
   fXmax = gr->GetX()[gr->GetN()-1];
 
   // TFile* fout = new TFile("ftti.root", "recreate");
   // gr->Write();
   // fout->Close();
+
+  delete gr;
 
   /* For error reporting, want precision of unsigned int ~10 digits*/
   std::cerr.precision(10);
@@ -40,19 +53,19 @@ FancyTTreeInterpolator::~FancyTTreeInterpolator(){
 
 
 
-std::shared_ptr<TGraph> FancyTTreeInterpolator::makeSortedTGraph(TString drawText){
+TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText){
   return makeSortedTGraph(drawText, "", 0);
 }
 
-std::shared_ptr<TGraph> FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString){
+TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString){
   return makeSortedTGraph(drawText, cutString, 0);
 }
 
-std::shared_ptr<TGraph> FancyTTreeInterpolator::makeSortedTGraph(TString drawText, Double_t wrapValue){
+TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, Double_t wrapValue){
   return makeSortedTGraph(drawText, "", wrapValue);
 }
 
-std::shared_ptr<TGraph> FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString, Double_t wrapValue){
+TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString, Double_t wrapValue){
   /*
     This function:
        Uses TTree::Draw to select the data.
@@ -98,7 +111,7 @@ std::shared_ptr<TGraph> FancyTTreeInterpolator::makeSortedTGraph(TString drawTex
   }
 
   // sorted TGraph
-  std::shared_ptr<TGraph> gr(new TGraph(nEntries,newX.data(), newY.data()));
+  TGraph* gr(new TGraph(nEntries,newX.data(), newY.data()));
   gr->SetTitle(drawText + ", " + cutString);
   gr->GetXaxis()->SetTitle(fXAxisText);
   gr->GetYaxis()->SetTitle(drawText);
@@ -121,7 +134,7 @@ void FancyTTreeInterpolator::add(TString yAxisText, Double_t wrapValue){
 
 void FancyTTreeInterpolator::add(TString yAxisText, TString cutString, Double_t wrapValue){
   TString drawText = yAxisText + ":" + fXAxisText;
-  std::shared_ptr<TGraph> gr = makeSortedTGraph(drawText, cutString, wrapValue);
+  TGraph* gr = makeSortedTGraph(drawText, cutString, wrapValue);
   fStringToGraph[yAxisText] = gr;
   fStringToWrapValue[yAxisText] = wrapValue;
 }
@@ -129,7 +142,7 @@ void FancyTTreeInterpolator::add(TString yAxisText, TString cutString, Double_t 
 
 
 
-std::shared_ptr<TGraph> FancyTTreeInterpolator::get(TString yAxisText){
+TGraph* FancyTTreeInterpolator::get(TString yAxisText){
   /* Use this to access a graph you've made with the add function */
 
   if(fStringToGraph.count(yAxisText)==0){
@@ -146,7 +159,7 @@ std::shared_ptr<TGraph> FancyTTreeInterpolator::get(TString yAxisText){
 Double_t FancyTTreeInterpolator::interp(TString yAxisText, Double_t xAxisValue){
   /* This function handles the getting of values from the appropriate TGraph */
 
-  std::shared_ptr<TGraph> gr = get(yAxisText);
+  TGraph* gr = get(yAxisText);
 
   if(xAxisValue >= fXmin && xAxisValue <= fXmax){
     Double_t tempVal = gr->Eval(xAxisValue);

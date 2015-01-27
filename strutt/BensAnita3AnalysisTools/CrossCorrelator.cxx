@@ -8,7 +8,34 @@
 
 #include "CrossCorrelator.h"
 
+ClassImp(CrossCorrelator)
+
 CrossCorrelator::CrossCorrelator(){
+  const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
+					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
+					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447};
+  
+  const Double_t phiArrayDegTemp[NUM_SEAVEYS] = {0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
+						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
+						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,180.0,
+						 202.5,225.0,247.5,270.0,292.5,315.0,337.5};
+
+  const Double_t zArrayTemp[NUM_SEAVEYS] = {-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
+					    -1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
+					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
+					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
+  for(int ant=0; ant<NUM_SEAVEYS; ant++){
+    rArray[ant] = rArrayTemp[ant];
+    zArray[ant] = zArrayTemp[ant];
+    phiArrayDeg[ant] = phiArrayDegTemp[ant];
+  }
   correlationDeltaT = 1./2.6;
   offsetIndGPU = fillDeltaTLookupGPU();
   do5PhiSectorCombinatorics();
@@ -197,7 +224,9 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-      for(Int_t& ant2 : ant2s[ant1]){
+      //      for(Int_t& ant2 : ant2s[ant1]){
+      for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
+	Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	Int_t comboInd = comboIndices[ant1][ant2];
 	if(!doneCrossCorrelations[pol][comboInd]){
 	  Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
@@ -267,7 +296,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 	    // Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
 	    // Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
 	    // std::cout << feedOffsetStep << " " << comboInd << " " << phiBin << " " << thetaBin << std::endl;
-	    Int_t offset = deltaTsVaryingPosition[feedOffsetStep][comboInd][phiBin][thetaBin];
+	    Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
 	    correlations += crossCorrelations[pol][comboInd][offset];
 	    contributors++;
 	  }
@@ -375,7 +404,7 @@ Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, I
 
 
 
-void CrossCorrelator::fillDeltaTLookupWithOffsets(){
+void CrossCorrelator::fillDeltaTLookup(){
 
   for(Int_t thetaBin=0; thetaBin < NUM_BINS_THETA; thetaBin++){
     Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
@@ -400,51 +429,33 @@ void CrossCorrelator::fillDeltaTLookupWithOffsets(){
 
   // Double_t tanThetaW = tan(thetaWave);
 
-  Double_t angleRad = angleDeg*TMath::DegToRad();
-  for(Int_t step=0; step<numSteps; step++){
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      rArray[ant] = rArrayFeed[ant] + dlPerStep*step*TMath::Cos(angleRad);
-      zArray[ant] = zArrayFeed[ant] + dlPerStep*step*TMath::Sin(angleRad);
-    }
-    for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-      for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-	Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
-	// Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-	// Double_t phiWave = TMath::DegToRad()*phiDeg;
-	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  // Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
-	  // Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-	  for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-	    for(Int_t& ant2 : ant2s[ant1]){
-	      Int_t comboInd = comboIndices[ant1][ant2];
-	      Int_t offset = getDeltaTExpected(ant1, ant2, phiBin, thetaBin);
-	      offset = offset < 0 ? offset + NUM_SAMPLES : offset;
-	      deltaTsVaryingPosition[step][comboInd][phiBin][thetaBin] = offset;
-	    }
+  for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
+    for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
+      Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
+      // Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+      // Double_t phiWave = TMath::DegToRad()*phiDeg;
+      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	// Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
+	// Double_t thetaWave = TMath::DegToRad()*thetaDeg;
+	for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
+	  for(Int_t& ant2 : ant2s[ant1]){
+	    Int_t comboInd = comboIndices[ant1][ant2];
+	    Int_t offset = getDeltaTExpected(ant1, ant2, phiBin, thetaBin);
+	    offset = offset < 0 ? offset + NUM_SAMPLES : offset;
+	    deltaTs[comboInd][phiBin][thetaBin] = offset;
 	  }
 	}
       }
     }
-    std::cout << step << std::endl;
   }
+  // std::cout << step << std::endl;
   
-  /* Put things back, just in case */
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    rArray[ant] = rArrayFeed[ant];
-    zArray[ant] = zArrayFeed[ant];
-  }
 }
 
 
 
 short* CrossCorrelator::fillDeltaTLookupGPU(){
   offsetIndGPU = (short*) malloc(sizeof(short)*NUM_PHI*LOCAL_COMBOS_PER_PHI_GPU*NUM_BINS_PHI*NUM_BINS_THETA);
-
-  Double_t phiArray[NUM_SEAVEYS] = {0};
-
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    phiArray[ant] = phiArrayDeg[ant]*TMath::DegToRad();
-  }
 
   for(Int_t phiSectorInd=0; phiSectorInd < NUM_PHI; phiSectorInd++){
     for(Int_t localCombo=0; localCombo < LOCAL_COMBOS_PER_PHI_GPU; localCombo++){

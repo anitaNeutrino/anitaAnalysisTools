@@ -57,14 +57,14 @@ int main(){
   }
 
 
-  std::shared_ptr<TGraph> gr = treeInterp.get("pat->latitude");
+  TGraph* gr = treeInterp.get("pat->latitude");
   gr->SetName("grLat");
   gr->Write();
 
 
   /* Test unwrapping functionality in heading, should be smooth */
   treeInterp.add("pat->heading", "pat->heading > -500", 360.0);
-  std::shared_ptr<TGraph> gr2 = treeInterp.get("pat->heading");
+  TGraph* gr2 = treeInterp.get("pat->heading");
   gr2->SetName("grHeadUnwrapped");
   gr2->Write();
 
@@ -81,7 +81,7 @@ int main(){
 
   /* Test unwrapping functionality in heading, check we get back to the intial graph */
   treeInterp.add("pat->heading", "pat->heading > -500");
-  std::shared_ptr<TGraph> gr4 = treeInterp.get("pat->heading");
+  TGraph* gr4 = treeInterp.get("pat->heading");
   gr4->SetName("grHeadNoWrap");
   gr4->Write();
 
