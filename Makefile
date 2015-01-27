@@ -60,7 +60,7 @@ endif
 # I use git svn and am too infrequent a commiter by nature...
 # Use this flag to prompt a local commit after every compile
 # (You probably don't actually want to commit after every compile, but the prompt is nice)
-FORCE_GIT=1 
+#FORCE_GIT=1 
 
 
 # For those who like really bloody pedantic compiler warnings... like me
@@ -135,10 +135,11 @@ endif
 
 install: $(ROOT_LIBRARY)
 ifeq ($(PLATFORM),macosx)
-	install -c -m 755 $(ROOT_LIBRARY) $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY)) $(ANITA_UTIL_LIB_DIR)
+#	install -c -m 755 $(ROOT_LIBRARY) $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY)) $(ANITA_UTIL_LIB_DIR)
+	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
 else
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
 endif
 	install -c -m 644  $(CLASS_HEADERS) $(ANITA_UTIL_INC_DIR)
-	install -d $(ANITA_UTIL_CALIB_DIR)
+
 

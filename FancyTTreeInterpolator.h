@@ -17,6 +17,7 @@
 
 #include "TObject.h"
 #include "TTree.h"
+#include "TChain.h"
 #include "TGraph.h"
 #include "TROOT.h"
 #include "TMath.h"
