@@ -72,8 +72,8 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h
+LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o benToolsDict.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h RootTools.h ArrayND.h
 BINARIES = testCorrelator testFancyTTreeInterpolator 
 
 #Now the bits we're actually compiling
