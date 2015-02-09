@@ -6,6 +6,7 @@
 
 #pragma link C++ class CrossCorrelator+;
 #pragma link C++ class FancyTTreeInterpolator+;
+#pragma link C++ class RootTools+;
 
 #endif
 
