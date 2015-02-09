@@ -232,7 +232,11 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 	  Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
 	  //Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant1]);
 	  for(Int_t samp=0; samp<NUM_SAMPLES; samp++){
-	    /* Fuck knows where this normalization factor comes from... */
+	    /* 
+	       Who knows where this normalization factor comes from...?
+	       All I know is if I put two identical normalized TGraphs in,
+	       the result at 0 offset should be 1...
+	    */
 	    crossCorrelations[pol][comboInd][samp] = crossCorrTemp[samp]/2;
 	  }
 	  doneCrossCorrelations[pol][comboInd] = 1;
@@ -289,7 +293,10 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
         Double_t correlations = 0;
         Int_t contributors = 0;
 	for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
-	  for(Int_t& ant2 : ant2s[ant1]){
+	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
+	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
+
+	  // for(Int_t& ant2 : ant2s[ant1]){
 	    Int_t comboInd = comboIndices[ant1][ant2];
 	    // Double_t phiWave = TMath::DegToRad()*hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
 	    // Double_t thetaWave = TMath::DegToRad()*hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
@@ -438,7 +445,10 @@ void CrossCorrelator::fillDeltaTLookup(){
 	// Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
 	// Double_t thetaWave = TMath::DegToRad()*thetaDeg;
 	for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-	  for(Int_t& ant2 : ant2s[ant1]){
+	  // for(Int_t& ant2 : ant2s[ant1]){
+	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
+	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
+
 	    Int_t comboInd = comboIndices[ant1][ant2];
 	    Int_t offset = getDeltaTExpected(ant1, ant2, phiBin, thetaBin);
 	    offset = offset < 0 ? offset + NUM_SAMPLES : offset;
