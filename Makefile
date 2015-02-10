@@ -41,7 +41,7 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
+CXXFLAGS     = -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
 

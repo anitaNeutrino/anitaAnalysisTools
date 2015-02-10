@@ -38,7 +38,7 @@ void testNewCombinatorics(){
 
   char eventFileName[1024];
 
-  int run = 11672;
+  Int_t run = 11672;
   sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
@@ -54,7 +54,7 @@ void testNewCombinatorics(){
   headTree->SetBranchAddress("header", &header);
 
   Long64_t numEntries = 200; //eventTree->GetEntries();
-  int entry = 107;
+  Int_t entry = 107;
 
   CrossCorrelator* cc = new CrossCorrelator();
 
@@ -63,9 +63,11 @@ void testNewCombinatorics(){
 
   UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
   cc->correlateEvent(realEvent);
-  int nc = -1;
-  for(int ant1=0; ant1<NUM_SEAVEYS; ant1++){
-    for(int& ant2 : cc->ant2s[ant1]){
+  Int_t nc = -1;
+  for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
+    for(UInt_t ant2Ind; ant2Ind < cc->ant2s[ant1].size(); ant2Ind++){
+      Int_t ant2 = cc->ant2s[ant1].at(ant2Ind);
+      //    for(int& ant2 : cc->ant2s[ant1]){
       std::cout << ant1 << " " << ant2 << " "
 		<< cc->comboIndices[ant1][ant2] << "  " 
 		<< cc->comboIndices[ant2][ant1] << std::endl;
@@ -92,7 +94,7 @@ void testImageGPUStyle(){
 
   char eventFileName[1024];
 
-  int run = 11672;
+  Int_t run = 11672;
   sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
@@ -149,7 +151,7 @@ void testImageFullStyle(){
 
   char eventFileName[1024];
 
-  int run = 11672;
+  Int_t run = 11672;
   sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
@@ -204,13 +206,13 @@ void testImageFullStyle(){
 void writeCorrelationGraphs(CrossCorrelator* cc){
   /* for debugging */
 
-  for(int ant1=0; ant1<NUM_SEAVEYS; ant1++){
+  for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
     char name[1024];
     sprintf(name, "grsInterp_%d", ant1);
     // cc->grsInterp[AnitaPol::kVertical][ant1]->SetName(name);
     // cc->grsInterp[AnitaPol::kVertical][ant1]->SetTitle(name);
     // cc->grsInterp[AnitaPol::kVertical][ant1]->Write();
-    for(int ant2=0; ant2<NUM_SEAVEYS; ant2++){
+    for(Int_t ant2=0; ant2<NUM_SEAVEYS; ant2++){
       TGraph* grCorr = cc->getCrossCorrelationGraph(AnitaPol::kVertical, ant1, ant2);
       if(grCorr){
 	grCorr->Write();
