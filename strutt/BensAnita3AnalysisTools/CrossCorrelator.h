@@ -60,7 +60,6 @@ public:
 
 
   /* Interformetry */
-  void preCalculateDeltaTsAndCombos();
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
 
   short* fillDeltaTLookupGPU();
