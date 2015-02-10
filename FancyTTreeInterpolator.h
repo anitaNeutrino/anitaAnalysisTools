@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <exception>
+#include <stdexcept>
 
 class FancyTTreeInterpolator: public TObject{
 
