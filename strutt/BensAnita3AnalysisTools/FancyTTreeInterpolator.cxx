@@ -80,7 +80,7 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutSt
 
   // Sort
   std::vector<Int_t> sortedIndices(nEntries);
-  TMath::Sort(nEntries, fTree->GetV2(), sortedIndices.data(), kFALSE);
+  TMath::Sort(nEntries, fTree->GetV2(), &sortedIndices.front(), kFALSE);
   std::vector<Double_t> newX(nEntries);
   std::vector<Double_t> newY(nEntries);
   
@@ -111,7 +111,7 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutSt
   }
 
   // sorted TGraph
-  TGraph* gr(new TGraph(nEntries,newX.data(), newY.data()));
+  TGraph* gr(new TGraph(nEntries,&newX.front(), &newY.front()));
   gr->SetTitle(drawText + ", " + cutString);
   gr->GetXaxis()->SetTitle(fXAxisText);
   gr->GetYaxis()->SetTitle(drawText);
