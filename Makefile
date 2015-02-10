@@ -73,8 +73,9 @@ endif
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h RootTools.h ArrayND.h
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h RootTools.h 
 BINARIES = testCorrelator testFancyTTreeInterpolator 
+
 
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) $(BINARIES) commit
@@ -108,8 +109,9 @@ endif
 %.$(OBJSUF) : %.$(SRCSUF) %.h
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+ifdef FORCE_GIT	
 	@if test $$? == 0; then git add $^; fi
-
+endif
 %.$(OBJSUF) : %.C
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
@@ -140,6 +142,6 @@ ifeq ($(PLATFORM),macosx)
 else
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
 endif
-	install -c -m 644  $(CLASS_HEADERS) $(ANITA_UTIL_INC_DIR)
+	install -c -m 644  $(CLASS_HEADERS) ArrayND.h $(ANITA_UTIL_INC_DIR)
 
 

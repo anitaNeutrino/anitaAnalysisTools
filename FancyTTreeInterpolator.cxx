@@ -147,7 +147,9 @@ TGraph* FancyTTreeInterpolator::get(TString yAxisText){
 
   if(fStringToGraph.count(yAxisText)==0){
     std::cerr << "Can't find TGraph in FancyTTreeInterpolator created with text " + yAxisText << std::endl;
-    throw std::invalid_argument("Can't find TGraph in FancyTTreeInterpolator created with text " + yAxisText);
+
+    // Hack for c++98... in 2014
+    throw std::invalid_argument("Can't find TGraph in FancyTTreeInterpolator created with text " + std::string(yAxisText.Data()));
   }
   else{
     return fStringToGraph.find(yAxisText)->second;
