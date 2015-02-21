@@ -36,6 +36,16 @@ CrossCorrelator::CrossCorrelator(){
     zArray[ant] = zArrayTemp[ant];
     phiArrayDeg[ant] = phiArrayDegTemp[ant];
   }
+
+  /* Initialize with NULL pointers */
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+      grs[pol][ant] = NULL;
+      grsInterp[pol][ant] = NULL;
+    }
+  }
+
+
   correlationDeltaT = 1./2.6;
   offsetIndGPU = fillDeltaTLookupGPU();
   do5PhiSectorCombinatorics();
@@ -53,8 +63,14 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
   /* Delete any old waveforms */
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]) delete grs[pol][ant];
-      if(grsInterp[pol][ant]) delete grsInterp[pol][ant];
+      if(grs[pol][ant]){
+	delete grs[pol][ant];
+	grs[pol][ant] = NULL;
+      }
+      if(grsInterp[pol][ant]){
+	delete grsInterp[pol][ant];
+	grsInterp[pol][ant] = NULL;
+      }
     }
   }
 
@@ -71,7 +87,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
     }
   }
 
-  /* Int_Terpolate with earliest start time */
+  /* Interpolate with earliest start time */
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grsInterp[pol][ant] = normalizeTGraph(interpolateWithStartTime(grs[pol][ant], earliestStart[pol]));
