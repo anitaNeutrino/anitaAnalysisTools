@@ -20,12 +20,14 @@ void testImageGPUStyle();
 void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
+void hackyNormalizationTest();
 
 int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  testImageFullStyle();
+  //  testImageFullStyle();
+  hackyNormalizationTest();
   return 0;
 
 }
@@ -152,12 +154,12 @@ void testImageFullStyle(){
   char eventFileName[1024];
 
   Int_t run = 11672;
-  sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
+  sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
 
   char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
@@ -202,6 +204,57 @@ void testImageFullStyle(){
   delete cc;
 
 }
+
+void hackyNormalizationTest(){
+  /*
+    Check FFT normalization
+   */
+
+  char eventFileName[1024];
+
+  Int_t run = 11672;
+  sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  RawAnitaEvent* event = NULL;
+  eventTree->SetBranchAddress("event", &event);
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+
+  CrossCorrelator* cc = new CrossCorrelator();
+
+  Long64_t numEntries = 108;
+  for(Long64_t entry=107; entry<numEntries; entry++){
+
+    headTree->GetEntry(entry);
+    eventTree->GetEntry(entry);
+
+    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
+    TGraph* gr1 = realEvent->getGraph(15, AnitaPol::kVertical);
+    TGraph* gr2 = realEvent->getGraph(15, AnitaPol::kVertical);
+
+    TGraph* gr1Int = cc->normalizeTGraph(cc->interpolateWithStartTime(gr1, gr1->GetX()[0]));
+    TGraph* gr2Int = cc->normalizeTGraph(cc->interpolateWithStartTime(gr2, gr2->GetX()[0]));
+
+    // cc->correlateEvent(realEvent);
+    Double_t* corrs = cc->crossCorrelateFourier(gr1Int, gr2Int);
+    std::cout << "Normalization factor is " << corrs[0] << std::endl;
+    
+    delete corrs;
+
+    delete realEvent;
+  }
+
+  delete cc;
+
+}
+
 
 void writeCorrelationGraphs(CrossCorrelator* cc){
   /* for debugging */

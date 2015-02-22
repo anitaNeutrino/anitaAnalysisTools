@@ -11,6 +11,9 @@
 ClassImp(CrossCorrelator)
 
 CrossCorrelator::CrossCorrelator(){
+
+  fftNormFactor = 4;
+
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
 					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
@@ -253,7 +256,7 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 	       All I know is if I put two identical normalized TGraphs in,
 	       the result at 0 offset should be 1...
 	    */
-	    crossCorrelations[pol][comboInd][samp] = crossCorrTemp[samp]/2;
+	    crossCorrelations[pol][comboInd][samp] = crossCorrTemp[samp]/fftNormFactor;
 	  }
 	  doneCrossCorrelations[pol][comboInd] = 1;
 	  // std::memcpy(crossCorrelations[pol][comboInd].data(), crossCorrTemp, sizeof(Double_t)*NUM_SAMPLES);
