@@ -85,6 +85,8 @@ public:
   Int_t ant2Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
   Double_t correlationsGPU[NUM_POL][NUM_PHI][GLOBAL_COMBOS_PER_PHI_GPU][NUM_SAMPLES];
 
+  Double_t fftNormFactor;
+
   /* For wider reconstruction */
   std::vector<Int_t> ant2s[NUM_SEAVEYS];
   int comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
