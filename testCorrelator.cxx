@@ -27,7 +27,7 @@ int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  // testImageFullStyle();
+  testImageFullStyle();
   // hackyNormalizationTest();
   return 0;
 

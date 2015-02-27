@@ -91,7 +91,8 @@ public:
   /* For wider reconstruction */
   std::vector<Int_t> ant2s[NUM_SEAVEYS];
   int comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
-  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES];
+  // Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES];
+  Double_t* crossCorrelations[NUM_POL][NUM_COMBOS];
   int doneCrossCorrelations[NUM_POL][NUM_COMBOS];
 
   TGraph* grs[NUM_POL][NUM_SEAVEYS];
