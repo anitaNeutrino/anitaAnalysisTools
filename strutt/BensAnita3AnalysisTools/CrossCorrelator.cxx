@@ -42,10 +42,13 @@ CrossCorrelator::CrossCorrelator(){
   }
 
   /* Initialize with NULL pointers */
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = NULL;
       grsInterp[pol][ant] = NULL;
+    }
+    for(int combo=0; combo<NUM_COMBOS; combo++){
+      crossCorrelations[pol][combo] = NULL;
     }
   }
 
@@ -249,23 +252,12 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 	Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	Int_t comboInd = comboIndices[ant1][ant2];
 	if(!doneCrossCorrelations[pol][comboInd]){
-	  Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
-	  //Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant1]);
-	  for(Int_t samp=0; samp<NUM_SAMPLES; samp++){
-	    /* 
-	       Who knows where this normalization factor comes from...?
-	       All I know is if I put two identical normalized TGraphs in,
-	       the result at 0 offset should be 1...
-	    */
-	    crossCorrelations[pol][comboInd][samp] = crossCorrTemp[samp]/fftNormFactor;
+	  if(crossCorrelations[pol][comboInd] != NULL){
+	    delete [] crossCorrelations[pol][comboInd];
 	  }
+	  crossCorrelations[pol][comboInd] = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
+	  
 	  doneCrossCorrelations[pol][comboInd] = 1;
-	  // std::memcpy(crossCorrelations[pol][comboInd].data(), crossCorrTemp, sizeof(Double_t)*NUM_SAMPLES);
-	  delete crossCorrTemp;
-
-	  // for(Int_t offsetInd=0; offsetInd<NUM_SAMPLES; offsetInd++){
-	  //   crossCorrelations[pol][comboInd][offsetInd] = correlationWithOffset(grsInterp[pol][ant1], grsInterp[pol][ant2], offsetInd);
-	  // }
 	}
       }
     }    
