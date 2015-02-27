@@ -12,9 +12,20 @@ ClassImp(CrossCorrelator)
 
 CrossCorrelator::CrossCorrelator(){
 
-  // fftNormFactor = 4;
-  fftNormFactor = 1;
+  /* Initialize with NULL pointers otherwise very bad things will happen with gcc */
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      grs[pol][ant] = NULL;
+      grsInterp[pol][ant] = NULL;
+    }
+    for(int combo=0; combo<NUM_COMBOS; combo++){
+      crossCorrelations[pol][combo] = NULL;
+    }
+  }
+  lastEventNormalized = 0;
+  correlationDeltaT = 1./2.6;
 
+  // Fill timing arrays and combinatorics
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
 					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
@@ -41,19 +52,6 @@ CrossCorrelator::CrossCorrelator(){
     phiArrayDeg[ant] = phiArrayDegTemp[ant];
   }
 
-  /* Initialize with NULL pointers */
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grs[pol][ant] = NULL;
-      grsInterp[pol][ant] = NULL;
-    }
-    for(int combo=0; combo<NUM_COMBOS; combo++){
-      crossCorrelations[pol][combo] = NULL;
-    }
-  }
-
-
-  correlationDeltaT = 1./2.6;
   offsetIndGPU = fillDeltaTLookupGPU();
   do5PhiSectorCombinatorics();
   fillDeltaTLookup();
@@ -61,44 +59,64 @@ CrossCorrelator::CrossCorrelator(){
 
 CrossCorrelator::~CrossCorrelator(){
   free(offsetIndGPU);
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      if(grs[pol][ant] != NULL){
+	delete grs[pol][ant];
+      }
+      if(grsInterp[pol][ant] != NULL){
+	delete grsInterp[pol][ant];
+      }
+    }
+    for(int combo=0; combo<NUM_COMBOS; combo++){
+      if(crossCorrelations[pol][combo] != NULL){
+	delete [] crossCorrelations[pol][combo];
+      }
+    }
+  }
 }
 
 
 void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent){
   /* Potentially needed in a few places, so it gets its own function */
 
-  /* Delete any old waveforms */
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]){
-	delete grs[pol][ant];
-	grs[pol][ant] = NULL;
-      }
-      if(grsInterp[pol][ant]){
-	delete grsInterp[pol][ant];
-	grsInterp[pol][ant] = NULL;
-      }
-    }
-  }
+  if(realEvent->eventNumber!=lastEventNormalized){
 
-  /* Find the start time of all waveforms */
-  Double_t earliestStart[NUM_POL] = {100};
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
-    grs[AnitaPol::kHorizontal][ant] = realEvent->getGraph(ant, AnitaPol::kHorizontal);
-
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
-	earliestStart[pol] = grs[pol][ant]->GetX()[0];
-      }
-    }
-  }
-
-  /* Interpolate with earliest start time */
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    /* Delete any old waveforms */
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grsInterp[pol][ant] = normalizeTGraph(interpolateWithStartTime(grs[pol][ant], earliestStart[pol]));
+      for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+	if(grs[pol][ant]){
+	  delete grs[pol][ant];
+	  grs[pol][ant] = NULL;
+	}
+	if(grsInterp[pol][ant]){
+	  delete grsInterp[pol][ant];
+	  grsInterp[pol][ant] = NULL;
+	}
+      }
     }
+
+    /* Find the start time of all waveforms */
+    Double_t earliestStart[NUM_POL] = {100};
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
+      grs[AnitaPol::kHorizontal][ant] = realEvent->getGraph(ant, AnitaPol::kHorizontal);
+
+      for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+	if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
+	  earliestStart[pol] = grs[pol][ant]->GetX()[0];
+	}
+      }
+    }
+
+    /* Interpolate with earliest start time */
+    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+      for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+	grsInterp[pol][ant] = normalizeTGraph(interpolateWithStartTime(grs[pol][ant], earliestStart[pol]));
+      }
+    }
+
+    lastEventNormalized = realEvent->eventNumber;
   }
 }
 
@@ -247,7 +265,6 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-      //      for(Int_t& ant2 : ant2s[ant1]){
       for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
 	Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	Int_t comboInd = comboIndices[ant1][ant2];
