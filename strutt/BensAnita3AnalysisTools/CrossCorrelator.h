@@ -54,6 +54,7 @@ public:
   /* Cross correlation */
   Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent);
+UInt_t lastEventNormalized;
   void correlateEventGPU(UsefulAnitaEvent* realEvent);
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   void correlateEvent(UsefulAnitaEvent* realEvent);
@@ -86,8 +87,6 @@ public:
   Int_t ant2Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
   Double_t correlationsGPU[NUM_POL][NUM_PHI][GLOBAL_COMBOS_PER_PHI_GPU][NUM_SAMPLES];
 
-  Double_t fftNormFactor;
-
   /* For wider reconstruction */
   std::vector<Int_t> ant2s[NUM_SEAVEYS];
   int comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
@@ -102,6 +101,7 @@ public:
   Double_t phiArrayDeg[NUM_SEAVEYS];
   Double_t zArray[NUM_SEAVEYS];
 
+  /* Speeds up calculating deltaTs */
   Double_t tanThetaLookup[NUM_BINS_THETA];
   Double_t cosThetaLookup[NUM_BINS_THETA];
   Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
@@ -113,6 +113,6 @@ public:
   void fillDeltaTLookup();
   unsigned char deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
 
-  ClassDef(CrossCorrelator, 1);
+  ClassDef(CrossCorrelator, 0);
 };
 #endif
