@@ -8,6 +8,7 @@
 
 
 #include "CrossCorrelator.h"
+#include "RootTools.h"
 
 #include "TGraph.h"
 #include "TFile.h"
@@ -26,8 +27,8 @@ int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  //  testImageFullStyle();
-  hackyNormalizationTest();
+  // testImageFullStyle();
+  // hackyNormalizationTest();
   return 0;
 
 }
@@ -205,6 +206,8 @@ void testImageFullStyle(){
 
 }
 
+
+
 void hackyNormalizationTest(){
   /*
     Check FFT normalization
@@ -239,8 +242,10 @@ void hackyNormalizationTest(){
     TGraph* gr1 = realEvent->getGraph(15, AnitaPol::kVertical);
     TGraph* gr2 = realEvent->getGraph(15, AnitaPol::kVertical);
 
-    TGraph* gr1Int = cc->normalizeTGraph(cc->interpolateWithStartTime(gr1, gr1->GetX()[0]));
-    TGraph* gr2Int = cc->normalizeTGraph(cc->interpolateWithStartTime(gr2, gr2->GetX()[0]));
+    TGraph* gr1Int = cc->interpolateWithStartTime(gr1, gr1->GetX()[0]);
+    TGraph* gr2Int = cc->interpolateWithStartTime(gr2, gr2->GetX()[0]);
+    RootTools::normalize(gr1Int);
+    RootTools::normalize(gr2Int);
 
     // cc->correlateEvent(realEvent);
     Double_t* corrs = cc->crossCorrelateFourier(gr1Int, gr2Int);

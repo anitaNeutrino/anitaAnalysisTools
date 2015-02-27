@@ -6,7 +6,10 @@
 
 #pragma link C++ class CrossCorrelator+;
 #pragma link C++ class FancyTTreeInterpolator+;
-#pragma link C++ class RootTools+;
+//#pragma link C++ class RootTools+;
+#pragma link C++ namespace RootTools+;
+#pragma link C++ class FancyFFTs+;
+#pragma link C++ namespace PowSpecNorm+;
 
 #endif
 

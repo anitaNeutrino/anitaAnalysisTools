@@ -1,13 +1,28 @@
 #include "RootTools.h"
 
-ClassImp(RootTools)
-
-RootTools::RootTools(){
-
+double RootTools::getSumOfYVals(TGraph* gr){
+  double sum = 0;
+  for(int i=0; i<gr->GetN(); i++){
+    sum += gr->GetY()[i];
+  }
+  return sum;
 }
 
-RootTools::~RootTools(){
+void RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end){
+  std::cout << start.Data();
+  for(int i=0; i<n; i++){
+    std::cout << array[i];
+    if(i<n-1) std::cout << delimiter.Data();
+  }  
+  std::cout << end.Data();
+}
 
+void RootTools::printYVals(TGraph* gr, TString delimiter, TString start, TString end){
+  printArray(gr->GetN(), gr->GetY(), delimiter, start, end);
+}
+
+void RootTools::printXVals(TGraph* gr, TString delimiter, TString start, TString end){
+  printArray(gr->GetN(), gr->GetX(), delimiter, start, end);
 }
 
 
@@ -43,6 +58,28 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
   for(int i=0; i<gr->GetN(); i++){
     gr->GetY()[i] -= offset;
   }
+}
+
+
+void RootTools::normalize(TGraph* gr){
+  double mean, rms;
+  normalize(gr, mean, rms);
+}
+
+
+TGraph* RootTools::makeNormalized(TGraph* gr){
+  /* Copies the TGraph and normalizes that */
+  TGraph* grCopy = (TGraph*) gr->Clone();
+  normalize(grCopy);
+  return grCopy;
+}
+
+
+TGraph* RootTools::makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms){
+  /* Copies the TGraph and normalizes that */
+  TGraph* grCopy = (TGraph*) gr->Clone();
+  normalize(grCopy, mean, rms);
+  return grCopy;
 }
 
 

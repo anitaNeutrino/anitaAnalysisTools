@@ -12,7 +12,10 @@
 /* Ryan things */
 #include "UsefulAnitaEvent.h"
 #include "AnitaGeomTool.h"
-#include "FFTtools.h"
+//#include "FFTtools.h"
+#include "RootTools.h"
+#include "FancyFFTs.h"
+
 
 /* ROOT things */
 #include "TGraph.h"
@@ -52,9 +55,13 @@ public:
 
   /* Cross correlation */
   Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
+
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent);
+  UInt_t lastEventNumberNormalized;
+
   void correlateEventGPU(UsefulAnitaEvent* realEvent);
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
+
   void correlateEvent(UsefulAnitaEvent* realEvent);
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
 
@@ -74,8 +81,6 @@ public:
 
   /* Waveform manipulation */
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
-  TGraph* normalizeTGraph(TGraph* gr);
-
   
   Double_t correlationDeltaT;
   short* offsetIndGPU;

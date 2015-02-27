@@ -12,7 +12,8 @@ ClassImp(CrossCorrelator)
 
 CrossCorrelator::CrossCorrelator(){
 
-  fftNormFactor = 4;
+  //  fftNormFactor = 4;
+  fftNormFactor = 1;
 
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
 					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
@@ -53,48 +54,76 @@ CrossCorrelator::CrossCorrelator(){
   offsetIndGPU = fillDeltaTLookupGPU();
   do5PhiSectorCombinatorics();
   fillDeltaTLookup();
+
+  lastEventNumberNormalized = 0;
 }
 
 CrossCorrelator::~CrossCorrelator(){
   free(offsetIndGPU);
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+      if(grs[pol][ant] != NULL){
+	delete grs[pol][ant];
+      }
+      if(grsInterp[pol][ant] != NULL){
+	delete grsInterp[pol][ant];
+      }
+    }
+  }
+
+
 }
 
 
 void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent){
   /* Potentially needed in a few places, so it gets its own function */
 
-  /* Delete any old waveforms */
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]){
-	delete grs[pol][ant];
-	grs[pol][ant] = NULL;
-      }
-      if(grsInterp[pol][ant]){
-	delete grsInterp[pol][ant];
-	grsInterp[pol][ant] = NULL;
-      }
-    }
-  }
+  if(realEvent->eventNumber != lastEventNumberNormalized){
+    /* 
+       This if statement is for profiling reasons so I can separate this step from the correlations
+       by calling this function before calling CrossCorrelator::correlateEvent inside a timing function.
+    */
 
-  /* Find the start time of all waveforms */
-  Double_t earliestStart[NUM_POL] = {100};
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
-    grs[AnitaPol::kHorizontal][ant] = realEvent->getGraph(ant, AnitaPol::kHorizontal);
-
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
-	earliestStart[pol] = grs[pol][ant]->GetX()[0];
-      }
-    }
-  }
-
-  /* Interpolate with earliest start time */
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    /* 
+       Delete any old waveforms. By not doing this at the end, waveforms from the previous
+       event are left in memory to be inspected if need be.       
+    */
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grsInterp[pol][ant] = normalizeTGraph(interpolateWithStartTime(grs[pol][ant], earliestStart[pol]));
+      for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+	if(grs[pol][ant]){
+	  delete grs[pol][ant];
+	  grs[pol][ant] = NULL;
+	}
+	if(grsInterp[pol][ant]){
+	  delete grsInterp[pol][ant];
+	  grsInterp[pol][ant] = NULL;
+	}
+      }
     }
+
+    /* Find the start time of all waveforms */
+    Double_t earliestStart[NUM_POL] = {100};
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
+      grs[AnitaPol::kHorizontal][ant] = realEvent->getGraph(ant, AnitaPol::kHorizontal);
+
+      for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+	if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
+	  earliestStart[pol] = grs[pol][ant]->GetX()[0];
+	}
+      }
+    }
+
+    /* Interpolate with earliest start time */
+    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+      for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+	grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
+	RootTools::normalize(grsInterp[pol][ant]);
+      }
+    }
+
+    /* Remember last event event done. */
+    lastEventNumberNormalized = realEvent->eventNumber;
   }
 }
 
@@ -243,13 +272,11 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-      //      for(Int_t& ant2 : ant2s[ant1]){
       for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
 	Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	Int_t comboInd = comboIndices[ant1][ant2];
 	if(!doneCrossCorrelations[pol][comboInd]){
 	  Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
-	  //Double_t * crossCorrTemp = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant1]);
 	  for(Int_t samp=0; samp<NUM_SAMPLES; samp++){
 	    /* 
 	       Who knows where this normalization factor comes from...?
@@ -259,22 +286,18 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
 	    crossCorrelations[pol][comboInd][samp] = crossCorrTemp[samp]/fftNormFactor;
 	  }
 	  doneCrossCorrelations[pol][comboInd] = 1;
-	  // std::memcpy(crossCorrelations[pol][comboInd].data(), crossCorrTemp, sizeof(Double_t)*NUM_SAMPLES);
 	  delete crossCorrTemp;
 
-	  // for(Int_t offsetInd=0; offsetInd<NUM_SAMPLES; offsetInd++){
-	  //   crossCorrelations[pol][comboInd][offsetInd] = correlationWithOffset(grsInterp[pol][ant1], grsInterp[pol][ant2], offsetInd);
-	  // }
 	}
       }
     }    
   }
-
 }
 
 
 Double_t* CrossCorrelator::crossCorrelateFourier(TGraph* gr1, TGraph* gr2){
-  return  FFTtools::getCorrelation(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+  //  return  FFTtools::getCorrelation(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+  return  FancyFFTs::crossCorrelate(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
 }
 
 
@@ -380,31 +403,6 @@ TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_
 
   return gr;
 }
-
-
-
-
-TGraph* CrossCorrelator::normalizeTGraph(TGraph* gr){
-  
-  Double_t sum=0;
-  Double_t sq = 0;
-  for(Int_t i=0; i<gr->GetN(); i++){
-    sum += gr->GetY()[i];
-    sq += gr->GetY()[i]*gr->GetY()[i];
-  }
-
-  Double_t mean = sum/gr->GetN();
-  Double_t rms = TMath::Sqrt(sq/gr->GetN() - mean*mean);
-  
-  for(Int_t i=0; i<gr->GetN(); i++){
-    gr->GetY()[i] = (gr->GetY()[i] - mean);
-    if(rms>0){
-      gr->GetY()[i]/=rms;
-    }
-  }
-  return gr;
-}
-
 
 
 Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave){
