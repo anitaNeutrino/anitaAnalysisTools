@@ -6,7 +6,7 @@
 include Makefile.arch
 
 #Site Specific  Flags
-SYSINCLUDES	= 
+SYSINCLUDES	= -I/usr/local/include
 SYSLIBS         =
 DLLSUF = ${DllSuf}
 OBJSUF = ${ObjSuf}
@@ -72,13 +72,13 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h RootTools.h 
-BINARIES = testCorrelator testFancyTTreeInterpolator 
+LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o benToolsDict.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h 
+BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs
 
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) $(BINARIES) commit
+all: $(ROOT_LIBRARY) install $(BINARIES) commit
 
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
@@ -120,7 +120,7 @@ endif
 benToolsDict.C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
-		rootcint $@ -c $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
+		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
 
 clean:
 	@rm -f *Dict*
