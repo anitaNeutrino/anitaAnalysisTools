@@ -131,7 +131,7 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
 
   makeNewPlanIfNeeded(len);
 
-  std::memcpy(fReals[len], input, sizeof(double)*len);
+  memcpy(fReals[len], input, sizeof(double)*len);
 
   fftw_execute(fRealToComplex[len]);
 
@@ -140,7 +140,7 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
     std::complex<double>* output = new std::complex<double>[numFreqs];
 
     /* Seems to work, see http://www.fftw.org/doc/Complex-numbers.html */
-    std::memcpy(output, fComplex[len], sizeof(fftw_complex)*numFreqs);
+    memcpy(output, fComplex[len], sizeof(fftw_complex)*numFreqs);
     return output;
   }
   else{
@@ -158,7 +158,7 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
   makeNewPlanIfNeeded(len);
   int numFreqs = getNumFreqs(len);
 
-  std::memcpy(fComplex[len], input, sizeof(fftw_complex)*numFreqs);
+  memcpy(fComplex[len], input, sizeof(fftw_complex)*numFreqs);
   fftw_execute(fComplexToReal[len]);
   
   /* Normalization needed on the inverse transform */
@@ -169,7 +169,7 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
 
   if(copyOutputToNewArray==true){
     double* output = new double[len];
-    std::memcpy(output, fReals[len], sizeof(double)*len);
+    memcpy(output, fReals[len], sizeof(double)*len);
     return output;
   }
   else{
