@@ -79,6 +79,7 @@ BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSp
 
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) install $(BINARIES) commit
+.PHONY: install commit clean
 
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
