@@ -14,6 +14,7 @@
 #include "AnitaGeomTool.h"
 //#include "FFTtools.h"
 #include "FancyFFTs.h"
+#include "RootTools.h"
 
 /* ROOT things */
 #include "TGraph.h"
@@ -31,6 +32,7 @@
 
 /* Offline reconstruction definitions */
 #define NUM_COMBOS 336
+// #define NUM_COMBOS 672
 
 /* Image definitions*/
 #define NUM_BINS_THETA 256
@@ -43,6 +45,7 @@
 #define NUM_POL 2
 #define NUM_RING 3
 
+#define SPEED_OF_LIGHT 2.99792458e8
 
 class CrossCorrelator : public TObject{
 
@@ -63,6 +66,10 @@ UInt_t lastEventNormalized;
 
   /* Interformetry */
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
+  Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); /* Slightly faster? */
+  /* Experimental */
+  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);  
+
 
   short* fillDeltaTLookupGPU();
   TH2D* makeImageGPU(AnitaPol::AnitaPol_t pol);
@@ -71,12 +78,15 @@ UInt_t lastEventNormalized;
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol);
 
+  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
+  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
   void do5PhiSectorCombinatorics();
 
   /* Waveform manipulation */
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
-  TGraph* normalizeTGraph(TGraph* gr);
+  //  TGraph* normalizeTGraph(TGraph* gr);
 
   
   Double_t correlationDeltaT;
@@ -109,7 +119,6 @@ UInt_t lastEventNormalized;
   Double_t cosPhiArrayLookup[NUM_SEAVEYS];
   Double_t sinPhiArrayLookup[NUM_SEAVEYS];
 
-  Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); /* Slightly faster? */
   void fillDeltaTLookup();
   unsigned char deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
 
