@@ -48,7 +48,7 @@ CrossCorrelator::CrossCorrelator(){
 					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray[ant] = rArrayTemp[ant];
-    zArray[ant] = zArrayTemp[ant];
+    zArray[ant] = zArrayTemp[ant]+5;
     phiArrayDeg[ant] = phiArrayDegTemp[ant];
   }
 
