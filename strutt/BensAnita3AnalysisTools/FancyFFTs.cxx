@@ -148,7 +148,6 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
   }
 }
 
-
 double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray){
   
   /* 
@@ -244,7 +243,6 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
   /* Take the product */
   int numFreqs = getNumFreqs(len);
   for(int i=0; i<numFreqs; i++){
-    // std::cout << tempVals1[i] <<"\t" << tempVals2[i] << std::endl;
     tempVals1[i] *= std::conj(tempVals2[i]);
   }
   
