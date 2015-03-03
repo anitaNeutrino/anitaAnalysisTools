@@ -29,23 +29,12 @@ INC_ANITA_UTIL=-I$(EVENT_READER_DIR)
 endif
 endif
 
-#Toggles the FFT functions on and off
-USE_FFT_TOOLS=1
-
-ifdef USE_FFT_TOOLS
-FFTLIBS = -L/usr/local/lib -lRootFftwWrapper -lfftw3
-FFTFLAG = -DUSE_FFT_TOOLS
-else
-FFTLIBS =
-FFTFLAG =
-endif
-
 #Generic and Site Specific Flags
 CXXFLAGS     = -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
 
-LIBS          = $(ROOTLIBS) -lMathMore -lMinuit $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS) 
+LIBS          = $(ROOTLIBS) -lMathMore -lMinuit $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS) -lfftw3
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 
 #Toggles google performance profile functionality on and off
