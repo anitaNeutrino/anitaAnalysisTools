@@ -7,7 +7,7 @@ include Makefile.arch
 
 #Site Specific  Flags
 SYSINCLUDES	= -I/usr/local/include
-SYSLIBS         =
+SYSLIBS         = -L/usr/local/include
 DLLSUF = ${DllSuf}
 OBJSUF = ${ObjSuf}
 SRCSUF = ${SrcSuf}
@@ -27,6 +27,17 @@ ifdef EVENT_READER_DIR
 LD_ANITA_UTIL=-L$(EVENT_READER_DIR)  -lAnitaEvent
 INC_ANITA_UTIL=-I$(EVENT_READER_DIR)
 endif
+endif
+
+#Toggles the FFT functions on and off
+#USE_FFT_TOOLS=1
+
+ifdef USE_FFT_TOOLS
+FFTLIBS = -L/usr/local/lib -lRootFftwWrapper -lfftw3
+FFTFLAG = -DUSE_FFT_TOOLS
+else
+FFTLIBS =
+FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
@@ -65,9 +76,9 @@ LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o be
 CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h 
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical
 
-
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) install $(BINARIES) commit
+
 .PHONY: install commit clean
 
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
