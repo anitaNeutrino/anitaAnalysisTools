@@ -48,7 +48,7 @@ CrossCorrelator::CrossCorrelator(){
 					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray[ant] = rArrayTemp[ant];
-    zArray[ant] = zArrayTemp[ant]+5;
+    zArray[ant] = zArrayTemp[ant];
     phiArrayDeg[ant] = phiArrayDegTemp[ant];
   }
 
@@ -62,15 +62,18 @@ CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       if(grs[pol][ant] != NULL){
-	delete grs[pol][ant];
+    	delete grs[pol][ant];
+	grs[pol][ant] = NULL;
       }
       if(grsInterp[pol][ant] != NULL){
-	delete grsInterp[pol][ant];
+    	delete grsInterp[pol][ant];
+	grsInterp[pol][ant] = NULL;
       }
     }
     for(int combo=0; combo<NUM_COMBOS; combo++){
       if(crossCorrelations[pol][combo] != NULL){
 	delete [] crossCorrelations[pol][combo];
+	crossCorrelations[pol][combo] = NULL;
       }
     }
   }
@@ -649,11 +652,12 @@ short* CrossCorrelator::fillDeltaTLookupGPU(){
 
 
 TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTime){
-  //TGraph* CrossCorrelator::Int_terpolate(TGraph* grIn, Double_t startTime){
-  Double_t newTimes[NUM_SAMPLES];
-  Double_t newVolts[NUM_SAMPLES];
+
+  Double_t newTimes[NUM_SAMPLES] = {0};
+  Double_t newVolts[NUM_SAMPLES] = {0};
   Double_t thisStartTime = grIn->GetX()[0];
   Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
+
 
   // Quantizes the start and end times so data poInt_ts lie at Int_teger multiples of nominal sampling 
   startTime = correlationDeltaT*TMath::Nint(startTime/correlationDeltaT + 0.5);

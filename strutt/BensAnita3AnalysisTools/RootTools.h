@@ -32,6 +32,9 @@ namespace RootTools{
   TGraph* makeNormalized(TGraph* gr);
   TGraph* makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms);
 
+  std::vector<Int_t> getIndicesOfNans(TGraph* gr);
+  void printTGraphInfo(TGraph* gr);
+  
 
 };
 

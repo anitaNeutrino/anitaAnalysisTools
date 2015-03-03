@@ -86,9 +86,11 @@ TGraph* RootTools::makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms){
 
 void RootTools::normalize(TGraph* gr, Double_t& mean, Double_t& rms){
   RootTools::getMeanAndRms(gr, mean, rms);
-  for(int i=0; i<gr->GetN(); i++){    
-    gr->GetY()[i] -= mean;
-    gr->GetY()[i] /= rms;
+  if(rms>0){ // Don't make any NaNs
+    for(int i=0; i<gr->GetN(); i++){    
+      gr->GetY()[i] -= mean;
+      gr->GetY()[i] /= rms;
+    }
   }
 }
 
@@ -101,4 +103,41 @@ void RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
   }
   mean = sum/gr->GetN();
   rms = TMath::Sqrt(square/gr->GetN() - mean*mean);
+}
+
+
+std::vector<Int_t> RootTools::getIndicesOfNans(TGraph* gr){
+  std::vector<Int_t> nanIndices;
+  for(Int_t i=0; i<gr->GetN(); i++){
+    if(TMath::IsNaN(gr->GetY()[i])){
+      nanIndices.push_back(i);
+    }
+  }
+  return nanIndices;
+}
+
+
+void RootTools::printTGraphInfo(TGraph* gr){
+  std::cout << "******************************************************************************" << std::endl;
+  std::cout << "RootTools::printTGraphValues(TGraph* gr = " << gr << "):" << std::endl;
+  std::cout << "Name: " << gr->GetName() << std::endl;
+  std::cout << "Title: " << gr->GetTitle() << std::endl;
+  std::cout << "Num points: " << gr->GetN() << std::endl;
+  std::cout << "Xvals: ";
+  for(Int_t i=0; i<gr->GetN(); i++){
+    std::cout << gr->GetX()[i];
+    if(i<gr->GetN()-1){
+      std::cout << ", ";
+    }
+  }
+  std::cout << std::endl;
+  std::cout << "Yvals: ";
+  for(Int_t i=0; i<gr->GetN(); i++){
+    std::cout << gr->GetY()[i];
+    if(i<gr->GetN()-1){
+      std::cout << ", ";
+    }
+  }
+  std::cout << std::endl;
+  std::cout << "******************************************************************************" << std::endl;
 }
