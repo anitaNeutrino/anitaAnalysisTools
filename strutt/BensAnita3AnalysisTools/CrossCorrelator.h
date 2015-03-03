@@ -12,7 +12,6 @@
 /* Ryan things */
 #include "UsefulAnitaEvent.h"
 #include "AnitaGeomTool.h"
-//#include "FFTtools.h"
 #include "FancyFFTs.h"
 #include "RootTools.h"
 
@@ -50,76 +49,105 @@
 class CrossCorrelator : public TObject{
 
 public:
+  /**********************************************************************************************************
+  Constructor and destructor functions
+  **********************************************************************************************************/
   CrossCorrelator();
   ~CrossCorrelator();
 
 
-  /* Cross correlation */
-  Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
+  /**********************************************************************************************************
+  Waveform manipulation functions
+  **********************************************************************************************************/
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent);
-UInt_t lastEventNormalized;
-  void correlateEventGPU(UsefulAnitaEvent* realEvent);
-  TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
+  TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
+
+
+  /**********************************************************************************************************
+  All correlation functions
+  **********************************************************************************************************/
+
+  Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
   void correlateEvent(UsefulAnitaEvent* realEvent);
+  void correlateEventGPU(UsefulAnitaEvent* realEvent);
+  void doAllCrossCorrelations();
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
 
 
-  /* Interformetry */
+  /**********************************************************************************************************
+  Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
+  **********************************************************************************************************/
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
+  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);    
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); /* Slightly faster? */
-  /* Experimental */
-  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);  
 
 
+  /**********************************************************************************************************
+  Precalculate DeltaTs during initialization where appropriate
+  **********************************************************************************************************/
+  void do5PhiSectorCombinatorics();
+  void fillDeltaTLookup();
   short* fillDeltaTLookupGPU();
+
+
+
+  /**********************************************************************************************************
+  Image generation functions.
+  **********************************************************************************************************/
+
+  TH2D* makeImage(AnitaPol::AnitaPol_t pol);
+  TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
+		  Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
+  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
+			   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   TH2D* makeImageGPU(AnitaPol::AnitaPol_t pol);
   TH2D* makeImageGPU(AnitaPol::AnitaPol_t pol, UInt_t phiSectorMask);
-
-  TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-  TH2D* makeImage(AnitaPol::AnitaPol_t pol);
-
-  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
-  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
-  void do5PhiSectorCombinatorics();
 
-  /* Waveform manipulation */
-  TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
-  //  TGraph* normalizeTGraph(TGraph* gr);
 
-  
+
+  /**********************************************************************************************************
+  Functions to delete pointers to internal variables
+  **********************************************************************************************************/
+  void deleteCrossCorrelations();
+  void deleteAllWaveforms();
+
+
+
+
+  /**********************************************************************************************************
+  Functions for debugging or testing
+  **********************************************************************************************************/
+  void correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource);
+  TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
+
+
+  /**********************************************************************************************************
+  Variables
+  **********************************************************************************************************/
+  UInt_t lastEventNormalized;
   Double_t correlationDeltaT;
   short* offsetIndGPU;
   
-  /* For GPU style*/
   Int_t ant1Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
   Int_t ant2Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
   Double_t correlationsGPU[NUM_POL][NUM_PHI][GLOBAL_COMBOS_PER_PHI_GPU][NUM_SAMPLES];
-
-  /* For wider reconstruction */
   std::vector<Int_t> ant2s[NUM_SEAVEYS];
   int comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
-  // Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES];
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS];
   int doneCrossCorrelations[NUM_POL][NUM_COMBOS];
-
   TGraph* grs[NUM_POL][NUM_SEAVEYS];
   TGraph* grsInterp[NUM_POL][NUM_SEAVEYS];
-
   Double_t rArray[NUM_SEAVEYS];
   Double_t phiArrayDeg[NUM_SEAVEYS];
   Double_t zArray[NUM_SEAVEYS];
-
-  /* Speeds up calculating deltaTs */
   Double_t tanThetaLookup[NUM_BINS_THETA];
   Double_t cosThetaLookup[NUM_BINS_THETA];
   Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
   Double_t cosPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
   Double_t cosPhiArrayLookup[NUM_SEAVEYS];
   Double_t sinPhiArrayLookup[NUM_SEAVEYS];
-
-  void fillDeltaTLookup();
   unsigned char deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
 
   ClassDef(CrossCorrelator, 0);
