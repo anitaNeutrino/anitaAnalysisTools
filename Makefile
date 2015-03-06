@@ -52,8 +52,8 @@ GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 USE_GPERFTOOLS=1
 
 ifdef USE_GPERFTOOLS
-LDFLAGS	+= #-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-LIBS += -lprofiler #-ltcmalloc
+LDFLAGS	+= -Wl,-no_pie -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+LIBS += -lprofiler -ltcmalloc
 endif
 
 
@@ -77,7 +77,7 @@ CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManage
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) install $(BINARIES) commit
+all: $(ROOT_LIBRARY) $(BINARIES) commit
 
 .PHONY: install commit clean
 
@@ -129,7 +129,7 @@ clean:
 	@rm -f *.${OBJSUF}
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
-	@rm -f testCorrelator testDeltaTsSpherical testFancyFFTs testFancyTTreeInterpolator 
+	@rm -f $(BINARIES) 
 
 commit: 
 ifdef FORCE_GIT

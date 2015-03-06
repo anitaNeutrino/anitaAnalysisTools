@@ -350,8 +350,8 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
   Int_t numCombos=0;
   for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
     Int_t phiSect1 = ant1%NUM_PHI;
-    // for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
-    for(Int_t deltaPhiSect=-3; deltaPhiSect<=3; deltaPhiSect++){
+    for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
+    //    for(Int_t deltaPhiSect=-3; deltaPhiSect<=3; deltaPhiSect++){
       for(Int_t ring=0; ring<NUM_RING; ring++){
 	Int_t phiSect2 = phiSect1 + deltaPhiSect;
 	phiSect2 = phiSect2 < 0 ? phiSect2 + NUM_PHI : phiSect2;
