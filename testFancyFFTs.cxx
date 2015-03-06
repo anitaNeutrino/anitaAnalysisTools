@@ -216,7 +216,7 @@ int main(int argc, char *argv[]){
 
   c1->Update();
   gSystem->ProcessEvents();
-  std::cerr << "Press ctrl+c to quit." << std::endl;
+  std::cerr << "Select File->Quit to quit." << std::endl;
   theApp->Run();
   
   return 0;

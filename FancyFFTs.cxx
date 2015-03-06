@@ -18,6 +18,7 @@ std::map<int, fftw_plan> FancyFFTs::fRealToComplex;
 std::map<int, fftw_plan> FancyFFTs::fComplexToReal;
 std::map<int, double*> FancyFFTs::fReals;
 std::map<int, std::complex<double>*> FancyFFTs::fComplex;
+FancyFFTsWisdomManager FancyFFTs::myWisdom;
 
 FancyFFTs::FancyFFTs(){
   std::cout << "FancyFFTs::FancyFFTs()" << std::endl;
@@ -45,6 +46,18 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len){
     return false;
   }
 }
+
+TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, bool dBScale){
+  double* powSpec = getPowerSpectrum(len, input, dt, normFlag);
+  int numFreqs = getNumFreqs(len);
+  if(dBScale==true){
+    for(int freqInd=0; freqInd < numFreqs; freqInd++){
+      powSpec[freqInd] = 10*TMath::Log10(powSpec[freqInd]);
+    }
+  }
+  return new TGraph(numFreqs, getFreqArray(len, dt), powSpec);
+}
+
 
 double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag){
 

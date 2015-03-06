@@ -16,6 +16,7 @@
 #include "TChain.h"
 
 #include "RawAnitaHeader.h"
+#include "UsefulAnitaEvent.h"
 
 void testImageGPUStyle();
 void testNewCombinatorics();

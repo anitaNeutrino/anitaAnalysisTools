@@ -2,14 +2,9 @@
 
 
   /* Tedious loading of libraries to make this ROOT macro work... */
-
-  gSystem->Load("libAnitaEvent.so"); // load event reader ROOT into CINT
-
-  // Load a few prerequisite libraries into CINT...
   gSystem->Load("libMathMore.so"); // prereq for Ryan's ROOT FFTW wrapper
-  gSystem->Load("libfftw3.so"); // prereq for Ryan's ROOT FFTW wrapper
   gSystem->Load("libRootFftwWrapper.so"); // Ryan's ROOT FFTW wrapper, required by EventReaderRoot
-
+  gSystem->Load("libAnitaEvent.so"); // load event reader ROOT into CINT
   gSystem->Load("libBensAnitaTools.so"); // load my correlator and other lovely things into CINT
 
 

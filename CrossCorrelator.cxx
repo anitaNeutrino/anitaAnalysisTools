@@ -32,25 +32,25 @@ CrossCorrelator::CrossCorrelator(){
 
   /* Fill geom, timing arrays and combinatorics*/
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
-					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
-					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447};
+  					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
+  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447};
   
   const Double_t phiArrayDegTemp[NUM_SEAVEYS] = {0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
-						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
-						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
-						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
-						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,180.0,
-						 202.5,225.0,247.5,270.0,292.5,315.0,337.5};
+  						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+  						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
+  						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+  						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,180.0,
+  						 202.5,225.0,247.5,270.0,292.5,315.0,337.5};
 
   const Double_t zArrayTemp[NUM_SEAVEYS] = {-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
-					    -1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
-					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
-					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
-					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
-					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
+  					    -1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
+  					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+  					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+  					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
+  					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray[ant] = rArrayTemp[ant];
     zArray[ant] = zArrayTemp[ant];
@@ -350,7 +350,8 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
   Int_t numCombos=0;
   for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
     Int_t phiSect1 = ant1%NUM_PHI;
-    for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
+    // for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
+    for(Int_t deltaPhiSect=-3; deltaPhiSect<=3; deltaPhiSect++){
       for(Int_t ring=0; ring<NUM_RING; ring++){
 	Int_t phiSect2 = phiSect1 + deltaPhiSect;
 	phiSect2 = phiSect2 < 0 ? phiSect2 + NUM_PHI : phiSect2;
@@ -367,8 +368,14 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
       }
     }
   }
-  /* I want an array not a vector so let's check there are the number of combinations I expect */
+  
+  if(numCombos != NUM_COMBOS){
+    std::cerr << "numCombos = " << numCombos
+	      << ", expecting NUM_COMBOS = " << NUM_COMBOS
+	      << ". Check the combinatorics... " << std::endl;
+  }
   assert(numCombos==NUM_COMBOS);
+
 }
 
 void CrossCorrelator::fillDeltaTLookup(){
@@ -598,9 +605,11 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
         Double_t correlations = 0;
         Int_t contributors = 0;
 	for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
+	// for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
 	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
 	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	    Int_t comboInd = comboIndices[ant1][ant2];
+	    if(comboInd < 0) continue;
 	    Int_t offset = getDeltaTExpectedSpherical(ant1, ant2, phiWave, thetaWave, rWave);
 
 	    /* 

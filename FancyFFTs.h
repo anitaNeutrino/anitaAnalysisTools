@@ -17,7 +17,8 @@
 #include <TObject.h>
 #include <TSystem.h>
 #include <TMath.h>
-
+#include <TGraph.h>
+#include "FancyFFTsWisdomManager.h"
 
 /* 
    Will use std::complex<double> for i/o as should be bit-to-bit identical to typdef fftw_complex double[2].
@@ -46,7 +47,11 @@ public:
   static std::complex<double>* doFFT(Int_t len, double* input, bool copyOutputToNewArray);
   static double* doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray);
 
-  static double* getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag);
+  static double* getPowerSpectrum(int len, double* input, double dt, 
+				  PowSpecNorm::conventionFlag normFlag);
+  static TGraph* getPowerSpectrumTGraph(int len, double* input, double dt, 
+					PowSpecNorm::conventionFlag normFlag,
+					bool dBScale);
   static double* getFreqArray(int len, double dt);
   static int getNumFreqs(int len);
   static int printListOfKeys();
@@ -66,6 +71,7 @@ private:
   static std::map<int, double*> fReals;
   // static std::map<int, fftw_complex*> fComplex;
   static std::map<int, std::complex<double>*> fComplex;
+  static FancyFFTsWisdomManager myWisdom;
 
   ClassDef(FancyFFTs, 0);
 };
