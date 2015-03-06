@@ -30,7 +30,8 @@
 #define LOCAL_COMBOS_PER_PHI_GPU 27
 
 /* Offline reconstruction definitions */
-#define NUM_COMBOS 336
+//#define NUM_COMBOS 336
+#define NUM_COMBOS 480
 // #define NUM_COMBOS 672
 
 /* Image definitions*/

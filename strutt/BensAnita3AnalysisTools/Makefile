@@ -30,7 +30,7 @@ endif
 endif
 
 #Toggles the FFT functions on and off
-#USE_FFT_TOOLS=1
+USE_FFT_TOOLS=1
 
 ifdef USE_FFT_TOOLS
 FFTLIBS = -L/usr/local/lib -lRootFftwWrapper -lfftw3
@@ -41,11 +41,11 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
+CXXFLAGS     = -g -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
 
-LIBS          = $(ROOTLIBS) -lMathMore -lMinuit $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS) -lfftw3
+LIBS          = $(ROOTLIBS) -lMathMore -lMinuit $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS)
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 
 #Toggles google performance profile functionality on and off
@@ -72,8 +72,8 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h 
+LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o benToolsDict.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h 
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical
 
 #Now the bits we're actually compiling
@@ -84,7 +84,7 @@ all: $(ROOT_LIBRARY) install $(BINARIES) commit
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
 	@echo $<
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $< $(ROOT_LIBRARY) $(LIBS) -o $@
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) $(LIBS) -o $@
 ifdef FORCE_GIT
 	-@if test $$? == 0; then git add $<; fi
 endif
@@ -94,12 +94,12 @@ $(ROOT_LIBRARY) : $(LIB_OBJS)
 	@echo "Linking $@ ..."
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .
-	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@
+	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $(LIBS) $^ $(OutPutOpt) $@
 ifneq ($(subst $(MACOSX_MINOR),,1234),1234)
 ifeq ($(MACOSX_MINOR),4)
 	ln -sf $@ $(subst .$(DllSuf),.so,$@)
 else
-	$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \
+	$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ 
 	$(OutPutOpt) $(subst .$(DllSuf),.so,$@)
 endif
 endif
@@ -121,14 +121,15 @@ endif
 benToolsDict.C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
-		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
+#		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
+		rootcint $@ -c -p $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
 
 clean:
 	@rm -f *Dict*
 	@rm -f *.${OBJSUF}
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
-	@rm -f testCorrelator testFancyTTreeInterpolator 
+	@rm -f testCorrelator testDeltaTsSpherical testFancyFFTs testFancyTTreeInterpolator 
 
 commit: 
 ifdef FORCE_GIT
