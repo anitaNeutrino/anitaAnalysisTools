@@ -13,7 +13,6 @@
 #define FANCYFFTS_WISDOM_MANAGER_H
 
 #include <iostream>
-#include <complex.h>
 #include <fftw3.h>
 #include <TObject.h>
 #include <TSystem.h>
