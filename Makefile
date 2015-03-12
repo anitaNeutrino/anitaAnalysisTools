@@ -84,7 +84,7 @@ all: $(ROOT_LIBRARY) $(BINARIES) commit
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
 	@echo $<
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) $(LIBS) -o $@
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) -o $@
 ifdef FORCE_GIT
 	-@if test $$? == 0; then git add $<; fi
 endif

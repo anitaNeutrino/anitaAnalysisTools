@@ -17,7 +17,7 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
   // std::cout << "FancyFFTsWisdomManager::FancyFFTsWisdomManager()" << std::endl;  
   const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
   wisdomDir = getenv(anitaUtilEnv);
-  wisdomImportSuccess = 0;
+  FILE* wisdomFile = NULL;
   
   if(wisdomDir==NULL){// no environment variable
     std::cerr << "Warning in FancyFFTsWisdomManager! Please set environment variable " 
@@ -28,12 +28,15 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
     sprintf(wisdomFileName, "%s/FancyFFTs.wisdom", wisdomDir);
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
-    FILE* wisdomFile = fopen(wisdomFileName, "r");
-    // wisdomImportSuccess = fftw_import_wisdom_from_filename(wisdomFileName);
-    wisdomImportSuccess = fftw_import_wisdom_from_file(wisdomFile);
-    fclose(wisdomFile);
+    wisdomFile = fopen(wisdomFileName, "r");
+    if(wisdomFile!=NULL){
+      // wisdomImportSuccess = fftw_import_wisdom_from_filename(wisdomFileName);
+      fftw_import_wisdom_from_file(wisdomFile);
+      fclose(wisdomFile);
+    }
   }
-  if(wisdomImportSuccess==0){//then no file
+
+  if(wisdomFile==NULL){//then no file
     std::cerr << "Warning in FancyFFTsWisdomManager! Failed to import fftw wisdom, "
 	      << "creating plans may take some time." << std::endl;
   }
@@ -50,12 +53,12 @@ FancyFFTsWisdomManager::~FancyFFTsWisdomManager(){
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
     FILE* wisdomFile = fopen(wisdomFileName, "w");
-    // int wisdomExportSuccess = fftw_export_wisdom_to_filename(wisdomFileName);
-    fftw_export_wisdom_to_file(wisdomFile);
-    fclose(wisdomFile);
-
-    // if(wisdomExportSuccess == 0){
-    //   std::cerr << "Warning in FancyFFTsWisdomManager! Failed to export fftw wisdom." << std::endl;
-    // }
+    if(wisdomFile!=NULL){
+      fftw_export_wisdom_to_file(wisdomFile);
+      fclose(wisdomFile);
+    }
+    else{
+      std::cerr << "Warning in FancyFFTsWisdomManager! Failed to export fftw wisdom." << std::endl;
+    }
   }
 }
