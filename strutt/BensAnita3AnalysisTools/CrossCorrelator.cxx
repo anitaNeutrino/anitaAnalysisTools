@@ -443,7 +443,6 @@ short* CrossCorrelator::fillDeltaTLookupGPU(){
       }
       else{
 	Int_t localInd = localCombo % GLOBAL_COMBOS_PER_PHI_GPU;
-	Int_t localInd2 = localCombo/GLOBAL_COMBOS_PER_PHI_GPU;
 	ant1Gpu[phiSectorInd][localCombo] = ant1Gpu[phiSectorInd][localInd] + localCombo/GLOBAL_COMBOS_PER_PHI_GPU;
 	if(ant1Gpu[phiSectorInd][localInd]/16 - ant1Gpu[phiSectorInd][localCombo]/16 != 0){
 	  ant1Gpu[phiSectorInd][localCombo] -= 16;
@@ -546,9 +545,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
   for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
     for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
       Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
-      Double_t phiWave = TMath::DegToRad()*hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
       for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	Double_t thetaWave = TMath::DegToRad()*hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
         Double_t correlations = 0;
         Int_t contributors = 0;
 	for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
