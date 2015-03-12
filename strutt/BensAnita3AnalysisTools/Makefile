@@ -72,9 +72,9 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h 
-BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical
+LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o benToolsDict.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h 
+BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar
 
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) $(BINARIES) commit
