@@ -7,8 +7,6 @@
 #include <TSystem.h>
 #include <TROOT.h>
 
-#include <array> 
-
 int main(int argc, char *argv[]){
 
   TApplication* theApp = new TApplication("App", &argc, argv);
