@@ -37,7 +37,7 @@ int main(){
   // }
 
   try{// deliberate typo
-    Double_t someNum = treeInterp.interp("pat->latitudea", 10000);
+    treeInterp.interp("pat->latitudea", 10000);
   }
   catch(...){
     std::cout << "Caught something!" << std::endl;

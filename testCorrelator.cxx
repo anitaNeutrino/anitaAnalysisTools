@@ -57,7 +57,6 @@ void testNewCombinatorics(){
   RawAnitaHeader* header = NULL;
   headTree->SetBranchAddress("header", &header);
 
-  Long64_t numEntries = 200; //eventTree->GetEntries();
   Int_t entry = 107;
 
   CrossCorrelator* cc = new CrossCorrelator();
@@ -69,7 +68,7 @@ void testNewCombinatorics(){
   cc->correlateEvent(realEvent);
   Int_t nc = -1;
   for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-    for(UInt_t ant2Ind; ant2Ind < cc->ant2s[ant1].size(); ant2Ind++){
+    for(UInt_t ant2Ind=0; ant2Ind < cc->ant2s[ant1].size(); ant2Ind++){
       Int_t ant2 = cc->ant2s[ant1].at(ant2Ind);
       //    for(int& ant2 : cc->ant2s[ant1]){
       std::cout << ant1 << " " << ant2 << " "
@@ -84,6 +83,9 @@ void testNewCombinatorics(){
 
   TFile* outFile = new TFile("/tmp/testNewCombinatorics.root","recreate");
   TH2D* hImage = cc->makeImage(AnitaPol::kVertical);
+  hImage->Write();
+  delete hImage;
+
   outFile->Write();
   outFile->Close();
 
@@ -119,8 +121,7 @@ void testImageGPUStyle(){
   corrTree->Branch("imagePeak", &imagePeak);
 
   //  Long64_t numEntries = eventTree->GetEntries();
-  Long64_t numEntries = 200; //eventTree->GetEntries();
-  numEntries = 108;
+  Long64_t numEntries = 108; //200; //eventTree->GetEntries();
 
   CrossCorrelator* cc = new CrossCorrelator();
 
@@ -136,6 +137,7 @@ void testImageGPUStyle(){
     TH2D* hImage = cc->makeImageGPU(AnitaPol::kVertical);
     hImage->SetName("hImageFrom3PhiSectorPulsing");
     hImage->SetTitle("Image From 3 Phi-Sector Pulsing");
+
 
     delete realEvent;
   }
