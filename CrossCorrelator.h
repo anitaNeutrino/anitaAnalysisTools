@@ -80,6 +80,8 @@ public:
   **********************************************************************************************************/
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
   Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);    
+
+
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); /* Slightly faster? */
 
 
@@ -128,6 +130,7 @@ public:
   Variables
   **********************************************************************************************************/
   UInt_t lastEventNormalized;
+  UInt_t eventNumber;
   Double_t correlationDeltaT;
   short* offsetIndGPU;
   

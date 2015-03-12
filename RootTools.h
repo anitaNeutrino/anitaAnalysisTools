@@ -10,7 +10,10 @@
 #ifndef ROOTTOOLS_H
 #define ROOTTOOLS_H
 
+#include <TObjArray.h>
 #include <TGraph.h>
+#include <TTree.h>
+#include <TAxis.h>
 #include <TMath.h>
 #include <iostream>
 
@@ -35,7 +38,7 @@ namespace RootTools{
   std::vector<Int_t> getIndicesOfNans(TGraph* gr);
   void printTGraphInfo(TGraph* gr);
   
-
+  TGraph* makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue);
 };
 
 #endif

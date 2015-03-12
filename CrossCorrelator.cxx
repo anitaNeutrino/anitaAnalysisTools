@@ -28,6 +28,7 @@ CrossCorrelator::CrossCorrelator(){
     }
   }
   lastEventNormalized = 0;
+  eventNumber = 0;
   correlationDeltaT = 1./2.6;
 
   /* Fill geom, timing arrays and combinatorics*/
@@ -200,10 +201,12 @@ Double_t CrossCorrelator::correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t 
 
 void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
   /* Read TGraphs from events into memory (also deletes old TGraphs) */
-  getNormalizedInterpolatedTGraphs(realEvent);  
-  
+  getNormalizedInterpolatedTGraphs(realEvent);
+
   /* Cross correlate waveforms using the TGraphs we just obtained (also deletes old cross correlations) */
   doAllCrossCorrelations();
+
+  eventNumber = realEvent->eventNumber;
 }
 
 
@@ -526,8 +529,12 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 
   assert(pol == AnitaPol::kVertical || pol == AnitaPol::kHorizontal);
   TString name = pol == AnitaPol::kVertical ? "hImageV" : "hImageH";
+  name += TString::Format("%u", eventNumber);
 
-  TH2D* hImage = new TH2D(name, name,
+  TString title = TString::Format("Event %u ", eventNumber);
+  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");  
+
+  TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI*NUM_PHI, -PHI_RANGE/2, PHI_RANGE*NUM_PHI-PHI_RANGE/2,
 			  NUM_BINS_THETA, -THETA_RANGE/2, THETA_RANGE/2);
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
@@ -584,8 +591,12 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
 
   assert(pol == AnitaPol::kVertical || pol == AnitaPol::kHorizontal);
   TString name = pol == AnitaPol::kVertical ? "hImageV" : "hImageH";
-  TString title = TString::Format("spherical #deltats r = %lf", rWave);
+  name += TString::Format("%u", eventNumber);
+  name += TString::Format("_r%lf", rWave);
 
+  TString title = TString::Format("Event %u ", eventNumber);
+  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");  
+  title += TString::Format(" (spherical #deltats r = %lf m)", rWave);
 
   TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI*NUM_PHI, phiArrayDeg[0]-PHI_RANGE/2, phiArrayDeg[15]+PHI_RANGE/2,

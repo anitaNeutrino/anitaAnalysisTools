@@ -141,3 +141,60 @@ void RootTools::printTGraphInfo(TGraph* gr){
   std::cout << std::endl;
   std::cout << "******************************************************************************" << std::endl;
 }
+
+TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue){
+  /*
+    This function:
+       Uses TTree::Draw to select the data.
+       Sorts it using TMath::Sort.
+       Returns the graph.
+       Note: This does not add it to the std::map of graphs that this class uses for storage.
+             To create a graph and add it to the std::map use FancyTTreeInterpolator::add.
+  */
+  
+  // Draw
+  const Int_t nEntries = tree->Draw(drawText, cutString, "goff"); // "goff" means graphics off
+
+  // Sort
+  std::vector<Int_t> sortedIndices(nEntries);
+  TMath::Sort(nEntries, tree->GetV2(), &sortedIndices.front(), kFALSE);
+  std::vector<Double_t> newX(nEntries);
+  std::vector<Double_t> newY(nEntries);
+  
+  for(int i=0; i<nEntries; i++){
+    newX.at(i) = tree->GetV2()[sortedIndices.at(i)];
+    newY.at(i) = tree->GetV1()[sortedIndices.at(i)];
+  }
+
+  // Unwrap data here so interpolation works smoothly
+  // will unwrap when getting entries from graph
+  if(wrapValue != 0){
+    for(int i=1; i<nEntries; i++){
+      // If y[i] >> y[i-1] => then we went below zero to the wrap value
+      // can only modify y[i], so we should subtract wrapValue enough times 
+      // that the graph becomes smooth
+      while (newY.at(i) - newY.at(i-1) > wrapValue/2){
+	newY.at(i) -= wrapValue;
+      }
+
+      // If y[i] << y[i-1] => then we went add zero to the wrap value
+      // can only modify y[i], so we should add wrapValue enough times 
+      // that the graph becomes smooth
+      while (newY.at(i) - newY.at(i-1) < -wrapValue/2){
+	newY.at(i) += wrapValue;
+      }    
+
+    }   
+  }
+
+  // sorted TGraph
+  TGraph* gr(new TGraph(nEntries,&newX.front(), &newY.front()));
+  TString title = cutString.Length() == 0 ? drawText : drawText + ", " + cutString;
+  gr->SetTitle(title);
+  TObjArray* tokens = drawText.Tokenize(":");
+  gr->GetXaxis()->SetTitle(((TObjString*) tokens->At(1))->String());
+  gr->GetYaxis()->SetTitle(((TObjString*) tokens->At(0))->String());
+  delete tokens;
+  
+  return gr;
+}
