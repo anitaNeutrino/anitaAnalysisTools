@@ -52,8 +52,8 @@
   
   // TH2D* hImage = cc->makeImage(AnitaPol::kVertical); // then generate and image
   TH2D* hImage = cc->makeImage(AnitaPol::kHorizontal); // then generate and image
-  hImage->SetTitle("A pulser event reconstructed by Cross Correlator");
-  hImage->SetName(TString::Format("hImage%u", eventIWant));
+  // hImage->SetTitle("A pulser event reconstructed by Cross Correlator");
+  // hImage->SetName(TString::Format("hImage%u", eventIWant));
     
   hImage->Draw("colz"); // ... and enjoy it, isn't it pretty?
 

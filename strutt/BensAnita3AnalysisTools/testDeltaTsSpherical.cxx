@@ -41,6 +41,8 @@ int main(int argc, char *argv[]){
   gSystem->ProcessEvents();
   std::cerr << "Press ctrl+c to quit." << std::endl;
   theApp->Run();
+
+  delete cc;
   
   return 0;
 }
