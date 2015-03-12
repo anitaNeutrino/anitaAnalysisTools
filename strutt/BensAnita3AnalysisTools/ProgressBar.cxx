@@ -45,7 +45,10 @@ void ProgressBar::operator++(int){
       percentage++;
     }
 
-    printf("\n\033[F\033[J");
+    // printf("\n\033[F\033[J");
+    // std::cout << std::endl;
+    // printf("\033[F\033[J");
+    printf("\r");
 
     // Show the percentage complete.
     printf(ANSI_COLOR_RED);
