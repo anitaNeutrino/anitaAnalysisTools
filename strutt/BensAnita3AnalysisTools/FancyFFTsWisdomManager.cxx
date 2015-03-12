@@ -26,7 +26,12 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
   else{
     char wisdomFileName[FILENAME_MAX];
     sprintf(wisdomFileName, "%s/FancyFFTs.wisdom", wisdomDir);
-    wisdomImportSuccess = fftw_import_wisdom_from_filename(wisdomFileName);
+
+    /* ... sigh... is more backwards compatible but doing even more c style*/
+    FILE* wisdomFile = fopen(wisdomFileName, "r");
+    // wisdomImportSuccess = fftw_import_wisdom_from_filename(wisdomFileName);
+    wisdomImportSuccess = fftw_import_wisdom_from_file(wisdomFile);
+    fclose(wisdomFile);
   }
   if(wisdomImportSuccess==0){//then no file
     std::cerr << "Warning in FancyFFTsWisdomManager! Failed to import fftw wisdom, "
@@ -42,9 +47,15 @@ FancyFFTsWisdomManager::~FancyFFTsWisdomManager(){
   if(wisdomDir != NULL){
     char wisdomFileName[FILENAME_MAX];
     sprintf(wisdomFileName, "%s/FancyFFTs.wisdom", wisdomDir);
-    int wisdomExportSuccess = fftw_export_wisdom_to_filename(wisdomFileName);
-    if(wisdomExportSuccess == 0){
-      std::cerr << "Warning in FancyFFTsWisdomManager! Failed to export fftw wisdom." << std::endl;
-    }
+
+    /* ... sigh... is more backwards compatible but doing even more c style*/
+    FILE* wisdomFile = fopen(wisdomFileName, "w");
+    // int wisdomExportSuccess = fftw_export_wisdom_to_filename(wisdomFileName);
+    fftw_export_wisdom_to_file(wisdomFile);
+    fclose(wisdomFile);
+
+    // if(wisdomExportSuccess == 0){
+    //   std::cerr << "Warning in FancyFFTsWisdomManager! Failed to export fftw wisdom." << std::endl;
+    // }
   }
 }
