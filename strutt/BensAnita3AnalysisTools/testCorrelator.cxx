@@ -23,15 +23,30 @@ void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
 void hackyNormalizationTest();
+void testFileWriting();
 
 int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  testImageFullStyle();
+  //  testImageFullStyle();
   // hackyNormalizationTest();
+  testFileWriting();
+
   return 0;
 
+}
+
+void testFileWriting(){
+
+  CrossCorrelator* c = new CrossCorrelator();
+  c->writeDeltaTsFile();
+
+  c->readDeltaTsFile();
+  for(int combo=0; combo<NUM_COMBOS; combo++){
+    std::cout << (int)c->deltaTs[combo][0][0] << ", ";
+  }
+  std::cout << std::endl;
 }
 
 

@@ -56,10 +56,11 @@ public:
   static int getNumFreqs(int len);
   static int printListOfKeys();
   static double* crossCorrelate(int len, double* v1, double* v2);
+  static int extendToPowerOfTwo(int len);
+
 
 private:
 
-  static int extendToPowerOfTwo(int len);
   static bool makeNewPlanIfNeeded(int len); /* Takes care of checking whether a plan exists or not */
   /*
      std::maps which hold all the fftw goodies.

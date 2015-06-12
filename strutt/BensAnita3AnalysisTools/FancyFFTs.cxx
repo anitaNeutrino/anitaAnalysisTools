@@ -192,7 +192,7 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
 
 
 int FancyFFTs::extendToPowerOfTwo(int len){
-  return TMath::CeilNint(TMath::Log2(len));
+  return pow(2, TMath::CeilNint(TMath::Log2(len)));
 }
 
 
@@ -261,6 +261,7 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
   
   /* Product back to time domain */
   double* crossCorr = doInvFFT(len, tempVals1, true);
+  delete [] tempVals1;
 
   /* 
      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.

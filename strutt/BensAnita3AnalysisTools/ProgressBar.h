@@ -23,6 +23,9 @@ public:
   /* handles everything */
   void operator++(int);
 
+  /* For debugging */
+  void status();
+
 private:
   Long64_t maxEntry;
   Long64_t counter;    
