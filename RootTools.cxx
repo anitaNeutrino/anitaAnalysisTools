@@ -25,13 +25,23 @@ void RootTools::printXVals(TGraph* gr, TString delimiter, TString start, TString
   printArray(gr->GetN(), gr->GetX(), delimiter, start, end);
 }
 
+TGraph* RootTools::makeDerivativeTGraph(TGraph* gr){
+  TGraph* grDer = new TGraph();
+  Int_t nDer = gr->GetN()-1;
+  grDer->Set(nDer);
+  for(int samp=0; samp<nDer; samp++){
+    Double_t dy = gr->GetY()[samp+1]-gr->GetY()[samp];
+    Double_t dx = gr->GetX()[samp+1]-gr->GetX()[samp];
+    grDer->SetPoint(samp, gr->GetX()[samp], dy/dx);
+  }
+  return grDer;
+}
 
 void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
   Double_t maxX=0;
   Double_t minX=0;
   RootTools::getMaxMin(gr, maxY, maxX, minY, minX);
 }
-
 
 
 void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX, Double_t& minY, Double_t& minX){
@@ -197,4 +207,96 @@ TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutSt
   delete tokens;
   
   return gr;
+}
+
+
+TH1D* RootTools::plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xMin, Double_t xMax){
+  TH1D* h = new TH1D(hName, hName, nBins, xMin, xMax);
+  for(int xBin=1; xBin<=h2->GetNbinsX(); xBin++){
+    for(int yBin=1; yBin<=h2->GetNbinsY(); yBin++){
+      Double_t val = h2->GetBinContent(xBin, yBin);
+      h->Fill(val);
+    }
+  }
+  return h;
+}
+
+
+
+void RootTools::zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt){
+  Int_t oldLen = gr->GetN();
+  gr->Set(newLen);
+  if(dt >= 0){
+    Double_t x0 = gr->GetX()[oldLen-1];
+    for(Int_t samp=oldLen; samp<newLen; samp++){
+      gr->GetX()[samp] = x0 + samp*dt;
+    }
+  }
+}
+
+
+TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
+
+  Int_t nIn = grIn->GetN();
+  Int_t newPoints = Int_t((grIn->GetX()[nIn-1] - grIn->GetX()[0])/dt) + 1;
+  std::vector<Double_t> newTimes(newPoints);
+  std::vector<Double_t> newVolts(newPoints);
+
+  Double_t time = grIn->GetX()[0];
+  Double_t lastTime = grIn->GetX()[nIn-1];
+
+  Int_t sampOut = 0; // Will iterate through 
+  Int_t sampIn = 0;
+
+  Double_t y1 = grIn->GetY()[sampIn];
+  Double_t x1 = grIn->GetX()[sampIn];
+  Double_t x2 = grIn->GetX()[sampIn+1];
+  Double_t m = (grIn->GetY()[sampIn+1]-y1)/(grIn->GetX()[sampIn+1]-x1);
+  
+  while(time < lastTime){
+    if(time > x2){
+
+      Int_t countLoop = 0;
+      while(time > x2){
+	if(sampIn < (nIn - 1)){ // if last point is equal don't need to increase?
+	  sampIn++;
+	}
+	x2 = grIn->GetX()[sampIn+1];
+	countLoop++;
+	if(countLoop==1000){
+	  std::cerr << "You can't do logic very well" << std::endl;
+	  std::cerr << time << "\t" << x1 << "\t" << x2 << "\t" << nIn << "\t" << sampIn << std::endl;
+	  exit(0);
+	}
+      }
+      x1 = grIn->GetX()[sampIn];
+      y1 = grIn->GetY()[sampIn];
+
+      m = (grIn->GetY()[sampIn+1]-y1)/(x2-x1);
+
+    }
+
+    // std::cout << time << "\t" << x1 << "\t" << x2;
+
+    // if(time < x1 || time > x2 ){
+    //   std::cout << "!!!!!!!!!!!!!!!!!!!!!!!";
+    // }
+    // std::cout << std::endl;
+
+    Double_t newY = y1 + m * (time - x1);
+
+    newTimes.at(sampOut) = time;
+    newVolts.at(sampOut) = newY;
+    sampOut++;
+    time += dt;
+  }
+
+  TGraph* grOut = new TGraph(newTimes.size(), &newTimes[0], &newVolts[0]);
+  // std::cout << grOut->GetN() - newPoints << " " << grIn->GetN() << " " << sampIn << " " 
+  // 	    << grIn->GetX()[0] << " " << grIn->GetX()[nIn-1] << " " << dt << std::endl;
+	    
+
+
+
+  return grOut;
 }

@@ -38,6 +38,7 @@ void ProgressBar::operator++(int){
   
   counter++;
   double ratio = double(counter)/maxEntry;
+  // std::cout << ratio << "\t" << counter << "\t" << maxEntry << std::endl;
 
   if(ratio*100 > percentage){
 
@@ -45,33 +46,39 @@ void ProgressBar::operator++(int){
       percentage++;
     }
 
-    // printf("\n\033[F\033[J");
+    // fprintf(stderr, "\n\033[F\033[J");
     // std::cout << std::endl;
-    // printf("\033[F\033[J");
-    printf("\r");
+    // fprintf(stderr, "\033[F\033[J");
+    fprintf(stderr, "\r");
 
     // Show the percentage complete.
-    printf(ANSI_COLOR_RED);
-    printf("%3u%%", (UInt_t)(percentage) );
-    printf(ANSI_COLOR_RESET); 
-    printf(" [");
+    fprintf(stderr, ANSI_COLOR_RED);
+    fprintf(stderr, "%3u%%", (UInt_t)(percentage) );
+    fprintf(stderr, ANSI_COLOR_RESET); 
+    fprintf(stderr, " [");
 
     // Show the load bar.
-    printf(ANSI_COLOR_BLUE);
+    fprintf(stderr, ANSI_COLOR_BLUE);
     for (UInt_t i=0; i<percentage; i++){
-      printf("=");
+      fprintf(stderr, "=");
     }
-    printf(ANSI_COLOR_RESET);
+    fprintf(stderr, ANSI_COLOR_RESET);
  
     for (UInt_t i=percentage; i<100; i++){
-      printf(" ");
+      fprintf(stderr, " ");
     }
  
-    printf("]");
+    fprintf(stderr, "]");
   }
 
-  if(percentage>=100) printf("\n");
+  if(percentage>=100) fprintf(stderr, "\n");
+
   
   return;
 
+}
+
+
+void ProgressBar::status(){
+  std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
 }

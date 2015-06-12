@@ -92,15 +92,18 @@ public:
   void fillDeltaTLookup();
   short* fillDeltaTLookupGPU();
 
+  void writeDeltaTsFile(); /* Attempt to speed up initialization */
+  Int_t readDeltaTsFile(); /* Attempt to speed up initialization */
+
 
 
   /**********************************************************************************************************
   Image generation functions.
   **********************************************************************************************************/
 
-  TH2D* makeImage(AnitaPol::AnitaPol_t pol);
+  TH2D* makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
-		  Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger=0xffff);
   TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
   TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
 			   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
@@ -143,6 +146,7 @@ public:
   int doneCrossCorrelations[NUM_POL][NUM_COMBOS];
   TGraph* grs[NUM_POL][NUM_SEAVEYS];
   TGraph* grsInterp[NUM_POL][NUM_SEAVEYS];
+  Double_t interpRMS[NUM_POL][NUM_SEAVEYS];
   Double_t rArray[NUM_SEAVEYS];
   Double_t phiArrayDeg[NUM_SEAVEYS];
   Double_t zArray[NUM_SEAVEYS];

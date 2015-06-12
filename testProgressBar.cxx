@@ -16,11 +16,12 @@ int main(){
     progress++;
   }
 
-  ProgressBar progress2(10);
-  for(int i=0; i<10; i++){
+  Int_t n2 = 11024;
+  ProgressBar progress2(n2);
+  for(int i=0; i<n2; i++){
     progress2++;
-    usleep(200000);
-    std::cerr << "some text output" << std::endl;
+    usleep(20000);
+    // std::cerr << "some text output" << std::endl;
   }
 
 

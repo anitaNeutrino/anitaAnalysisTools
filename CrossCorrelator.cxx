@@ -11,17 +11,17 @@
 ClassImp(CrossCorrelator)
 
 
-
 /************************************************************************************************************
 Constructor and destructor functions
 ************************************************************************************************************/
 CrossCorrelator::CrossCorrelator(){
 
-  /* Initialize with NULL pointers otherwise very bad things will happen with gcc */
+  /* Initialize with NULL otherwise very bad things will happen with gcc */
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = NULL;
       grsInterp[pol][ant] = NULL;
+      interpRMS[pol][ant] = 0;
     }
     for(int combo=0; combo<NUM_COMBOS; combo++){
       crossCorrelations[pol][combo] = NULL;
@@ -58,13 +58,23 @@ CrossCorrelator::CrossCorrelator(){
     phiArrayDeg[ant] = phiArrayDegTemp[ant];
   }
 
-  offsetIndGPU = fillDeltaTLookupGPU();
+  // offsetIndGPU = fillDeltaTLookupGPU();
+  offsetIndGPU = NULL;
   do5PhiSectorCombinatorics();
-  fillDeltaTLookup();
+
+  // Here we try to read the dts from binary file (for speed)
+  Int_t readFileSuccess = readDeltaTsFile();
+  if(readFileSuccess != 0){
+    fillDeltaTLookup();
+    writeDeltaTsFile();
+  }
 }
 
 CrossCorrelator::~CrossCorrelator(){
-  free(offsetIndGPU);
+  if(offsetIndGPU!=NULL){
+    free(offsetIndGPU);
+    offsetIndGPU = NULL;
+  }
 
   deleteAllWaveforms();
   deleteCrossCorrelations();
@@ -117,7 +127,8 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
       for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 	grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
-	RootTools::normalize(grsInterp[pol][ant]);
+	Double_t mean; // don't care about this.
+	RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
       }
     }
 
@@ -517,12 +528,12 @@ Image generation functions.
 
 
 
-TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol){
+TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger){
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;
-  return makeImage(pol, imagePeak, peakPhiDeg, peakThetaDeg);
+  return makeImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3Trigger);
 }
 
-TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg){
+TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger){
 
   imagePeak = -100;
 
@@ -531,7 +542,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
   name += TString::Format("%u", eventNumber);
 
   TString title = TString::Format("Event %u ", eventNumber);
-  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");  
+  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
 
   TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI*NUM_PHI, -PHI_RANGE/2, PHI_RANGE*NUM_PHI-PHI_RANGE/2,
@@ -543,28 +554,34 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
   Int_t peakThetaBin = -1;
   
   for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-    for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-      Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
-      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-        Double_t correlations = 0;
-        Int_t contributors = 0;
-	for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
-	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
-	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
-	    Int_t comboInd = comboIndices[ant1][ant2];
-	    Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
-	    correlations += crossCorrelations[pol][comboInd][offset];
-	    contributors++;
+    UInt_t doPhiSector = ((l3Trigger >> phiSector) & 1);
+    if(doPhiSector){
+      for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
+	Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
+	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	  Double_t correlations = 0;
+	  Int_t contributors = 0;
+	  for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
+	  // for(Int_t ant1=1; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
+	    for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
+	      Int_t ant2 = ant2s[ant1].at(ant2Ind);
+	      Int_t comboInd = comboIndices[ant1][ant2];
+	      if(comboInd > 0){
+		Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
+		correlations += crossCorrelations[pol][comboInd][offset];
+		contributors++;
+	      }
+	    }
 	  }
-	}
-	if(contributors>0){
-	  correlations /= contributors;
-	}
-	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
-	if(correlations > imagePeak){
-	  imagePeak = correlations;
-	  peakPhiBin = phiBin;
-	  peakThetaBin = thetaBin;
+	  if(contributors>0){
+	    correlations /= contributors;
+	  }
+	  hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
+	  if(correlations > imagePeak){
+	    imagePeak = correlations;
+	    peakPhiBin = phiBin;
+	    peakThetaBin = thetaBin;
+	  }
 	}
       }
     }
@@ -834,4 +851,40 @@ TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_
   gr->SetTitle(TString::Format("Cross Correlation ant1 = %d, ant2 = %d", ant1, ant2));
 
   return gr;
+}
+
+
+void CrossCorrelator::writeDeltaTsFile(){
+  /* Write sets of deltaTs into a file to try and speed up class initialization by reading it */
+
+  const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
+  std::cout << anitaUtilEnv << std::endl;
+  const char* dtsDir = getenv(anitaUtilEnv);
+  char dtsFileName[FILENAME_MAX];
+  sprintf(dtsFileName, "%s/crossCorrelator.dts", dtsDir);
+
+  FILE* dtsFile = fopen(dtsFileName, "w");
+  fwrite(deltaTs,sizeof(unsigned char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA, 1, dtsFile);
+  fclose(dtsFile);
+}
+
+Int_t CrossCorrelator::readDeltaTsFile(){
+  /* Returns 0 on success */
+
+  const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
+  const char* dtsDir = getenv(anitaUtilEnv);
+  char dtsFileName[FILENAME_MAX];
+  sprintf(dtsFileName, "%s/crossCorrelator.dts", dtsDir);
+
+  Int_t success = 0;
+  FILE* dtsFile = fopen(dtsFileName, "r");
+  if(dtsFile != NULL){
+    UInt_t numBytes = sizeof(unsigned char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA;
+    fread(deltaTs,1,numBytes,dtsFile);
+    fclose(dtsFile);
+  }
+  else{
+    success = 1;
+  }
+  return success;
 }
