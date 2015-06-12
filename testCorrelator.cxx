@@ -79,7 +79,7 @@ void testNewCombinatorics(){
   headTree->GetEntry(entry);
   eventTree->GetEntry(entry);
 
-  UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
+  UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
   cc->correlateEvent(realEvent);
   Int_t nc = -1;
   for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
@@ -147,7 +147,7 @@ void testImageGPUStyle(){
     headTree->GetEntry(entry);
     eventTree->GetEntry(entry);
 
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
+    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
     cc->correlateEventGPU(realEvent);
     TH2D* hImage = cc->makeImageGPU(AnitaPol::kVertical);
     hImage->SetName("hImageFrom3PhiSectorPulsing");
@@ -205,7 +205,7 @@ void testImageFullStyle(){
     headTree->GetEntry(entry);
     eventTree->GetEntry(entry);
 
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
+    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
     cc->correlateEvent(realEvent);
 
     writeCorrelationGraphs(cc);
@@ -256,7 +256,7 @@ void hackyNormalizationTest(){
     headTree->GetEntry(entry);
     eventTree->GetEntry(entry);
 
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kVTBenS, header));
+    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault, header));
     TGraph* gr1 = realEvent->getGraph(15, AnitaPol::kVertical);
     TGraph* gr2 = realEvent->getGraph(15, AnitaPol::kVertical);
 

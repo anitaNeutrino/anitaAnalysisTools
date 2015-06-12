@@ -876,7 +876,7 @@ Int_t CrossCorrelator::readDeltaTsFile(){
   char dtsFileName[FILENAME_MAX];
   sprintf(dtsFileName, "%s/crossCorrelator.dts", dtsDir);
 
-  Int_t success = 0;
+  Int_t successState = 0;
   FILE* dtsFile = fopen(dtsFileName, "r");
   if(dtsFile != NULL){
     UInt_t numBytes = sizeof(unsigned char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA;
@@ -884,7 +884,7 @@ Int_t CrossCorrelator::readDeltaTsFile(){
     fclose(dtsFile);
   }
   else{
-    success = 1;
+    successState = 1;
   }
-  return success;
+  return successState;
 }

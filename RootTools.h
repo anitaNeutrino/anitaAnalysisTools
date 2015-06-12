@@ -1,4 +1,5 @@
-/* -*- C++ -*-.***************************************************************************************************
+/* -*- C++ -*-.*/
+/**************************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
@@ -18,24 +19,55 @@
 #include <iostream>
 #include <TH2.h>
 #include <TH1D.h>
+#include <TStyle.h>
+#include <TCanvas.h>
+#include <TLegend.h>
+#include <cfloat>
 
+/*! \namespace RootTools
+\brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
+
+This lovingly curated namespace can be imported into CINT with gSystem->Load('libBensAnitaTools.so"). 
+
+I find myself often writing little routines to modify things like TGraphs over and over again.
+Functions that do little jobs, too simple to deserve a dedicated class of their own, will go in this namespace.
+
+Put another way, if the goal of the other classes in this library is to a specific heavy lifting job, then the goal of RootTools is to collect all the little useful functions that get used many times.
+
+The point is to write every function only once. 
+
+Expect this namespace to be referenced a lot in my code.
+
+*/
 namespace RootTools{
 
-
-  /* Print info to the screen */
-  void printArray(int n, double* array, TString delimiter, TString start ,TString end);
-  void printYVals(TGraph* gr, TString delimiter, TString start, TString end);
-  void printXVals(TGraph* gr, TString delimiter, TString start, TString end);
+  void writeTGraph(TGraph* gr, TString name);
+  void printArray(int n, double* array, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
+  void printYVals(TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
+  void printXVals(TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
   void printTGraphInfo(TGraph* gr);
 
 
   /* Get info about input */
   std::vector<Int_t> getIndicesOfNans(TGraph* gr);
-  double getSumOfYVals(TGraph* gr);
+  Double_t getSumOfYVals(TGraph* gr);
   void getMaxMin(TGraph* gr, Double_t& max, Double_t& min);
   void getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms);
   void getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX, Double_t& minY, Double_t& minX);
+  void getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX, 
+			     Double_t& minY, Double_t& minX, 
+			     Double_t lowerLimit, Double_t upperLimit);
+  void getLocalMaxToMin(TGraph* gr, 
+			Double_t& maxY, Double_t& maxX, 
+			Double_t& minY, Double_t& minX);
+  void getLocalMaxToMinWithinLimits(TGraph* gr, 
+				    Double_t& maxY, Double_t& maxX, 
+				    Double_t& minY, Double_t& minX,
+				    Double_t lowerLimit, Double_t upperLimit);
 
+
+
+    
 
   /* Modify input */
   void subtractOffset(TGraph* gr, Double_t offset);
@@ -43,14 +75,26 @@ namespace RootTools{
   void normalize(TGraph* gr);
   void zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt=0);
 
-
   /* Make new output based on input */
-  TGraph* makeNormalized(TGraph* gr);
-  TGraph* makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms);  
+  TGraph* makeNormalized(TGraph* gr); ///< Creates new TGraph (leaving original unchanged) with mean = 0 & RMS = 1
+  TGraph* makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms);
   TGraph* makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue);
   TGraph* makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt);
   TGraph* makeDerivativeTGraph(TGraph* gr);
+  TGraph* makeUnwrappedCorrelationGraph(TGraph* gr);
+
   TH1D* plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xMin, Double_t xMax);
+  TCanvas* drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanvas* can=NULL, 
+				     Double_t* colWeights = NULL);
+  TCanvas* drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs, 
+				      TString drawOpt = "l", TCanvas* can=NULL,
+				      Double_t* colWeights = NULL);
+  TLegend* makeLegend(TGraph* grs[], Int_t numGrs, TString titles[], TString opt = "l", 
+		      Double_t minX=0.8, Double_t minY=0.8,Double_t maxX=1, Double_t maxY=1);
+  TLegend* makeLegend(TH1D* hs[], Int_t numHists, TString titles[], TString opt = "l", 
+		      Double_t minX=0.8, Double_t minY=0.8,Double_t maxX=1, Double_t maxY=1);
+
+
 
 };
 

@@ -25,7 +25,7 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
   }
   else{
     char wisdomFileName[FILENAME_MAX];
-    sprintf(wisdomFileName, "%s/FancyFFTs.wisdom", wisdomDir);
+    sprintf(wisdomFileName, "%s/fftw.wis", wisdomDir);
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
     wisdomFile = fopen(wisdomFileName, "r");
@@ -49,7 +49,7 @@ FancyFFTsWisdomManager::~FancyFFTsWisdomManager(){
   // std::cout << "FancyFFTsWisdomManager::~FancyFFTsWisdomManager()" << std::endl;  
   if(wisdomDir != NULL){
     char wisdomFileName[FILENAME_MAX];
-    sprintf(wisdomFileName, "%s/FancyFFTs.wisdom", wisdomDir);
+    sprintf(wisdomFileName, "%s/fftw.wis", wisdomDir);
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
     FILE* wisdomFile = fopen(wisdomFileName, "w");
