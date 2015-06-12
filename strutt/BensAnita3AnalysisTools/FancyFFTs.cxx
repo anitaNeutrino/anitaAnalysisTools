@@ -47,6 +47,7 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len){
   }
 }
 
+
 TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, bool dBScale){
   double* powSpec = getPowerSpectrum(len, input, dt, normFlag);
   int numFreqs = getNumFreqs(len);
@@ -57,7 +58,6 @@ TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, Pow
   }
   return new TGraph(numFreqs, getFreqArray(len, dt), powSpec);
 }
-
 
 double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag){
 

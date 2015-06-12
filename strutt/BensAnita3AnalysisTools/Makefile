@@ -7,7 +7,7 @@ include Makefile.arch
 
 #Site Specific  Flags
 SYSINCLUDES	= -I/usr/local/include
-SYSLIBS         = -L/usr/local/include
+SYSLIBS         = 
 DLLSUF = ${DllSuf}
 OBJSUF = ${ObjSuf}
 SRCSUF = ${SrcSuf}
@@ -41,15 +41,14 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = -g -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) -std=c++11 
+CXXFLAGS     = -g -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
-
-LIBS          = $(ROOTLIBS) -lMathMore -lMinuit $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS)
+LIBS          = $(ROOTLIBS) -lMathMore -lMinuit -lGraf $(SYSLIBS) $(LD_ANITA_UTIL) $(FFTLIBS)
 GLIBS         = $(ROOTGLIBS) $(SYSLIBS)
 
 #Toggles google performance profile functionality on and off
-USE_GPERFTOOLS=1
+#USE_GPERFTOOLS=1
 
 ifdef USE_GPERFTOOLS
 LDFLAGS	+= -Wl,-no_pie -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
@@ -66,14 +65,14 @@ endif
 # For those who like really bloody pedantic compiler warnings... like me
 HARDCORE_MODE=1
 ifdef HARDCORE_MODE
-CXXFLAGS += -Wall -Wextra -Wshadow -Werror -Wpedantic
+CXXFLAGS += -Wall -Wextra -Wshadow -Werror #-Wpedantic
 endif
 
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o benToolsDict.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h 
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar
 
 #Now the bits we're actually compiling
@@ -104,7 +103,7 @@ else
 endif
 endif
 else
-	$(LD) $(SOFLAGS) $(LDFLAGS) $(LIBS) $(LIB_OBJS) -o $@
+	$(LD) $(SOFLAGS) $(LDFLAGS) $(LIB_OBJS) -o $@
 endif
 
 %.$(OBJSUF) : %.$(SRCSUF) %.h

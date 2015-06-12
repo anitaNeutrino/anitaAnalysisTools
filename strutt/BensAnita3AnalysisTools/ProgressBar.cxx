@@ -24,17 +24,29 @@ ProgressBar::ProgressBar(){
   maxEntry = 100;
   counter = 0;
   percentage = 0;
+  watch.Start(kTRUE);
 }
 
 ProgressBar::ProgressBar(Long64_t maxEntryInit){
   maxEntry = maxEntryInit;
   counter = 0;
   percentage = 0;
+  watch.Start(kTRUE);
 }
 
 void ProgressBar::operator++(int){
 
   if(percentage>=100) return;
+  
+  /* Stops the watch */
+  Int_t seconds = Int_t(watch.RealTime());
+  Int_t hours = seconds / 3600;
+  hours = hours < 0 ? 0 : hours;
+  seconds = seconds - hours * 3600;
+  Int_t mins = seconds / 60;
+  mins = mins < 0 ? 0 : mins;
+  
+  seconds = seconds - mins * 60;
   
   counter++;
   double ratio = double(counter)/maxEntry;
@@ -59,12 +71,14 @@ void ProgressBar::operator++(int){
 
     // Show the load bar.
     fprintf(stderr, ANSI_COLOR_BLUE);
-    for (UInt_t i=0; i<percentage; i++){
+    fprintf(stderr, "%02d:%02d:%02d", hours, mins, seconds);
+    for (UInt_t i=8; i<percentage; i++){
       fprintf(stderr, "=");
     }
     fprintf(stderr, ANSI_COLOR_RESET);
  
-    for (UInt_t i=percentage; i<100; i++){
+    Int_t startSpace = percentage > 8 ? percentage : 8;
+    for (Int_t i=startSpace; i<100; i++){
       fprintf(stderr, " ");
     }
  
@@ -72,8 +86,7 @@ void ProgressBar::operator++(int){
   }
 
   if(percentage>=100) fprintf(stderr, "\n");
-
-  
+  watch.Start(kFALSE);
   return;
 
 }

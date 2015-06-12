@@ -12,6 +12,7 @@
 #define PROGRESSBAR_H
 
 #include <TObject.h>
+#include <TStopwatch.h>
 #include <iostream>
 
 class ProgressBar : public TObject{
@@ -30,6 +31,7 @@ private:
   Long64_t maxEntry;
   Long64_t counter;    
   UInt_t percentage;
+  TStopwatch watch;
 
   ClassDef(ProgressBar, 0);
 
