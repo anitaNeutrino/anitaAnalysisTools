@@ -567,39 +567,40 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
   Int_t first = 0;
   for(Int_t grInd=0; grInd < numGrs; grInd++){
     if(grs[grInd]!=NULL){
-      TString opt = numDrawn == 0 ? "a" + drawOpt : drawOpt + "same";
-      if(numDrawn==0){
-	first = grInd;
-      }
+      if(grs[grInd]->GetN() > 0){
+	TString opt = numDrawn == 0 ? "a" + drawOpt : drawOpt + "same";
+	if(numDrawn==0){
+	  first = grInd;
+	}
 
-      if(colWeights!=NULL){
-	grs[grInd]->SetLineColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
-	grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
-	grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-      }
-      else{
-	grs[grInd]->SetLineColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-	grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-	grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-      }
+	if(colWeights!=NULL){
+	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	}
+	else{
+	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	}
 
-      grs[grInd]->Draw(opt);
+	grs[grInd]->Draw(opt);
 
-      Double_t thisMax = TMath::MaxElement(grs[grInd]->GetN(), grs[grInd]->GetY());
-      if(thisMax > max){
-	Double_t fact = thisMax > 0 ? 1.1 : 0.9;
-	max = thisMax*fact;
-	grs[first]->SetMaximum(max);
+	Double_t thisMax = TMath::MaxElement(grs[grInd]->GetN(), grs[grInd]->GetY());
+	if(thisMax > max){
+	  Double_t fact = thisMax > 0 ? 1.1 : 0.9;
+	  max = thisMax*fact;
+	  grs[first]->SetMaximum(max);
+	}
+
+	Double_t thisMin = TMath::MinElement(grs[grInd]->GetN(), grs[grInd]->GetY());
+	if(thisMin < min){
+	  Double_t fact = thisMin < 0 ? 1.1 : 0.9;
+	  min = thisMin*fact;
+	  grs[first]->SetMinimum(min);
+	}
+	numDrawn++;
       }
-
-      Double_t thisMin = TMath::MinElement(grs[grInd]->GetN(), grs[grInd]->GetY());
-      if(thisMin < min){
-	Double_t fact = thisMin < 0 ? 1.1 : 0.9;
-	min = thisMin*fact;
-	grs[first]->SetMinimum(min);
-      }
-      numDrawn++;
-
     }
   }
 
@@ -751,4 +752,64 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
     minY = gr->GetY()[extremaSamps.at(maxSampInd)];
     minX = gr->GetX()[extremaSamps.at(maxSampInd)];
   }
+}
+
+
+/*!
+  \brief My function to save a TCanvas for talks, and save an editable version.
+  \param c is a pointer to the TCanvas
+  \param fileName is the file name. Note that suffixes are added in the function!
+*/
+
+void RootTools::saveCanvas(TCanvas* c, TString fileName){
+
+  std::cout << "Saving this canvas as a .png and .C file..." << std::endl;
+  TString fName = fileName + ".png";
+  c->SaveAs(fName);
+  fName = fileName + ".C";
+  c->SaveAs(fName);
+  std::cout << "...Complete!" << std::endl;
+  c->Update();
+
+}
+
+
+/*!
+  \brief Assumes a nice distribution with a single peak, finds the full width half max.
+  \param h is a histogram
+  \returns the full width half max
+*/
+
+Double_t RootTools::getFullWidthHalfMax(TH1D* h){
+  
+  Int_t n = h->GetNbinsX();
+  Double_t max = DBL_MIN;
+  Int_t maxBin = 0;
+  for(Int_t bin=1; bin<n; bin++){
+    Double_t val = h->GetBinContent(bin);
+    if(val > max){
+      max = val;
+      maxBin = bin;
+    }
+  }
+
+  Double_t halfMaxPos = 0;
+  for(Int_t bin=maxBin; bin<=n; bin++){
+    Double_t val = h->GetBinContent(bin);
+    if(val < max/2){
+      halfMaxPos = h->GetBinLowEdge(bin);
+      break;
+    }
+  }
+
+  Double_t halfMaxNeg = 0;
+  for(Int_t bin=maxBin; bin>=1; bin--){
+    Double_t val = h->GetBinContent(bin);
+    if(val < max/2){
+      halfMaxNeg = h->GetBinLowEdge(bin);
+      break;
+    }
+  }
+
+  return halfMaxPos - halfMaxNeg;
 }

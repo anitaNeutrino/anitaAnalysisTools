@@ -14,9 +14,11 @@ ClassImp(CrossCorrelator)
 /************************************************************************************************************
 Constructor and destructor functions
 ************************************************************************************************************/
+
+
 CrossCorrelator::CrossCorrelator(){
 
-  /* Initialize with NULL otherwise very bad things will happen with gcc */
+  // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = NULL;
@@ -31,7 +33,7 @@ CrossCorrelator::CrossCorrelator(){
   eventNumber = 0;
   correlationDeltaT = 1./2.6;
 
-  /* Fill geom, timing arrays and combinatorics*/
+  // Fill geom, timing arrays and combinatorics
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
   					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
   					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
@@ -53,9 +55,9 @@ CrossCorrelator::CrossCorrelator(){
   					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
   					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
-    rArray[ant] = rArrayTemp[ant];
-    zArray[ant] = zArrayTemp[ant];
-    phiArrayDeg[ant] = phiArrayDegTemp[ant];
+    rArray.push_back(rArrayTemp[ant]);
+    zArray.push_back(zArrayTemp[ant]);
+    phiArrayDeg.push_back(phiArrayDegTemp[ant]);
   }
 
   // offsetIndGPU = fillDeltaTLookupGPU();
@@ -102,15 +104,15 @@ Waveform manipulation functions
 
 
 void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent){
-  /* Potentially needed in a few places, so it gets its own function */
+  // Potentially needed in a few places, so it gets its own function 
 
-  /* Pretty much just for profiling */
+  // Pretty much just for profiling 
   if(realEvent->eventNumber!=lastEventNormalized){
 
-    /* Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)*/
+    // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
     deleteAllWaveforms();
 
-    /* Find the start time of all waveforms */
+    // Find the start time of all waveforms 
     Double_t earliestStart[NUM_POL] = {100};
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
@@ -123,7 +125,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
       }
     }
 
-    /* Interpolate with earliest start time */
+    // Interpolate with earliest start time 
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
       for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 	grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
@@ -197,12 +199,25 @@ TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTi
 All correlation functions
 ************************************************************************************************************/
 
+std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
+  
+  std::vector<std::vector<Double_t> > peakTimes(NUM_POL, std::vector<Double_t>(NUM_COMBOS, 0));
+
+  for(Int_t pol=0; pol<NUM_POL; pol++){
+    for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+      peakTimes.at(pol).at(combo) = TMath::MaxElement(NUM_SAMPLES, crossCorrelations[pol][combo]);
+    }
+  }
+  return peakTimes;
+}
+
+
 
 Double_t CrossCorrelator::correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset){
-  /* Time domain cross correlation, no longer used */
+  // Time domain cross correlation, no longer used 
   Double_t correlation = 0;
   for(Int_t i=0; i<NUM_SAMPLES; i++){
-    /* Modulo NUM_SAMPLES wraps for circular correlation */
+    // Modulo NUM_SAMPLES wraps for circular correlation 
     Int_t j = (i + offset)%NUM_SAMPLES; 
     correlation += gr1->GetY()[i]*gr2->GetY()[j];
   }
@@ -211,10 +226,10 @@ Double_t CrossCorrelator::correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t 
 }
 
 void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
-  /* Read TGraphs from events into memory (also deletes old TGraphs) */
+  // Read TGraphs from events into memory (also deletes old TGraphs) 
   getNormalizedInterpolatedTGraphs(realEvent);
 
-  /* Cross correlate waveforms using the TGraphs we just obtained (also deletes old cross correlations) */
+  // Cross correlate waveforms using the TGraphs we just obtained (also deletes old cross correlations) 
   doAllCrossCorrelations();
 
   eventNumber = realEvent->eventNumber;
@@ -246,7 +261,7 @@ void CrossCorrelator::correlateEventGPU(UsefulAnitaEvent* realEvent){
 
 void CrossCorrelator::doAllCrossCorrelations(){
 
-  /* Delete old cross correlations first */
+  // Delete old cross correlations first 
   deleteCrossCorrelations();
 
 
@@ -267,9 +282,9 @@ void CrossCorrelator::doAllCrossCorrelations(){
 
 
 Double_t* CrossCorrelator::crossCorrelateFourier(TGraph* gr1, TGraph* gr2){
-  /* Generate cross correlations, now using FancyFFTs */
+  // Generate cross correlations, now using FancyFFTs 
   //  return  FFTtools::getCorrelation(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
-  return  FancyFFTs::crossCorrelate(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+  return FancyFFTs::crossCorrelate(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
 }
 
 
@@ -321,7 +336,7 @@ Int_t CrossCorrelator::getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2, Double
   Double_t part1 = TMath::Sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0) + (z1-z0)*(z1-z0));
   Double_t part2 = TMath::Sqrt((x2-x0)*(x2-x0) + (y2-y0)*(y2-y0) + (z2-z0)*(z2-z0));
 
-  Double_t tdiff = 1e9*(part2 - part1)/SPEED_OF_LIGHT; /* 1e9 for seconds to nanoseconds */
+  Double_t tdiff = 1e9*(part2 - part1)/SPEED_OF_LIGHT; // 1e9 for seconds to nanoseconds 
 
   tdiff /= correlationDeltaT;
   return TMath::Nint(tdiff);
@@ -354,7 +369,7 @@ Precalculate DeltaTs during initialization where appropriate
 ************************************************************************************************************/
 
 void CrossCorrelator::do5PhiSectorCombinatorics(){
-  /* For checking later... */
+  // For checking later... 
   for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
     for(Int_t ant2=0; ant2 < NUM_SEAVEYS; ant2++){
       comboIndices[ant1][ant2] = -1;
@@ -437,7 +452,7 @@ void CrossCorrelator::fillDeltaTLookup(){
 }
 
 short* CrossCorrelator::fillDeltaTLookupGPU(){
-  /* This function is mostly copied from the ANITA-3 Prioritizerd */
+  // This function is mostly copied from the ANITA-3 Prioritizerd 
 
   offsetIndGPU = (short*) malloc(sizeof(short)*NUM_PHI*LOCAL_COMBOS_PER_PHI_GPU*NUM_BINS_PHI*NUM_BINS_THETA);
 
@@ -637,10 +652,9 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
 	    if(comboInd < 0) continue;
 	    Int_t offset = getDeltaTExpectedSpherical(ant1, ant2, phiWave, thetaWave, rWave);
 
-	    /* 
-	       Not obvious, but since we correlate ant1 with ant2 but not ant2 with ant1 
-	       we need to correct the sign of deltaT in the case that ant1 < ant2.
-	    */
+	    // Not obvious, but since we correlate ant1 with ant2 but not ant2 with ant1 
+	    // we need to correct the sign of deltaT in the case that ant1 < ant2.
+
 	    if(ant1 < ant2){
 	      offset *= -1;
 	    }
@@ -799,9 +813,9 @@ Functions for debugging or testing
 ************************************************************************************************************/
 
 void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource){
-  /* Generates a set of delta function like waveforms, correlates them */
+  // Generates a set of delta function like waveforms, correlates them 
 
-  /* Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)*/
+  // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
   deleteAllWaveforms();
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
@@ -828,7 +842,7 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
 
 
 TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
-  /* Primarily for debugging, put cross correlations in a TGraph */
+  // Primarily for debugging, put cross correlations in a TGraph 
 
   Int_t comboInd = comboIndices[ant1][ant2];
   if(comboInd < 0 ){
@@ -855,7 +869,7 @@ TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_
 
 
 void CrossCorrelator::writeDeltaTsFile(){
-  /* Write sets of deltaTs into a file to try and speed up class initialization by reading it */
+  // Write sets of deltaTs into a file to try and speed up class initialization by reading it 
 
   const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
   std::cout << anitaUtilEnv << std::endl;
@@ -869,7 +883,7 @@ void CrossCorrelator::writeDeltaTsFile(){
 }
 
 Int_t CrossCorrelator::readDeltaTsFile(){
-  /* Returns 0 on success */
+  // Returns 0 on success 
 
   const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
   const char* dtsDir = getenv(anitaUtilEnv);
