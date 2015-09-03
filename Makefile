@@ -76,9 +76,9 @@ CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManage
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) $(BINARIES) commit
+all: $(ROOT_LIBRARY) $(BINARIES) commit docs
 
-.PHONY: install commit clean
+.PHONY: install commit clean docs
 
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
@@ -87,6 +87,9 @@ $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY)
 ifdef FORCE_GIT
 	-@if test $$? == 0; then git add $<; fi
 endif
+
+docs: Doxyfile
+	doxygen Doxyfile
 
 #The library
 $(ROOT_LIBRARY) : $(LIB_OBJS) 
