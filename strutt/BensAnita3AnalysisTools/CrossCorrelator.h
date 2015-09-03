@@ -13,6 +13,8 @@
 #include "UsefulAnitaEvent.h"
 #include "AnitaGeomTool.h"
 #include "FancyFFTs.h"
+
+// My things
 #include "RootTools.h"
 
 /* ROOT things */
@@ -25,9 +27,6 @@
 #include <iostream>
 #include <assert.h>
 
-/* GPU definitions */
-#define GLOBAL_COMBOS_PER_PHI_GPU 12
-#define LOCAL_COMBOS_PER_PHI_GPU 27
 
 /* Offline reconstruction definitions */
 #define NUM_COMBOS 336
@@ -39,7 +38,8 @@
 #define NUM_BINS_PHI 64
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
-#define NUM_SAMPLES 256
+#define NUM_SAMPLES 1024
+//#define NUM_SAMPLES 256
 
 /* Anita Geometry definitions, shouldn't really be here */
 #define NUM_POL 2
@@ -55,6 +55,8 @@ public:
   **********************************************************************************************************/
   CrossCorrelator();
   ~CrossCorrelator();
+  void initializeVariables();
+
 
 
   /**********************************************************************************************************
@@ -69,7 +71,6 @@ public:
 
   Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
   void correlateEvent(UsefulAnitaEvent* realEvent);
-  void correlateEventGPU(UsefulAnitaEvent* realEvent);
   void doAllCrossCorrelations();
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
@@ -80,8 +81,7 @@ public:
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
   Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);    
 
-
-  Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); /* Slightly faster? */
+  Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); // Slightly faster?
 
 
   /**********************************************************************************************************
@@ -89,7 +89,6 @@ public:
   **********************************************************************************************************/
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
-  short* fillDeltaTLookupGPU();
 
   void writeDeltaTsFile(); /* Attempt to speed up initialization */
   Int_t readDeltaTsFile(); /* Attempt to speed up initialization */
@@ -106,8 +105,6 @@ public:
   TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
   TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
 			   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-  TH2D* makeImageGPU(AnitaPol::AnitaPol_t pol);
-  TH2D* makeImageGPU(AnitaPol::AnitaPol_t pol, UInt_t phiSectorMask);
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
 
 
@@ -131,31 +128,31 @@ public:
   /**********************************************************************************************************
   Variables
   **********************************************************************************************************/
-  UInt_t lastEventNormalized;
-  UInt_t eventNumber;
-  Double_t correlationDeltaT;
-  short* offsetIndGPU;
-  
-  Int_t ant1Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
-  Int_t ant2Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
-  Double_t correlationsGPU[NUM_POL][NUM_PHI][GLOBAL_COMBOS_PER_PHI_GPU][NUM_SAMPLES];
-  std::vector<Int_t> ant2s[NUM_SEAVEYS];
-  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
-  Double_t* crossCorrelations[NUM_POL][NUM_COMBOS];
-  Int_t doneCrossCorrelations[NUM_POL][NUM_COMBOS];
-  TGraph* grs[NUM_POL][NUM_SEAVEYS];
-  TGraph* grsInterp[NUM_POL][NUM_SEAVEYS];
-  Double_t interpRMS[NUM_POL][NUM_SEAVEYS];
-  std::vector<Double_t> rArray;
-  std::vector<Double_t> phiArrayDeg;
-  std::vector<Double_t> zArray;
-  Double_t tanThetaLookup[NUM_BINS_THETA];
-  Double_t cosThetaLookup[NUM_BINS_THETA];
-  Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
-  Double_t cosPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
-  Double_t cosPhiArrayLookup[NUM_SEAVEYS];
-  Double_t sinPhiArrayLookup[NUM_SEAVEYS];
-  UChar_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
+  UInt_t eventNumber; ///< For tracking event number
+  UInt_t lastEventNormalized; ///< Prevents cross-correlation of the same event twice
+  Double_t nominalSamplingDeltaT; ///< ANITA-3 => 1./2.6 ns
+  Double_t upsampleFactor; ///< Default = 1, 
+  Double_t correlationDeltaT; ///< nominalSamplingDeltaT/upsampleFactor, deltaT of interpolation and cross correlation
+
+  std::vector<Int_t> ant2s[NUM_SEAVEYS]; ///< Vector holding ant2 indices for each ant1 (for combinatorics)
+  std::vector<Int_t> comboToAnt1s; ///< Vector mapping combination index to ant1
+  std::vector<Int_t> comboToAnt2s; ///< Vector mapping combination index to ant1
+  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
+  Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
+  Int_t doneCrossCorrelations[NUM_POL][NUM_COMBOS]; ///< Keeps track of which correlations have been done
+  TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
+  TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs 
+  Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
+  std::vector<Double_t> rArray; ///< Vector of antenna radial positions
+  std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
+  std::vector<Double_t> zArray; ///< Vector of antenna heights
+  Double_t tanThetaLookup[NUM_BINS_THETA]; ///< Lookup for getDeltaTExpected
+  Double_t cosThetaLookup[NUM_BINS_THETA];///< Lookup for getDeltaTExpected
+  Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI]; ///< Lookup for getDeltaTExpected
+  Double_t cosPhiWaveLookup[NUM_BINS_PHI*NUM_PHI]; ///< Lookup for getDeltaTExpected
+  Double_t cosPhiArrayLookup[NUM_SEAVEYS]; ///< Lookup for getDeltaTExpected
+  Double_t sinPhiArrayLookup[NUM_SEAVEYS]; ///< Lookup for getDeltaTExpected
+  UChar_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
 
   ClassDef(CrossCorrelator, 0);
 };

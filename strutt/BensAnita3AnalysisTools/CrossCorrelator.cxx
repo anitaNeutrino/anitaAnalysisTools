@@ -17,6 +17,11 @@ Constructor and destructor functions
 
 
 CrossCorrelator::CrossCorrelator(){
+  initializeVariables();
+}
+
+
+void CrossCorrelator::initializeVariables(){
 
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -31,7 +36,10 @@ CrossCorrelator::CrossCorrelator(){
   }
   lastEventNormalized = 0;
   eventNumber = 0;
-  correlationDeltaT = 1./2.6;
+
+  nominalSamplingDeltaT = 1./2.6;
+  upsampleFactor = 1;
+  correlationDeltaT = nominalSamplingDeltaT/upsampleFactor;
 
   // Fill geom, timing arrays and combinatorics
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
@@ -60,8 +68,6 @@ CrossCorrelator::CrossCorrelator(){
     phiArrayDeg.push_back(phiArrayDegTemp[ant]);
   }
 
-  // offsetIndGPU = fillDeltaTLookupGPU();
-  offsetIndGPU = NULL;
   do5PhiSectorCombinatorics();
 
   // Here we try to read the dts from binary file (for speed)
@@ -73,11 +79,6 @@ CrossCorrelator::CrossCorrelator(){
 }
 
 CrossCorrelator::~CrossCorrelator(){
-  if(offsetIndGPU!=NULL){
-    free(offsetIndGPU);
-    offsetIndGPU = NULL;
-  }
-
   deleteAllWaveforms();
   deleteCrossCorrelations();
 
@@ -103,11 +104,15 @@ Waveform manipulation functions
 ************************************************************************************************************/
 
 
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent){
+/*!
+  \brief Loops through all waveform graphs in the UsefulAnitaEvent and makes an evenly re-sampled, normalized copy of each one.
+  \param usefulEvent points to the UsefulAnitaEvent of interest
+*/
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent){
   // Potentially needed in a few places, so it gets its own function 
 
   // Pretty much just for profiling 
-  if(realEvent->eventNumber!=lastEventNormalized){
+  if(usefulEvent->eventNumber!=lastEventNormalized){
 
     // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
     deleteAllWaveforms();
@@ -115,8 +120,8 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
     // Find the start time of all waveforms 
     Double_t earliestStart[NUM_POL] = {100};
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grs[AnitaPol::kVertical][ant] = realEvent->getGraph(ant, AnitaPol::kVertical);
-      grs[AnitaPol::kHorizontal][ant] = realEvent->getGraph(ant, AnitaPol::kHorizontal);
+      grs[AnitaPol::kVertical][ant] = usefulEvent->getGraph(ant, AnitaPol::kVertical);
+      grs[AnitaPol::kHorizontal][ant] = usefulEvent->getGraph(ant, AnitaPol::kHorizontal);
 
       for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
 	if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
@@ -133,11 +138,16 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEve
 	RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
       }
     }
-
-    lastEventNormalized = realEvent->eventNumber;
+    lastEventNormalized = usefulEvent->eventNumber;
   }
 }
 
+
+/*!
+  \brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
+  \param grIn points to the TGraph containing the waveform to interpolate
+  \param startTime is the start time for interpolation: zero pads if this is earlier than the TGraph start time.
+*/
 TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTime){
 
   Double_t newTimes[NUM_SAMPLES] = {0};
@@ -199,13 +209,20 @@ TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTi
 All correlation functions
 ************************************************************************************************************/
 
+
+/*!
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times
+*/
 std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
   
   std::vector<std::vector<Double_t> > peakTimes(NUM_POL, std::vector<Double_t>(NUM_COMBOS, 0));
 
-  for(Int_t pol=0; pol<NUM_POL; pol++){
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-      peakTimes.at(pol).at(combo) = TMath::MaxElement(NUM_SAMPLES, crossCorrelations[pol][combo]);
+      Int_t maxInd = RootTools::getIndexOfMaximum(NUM_SAMPLES, crossCorrelations[pol][combo]);
+      Int_t offset = maxInd >= NUM_SAMPLES/2 ? maxInd - NUM_SAMPLES : maxInd;
+	//	offset = offset < 0 ? offset + NUM_SAMPLES : offset;
+      peakTimes.at(pol).at(combo) = offset*correlationDeltaT;      
     }
   }
   return peakTimes;
@@ -225,39 +242,17 @@ Double_t CrossCorrelator::correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t 
   return correlation;
 }
 
-void CrossCorrelator::correlateEvent(UsefulAnitaEvent* realEvent){
+void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent){
   // Read TGraphs from events into memory (also deletes old TGraphs) 
-  getNormalizedInterpolatedTGraphs(realEvent);
+  getNormalizedInterpolatedTGraphs(usefulEvent);
 
   // Cross correlate waveforms using the TGraphs we just obtained (also deletes old cross correlations) 
   doAllCrossCorrelations();
 
-  eventNumber = realEvent->eventNumber;
+  eventNumber = usefulEvent->eventNumber;
 }
 
 
-void CrossCorrelator::correlateEventGPU(UsefulAnitaEvent* realEvent){
-
-  getNormalizedInterpolatedTGraphs(realEvent);
-
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t phiSectorInd=0; phiSectorInd<NUM_PHI; phiSectorInd++){
-      for(Int_t localCombo=0; localCombo<LOCAL_COMBOS_PER_PHI_GPU; localCombo++){
-
-	Int_t comboLocal = localCombo;
-	Int_t phiSector = (phiSectorInd + 15 + comboLocal/GLOBAL_COMBOS_PER_PHI_GPU)%NUM_PHI;
-	UInt_t globalCombo = comboLocal % GLOBAL_COMBOS_PER_PHI_GPU;
-
-	Int_t a1 = ant1Gpu[phiSectorInd][localCombo];
-	Int_t a2 = ant2Gpu[phiSectorInd][localCombo];
-
-	for(Int_t offsetInd=0; offsetInd<NUM_SAMPLES; offsetInd++){
-	  correlationsGPU[pol][phiSector][globalCombo][offsetInd] = correlationWithOffset(grsInterp[pol][a1], grsInterp[pol][a2], offsetInd);
-	}
-      }
-    }
-  }
-}
 
 void CrossCorrelator::doAllCrossCorrelations(){
 
@@ -308,8 +303,8 @@ Calculate deltaT between two antennas (for a plane wave unless function name say
 
 Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave){
   Double_t tanThetaW = tan(-thetaWave);
-  Double_t part1 = zArray[ant1]*tanThetaW - rArray[ant1]*cos(phiWave-TMath::DegToRad()*phiArrayDeg[ant1]);
-  Double_t part2 = zArray[ant2]*tanThetaW - rArray[ant2]*cos(phiWave-TMath::DegToRad()*phiArrayDeg[ant2]);
+  Double_t part1 = zArray.at(ant1)*tanThetaW - rArray.at(ant1)*cos(phiWave-TMath::DegToRad()*phiArrayDeg.at(ant1));
+  Double_t part2 = zArray.at(ant2)*tanThetaW - rArray.at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg.at(ant2));
   Double_t tdiff = 1e9*((cos(-thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
   tdiff /= correlationDeltaT;
@@ -319,15 +314,15 @@ Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2, Double_t phiWav
 
 Int_t CrossCorrelator::getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave, Double_t rWave){
 
-  Double_t phi1 = TMath::DegToRad()*phiArrayDeg[ant1];
-  Double_t x1 = rArray[ant1]*TMath::Cos(phi1);
-  Double_t y1 = rArray[ant1]*TMath::Sin(phi1);
-  Double_t z1 = zArray[ant1];
+  Double_t phi1 = TMath::DegToRad()*phiArrayDeg.at(ant1);
+  Double_t x1 = rArray.at(ant1)*TMath::Cos(phi1);
+  Double_t y1 = rArray.at(ant1)*TMath::Sin(phi1);
+  Double_t z1 = zArray.at(ant1);
 
-  Double_t phi2 = TMath::DegToRad()*phiArrayDeg[ant2];
-  Double_t x2 = rArray[ant2]*TMath::Cos(phi2);
-  Double_t y2 = rArray[ant2]*TMath::Sin(phi2);
-  Double_t z2 = zArray[ant2];
+  Double_t phi2 = TMath::DegToRad()*phiArrayDeg.at(ant2);
+  Double_t x2 = rArray.at(ant2)*TMath::Cos(phi2);
+  Double_t y2 = rArray.at(ant2)*TMath::Sin(phi2);
+  Double_t z2 = zArray.at(ant2);
 
   Double_t x0 = rWave*TMath::Cos(phiWave)*TMath::Cos(thetaWave);
   Double_t y0 = rWave*TMath::Sin(phiWave)*TMath::Cos(thetaWave);
@@ -345,8 +340,8 @@ Int_t CrossCorrelator::getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2, Double
 
 
 Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin){
-  Double_t part1 = -zArray[ant1]*tanThetaLookup[thetaBin] - rArray[ant1]*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant1] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant1]);
-  Double_t part2 = -zArray[ant2]*tanThetaLookup[thetaBin] - rArray[ant2]*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant2] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant2]);
+  Double_t part1 = -zArray.at(ant1)*tanThetaLookup[thetaBin] - rArray.at(ant1)*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant1] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant1]);
+  Double_t part2 = -zArray.at(ant2)*tanThetaLookup[thetaBin] - rArray.at(ant2)*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant2] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant2]);
   Double_t tdiff = 1e9*((cosThetaLookup[thetaBin] * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
   tdiff /= correlationDeltaT;
   return TMath::Nint(tdiff);
@@ -391,6 +386,8 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
 	  if(comboIndices[ant1][ant2] < 0){
 	    comboIndices[ant1][ant2] = numCombos;
 	    comboIndices[ant2][ant1] = numCombos;
+	    comboToAnt1s.push_back(ant1);
+	    comboToAnt2s.push_back(ant2);	    
 	    numCombos++;
 	  }
 	}
@@ -424,7 +421,7 @@ void CrossCorrelator::fillDeltaTLookup(){
     sinPhiWaveLookup[phiBin] = TMath::Sin(phiWave);
   }
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    Double_t phiRad = TMath::DegToRad()*phiArrayDeg[ant];
+    Double_t phiRad = TMath::DegToRad()*phiArrayDeg.at(ant);
     cosPhiArrayLookup[ant] = TMath::Cos(phiRad);
     sinPhiArrayLookup[ant] = TMath::Sin(phiRad);
   }
@@ -451,63 +448,6 @@ void CrossCorrelator::fillDeltaTLookup(){
   }  
 }
 
-short* CrossCorrelator::fillDeltaTLookupGPU(){
-  // This function is mostly copied from the ANITA-3 Prioritizerd 
-
-  offsetIndGPU = (short*) malloc(sizeof(short)*NUM_PHI*LOCAL_COMBOS_PER_PHI_GPU*NUM_BINS_PHI*NUM_BINS_THETA);
-
-  for(Int_t phiSectorInd=0; phiSectorInd < NUM_PHI; phiSectorInd++){
-    for(Int_t localCombo=0; localCombo < LOCAL_COMBOS_PER_PHI_GPU; localCombo++){
-      // phiSector - 1... self + right
-      if(localCombo < 3){
-	ant1Gpu[phiSectorInd][localCombo] = (phiSectorInd+15)%16 + localCombo*NUM_PHI;
-	ant2Gpu[phiSectorInd][localCombo] = (ant1Gpu[phiSectorInd][localCombo] + NUM_PHI)%NUM_SEAVEYS;
-      }
-      else if(localCombo < GLOBAL_COMBOS_PER_PHI_GPU){
-	ant1Gpu[phiSectorInd][localCombo] = (phiSectorInd+15)%NUM_PHI + NUM_PHI*((localCombo-3)/3);
-	ant2Gpu[phiSectorInd][localCombo] = phiSectorInd + (localCombo%3)*NUM_PHI;
-      }
-      else{
-	Int_t localInd = localCombo % GLOBAL_COMBOS_PER_PHI_GPU;
-	ant1Gpu[phiSectorInd][localCombo] = ant1Gpu[phiSectorInd][localInd] + localCombo/GLOBAL_COMBOS_PER_PHI_GPU;
-	if(ant1Gpu[phiSectorInd][localInd]/16 - ant1Gpu[phiSectorInd][localCombo]/16 != 0){
-	  ant1Gpu[phiSectorInd][localCombo] -= 16;
-	}
-	ant2Gpu[phiSectorInd][localCombo] = ant2Gpu[phiSectorInd][localInd] + localCombo/GLOBAL_COMBOS_PER_PHI_GPU;
-	if(ant2Gpu[phiSectorInd][localInd]/16 - ant2Gpu[phiSectorInd][localCombo]/16 != 0){
-	  ant2Gpu[phiSectorInd][localCombo] -= 16;
-	}
-      }
-    }
-  }
-
-  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
-    for(Int_t combo=0; combo < LOCAL_COMBOS_PER_PHI_GPU; combo++){
-      Int_t a1 = ant1Gpu[phiSector][combo];
-      Int_t a2 = ant2Gpu[phiSector][combo];
-      for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-	Double_t phiDeg = phiArrayDeg[phiSector] + PHI_RANGE*((Double_t)phiInd/NUM_BINS_PHI - 0.5);
-	Double_t phiWave = phiDeg*TMath::DegToRad();
-	for(Int_t thetaInd = 0; thetaInd < NUM_BINS_THETA; thetaInd++){
-	  Double_t thetaDeg = THETA_RANGE*((Double_t)thetaInd/NUM_BINS_THETA - 0.5);
-	  Double_t thetaWave = thetaDeg*TMath::DegToRad();
-	  short offset = getDeltaTExpected(a1, a2, phiWave, thetaWave);
-
-	  if(offset < 0){
-	    offset += NUM_SAMPLES;
-	  }
-	  UInt_t offsetIndInd = (phiSector*LOCAL_COMBOS_PER_PHI_GPU*NUM_BINS_PHI*NUM_BINS_THETA
-			       + combo*NUM_BINS_PHI*NUM_BINS_THETA
-			       + phiInd*NUM_BINS_THETA
-			       + thetaInd);
-	  offsetIndGPU[offsetIndInd] = offset;
-	}
-      }
-    }
-  }
-  return offsetIndGPU;
-
-}
 
 
 
@@ -628,8 +568,10 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
   title += TString::Format(" (spherical #deltats r = %lf m)", rWave);
 
   TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI*NUM_PHI, phiArrayDeg[0]-PHI_RANGE/2, phiArrayDeg[15]+PHI_RANGE/2,
-			  NUM_BINS_THETA, -THETA_RANGE/2, THETA_RANGE/2);
+			  NUM_BINS_PHI*NUM_PHI, phiArrayDeg.at(0)-PHI_RANGE/2,
+			  phiArrayDeg.at(15)+PHI_RANGE/2,
+			  NUM_BINS_THETA, -THETA_RANGE/2,
+			  THETA_RANGE/2);
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
@@ -682,59 +624,6 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
   return hImage;
 }
 
-
-TH2D* CrossCorrelator::makeImageGPU(AnitaPol::AnitaPol_t pol){
-  UInt_t l3Trigger = 0xffff; // is equal to pow(2, 16)-1 i.e. 16 bits set.
-  return makeImageGPU(pol, l3Trigger);
-}
-
-
-TH2D* CrossCorrelator::makeImageGPU(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger){
-
-  assert(pol == AnitaPol::kVertical || pol == AnitaPol::kHorizontal);
-  TString name = pol == AnitaPol::kVertical ? "hImageV" : "hImageH";
-
-  TH2D* hImage = new TH2D(name, name,
-			  NUM_BINS_PHI*NUM_PHI, -PHI_RANGE/2, PHI_RANGE*NUM_PHI-PHI_RANGE/2,
-			  NUM_BINS_THETA, -THETA_RANGE/2, THETA_RANGE/2);
-
-  for(Int_t phiSectorInd = 0; phiSectorInd < NUM_PHI; phiSectorInd++){
-    UInt_t doPhiSector = ((l3Trigger >> phiSectorInd) & 1);
-    //    std::cout << phiSectorInd << " " << doPhiSector << std::endl;
-    if(doPhiSector){
-      for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-	for(Int_t thetaInd = 0; thetaInd < NUM_BINS_THETA; thetaInd++){
-	  Double_t correlations = 0;
-	  Int_t contributors = 0;
-	  for(Int_t localCombo=0; localCombo<LOCAL_COMBOS_PER_PHI_GPU; localCombo++){
-
-	    Int_t comboLocal = localCombo;
-	    Int_t phiSector = (phiSectorInd + 15 + comboLocal/GLOBAL_COMBOS_PER_PHI_GPU)%NUM_PHI;
-	    Int_t globalCombo = comboLocal % GLOBAL_COMBOS_PER_PHI_GPU;
-
-	    short offset = offsetIndGPU[phiSectorInd*LOCAL_COMBOS_PER_PHI_GPU*NUM_BINS_PHI*NUM_BINS_THETA
-					+ localCombo*NUM_BINS_PHI*NUM_BINS_THETA
-					+ phiInd*NUM_BINS_THETA
-					+ thetaInd];
-
-	    Double_t correlation = correlationsGPU[pol][phiSector][globalCombo][offset];
-
-	    // sum correlations
-	    correlations += correlation;
-	    contributors++;
-
-	  }
-	  if(contributors>0){
-	    correlations /= contributors;
-	  }
-	  hImage->SetBinContent(phiSectorInd*NUM_BINS_PHI + phiInd + 1, thetaInd + 1, correlations);
-	}
-      }
-    }
-  }
-
-  return hImage;
-}
 
 
 Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi){

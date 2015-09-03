@@ -192,6 +192,30 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
 
 
 /*!
+  \brief Do angle1-angle2 (in degrees) and +- 360 such that the result lies in -180 < deltaAngle < 180.
+  \param angle1 is the first angle
+  \param angle2 is the second angle
+  \returns deltaAngle is the difference in the range -180 < deltaAngle < 180
+*/
+
+Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
+  
+  Double_t deltaAngle = angle1 - angle2;
+  while(TMath::Abs(deltaAngle > 180)){
+    if(deltaAngle > 180){
+      deltaAngle -= 360;
+    }
+    else{
+      if(deltaAngle <= -180){
+	deltaAngle += 360;
+      }
+    }
+  }
+  return deltaAngle;
+}
+
+
+/*!
   \brief Modify gr to set mean=0 and rms=1.
   \param gr is the TGraph you want to manipulate.
 */
@@ -261,6 +285,23 @@ void RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
   rms = TMath::Sqrt(square/gr->GetN() - mean*mean);
 }
 
+/*!
+  \brief Find indices where input is not a number (for debugging)
+  \param gr is the TGraph you want information about.
+  \returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number
+*/
+
+Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
+  Double_t max=DBL_MIN;
+  Int_t maxIndex = -1;
+  for(Int_t i=0; i < len; ++i){
+    if(arr[i] > max){
+      max = arr[i];
+      maxIndex = i;
+    }
+  }
+  return maxIndex;
+}
 
 /*!
   \brief Find indices where input is not a number (for debugging)

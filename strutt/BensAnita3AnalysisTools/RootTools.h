@@ -26,16 +26,10 @@
 
 /*! \namespace RootTools
 \brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
-
 This lovingly curated namespace can be imported into CINT with gSystem->Load('libBensAnitaTools.so"). 
-
 I find myself often writing little routines to modify things like TGraphs over and over again.
 Functions that do little jobs, too simple to deserve a dedicated class of their own, will go in this namespace.
-
-Put another way, if the goal of the other classes in this library is to a specific heavy lifting job, then the goal of RootTools is to collect all the little useful functions that get used many times.
-
-The point is to write every function only once. 
-
+The idea that I only spend any time coding up a particular function once. 
 Expect this namespace to be referenced a lot in my code.
 
 */
@@ -49,7 +43,8 @@ namespace RootTools{
 
 
   /* Get info about input */
-  std::vector<Int_t> getIndicesOfNans(TGraph* gr);
+  Int_t getIndexOfMaximum(Int_t len, Double_t* arr);
+  std::vector<Int_t> getIndicesOfNans(TGraph* gr);  
   Double_t getSumOfYVals(TGraph* gr);
   void getMaxMin(TGraph* gr, Double_t& max, Double_t& min);
   void getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms);
@@ -67,7 +62,10 @@ namespace RootTools{
 
   Double_t getFullWidthHalfMax(TH1D* h);
 
-    
+
+  /* Do geometric things */
+  Double_t getDeltaAngleDeg(Double_t angle1, Double_t angle2);
+  
 
   /* Modify input */
   void subtractOffset(TGraph* gr, Double_t offset);
