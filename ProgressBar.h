@@ -21,17 +21,14 @@ public:
   ProgressBar();
   ProgressBar(Long64_t maxEntry);
 
-  /* handles everything */
   void operator++(int);
-
-  /* For debugging */
   void status();
 
 private:
-  Long64_t maxEntry;
-  Long64_t counter;    
-  UInt_t percentage;
-  TStopwatch watch;
+  Long64_t maxEntry; ///< Number of events you will loop over
+  Long64_t counter; ///< Number of loops completed
+  UInt_t percentage; ///< Percentage to print to the screen
+  TStopwatch watch; ///< ROOT's stopwatch class, used to time the progress since object construction
 
   ClassDef(ProgressBar, 0);
 

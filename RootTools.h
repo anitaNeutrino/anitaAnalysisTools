@@ -65,7 +65,7 @@ namespace RootTools{
 				    Double_t& minY, Double_t& minX,
 				    Double_t lowerLimit, Double_t upperLimit);
 
-
+  Double_t getFullWidthHalfMax(TH1D* h);
 
     
 
@@ -94,6 +94,7 @@ namespace RootTools{
   TLegend* makeLegend(TH1D* hs[], Int_t numHists, TString titles[], TString opt = "l", 
 		      Double_t minX=0.8, Double_t minY=0.8,Double_t maxX=1, Double_t maxY=1);
 
+  void saveCanvas(TCanvas* c1, TString fileName);
 
 
 };

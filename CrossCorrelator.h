@@ -63,7 +63,6 @@ public:
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent);
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
 
-
   /**********************************************************************************************************
   All correlation functions
   **********************************************************************************************************/
@@ -73,7 +72,7 @@ public:
   void correlateEventGPU(UsefulAnitaEvent* realEvent);
   void doAllCrossCorrelations();
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
-
+  std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
 
   /**********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
@@ -141,22 +140,22 @@ public:
   Int_t ant2Gpu[NUM_PHI][LOCAL_COMBOS_PER_PHI_GPU];
   Double_t correlationsGPU[NUM_POL][NUM_PHI][GLOBAL_COMBOS_PER_PHI_GPU][NUM_SAMPLES];
   std::vector<Int_t> ant2s[NUM_SEAVEYS];
-  int comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
+  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS];
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS];
-  int doneCrossCorrelations[NUM_POL][NUM_COMBOS];
+  Int_t doneCrossCorrelations[NUM_POL][NUM_COMBOS];
   TGraph* grs[NUM_POL][NUM_SEAVEYS];
   TGraph* grsInterp[NUM_POL][NUM_SEAVEYS];
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS];
-  Double_t rArray[NUM_SEAVEYS];
-  Double_t phiArrayDeg[NUM_SEAVEYS];
-  Double_t zArray[NUM_SEAVEYS];
+  std::vector<Double_t> rArray;
+  std::vector<Double_t> phiArrayDeg;
+  std::vector<Double_t> zArray;
   Double_t tanThetaLookup[NUM_BINS_THETA];
   Double_t cosThetaLookup[NUM_BINS_THETA];
   Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
   Double_t cosPhiWaveLookup[NUM_BINS_PHI*NUM_PHI];
   Double_t cosPhiArrayLookup[NUM_SEAVEYS];
   Double_t sinPhiArrayLookup[NUM_SEAVEYS];
-  unsigned char deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
+  UChar_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA];
 
   ClassDef(CrossCorrelator, 0);
 };

@@ -19,6 +19,10 @@
 
 ClassImp(ProgressBar);
 
+
+/*!
+  \brief Default constructor - don't use this
+*/
 ProgressBar::ProgressBar(){
   std::cerr << "Assuming 100 events in ProgressBar" << std::endl;
   maxEntry = 100;
@@ -27,6 +31,11 @@ ProgressBar::ProgressBar(){
   watch.Start(kTRUE);
 }
 
+
+/*!
+  \brief Useful constructor - do use this one.
+  \param maxEntryInit is the number of events you want to loop over
+*/
 ProgressBar::ProgressBar(Long64_t maxEntryInit){
   maxEntry = maxEntryInit;
   counter = 0;
@@ -34,11 +43,15 @@ ProgressBar::ProgressBar(Long64_t maxEntryInit){
   watch.Start(kTRUE);
 }
 
+
+/*!
+  \brief Increment operator, use when you have completed one iteration of the main loop
+*/
 void ProgressBar::operator++(int){
 
   if(percentage>=100) return;
   
-  /* Stops the watch */
+  // Stops the watch
   Int_t seconds = Int_t(watch.RealTime());
   Int_t hours = seconds / 3600;
   hours = hours < 0 ? 0 : hours;
@@ -91,7 +104,9 @@ void ProgressBar::operator++(int){
 
 }
 
-
+/*!
+  \brief For debugging, prints state of internal variables
+*/
 void ProgressBar::status(){
   std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
 }
