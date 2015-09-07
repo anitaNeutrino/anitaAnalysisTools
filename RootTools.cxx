@@ -578,6 +578,42 @@ TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanva
 
 
 /*!
+  \brief Adds a set of offsets to the x-axis values of each respective TGraph
+  \param numGrs is the length of both arrays.
+  \param grs is a vector of pointers to TGraphs.
+  \param offsets a vector of Double_ts to add to each x-axis point of the respective TGraph.
+  
+  Assumes that both grs and offsets point to arrays of length numGrs
+*/
+void RootTools::offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[]){
+  for(Int_t grInd=0; grInd < numGrs; grInd++){
+    for(Int_t samp=0; samp < grs[grInd]->GetN(); samp++){
+      grs[grInd]->GetX()[samp] += offsets[grInd];
+    }
+  }
+}
+
+
+/*!
+  \brief Multiples a set of factors to the y-axis values of each respective TGraph
+  \param numGrs is the length of both arrays.
+  \param grs is an array of pointers to TGraphs.
+  \param factors an array of Double_ts to add to each x-axis point of the respective TGraph.
+  
+  Assumes that both grs and factors point to arrays of length numGrs
+*/
+void RootTools::multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factors[]){
+  for(Int_t grInd=0; grInd < numGrs; grInd++){
+    for(Int_t samp=0; samp < grs[grInd]->GetN(); samp++){
+      grs[grInd]->GetY()[samp] *= factors[grInd];
+    }
+  }
+}
+
+
+
+
+/*!
   \brief Draws an array of TGraphs with a rainbow on a single TCanvas
   \param grs is a pointer to an array of pointers to the TGraphs. 
   \param numGrs is the number of TGraphs.
@@ -585,7 +621,6 @@ TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanva
   \param drawOpt is the draw option, select "p" for markers and "l" for lines.
   \returns the TCanvas the TGraphs are drawn on.
 */
-
 TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs, 
 					       TString drawOpt, TCanvas* can, Double_t* colWeights){
 
@@ -598,7 +633,7 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
   if(colWeights!=NULL){
     Double_t maxCol = TMath::MaxElement(numGrs, colWeights);
     Double_t minCol = TMath::MinElement(numGrs, colWeights);
-    colFactor = (maxCol-minCol)/255;
+    colFactor = 254./(maxCol-minCol);
   }
 
 
@@ -617,12 +652,12 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
 	if(colWeights!=NULL){
 	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
 	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
-	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
 	}
 	else{
-	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
-	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(255./numGrs)));
+	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(grInd*Int_t(254./(numGrs-1))));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(254./(numGrs-1))));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(grInd*Int_t(254./(numGrs-1))));
 	}
 
 	grs[grInd]->Draw(opt);
@@ -804,10 +839,10 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
 
 void RootTools::saveCanvas(TCanvas* c, TString fileName){
 
-  std::cout << "Saving this canvas as a .png and .C file..." << std::endl;
-  TString fName = fileName + ".png";
+  std::cout << "Saving this canvas as an .eps and .root file..." << std::endl;
+  TString fName = fileName + ".eps";
   c->SaveAs(fName);
-  fName = fileName + ".C";
+  fName = fileName + ".root";
   c->SaveAs(fName);
   std::cout << "...Complete!" << std::endl;
   c->Update();

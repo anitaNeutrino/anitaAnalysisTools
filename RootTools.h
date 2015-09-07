@@ -31,8 +31,8 @@ I find myself often writing little routines to modify things like TGraphs over a
 Functions that do little jobs, too simple to deserve a dedicated class of their own, will go in this namespace.
 The idea that I only spend any time coding up a particular function once. 
 Expect this namespace to be referenced a lot in my code.
-
 */
+
 namespace RootTools{
 
   void writeTGraph(TGraph* gr, TString name);
@@ -72,7 +72,9 @@ namespace RootTools{
   void normalize(TGraph* gr, Double_t& mean, Double_t& rms);
   void normalize(TGraph* gr);
   void zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt=0);
-
+  void offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[]);
+  void multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factors[]);
+  
   /* Make new output based on input */
   TGraph* makeNormalized(TGraph* gr); ///< Creates new TGraph (leaving original unchanged) with mean = 0 & RMS = 1
   TGraph* makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms);

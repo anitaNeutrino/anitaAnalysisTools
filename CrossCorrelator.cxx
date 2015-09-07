@@ -15,13 +15,28 @@ ClassImp(CrossCorrelator)
 Constructor and destructor functions
 ************************************************************************************************************/
 
+/*!
+  \brief Constructor
+  \param upsampleFactorTemp is the upsample factor, by default = 1.
+*/
+CrossCorrelator::CrossCorrelator(Int_t upsampleFactorTemp){
+  initializeVariables(upsampleFactorTemp);
+}
 
-CrossCorrelator::CrossCorrelator(){
-  initializeVariables();
+/*!
+  \brief Destructor
+*/
+CrossCorrelator::~CrossCorrelator(){
+  deleteAllWaveforms();
+  deleteCrossCorrelations();
 }
 
 
-void CrossCorrelator::initializeVariables(){
+/*!
+  \brief Workhorse function to set internal variables.
+  /param upSampleFactorTemp is passed here from the constructor.
+*/
+void CrossCorrelator::initializeVariables(Int_t upSampleFactorTemp){
 
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -38,8 +53,9 @@ void CrossCorrelator::initializeVariables(){
   eventNumber = 0;
 
   nominalSamplingDeltaT = 1./2.6;
-  upsampleFactor = 1;
+  upsampleFactor = upSampleFactorTemp;
   correlationDeltaT = nominalSamplingDeltaT/upsampleFactor;
+  numSamplesUpsampled = 2*NUM_SAMPLES*upsampleFactor;
 
   // Fill geom, timing arrays and combinatorics
   const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
@@ -78,11 +94,6 @@ void CrossCorrelator::initializeVariables(){
   }
 }
 
-CrossCorrelator::~CrossCorrelator(){
-  deleteAllWaveforms();
-  deleteCrossCorrelations();
-
-}
 
 
 
@@ -150,8 +161,8 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
 */
 TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTime){
 
-  Double_t newTimes[NUM_SAMPLES] = {0};
-  Double_t newVolts[NUM_SAMPLES] = {0};
+  std::vector<Double_t> newTimes = std::vector<Double_t>(numSamplesUpsampled, 0);
+  std::vector<Double_t> newVolts = std::vector<Double_t>(numSamplesUpsampled, 0);  
   Double_t thisStartTime = grIn->GetX()[0];
   Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
 
@@ -169,19 +180,18 @@ TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTi
   
   // Put new data Int_to arrays
   Double_t time = startTime;
-  for(Int_t samp = 0; samp < NUM_SAMPLES; samp++){
-    newTimes[samp] = time;
+  for(Int_t samp = 0; samp < numSamplesUpsampled; samp++){
+    newTimes.at(samp) = time;
     if(time >= thisStartTime && time <= lastTime){
-      newVolts[samp] = chanInterp.Eval(time);
+      newVolts.at(samp) = chanInterp.Eval(time);
     }
     else{
-      newVolts[samp] = 0;
+      newVolts.at(samp) = 0;
     }
     time += correlationDeltaT;
-
   }
 
-  return new TGraph(NUM_SAMPLES, newTimes, newVolts);
+  return new TGraph(numSamplesUpsampled, &newTimes[0], &newVolts[0]);
 
 }
 
@@ -219,26 +229,43 @@ std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-      Int_t maxInd = RootTools::getIndexOfMaximum(NUM_SAMPLES, crossCorrelations[pol][combo]);
-      Int_t offset = maxInd >= NUM_SAMPLES/2 ? maxInd - NUM_SAMPLES : maxInd;
-	//	offset = offset < 0 ? offset + NUM_SAMPLES : offset;
+      Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
+      Int_t offset = maxInd >= numSamplesUpsampled/2 ? maxInd - numSamplesUpsampled : maxInd;
+	//	offset = offset < 0 ? offset + numSamplesUpsampled : offset;
       peakTimes.at(pol).at(combo) = offset*correlationDeltaT;      
     }
   }
   return peakTimes;
 }
 
+/*!
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values
+*/
+std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationValues(){
+  
+  std::vector<std::vector<Double_t> > peakVals(NUM_POL, std::vector<Double_t>(NUM_COMBOS, 0));
+
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+      Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
+      peakVals.at(pol).at(combo) = crossCorrelations[pol][combo][maxInd];
+    }
+  }
+  return peakVals;
+}
+
+
 
 
 Double_t CrossCorrelator::correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset){
   // Time domain cross correlation, no longer used 
   Double_t correlation = 0;
-  for(Int_t i=0; i<NUM_SAMPLES; i++){
-    // Modulo NUM_SAMPLES wraps for circular correlation 
-    Int_t j = (i + offset)%NUM_SAMPLES; 
+  for(Int_t i=0; i<numSamplesUpsampled; i++){
+    // Modulo numSamplesUpsampled wraps for circular correlation 
+    Int_t j = (i + offset)%numSamplesUpsampled; 
     correlation += gr1->GetY()[i]*gr2->GetY()[j];
   }
-  correlation/=NUM_SAMPLES;  
+  correlation/=numSamplesUpsampled;  
   return correlation;
 }
 
@@ -439,7 +466,7 @@ void CrossCorrelator::fillDeltaTLookup(){
 	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	    Int_t comboInd = comboIndices[ant1][ant2];
 	    Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
-	    offset = offset < 0 ? offset + NUM_SAMPLES : offset;
+	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	    deltaTs[comboInd][phiBin][thetaBin] = offset;
 	  }
 	}
@@ -490,7 +517,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger){
 
 TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger){
 
-  imagePeak = -100;
+  imagePeak = DBL_MIN;
 
   assert(pol == AnitaPol::kVertical || pol == AnitaPol::kHorizontal);
   TString name = pol == AnitaPol::kVertical ? "hImageV" : "hImageH";
@@ -523,6 +550,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 	      Int_t comboInd = comboIndices[ant1][ant2];
 	      if(comboInd > 0){
 		Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
+		offset*=upsampleFactor; // Correct for variable upsample factor
 		correlations += crossCorrelations[pol][comboInd][offset];
 		contributors++;
 	      }
@@ -600,7 +628,7 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
 	    if(ant1 < ant2){
 	      offset *= -1;
 	    }
-	    offset = offset < 0 ? offset + NUM_SAMPLES : offset;
+	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	    correlations += crossCorrelations[pol][comboInd][offset];
 	    contributors++;
 	  }
@@ -709,19 +737,19 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      Double_t newVs[NUM_SAMPLES] = {0};
-      Double_t newTimes[NUM_SAMPLES] = {0};
-      Int_t dt = NUM_SAMPLES/2 + getDeltaTExpectedSpherical(0, ant, 
+      std::vector<Double_t> newVs = std::vector<Double_t>(numSamplesUpsampled, 0);
+      std::vector<Double_t> newTimes = std::vector<Double_t>(numSamplesUpsampled, 0);      
+      Int_t dt = numSamplesUpsampled/2 + getDeltaTExpectedSpherical(0, ant, 
 						  phiDegSource*TMath::DegToRad(), 
 						  thetaDegSource*TMath::DegToRad(), 
 						  rSource);
-      for(int samp=0; samp<NUM_SAMPLES; samp++){
+      for(int samp=0; samp<numSamplesUpsampled; samp++){
 	newTimes[samp] = correlationDeltaT*samp;
 	if(samp==dt){
-	  newVs[samp] = NUM_SAMPLES;
+	  newVs[samp] = numSamplesUpsampled;
 	}
       }
-      grsInterp[pol][ant] = new TGraph(NUM_SAMPLES, newTimes, newVs);    
+      grsInterp[pol][ant] = new TGraph(numSamplesUpsampled, &newTimes[0], &newVs[0]);    
       RootTools::normalize(grsInterp[pol][ant]);
     }
   }
@@ -737,19 +765,19 @@ TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_
   if(comboInd < 0 ){
     return NULL;
   }
-  Double_t offsets[NUM_SAMPLES];
-  Double_t corrs[NUM_SAMPLES];
+  std::vector<Double_t> offsets = std::vector<Double_t>(numSamplesUpsampled, 0);
+  std::vector<Double_t> corrs = std::vector<Double_t>(numSamplesUpsampled, 0);  
 
-  for(Int_t i=0; i<NUM_SAMPLES; i++){
-    Int_t offset = (i - NUM_SAMPLES/2);
-    offsets[i] = offset*correlationDeltaT;
-    Int_t j = offset < 0 ? offset + NUM_SAMPLES : offset;
-    corrs[i] = crossCorrelations[pol][comboInd][j];
+  for(Int_t i=0; i<numSamplesUpsampled; i++){
+    Int_t offset = (i - numSamplesUpsampled/2);
+    offsets.at(i) = offset*correlationDeltaT;
+    Int_t j = offset < 0 ? offset + numSamplesUpsampled : offset;
+    corrs.at(i) = crossCorrelations[pol][comboInd][j];
 
   }
 
 
-  TGraph* gr = new TGraph(NUM_SAMPLES,  offsets, corrs);
+  TGraph* gr = new TGraph(numSamplesUpsampled,  &offsets[0], &corrs[0]);
   gr->SetName(TString::Format("grCorr_%d_%d", ant1, ant2));
   gr->SetTitle(TString::Format("Cross Correlation ant1 = %d, ant2 = %d", ant1, ant2));
 

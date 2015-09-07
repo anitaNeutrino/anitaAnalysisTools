@@ -76,7 +76,7 @@ CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManage
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) $(BINARIES) commit docs
+all: $(ROOT_LIBRARY) $(BINARIES) commit
 
 .PHONY: install commit clean docs
 
