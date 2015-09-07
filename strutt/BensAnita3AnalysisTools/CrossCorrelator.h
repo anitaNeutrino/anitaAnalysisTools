@@ -9,43 +9,49 @@
 #ifndef CROSSCORRELATOR_H
 #define CROSSCORRELATOR_H
 
-/* Ryan things */
+// Ryan things
 #include "UsefulAnitaEvent.h"
 #include "AnitaGeomTool.h"
+// #include "FFTtools.h"
 #include "FancyFFTs.h"
 
 // My things
 #include "RootTools.h"
 
-/* ROOT things */
+// ROOT things
 #include "TGraph.h"
 #include "TH2D.h"
 #include "Math/Interpolator.h"
 #include "Math/InterpolationTypes.h"
 
-/* standard c++ things */
+// standard c++ things
 #include <iostream>
 #include <assert.h>
 
 
-/* Offline reconstruction definitions */
+// Offline reconstruction definitions
 #define NUM_COMBOS 336
-//#define NUM_COMBOS 480
-// #define NUM_COMBOS 672
 
-/* Image definitions*/
+// Image definitions
 #define NUM_BINS_THETA 256
 #define NUM_BINS_PHI 64
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
-#define NUM_SAMPLES 1024
-//#define NUM_SAMPLES 256
+#define NUM_SAMPLES 256
 
-/* Anita Geometry definitions, shouldn't really be here */
+// Anita Geometry definitions, shouldn't really be here
 #define NUM_POL 2
 #define NUM_RING 3
 
 #define SPEED_OF_LIGHT 2.99792458e8
+
+
+/*! \class CrossCorrelator
+\brief Pass CrossCorrelator an event and get interferometric maps with a single function.
+
+Does all the heavy lifting of getting waveforms from a UsefulAnitaEvent, cross correlating them and producing interferometric maps. 
+*/
+
 
 class CrossCorrelator : public TObject{
 
@@ -53,9 +59,9 @@ public:
   /**********************************************************************************************************
   Constructor and destructor functions
   **********************************************************************************************************/
-  CrossCorrelator();
+  CrossCorrelator(Int_t upsampleFactorTemp = 1);
   ~CrossCorrelator();
-  void initializeVariables();
+  void initializeVariables(Int_t upsampleFactorTemp);
 
 
 
@@ -74,15 +80,15 @@ public:
   void doAllCrossCorrelations();
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
+  std::vector<std::vector<Double_t> > getMaxCorrelationValues();
 
   /**********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
   **********************************************************************************************************/
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
-  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);    
+  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); // Slightly faster?
-
 
   /**********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
@@ -90,8 +96,8 @@ public:
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
 
-  void writeDeltaTsFile(); /* Attempt to speed up initialization */
-  Int_t readDeltaTsFile(); /* Attempt to speed up initialization */
+  void writeDeltaTsFile(); // Speed up initialization
+  Int_t readDeltaTsFile(); // Speed up initialization
 
 
 
@@ -133,7 +139,8 @@ public:
   Double_t nominalSamplingDeltaT; ///< ANITA-3 => 1./2.6 ns
   Double_t upsampleFactor; ///< Default = 1, 
   Double_t correlationDeltaT; ///< nominalSamplingDeltaT/upsampleFactor, deltaT of interpolation and cross correlation
-
+  Int_t numSamplesUpsampled; ///< Number of samples in waveform after up sampling is applied
+  
   std::vector<Int_t> ant2s[NUM_SEAVEYS]; ///< Vector holding ant2 indices for each ant1 (for combinatorics)
   std::vector<Int_t> comboToAnt1s; ///< Vector mapping combination index to ant1
   std::vector<Int_t> comboToAnt2s; ///< Vector mapping combination index to ant1

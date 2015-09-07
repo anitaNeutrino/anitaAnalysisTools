@@ -3,22 +3,24 @@
  Email: b.strutt.12@ucl.ac.uk
 
  Description: 
-             Program to test the functionality of the CrossCorrelator class, nothing more complicated than that.
+             Program to test the functionality of the CrossCorrelator class, nothing more complicated than that. Writes some output to /tmp.
+
 *************************************************************************************************************** */
 
 
-#include "CrossCorrelator.h"
-#include "RootTools.h"
+#include <CrossCorrelator.h>
+#include <RootTools.h>
 
-#include "TGraph.h"
-#include "TFile.h"
-#include "TTree.h"
-#include "TChain.h"
+#include <TGraph.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TChain.h>
 
-#include "RawAnitaHeader.h"
-#include "UsefulAnitaEvent.h"
+#include <RawAnitaHeader.h>
+#include <UsefulAnitaEvent.h>
+#include <CalibratedAnitaEvent.h>
 
-void testImageGPUStyle();
+//void testImageGPUStyle();
 void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
@@ -29,9 +31,9 @@ int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  //  testImageFullStyle();
+  testImageFullStyle();
   // hackyNormalizationTest();
-  testFileWriting();
+  //  testFileWriting();
 
   return 0;
 
@@ -108,61 +110,61 @@ void testNewCombinatorics(){
   
 }
 
-void testImageGPUStyle(){
-  /*
-    This function tests the cross-correlation functions which mimic what the GPU is doing on some level.
-   */
+// void testImageGPUStyle(){
+//   /*
+//     This function tests the cross-correlation functions which mimic what the GPU is doing on some level.
+//    */
 
-  char eventFileName[1024];
+//   char eventFileName[1024];
 
-  Int_t run = 11672;
-  sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
-  TFile* eventFile = TFile::Open(eventFileName);
-  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+//   Int_t run = 11672;
+//   sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
+//   TFile* eventFile = TFile::Open(eventFileName);
+//   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
 
-  char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
-  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+//   char rawHeaderFileName[1024];
+//   sprintf(rawHeaderFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
+//   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+//   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  RawAnitaEvent* event = NULL;
-  eventTree->SetBranchAddress("event", &event);
-  RawAnitaHeader* header = NULL;
-  headTree->SetBranchAddress("header", &header);
+//   RawAnitaEvent* event = NULL;
+//   eventTree->SetBranchAddress("event", &event);
+//   RawAnitaHeader* header = NULL;
+//   headTree->SetBranchAddress("header", &header);
 
-  TFile* outFile = new TFile("/tmp/testImageGPUStyle.root","recreate");
-  TTree* corrTree = new TTree("corrTree","corrTree");
-  Double_t imagePeak;
-  corrTree->Branch("imagePeak", &imagePeak);
+//   TFile* outFile = new TFile("/tmp/testImageGPUStyle.root","recreate");
+//   TTree* corrTree = new TTree("corrTree","corrTree");
+//   Double_t imagePeak;
+//   corrTree->Branch("imagePeak", &imagePeak);
 
-  //  Long64_t numEntries = eventTree->GetEntries();
-  Long64_t numEntries = 108; //200; //eventTree->GetEntries();
+//   //  Long64_t numEntries = eventTree->GetEntries();
+//   Long64_t numEntries = 108; //200; //eventTree->GetEntries();
 
-  CrossCorrelator* cc = new CrossCorrelator();
+//   CrossCorrelator* cc = new CrossCorrelator();
 
-  for(Long64_t entry=107; entry<numEntries; entry++){
+//   for(Long64_t entry=107; entry<numEntries; entry++){
 
-    imagePeak = -1;
+//     imagePeak = -1;
 
-    headTree->GetEntry(entry);
-    eventTree->GetEntry(entry);
+//     headTree->GetEntry(entry);
+//     eventTree->GetEntry(entry);
 
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
-    cc->correlateEventGPU(realEvent);
-    TH2D* hImage = cc->makeImageGPU(AnitaPol::kVertical);
-    hImage->SetName("hImageFrom3PhiSectorPulsing");
-    hImage->SetTitle("Image From 3 Phi-Sector Pulsing");
+//     UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+//     cc->correlateEventGPU(realEvent);
+//     TH2D* hImage = cc->makeImageGPU(AnitaPol::kVertical);
+//     hImage->SetName("hImageFrom3PhiSectorPulsing");
+//     hImage->SetTitle("Image From 3 Phi-Sector Pulsing");
 
 
-    delete realEvent;
-  }
+//     delete realEvent;
+//   }
 
-  outFile->Write();
-  outFile->Close();
+//   outFile->Write();
+//   outFile->Close();
 
-  delete cc;
+//   delete cc;
 
-}
+// }
 
 
 void testImageFullStyle(){
@@ -172,18 +174,26 @@ void testImageFullStyle(){
 
   char eventFileName[1024];
 
-  Int_t run = 11672;
-  sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
+  // Int_t run = 11672;
+  // sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
 
+  // char rawHeaderFileName[1024];
+  // sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
   char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  RawAnitaEvent* event = NULL;
+  // RawAnitaEvent* event = NULL;
+  CalibratedAnitaEvent* event = NULL;  
   eventTree->SetBranchAddress("event", &event);
+
   RawAnitaHeader* header = NULL;
   headTree->SetBranchAddress("header", &header);
 
@@ -196,7 +206,7 @@ void testImageFullStyle(){
   Long64_t numEntries = 200; //eventTree->GetEntries();
   numEntries = 108;
 
-  CrossCorrelator* cc = new CrossCorrelator();
+  CrossCorrelator* cc = new CrossCorrelator(2);
 
   for(Long64_t entry=107; entry<numEntries; entry++){
 
@@ -205,15 +215,17 @@ void testImageFullStyle(){
     headTree->GetEntry(entry);
     eventTree->GetEntry(entry);
 
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+    // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+    UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
     cc->correlateEvent(realEvent);
 
     writeCorrelationGraphs(cc);
 
-    TH2D* hImage = cc->makeImage(AnitaPol::kVertical);
-    hImage->SetName("hImageFrom3PhiSectorPulsing");
-    hImage->SetTitle("Image From 3 Phi-Sector Pulsing, correlating 5 phi-sectors");
-
+    std::vector<TH2D*> hImages;
+    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+      hImages.push_back(cc->makeImage(AnitaPol::AnitaPol_t(pol)));
+    }
+    
     delete realEvent;
   }
 
