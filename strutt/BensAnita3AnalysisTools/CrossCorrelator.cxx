@@ -58,30 +58,32 @@ void CrossCorrelator::initializeVariables(Int_t upSampleFactorTemp){
   numSamplesUpsampled = 2*NUM_SAMPLES*upsampleFactor;
 
   // Fill geom, timing arrays and combinatorics
-  const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
-  					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
-  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
-  					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447};
+  // const Double_t rArrayTemp[NUM_SEAVEYS] = {0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
+  // 					    0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,0.9675,0.7402,
+  // 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  // 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  // 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,
+  // 					    2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447,2.0447};
   
-  const Double_t phiArrayDegTemp[NUM_SEAVEYS] = {0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
-  						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
-  						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
-  						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
-  						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,180.0,
-  						 202.5,225.0,247.5,270.0,292.5,315.0,337.5};
+  // const Double_t phiArrayDegTemp[NUM_SEAVEYS] = {0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
+  // 						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+  // 						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,
+  // 						 180.0,202.5,225.0,247.5,270.0,292.5,315.0,337.5,
+  // 						 0.0,22.5,45.0,67.5,90.0,112.5,135.0,157.5,180.0,
+  // 						 202.5,225.0,247.5,270.0,292.5,315.0,337.5};
 
-  const Double_t zArrayTemp[NUM_SEAVEYS] = {-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
-  					    -1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
-  					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
-  					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
-  					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
-  					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
+  // const Double_t zArrayTemp[NUM_SEAVEYS] = {-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
+  // 					    -1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,-1.4407,-2.4135,
+  // 					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+  // 					    -5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,-5.1090,
+  // 					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,
+  // 					    -6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951,-6.1951};
+
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
-    rArray.push_back(rArrayTemp[ant]);
-    zArray.push_back(zArrayTemp[ant]);
-    phiArrayDeg.push_back(phiArrayDegTemp[ant]);
+    rArray.push_back(geom->getAntR(ant));
+    zArray.push_back(geom->getAntZ(ant));
+    phiArrayDeg.push_back(geom->getAntPhiPosition(ant)*TMath::RadToDeg());
   }
 
   do5PhiSectorCombinatorics();
@@ -441,7 +443,8 @@ void CrossCorrelator::fillDeltaTLookup(){
   }
 
   for(Int_t phiBin=0; phiBin < NUM_BINS_PHI*NUM_PHI; phiBin++){
-    Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+    // Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+    Double_t phiDeg = -0.5*PHI_RANGE + phiArrayDeg.at(0) + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
     Double_t phiWave = TMath::DegToRad()*phiDeg;
     //    phiWaveLookup[phiBin] = phiWave;
     cosPhiWaveLookup[phiBin] = TMath::Cos(phiWave);
@@ -456,7 +459,8 @@ void CrossCorrelator::fillDeltaTLookup(){
   for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
     for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
       Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
-      Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+      // Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+      Double_t phiDeg = -0.5*PHI_RANGE + phiArrayDeg.at(0) + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;      
       Double_t phiWave = TMath::DegToRad()*phiDeg;
       for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 	Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
@@ -468,6 +472,11 @@ void CrossCorrelator::fillDeltaTLookup(){
 	    Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
 	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	    deltaTs[comboInd][phiBin][thetaBin] = offset;
+	    if(thetaBin==0 && phiBin==0 && ant1==0){
+	      std::cout << thetaBin << "\t" << phiBin << "\t" << ant1 << "\t"
+			<< ant2 << "\t" << offset << std::endl;
+	    }
+
 	  }
 	}
       }
@@ -789,7 +798,7 @@ void CrossCorrelator::writeDeltaTsFile(){
   // Write sets of deltaTs into a file to try and speed up class initialization by reading it 
 
   const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
-  std::cout << anitaUtilEnv << std::endl;
+  // std::cout << anitaUtilEnv << std::endl;
   const char* dtsDir = getenv(anitaUtilEnv);
   char dtsFileName[FILENAME_MAX];
   sprintf(dtsFileName, "%s/crossCorrelator.dts", dtsDir);
