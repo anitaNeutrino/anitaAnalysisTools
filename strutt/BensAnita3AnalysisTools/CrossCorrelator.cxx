@@ -83,7 +83,7 @@ void CrossCorrelator::initializeVariables(Int_t upSampleFactorTemp){
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray.push_back(geom->getAntR(ant));
     zArray.push_back(geom->getAntZ(ant));
-    phiArrayDeg.push_back(geom->getAntPhiPosition(ant)*TMath::RadToDeg());
+    phiArrayDeg.push_back(geom->getAntPhiPositionRelToAftFore(ant)*TMath::RadToDeg());
   }
 
   do5PhiSectorCombinatorics();
@@ -472,11 +472,6 @@ void CrossCorrelator::fillDeltaTLookup(){
 	    Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
 	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	    deltaTs[comboInd][phiBin][thetaBin] = offset;
-	    if(thetaBin==0 && phiBin==0 && ant1==0){
-	      std::cout << thetaBin << "\t" << phiBin << "\t" << ant1 << "\t"
-			<< ant2 << "\t" << offset << std::endl;
-	    }
-
 	  }
 	}
       }
