@@ -129,6 +129,7 @@ $(DICT).C : $(CLASS_HEADERS)
 
 clean:
 	@rm -f *Dict*
+	@rm -f $(ANITA_UTIL_INSTALL_DIR)/share/crossCorrelator.dts
 	@rm -f *.${OBJSUF}
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
