@@ -42,6 +42,7 @@
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL 2
 #define NUM_RING 3
+#define DELTA_PHI_SECT 2
 
 #define SPEED_OF_LIGHT 2.99792458e8
 
@@ -104,6 +105,7 @@ public:
   **********************************************************************************************************/
   
   Double_t getPhi0();
+  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
   TH2D* makeBlankImage(TString name, TString title);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
