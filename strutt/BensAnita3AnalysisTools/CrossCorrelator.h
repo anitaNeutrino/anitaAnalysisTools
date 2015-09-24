@@ -63,8 +63,7 @@ public:
   CrossCorrelator(Int_t upsampleFactorTemp = 1);
   ~CrossCorrelator();
   void initializeVariables(Int_t upsampleFactorTemp);
-
-
+  void printInfo();
 
   /**********************************************************************************************************
   Waveform manipulation functions
@@ -107,6 +106,7 @@ public:
   Double_t getPhi0();
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
   TH2D* makeBlankImage(TString name, TString title);
+  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger=0xffff);
@@ -155,8 +155,12 @@ public:
   std::vector<Double_t> rArray; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray; ///< Vector of antenna heights
-  Char_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
 
+  typedef Short_t dtIndex_t;
+  // dtIndex_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
+  dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)  
+  Int_t deltaTMax;
+  Int_t deltaTMin;
   ClassDef(CrossCorrelator, 0);
 };
 #endif
