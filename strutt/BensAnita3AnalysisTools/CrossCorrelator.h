@@ -140,20 +140,20 @@ public:
   Double_t upsampleFactor; ///< Default = 1, 
   Double_t correlationDeltaT; ///< nominalSamplingDeltaT/upsampleFactor, deltaT of interpolation and cross correlation
   Int_t numSamplesUpsampled; ///< Number of samples in waveform after up sampling is applied
+  Int_t numCombos;
   
   std::vector<Int_t> ant2s[NUM_SEAVEYS]; ///< Vector holding ant2 indices for each ant1 (for combinatorics)
   std::vector<Int_t> comboToAnt1s; ///< Vector mapping combination index to ant1
   std::vector<Int_t> comboToAnt2s; ///< Vector mapping combination index to ant1
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
-  Int_t doneCrossCorrelations[NUM_POL][NUM_COMBOS]; ///< Keeps track of which correlations have been done
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
   TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs 
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
   std::vector<Double_t> rArray; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray; ///< Vector of antenna heights
-  UChar_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
+  Char_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
 
   ClassDef(CrossCorrelator, 0);
 };
