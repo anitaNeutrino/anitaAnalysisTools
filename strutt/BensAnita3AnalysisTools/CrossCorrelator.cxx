@@ -70,6 +70,13 @@ void CrossCorrelator::initializeVariables(){
   do5PhiSectorCombinatorics();
   fillDeltaTLookup();
   printInfo();
+
+
+  mapModeNames[kGlobal] = "Global";
+  mapModeNames[kTriggered] = "Triggered";
+  zoomModeNames[kZoomedOut] = "";
+  zoomModeNames[kZoomedIn] = "Zoom";
+  
 }
 
 

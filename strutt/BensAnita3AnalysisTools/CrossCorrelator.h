@@ -75,14 +75,14 @@ public:
     kTriggered,
     kNumMapModes
   } mapMode_t;
-  TString mapModeNames[kNumMapModes] = {"Global", "Triggered"};
 
   typedef enum{
     kZoomedOut,
     kZoomedIn,
     kNumZoomModes
   } zoomMode_t;
-  TString zoomModeNames[kNumZoomModes] = {"", "Zoom"};
+  TString mapModeNames[kNumMapModes];
+  TString zoomModeNames[kNumZoomModes];
 
   
   /**********************************************************************************************************
@@ -125,7 +125,6 @@ public:
   Double_t getBin0PhiDeg();
   void writeDeltaTsFile(); // Speed up initialization
   Int_t readDeltaTsFile(); // Speed up initialization
-
 
   /**********************************************************************************************************
   Image generation functions.
