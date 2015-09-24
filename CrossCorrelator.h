@@ -88,8 +88,6 @@ public:
   Int_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
   Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
-  Int_t getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin); // Slightly faster?
-
   /**********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
   **********************************************************************************************************/
@@ -104,7 +102,9 @@ public:
   /**********************************************************************************************************
   Image generation functions.
   **********************************************************************************************************/
-
+  
+  Double_t getPhi0();
+  TH2D* makeBlankImage(TString name, TString title);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger=0xffff);
@@ -153,12 +153,6 @@ public:
   std::vector<Double_t> rArray; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray; ///< Vector of antenna heights
-  Double_t tanThetaLookup[NUM_BINS_THETA]; ///< Lookup for getDeltaTExpected
-  Double_t cosThetaLookup[NUM_BINS_THETA];///< Lookup for getDeltaTExpected
-  Double_t sinPhiWaveLookup[NUM_BINS_PHI*NUM_PHI]; ///< Lookup for getDeltaTExpected
-  Double_t cosPhiWaveLookup[NUM_BINS_PHI*NUM_PHI]; ///< Lookup for getDeltaTExpected
-  Double_t cosPhiArrayLookup[NUM_SEAVEYS]; ///< Lookup for getDeltaTExpected
-  Double_t sinPhiArrayLookup[NUM_SEAVEYS]; ///< Lookup for getDeltaTExpected
   UChar_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
 
   ClassDef(CrossCorrelator, 0);
