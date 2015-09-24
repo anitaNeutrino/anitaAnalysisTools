@@ -201,7 +201,7 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
 Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
   
   Double_t deltaAngle = angle1 - angle2;
-  while(TMath::Abs(deltaAngle > 180)){
+  while(TMath::Abs(deltaAngle) > 180){
     if(deltaAngle > 180){
       deltaAngle -= 360;
     }
@@ -858,16 +858,10 @@ void RootTools::saveCanvas(TCanvas* c, TString fileName){
 
 Double_t RootTools::getFullWidthHalfMax(TH1D* h){
   
+  Int_t maxBin = RootTools::getPeakBinOfHistogram(h);
   Int_t n = h->GetNbinsX();
-  Double_t max = DBL_MIN;
-  Int_t maxBin = 0;
-  for(Int_t bin=1; bin<n; bin++){
-    Double_t val = h->GetBinContent(bin);
-    if(val > max){
-      max = val;
-      maxBin = bin;
-    }
-  }
+  Double_t max = h->GetBinContent(maxBin);
+
 
   Double_t halfMaxPos = 0;
   for(Int_t bin=maxBin; bin<=n; bin++){
@@ -888,4 +882,61 @@ Double_t RootTools::getFullWidthHalfMax(TH1D* h){
   }
 
   return halfMaxPos - halfMaxNeg;
+}
+
+
+
+/*!
+  \brief Finds the bin containing the maximum value of a TH1D
+  \param h is a histogram
+  \returns the peak bin (in ROOT bin counting starts at 1)
+*/
+Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
+
+  Int_t n = h->GetNbinsX();
+  Double_t max = DBL_MIN;
+  Int_t maxBin = 0;
+  for(Int_t bin=1; bin<n; bin++){
+    Double_t val = h->GetBinContent(bin);
+    if(val > max){
+      max = val;
+      maxBin = bin;
+    }
+  }
+  return maxBin;
+}
+
+
+/*!
+  \brief For nice plotting of 2D dists about 0, makes max = -min.
+  \param h is a 2D histogram
+*/
+void RootTools::makeZaxisScaleEqualAboutZero(TH2D* h){
+
+  Double_t min = h->GetMinimum();
+  Double_t max = h->GetMaximum();
+
+  if(TMath::Abs(min) > max){
+    h->SetMaximum(-min);
+  }
+  else{
+    h->SetMinimum(-max);
+  }
+
+}
+
+/*!
+  \brief For decoding ANITA-3 l3triggers.
+  \param numPhi should be 16 really, but just want to make this function very general.
+  \param l3Trigger is the bit mask to be decoded.
+*/
+
+std::vector<Int_t> RootTools::decodeL3Trigger(UInt_t numPhi, UInt_t l3Trigger){
+
+  std::vector<Int_t> decoded(numPhi, 0);
+  for(UInt_t phiSector=0; phiSector<numPhi; phiSector++){
+    UInt_t doPhiSector = ((l3Trigger >> phiSector) & 1);
+    decoded.at(phiSector) = doPhiSector;
+  }
+  return decoded;
 }

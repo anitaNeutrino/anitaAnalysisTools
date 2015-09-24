@@ -71,7 +71,8 @@ endif
 
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
-LIB_OBJS = CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o benToolsDict.o
+DICT = benToolsDict
+LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o
 CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar
 
@@ -120,7 +121,7 @@ endif
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
 
 
-benToolsDict.C : $(CLASS_HEADERS)
+$(DICT).C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
 #		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
@@ -143,6 +144,8 @@ install: $(ROOT_LIBRARY)
 ifeq ($(PLATFORM),macosx)
 #	install -c -m 755 $(ROOT_LIBRARY) $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY)) $(ANITA_UTIL_LIB_DIR)
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
+	-@install -c -m 755 $(DICT)_rdict.pcm $(ANITA_UTIL_LIB_DIR)
+
 else
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
 endif

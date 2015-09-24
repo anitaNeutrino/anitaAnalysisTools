@@ -60,7 +60,9 @@ namespace RootTools{
 				    Double_t& minY, Double_t& minX,
 				    Double_t lowerLimit, Double_t upperLimit);
 
+  Int_t getPeakBinOfHistogram(TH1D* h);
   Double_t getFullWidthHalfMax(TH1D* h);
+  std::vector<Int_t> decodeL3Trigger(UInt_t numPhi, UInt_t l3Trigger);
 
 
   /* Do geometric things */
@@ -74,6 +76,10 @@ namespace RootTools{
   void zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt=0);
   void offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[]);
   void multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factors[]);
+
+
+  /* Prettify */
+  void makeZaxisScaleEqualAboutZero(TH2D* h);
   
   /* Make new output based on input */
   TGraph* makeNormalized(TGraph* gr); ///< Creates new TGraph (leaving original unchanged) with mean = 0 & RMS = 1

@@ -25,7 +25,7 @@ void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
 void hackyNormalizationTest();
-void testFileWriting();
+// void testFileWriting();
 
 int main(){
 
@@ -39,17 +39,17 @@ int main(){
 
 }
 
-void testFileWriting(){
+// void testFileWriting(){
 
-  CrossCorrelator* c = new CrossCorrelator();
-  c->writeDeltaTsFile();
+//   CrossCorrelator* c = new CrossCorrelator();
+//   c->writeDeltaTsFile();
 
-  c->readDeltaTsFile();
-  for(int combo=0; combo<NUM_COMBOS; combo++){
-    std::cout << (int)c->deltaTs[combo][0][0] << ", ";
-  }
-  std::cout << std::endl;
-}
+//   c->readDeltaTsFile();
+//   for(int combo=0; combo<NUM_COMBOS; combo++){
+//     std::cout << (int)c->deltaTs[combo][0][0] << ", ";
+//   }
+//   std::cout << std::endl;
+// }
 
 
 void testNewCombinatorics(){
