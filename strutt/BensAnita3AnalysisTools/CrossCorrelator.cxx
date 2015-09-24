@@ -102,6 +102,20 @@ void CrossCorrelator::initializeVariables(Int_t upSampleFactorTemp){
 
 
 
+/*!
+  \brief Normalizes the position of phi-sector 1, for histogram binning.
+  \returns phiArrayDeg.at(0) normalized to lie between -180 and 180.
+*/
+Double_t CrossCorrelator::getPhi0(){
+  Double_t phi0 = phiArrayDeg.at(0);
+  if(phi0 < -180){
+    phi0+=360;
+  }
+  else if(phi0 >= 180){
+    phi0-=360;
+  }
+  return phi0;
+}
 
 
 
@@ -368,20 +382,6 @@ Int_t CrossCorrelator::getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2, Double
 
 
 
-Int_t CrossCorrelator::getDeltaTExpected(Int_t ant1, Int_t ant2, Int_t phiBin, Int_t thetaBin){
-  Double_t part1 = -zArray.at(ant1)*tanThetaLookup[thetaBin] - rArray.at(ant1)*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant1] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant1]);
-  Double_t part2 = -zArray.at(ant2)*tanThetaLookup[thetaBin] - rArray.at(ant2)*(cosPhiWaveLookup[phiBin]*cosPhiArrayLookup[ant2] + sinPhiWaveLookup[phiBin]*sinPhiArrayLookup[ant2]);
-  Double_t tdiff = 1e9*((cosThetaLookup[thetaBin] * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
-  tdiff /= correlationDeltaT;
-  return TMath::Nint(tdiff);
-}
-
-
-
-
-
-
-
 
 
 
@@ -434,27 +434,6 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
 }
 
 void CrossCorrelator::fillDeltaTLookup(){
-
-  for(Int_t thetaBin=0; thetaBin < NUM_BINS_THETA; thetaBin++){
-    Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
-    Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-    tanThetaLookup[thetaBin] = TMath::Tan(thetaWave);
-    cosThetaLookup[thetaBin] = TMath::Cos(thetaWave);
-  }
-
-  for(Int_t phiBin=0; phiBin < NUM_BINS_PHI*NUM_PHI; phiBin++){
-    // Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-    Double_t phiDeg = -0.5*PHI_RANGE + phiArrayDeg.at(0) + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-    Double_t phiWave = TMath::DegToRad()*phiDeg;
-    //    phiWaveLookup[phiBin] = phiWave;
-    cosPhiWaveLookup[phiBin] = TMath::Cos(phiWave);
-    sinPhiWaveLookup[phiBin] = TMath::Sin(phiWave);
-  }
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    Double_t phiRad = TMath::DegToRad()*phiArrayDeg.at(ant);
-    cosPhiArrayLookup[ant] = TMath::Cos(phiRad);
-    sinPhiArrayLookup[ant] = TMath::Sin(phiRad);
-  }
 
   for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
     for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
@@ -512,6 +491,18 @@ void CrossCorrelator::fillDeltaTLookup(){
 Image generation functions.
 ************************************************************************************************************/
 
+TH2D* CrossCorrelator::makeBlankImage(TString name, TString title){
+  Double_t phiSect0Deg = getPhi0();
+  Double_t phiMin = phiSect0Deg - PHI_RANGE/2;
+  Double_t phiMax = phiMin + 360;
+  TH2D* hImage = new TH2D(name, title,
+			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
+			  NUM_BINS_THETA, -THETA_RANGE/2, THETA_RANGE/2);
+  hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
+  hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
+  return hImage;
+}
+
 
 
 TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger){
@@ -530,12 +521,8 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
   TString title = TString::Format("Event %u ", eventNumber);
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
 
-  TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI*NUM_PHI, -PHI_RANGE/2, PHI_RANGE*NUM_PHI-PHI_RANGE/2,
-			  NUM_BINS_THETA, -THETA_RANGE/2, THETA_RANGE/2);
-  hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
-
+  TH2D* hImage = makeBlankImage(name, title);
+  
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
   
@@ -552,6 +539,9 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 	    for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
 	      Int_t ant2 = ant2s[ant1].at(ant2Ind);
 	      Int_t comboInd = comboIndices[ant1][ant2];
+	      // if(phiBin==0&&thetaBin==0){
+	      // 	std::cout << comboInd << "\t" << ant1 << "\t" << ant2 << std::endl;
+	      // }
 	      if(comboInd > 0){
 		Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
 		offset*=upsampleFactor; // Correct for variable upsample factor
@@ -599,13 +589,7 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");  
   title += TString::Format(" (spherical #deltats r = %lf m)", rWave);
 
-  TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI*NUM_PHI, phiArrayDeg.at(0)-PHI_RANGE/2,
-			  phiArrayDeg.at(15)+PHI_RANGE/2,
-			  NUM_BINS_THETA, -THETA_RANGE/2,
-			  THETA_RANGE/2);
-  hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
+  TH2D* hImage = makeBlankImage(name, title);
 
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
