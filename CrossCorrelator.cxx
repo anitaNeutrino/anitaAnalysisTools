@@ -304,17 +304,11 @@ void CrossCorrelator::doAllCrossCorrelations(){
 
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-      for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
-	Int_t ant2 = ant2s[ant1].at(ant2Ind);
-	Int_t comboInd = comboIndices[ant1][ant2];
-	if(!doneCrossCorrelations[pol][comboInd]){
-	  crossCorrelations[pol][comboInd] = crossCorrelateFourier(grsInterp[pol][ant1], grsInterp[pol][ant2]);
-	  
-	  doneCrossCorrelations[pol][comboInd] = 1;
-	}
-      }
-    }    
+    for(Int_t combo=0; combo<numCombos; combo++){
+      Int_t ant1 = comboToAnt1s.at(combo);
+      Int_t ant2 = comboToAnt2s.at(combo);
+      crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
+    }
   }
 }
 
@@ -400,29 +394,47 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
     }
   }
 
-  Int_t numCombos=0;
-  for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
-    Int_t phiSect1 = ant1%NUM_PHI;
-    for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
-    //    for(Int_t deltaPhiSect=-3; deltaPhiSect<=3; deltaPhiSect++){
-      for(Int_t ring=0; ring<NUM_RING; ring++){
-	Int_t phiSect2 = phiSect1 + deltaPhiSect;
-	phiSect2 = phiSect2 < 0 ? phiSect2 + NUM_PHI : phiSect2;
-	phiSect2 = phiSect2 >= NUM_PHI ? phiSect2 - NUM_PHI : phiSect2;
-	Int_t ant2 = phiSect2 + ring*NUM_PHI;
-	if(ant1 != ant2){
-	  ant2s[ant1].push_back(ant2);	  
-	  if(comboIndices[ant1][ant2] < 0){
-	    comboIndices[ant1][ant2] = numCombos;
-	    comboIndices[ant2][ant1] = numCombos;
-	    comboToAnt1s.push_back(ant1);
-	    comboToAnt2s.push_back(ant2);	    
-	    numCombos++;
-	  }
-	}
+
+  numCombos=0;
+  for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
+    Double_t phiSect1 = ant1%NUM_PHI;	
+    for(Int_t ant2=ant1+1; ant2<NUM_SEAVEYS; ant2++){
+      Double_t phiSect2 = ant2%NUM_PHI;
+      if(TMath::Abs(phiSect1 - phiSect2) <= 2 || TMath::Abs(phiSect1 - phiSect2) >= (NUM_PHI-2)){
+	// std::cout << ant1 << "\t" << ant2 << "\t" << numCombos << std::endl;
+	comboIndices[ant1][ant2] = numCombos;
+	comboIndices[ant2][ant1] = numCombos;
+	comboToAnt1s.push_back(ant1);
+	comboToAnt2s.push_back(ant2);	    
+	numCombos++;
       }
-    }
+    }    
   }
+  
+
+
+  // Int_t numCombos=0;
+  // for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
+  //   Int_t phiSect1 = ant1%NUM_PHI;
+  //   for(Int_t deltaPhiSect=-2; deltaPhiSect<=2; deltaPhiSect++){
+  //     for(Int_t ring=0; ring<NUM_RING; ring++){
+  // 	Int_t phiSect2 = phiSect1 + deltaPhiSect;
+  // 	phiSect2 = phiSect2 < 0 ? phiSect2 + NUM_PHI : phiSect2;
+  // 	phiSect2 = phiSect2 >= NUM_PHI ? phiSect2 - NUM_PHI : phiSect2;
+  // 	Int_t ant2 = phiSect2 + ring*NUM_PHI;
+  // 	if(ant1 != ant2){
+  // 	  ant2s[ant1].push_back(ant2);	  
+  // 	  if(comboIndices[ant1][ant2] < 0){
+  // 	    comboIndices[ant1][ant2] = numCombos;
+  // 	    comboIndices[ant2][ant1] = numCombos;
+  // 	    comboToAnt1s.push_back(ant1);
+  // 	    comboToAnt2s.push_back(ant2);	    
+  // 	    numCombos++;
+  // 	  }
+  // 	}
+  //     }
+  //   }
+  // }
   
   if(numCombos != NUM_COMBOS){
     std::cerr << "numCombos = " << numCombos
@@ -439,19 +451,17 @@ void CrossCorrelator::fillDeltaTLookup(){
     for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
       Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
       // Double_t phiDeg = -0.5*PHI_RANGE + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-      Double_t phiDeg = -0.5*PHI_RANGE + phiArrayDeg.at(0) + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;      
+      Double_t phiDeg = -0.5*PHI_RANGE + phiArrayDeg.at(0) + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
       Double_t phiWave = TMath::DegToRad()*phiDeg;
       for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 	Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
 	Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-	for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
-	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
-	    Int_t comboInd = comboIndices[ant1][ant2];
-	    Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
-	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
-	    deltaTs[comboInd][phiBin][thetaBin] = offset;
-	  }
+	for(Int_t combo=0; combo<numCombos; combo++){
+	  Int_t ant1 = comboToAnt1s.at(combo);
+	  Int_t ant2 = comboToAnt2s.at(combo);
+	  Int_t offset = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
+	  // std::cout << combo << "\t" << phiBin << "\t" << thetaBin << "\t" << offset << "\t" << deltaTs << std::endl;
+	  deltaTs[combo][phiBin][thetaBin] = offset;
 	}
       }
     }
@@ -534,18 +544,20 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 	  Double_t correlations = 0;
 	  Int_t contributors = 0;
-	  for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
-	  // for(Int_t ant1=1; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
-	    for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
-	      Int_t ant2 = ant2s[ant1].at(ant2Ind);
-	      Int_t comboInd = comboIndices[ant1][ant2];
-	      // if(phiBin==0&&thetaBin==0){
-	      // 	std::cout << comboInd << "\t" << ant1 << "\t" << ant2 << std::endl;
-	      // }
-	      if(comboInd > 0){
-		Int_t offset = deltaTs[comboInd][phiBin][thetaBin];
-		offset*=upsampleFactor; // Correct for variable upsample factor
-		correlations += crossCorrelations[pol][comboInd][offset];
+
+	  std::vector<Int_t> doneCombos;
+	  for(Int_t combo=0; combo<numCombos; combo++){
+	    Int_t ant1 = comboToAnt1s.at(combo);
+	    Int_t ant2 = comboToAnt2s.at(combo);
+	    if(TMath::Abs(phiSector - (ant1%16))<=2 || TMath::Abs(phiSector - (ant1%16))>=14){
+	      if(TMath::Abs(phiSector - (ant2%16))<=2 || TMath::Abs(phiSector - (ant2%16))>=14){	    
+		// if(!(ant1==0 && ant2==16)) continue;
+		// if(combo >= 2) continue;
+		Int_t offset = deltaTs[combo][phiBin][thetaBin];
+		offset = offset < 0 ? offset + numSamplesUpsampled : offset;
+		offset*=upsampleFactor; // Correct for variable upsample factor		  
+		correlations += crossCorrelations[pol][combo][offset];
+		// correlations += offset;
 		contributors++;
 	      }
 	    }
@@ -602,35 +614,36 @@ TH2D* CrossCorrelator::makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWa
 	Double_t thetaWave = TMath::DegToRad()*hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
         Double_t correlations = 0;
         Int_t contributors = 0;
-	for(Int_t ant1=phiSector; ant1<NUM_SEAVEYS; ant1+=NUM_PHI){
-	// for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-	  for(UInt_t ant2Ind=0; ant2Ind<ant2s[ant1].size(); ant2Ind++){
-	    Int_t ant2 = ant2s[ant1].at(ant2Ind);
-	    Int_t comboInd = comboIndices[ant1][ant2];
-	    if(comboInd < 0) continue;
-	    Int_t offset = getDeltaTExpectedSpherical(ant1, ant2, phiWave, thetaWave, rWave);
+	for(Int_t combo=0; combo<numCombos; combo++){
+	  Int_t ant1 = comboToAnt1s.at(combo);
+	  Int_t ant2 = comboToAnt2s.at(combo);
+	  if(TMath::Abs(phiSector - (ant1%16))<=2 || TMath::Abs(phiSector - (ant1%16))>=14){
+	    if(TMath::Abs(phiSector - (ant2%16))<=2 || TMath::Abs(phiSector - (ant2%16))>=14){	    
+	      Int_t offset = getDeltaTExpectedSpherical(ant1, ant2, phiWave, thetaWave, rWave);
 
-	    // Not obvious, but since we correlate ant1 with ant2 but not ant2 with ant1 
-	    // we need to correct the sign of deltaT in the case that ant1 < ant2.
+	      // Not obvious, but since we correlate ant1 with ant2 but not ant2 with ant1 
+	      // we need to correct the sign of deltaT in the case that ant1 < ant2.
 
-	    if(ant1 < ant2){
-	      offset *= -1;
+	      if(ant1 < ant2){
+		offset *= -1;
+	      }
+	      offset = offset < 0 ? offset + numSamplesUpsampled : offset;
+	      correlations += crossCorrelations[pol][combo][offset];
+	      contributors++;
 	    }
-	    offset = offset < 0 ? offset + numSamplesUpsampled : offset;
-	    correlations += crossCorrelations[pol][comboInd][offset];
-	    contributors++;
+	    if(contributors>0){
+	      correlations /= contributors;
+	    }
+	    hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
+	    if(correlations > imagePeak){
+	      imagePeak = correlations;
+	      peakPhiBin = phiBin;
+	      peakThetaBin = thetaBin;
+	    }
 	  }
 	}
-	if(contributors>0){
-	  correlations /= contributors;
-	}
-	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
-	if(correlations > imagePeak){
-	  imagePeak = correlations;
-	  peakPhiBin = phiBin;
-	  peakThetaBin = thetaBin;
-	}
       }
+	
     }
   }
 
@@ -672,7 +685,6 @@ Functions to delete pointers to internal variables
 void CrossCorrelator::deleteCrossCorrelations(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t comboInd=0; comboInd<NUM_COMBOS; comboInd++){
-      doneCrossCorrelations[pol][comboInd] = 0;
       if(crossCorrelations[pol][comboInd] != NULL){
 	delete [] crossCorrelations[pol][comboInd];
 	crossCorrelations[pol][comboInd] = NULL;
@@ -783,7 +795,7 @@ void CrossCorrelator::writeDeltaTsFile(){
   sprintf(dtsFileName, "%s/crossCorrelator.dts", dtsDir);
 
   FILE* dtsFile = fopen(dtsFileName, "w");
-  fwrite(deltaTs,sizeof(unsigned char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA, 1, dtsFile);
+  fwrite(deltaTs,sizeof(char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA, 1, dtsFile);
   fclose(dtsFile);
 }
 
@@ -798,7 +810,7 @@ Int_t CrossCorrelator::readDeltaTsFile(){
   Int_t successState = 0;
   FILE* dtsFile = fopen(dtsFileName, "r");
   if(dtsFile != NULL){
-    UInt_t numBytes = sizeof(unsigned char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA;
+    UInt_t numBytes = sizeof(char)*NUM_COMBOS*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA;
     fread(deltaTs,1,numBytes,dtsFile);
     fclose(dtsFile);
   }
