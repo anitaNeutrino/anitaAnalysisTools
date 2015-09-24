@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
   cc->correlateEventTest(30, -15, 7);
 
   for(Int_t rInd = 0; rInd<numRVals; rInd++){    
-    hDts[rInd] = cc->makeImageSpherical(AnitaPol::kVertical, rVals[rInd]);
+    hDts[rInd] = cc->makeGlobalSphericalImage(AnitaPol::kVertical, rVals[rInd]);
     hDts[rInd]->SetName(TString::Format("hSpherical%d", rInd));
   }
 

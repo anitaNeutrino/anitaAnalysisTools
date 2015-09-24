@@ -99,7 +99,11 @@ void testNewCombinatorics(){
   std::cout << nc << " combos" << std::endl; 
 
   TFile* outFile = new TFile("/tmp/testNewCombinatorics.root","recreate");
-  TH2D* hImage = cc->makeImage(AnitaPol::kVertical);
+  Double_t imagePeak = -1;
+  Double_t peakPhiDeg = -1;
+  Double_t peakThetaDeg = -1;
+  
+  TH2D* hImage = cc->makeGlobalImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg);
   hImage->Write();
   delete hImage;
 
@@ -110,63 +114,6 @@ void testNewCombinatorics(){
   
 }
 
-// void testImageGPUStyle(){
-//   /*
-//     This function tests the cross-correlation functions which mimic what the GPU is doing on some level.
-//    */
-
-//   char eventFileName[1024];
-
-//   Int_t run = 11672;
-//   sprintf(eventFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
-//   TFile* eventFile = TFile::Open(eventFileName);
-//   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
-
-//   char rawHeaderFileName[1024];
-//   sprintf(rawHeaderFileName, "../antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
-//   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-//   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
-
-//   RawAnitaEvent* event = NULL;
-//   eventTree->SetBranchAddress("event", &event);
-//   RawAnitaHeader* header = NULL;
-//   headTree->SetBranchAddress("header", &header);
-
-//   TFile* outFile = new TFile("/tmp/testImageGPUStyle.root","recreate");
-//   TTree* corrTree = new TTree("corrTree","corrTree");
-//   Double_t imagePeak;
-//   corrTree->Branch("imagePeak", &imagePeak);
-
-//   //  Long64_t numEntries = eventTree->GetEntries();
-//   Long64_t numEntries = 108; //200; //eventTree->GetEntries();
-
-//   CrossCorrelator* cc = new CrossCorrelator();
-
-//   for(Long64_t entry=107; entry<numEntries; entry++){
-
-//     imagePeak = -1;
-
-//     headTree->GetEntry(entry);
-//     eventTree->GetEntry(entry);
-
-//     UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
-//     cc->correlateEventGPU(realEvent);
-//     TH2D* hImage = cc->makeImageGPU(AnitaPol::kVertical);
-//     hImage->SetName("hImageFrom3PhiSectorPulsing");
-//     hImage->SetTitle("Image From 3 Phi-Sector Pulsing");
-
-
-//     delete realEvent;
-//   }
-
-//   outFile->Write();
-//   outFile->Close();
-
-//   delete cc;
-
-// }
-
-
 void testImageFullStyle(){
   /*
     This function tests the full +-2 phi-sector reconstruction.
@@ -174,23 +121,18 @@ void testImageFullStyle(){
 
   char eventFileName[1024];
 
-  // Int_t run = 11672;
-  // sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
   Int_t run = 352;
   sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
 
   TFile* eventFile = TFile::Open(eventFileName);
   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
 
-  // char rawHeaderFileName[1024];
-  // sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
   char rawHeaderFileName[1024];
   sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
 
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  // RawAnitaEvent* event = NULL;
   CalibratedAnitaEvent* event = NULL;  
   eventTree->SetBranchAddress("event", &event);
 
@@ -206,11 +148,13 @@ void testImageFullStyle(){
   Long64_t numEntries = 200; //eventTree->GetEntries();
   numEntries = 108;
 
-  CrossCorrelator* cc = new CrossCorrelator(2);
+  CrossCorrelator* cc = new CrossCorrelator();
 
   for(Long64_t entry=107; entry<numEntries; entry++){
 
     imagePeak = -1;
+    Double_t peakPhiDeg = -1;
+    Double_t peakThetaDeg = -1;
 
     headTree->GetEntry(entry);
     eventTree->GetEntry(entry);
@@ -223,7 +167,7 @@ void testImageFullStyle(){
 
     std::vector<TH2D*> hImages;
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      hImages.push_back(cc->makeImage(AnitaPol::AnitaPol_t(pol)));
+      hImages.push_back(cc->makeGlobalImage(AnitaPol::AnitaPol_t(pol), imagePeak, peakPhiDeg, peakThetaDeg));
     }
     
     delete realEvent;

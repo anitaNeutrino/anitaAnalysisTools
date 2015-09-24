@@ -26,18 +26,24 @@
 
 // standard c++ things
 #include <iostream>
-#include <assert.h>
 
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
+
+// Typical number of samples in waveform
+#define NUM_SAMPLES 256
 
 // Image definitions
 #define NUM_BINS_THETA 256
 #define NUM_BINS_PHI 64
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
-#define NUM_SAMPLES 256
+
+#define NUM_BINS_THETA_ZOOM 100
+#define NUM_BINS_PHI_ZOOM 100
+#define THETA_RANGE_ZOOM 10
+#define PHI_RANGE_ZOOM 10
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL 2
@@ -45,6 +51,9 @@
 #define DELTA_PHI_SECT 2
 
 #define SPEED_OF_LIGHT 2.99792458e8
+
+
+#define ALL_PHI_TRIGS (pow(2, NUM_PHI)-1)
 
 
 /*! \class CrossCorrelator
@@ -57,12 +66,31 @@ Does all the heavy lifting of getting waveforms from a UsefulAnitaEvent, cross c
 class CrossCorrelator : public TObject{
 
 public:
+
+  /**********************************************************************************************************
+  typdef enums: flags for making maps
+  **********************************************************************************************************/
+  typedef enum {
+    kGlobal,
+    kTriggered,
+    kNumMapModes
+  } mapMode_t;
+  TString mapModeNames[kNumMapModes] = {"Global", "Triggered"};
+
+  typedef enum{
+    kZoomedOut,
+    kZoomedIn,
+    kNumZoomModes
+  } zoomMode_t;
+  TString zoomModeNames[kNumZoomModes] = {"", "Zoom"};
+
+  
   /**********************************************************************************************************
   Constructor and destructor functions
   **********************************************************************************************************/
-  CrossCorrelator(Int_t upsampleFactorTemp = 1);
+  CrossCorrelator();
   ~CrossCorrelator();
-  void initializeVariables(Int_t upsampleFactorTemp);
+  void initializeVariables();  
   void printInfo();
 
   /**********************************************************************************************************
@@ -75,7 +103,6 @@ public:
   All correlation functions
   **********************************************************************************************************/
 
-  Double_t correlationWithOffset(TGraph* gr1, TGraph* gr2, Int_t offset);
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void doAllCrossCorrelations();
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
@@ -91,31 +118,61 @@ public:
   /**********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
   **********************************************************************************************************/
+  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
+  void fillCombosToUse(mapMode_t mapMode, UInt_t l3Trigger, std::vector<Int_t>* combosToUse);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
-
+  Double_t getBin0PhiDeg();
   void writeDeltaTsFile(); // Speed up initialization
   Int_t readDeltaTsFile(); // Speed up initialization
-
 
 
   /**********************************************************************************************************
   Image generation functions.
   **********************************************************************************************************/
+
+  // Create blank histogram with proper axis ranges and axis titles
+  void createImageNameAndTitle(TString& name, TString& title, mapMode_t mapMode, zoomMode_t zoomMode,
+			       Double_t rWave, AnitaPol::AnitaPol_t pol);
   
-  Double_t getPhi0();
-  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
   TH2D* makeBlankImage(TString name, TString title);
-  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
-  TH2D* makeImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger=0xffff);
-  TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, 
-		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger=0xffff);
-  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave);
-  TH2D* makeImageSpherical(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
-			   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  TH2D* makeBlankZoomedImage(TString name, TString title, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
+  
+  // Workhorse function which is called by many aliases.
+  // Don't call directly unless you want to pass a lot of redundant parameters
+  TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
+		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger,
+		  mapMode_t mapMode, zoomMode_t zoomMode,
+		  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+
+
+  TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
+			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+
+  TH2D* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
+			   Double_t& peakThetaDeg, UInt_t l3Trigger);
+  
+
+  TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave);
+  TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
+				 Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+
+  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3Trigger);
+  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
+				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3Trigger);
+  
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
 
 
+  // To be completed
+  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3Trigger,
+			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
+
+  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
+			Double_t& peakThetaDeg, UInt_t l3Trigger, Double_t zoomCenterPhiDeg,
+			Double_t zoomCenterThetaDeg);
+  
+  
 
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
@@ -133,6 +190,7 @@ public:
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
 
 
+  
   /**********************************************************************************************************
   Variables
   **********************************************************************************************************/
@@ -157,10 +215,10 @@ public:
   std::vector<Double_t> zArray; ///< Vector of antenna heights
 
   typedef Short_t dtIndex_t;
-  // dtIndex_t deltaTs[NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)
   dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)  
   Int_t deltaTMax;
   Int_t deltaTMin;
+  
   ClassDef(CrossCorrelator, 0);
 };
 #endif
