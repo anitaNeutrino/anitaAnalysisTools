@@ -1099,7 +1099,7 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
     // Pads FFTs for more finely grained correlation result for zoomed in map
     // doUpsampledCrossCorrelations(pol, l3TrigPattern);
     doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
-    fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
+    // fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
   }
 
   // LAUNCH THREADS HERE
@@ -1173,7 +1173,13 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	}
 	// If we are in zoomed in & plane wave mode then calculate
 	else if(zoomMode==kZoomedIn && rWave==0){
-	  offset = ptr->deltaTsZoom[phiBin][thetaBin][combo];
+	  // offset = ptr->deltaTsZoom[phiBin][thetaBin][combo];
+	  // offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
+	  // correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
+	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
+	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
+	  Double_t deltaT = ptr->getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
+	  offset = TMath::Nint(deltaT/ptr->correlationDeltaT);
 	  offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
 	  correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
 	}
