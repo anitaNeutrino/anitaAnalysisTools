@@ -881,13 +881,15 @@ TH2D* CrossCorrelator::makeBlankZoomedImage(TString name, TString title,
 
 TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave){
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;
-  return makeGlobalSphericalImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg);
+  return makeGlobalSphericalImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg);  
 }
 
 TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
 						Double_t& peakPhiDeg, Double_t& peakThetaDeg){
-  return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-		   kGlobal, kZoomedOut);
+  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+  // 		   kGlobal, kZoomedOut);
+  return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+			   kGlobal, kZoomedOut);
 }
 
 
@@ -899,20 +901,27 @@ TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Dou
 TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
 						   Double_t& imagePeak, Double_t& peakPhiDeg,
 						   Double_t& peakThetaDeg, UInt_t l3TrigPattern){
-  return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern, kTriggered, kZoomedOut);
+  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
+  // 		   l3TrigPattern, kTriggered, kZoomedOut);
+  return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
+			   l3TrigPattern, kTriggered, kZoomedOut);  
 }
 
 
 TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 				       Double_t& peakThetaDeg){
-  return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-		   kGlobal, kZoomedOut);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+  // 		   kGlobal, kZoomedOut);
+  return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+			   kGlobal, kZoomedOut);
 }
 
 
 TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 					  Double_t& peakThetaDeg, UInt_t l3TrigPattern){
-  return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern, kTriggered, kZoomedOut);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern, kTriggered, kZoomedOut);
+  return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
+			   l3TrigPattern, kTriggered, kZoomedOut);  
 }
 
 
@@ -920,8 +929,10 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 				       Double_t& peakThetaDeg, UInt_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
-  return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
+  // 		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
+			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
 }
 
@@ -930,7 +941,7 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPa
 
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;    
   return makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-			 l3TrigPattern, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  			 l3TrigPattern, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
 }
 
@@ -971,8 +982,18 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
   }
   else if(zoomMode == kZoomedIn){
     hImage = makeBlankZoomedImage(name, title, zoomCenterPhiDeg, zoomCenterThetaDeg);
-    // doUpsampledCrossCorrelations(pol, l3TrigPattern); // Pads FFTs for more finely grained correlation.
-    doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern); // Pads FFTs for more finely grained correlation.    
+  }
+
+  threadImage = hImage;
+  threadMapMode = mapMode;
+  threadZoomMode = zoomMode;
+  threadRWave = rWave;
+  threadL3TrigPattern = l3TrigPattern;
+  
+  if(zoomMode == kZoomedIn){
+    // Pads FFTs for more finely grained correlation result for zoomed in map
+    // doUpsampledCrossCorrelations(pol, l3TrigPattern);
+    doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
     fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
   }
 
@@ -981,18 +1002,25 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
   //   std::cout << phiSect << "\t" << combosToUse[phiSect].size() << std::endl;
   // }
   // std::cout << std::endl << std::endl;
+
   imagePeak = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
+  std::vector<Int_t> combosToUse;
+  Int_t lastPhiSector = 0;
+  if(mapMode==kTriggered){
+    combosToUse = combosToUseTriggered[l3TrigPattern];
+  }
+  else{
+    combosToUse = combosToUseGlobal[0];
+  }
+
   for(Int_t phiInd = 0; phiInd < hImage->GetNbinsX(); phiInd++){
     Int_t phiBin = phiInd;
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
-    std::vector<Int_t> combosToUse;
-    if(mapMode==kTriggered){
-      combosToUse = combosToUseTriggered[l3TrigPattern];
-    }
-    else{
+    if(phiSector!=lastPhiSector && mapMode==kGlobal){
       combosToUse = combosToUseGlobal[phiSector];
+      lastPhiSector = phiSector;
     }
     
     Double_t phiWave = hImage->GetXaxis()->GetBinLowEdge(phiBin+1)*TMath::DegToRad();
@@ -1043,6 +1071,60 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
   return hImage;
 }
 
+TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
+					 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+					 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
+					 Double_t zoomCenterThetaDeg){
+
+  fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
+
+  TString name, title;
+  createImageNameAndTitle(name, title, mapMode, zoomMode, rWave, pol);
+  
+  TH2D* hImage = NULL;
+  if(zoomMode == kZoomedOut){
+    hImage = makeBlankImage(name, title);
+  }
+  else if(zoomMode == kZoomedIn){
+    hImage = makeBlankZoomedImage(name, title, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  }
+
+  threadImage = hImage;
+  threadMapMode = mapMode;
+  threadZoomMode = zoomMode;
+  threadRWave = rWave;
+  threadL3TrigPattern = l3TrigPattern;
+  
+  if(zoomMode == kZoomedIn){
+    // Pads FFTs for more finely grained correlation result for zoomed in map
+    // doUpsampledCrossCorrelations(pol, l3TrigPattern);
+    doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
+    fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
+  }
+
+  // LAUNCH THREADS HERE
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    mapThreads.at(threadInd)->Run();
+  }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    mapThreads.at(threadInd)->Join();
+  }
+
+  // Combine peak search results from each thread.
+  imagePeak = -DBL_MAX;
+  for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    if(threadImagePeak[threadInd] > imagePeak){
+      imagePeak = threadImagePeak[threadInd];
+      peakPhiDeg = threadPeakPhiDeg[threadInd];
+      peakThetaDeg = threadPeakThetaDeg[threadInd];
+    }
+  }
+  
+  return hImage;
+}
+
+
 
 void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   // Disgusting hacks to get ROOT threading to compile inside a class.
@@ -1050,11 +1132,75 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Long_t threadInd = args->threadInd;
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
-
-  threadInd++;
-  ptr++;
-  pol=AnitaPol::kHorizontal;
+  mapMode_t mapMode = ptr->threadMapMode;
+  zoomMode_t zoomMode = ptr->threadZoomMode;
+  Double_t rWave = ptr->threadRWave;
   
+  TH2D* hImage = ptr->threadImage;
+
+  Int_t numPhiBinsThread = hImage->GetNbinsX()/NUM_THREADS;
+  Int_t startPhiBin = threadInd*numPhiBinsThread;
+  
+  ptr->threadImagePeak[threadInd] = -DBL_MAX;
+  Int_t peakPhiBin = -1;
+  Int_t peakThetaBin = -1;
+  std::vector<Int_t> combosToUse;
+  if(mapMode==kTriggered){
+    combosToUse = ptr->combosToUseTriggered[ptr->threadL3TrigPattern];
+  }
+
+  for(Int_t phiInd = startPhiBin; phiInd < startPhiBin+numPhiBinsThread; phiInd++){
+    Int_t phiBin = phiInd;
+    Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
+    if(mapMode==kGlobal){
+      combosToUse = ptr->combosToUseGlobal[phiSector];
+    }
+    
+    Double_t phiWave = hImage->GetXaxis()->GetBinLowEdge(phiBin+1)*TMath::DegToRad();
+    for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+      Double_t thetaWave = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1)*TMath::DegToRad();
+
+      Double_t correlations = 0;
+      for(UInt_t comboInd=0; comboInd<combosToUse.size(); comboInd++){
+	Int_t combo = combosToUse.at(comboInd);
+	Int_t offset = 0;
+
+	// If we are in zoomed out & plane wave mode then use the lookup table for a big speedup
+	if(zoomMode==kZoomedOut && rWave==0){
+	  offset = ptr->deltaTs[phiBin][thetaBin][combo];
+	  offset = offset < 0 ? offset + ptr->numSamples : offset;
+	  correlations += ptr->crossCorrelations[pol][combo][offset];
+	}
+	// If we are in zoomed in & plane wave mode then calculate
+	else if(zoomMode==kZoomedIn && rWave==0){
+	  offset = ptr->deltaTsZoom[phiBin][thetaBin][combo];
+	  offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
+	  correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
+	}
+	// If we are in zoomed out & spherical wave mode then calculate
+	else{
+	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
+	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
+	  offset = ptr->getDeltaTExpectedSpherical(ant1, ant2, phiWave, thetaWave, rWave);
+	  offset = offset < 0 ? offset + ptr->numSamples : offset;
+	  correlations += ptr->crossCorrelations[pol][combo][offset];
+	}
+      }
+      if(combosToUse.size()>0){
+	correlations /= combosToUse.size();
+      }
+      hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
+      if(correlations > ptr->threadImagePeak[threadInd]){
+	ptr->threadImagePeak[threadInd] = correlations;
+	peakPhiBin = phiBin;
+	peakThetaBin = thetaBin;
+      }
+    }
+  }
+
+  ptr->threadPeakPhiDeg[threadInd] = hImage->GetXaxis()->GetBinLowEdge(peakPhiBin+1);
+  ptr->threadPeakThetaDeg[threadInd] = hImage->GetYaxis()->GetBinLowEdge(peakThetaBin+1);
+
   return 0;
   
 }
