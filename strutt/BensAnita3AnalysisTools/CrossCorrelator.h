@@ -165,6 +165,10 @@ public:
 		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
 		  mapMode_t mapMode, zoomMode_t zoomMode,
 		  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+  TH2D* makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
+			  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+			  mapMode_t mapMode, zoomMode_t zoomMode,
+			  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
 
 
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
@@ -256,6 +260,14 @@ public:
 
   AnitaPol::AnitaPol_t threadPol;
   UInt_t threadL3TrigPattern;
+  TH2D* threadImage;
+  mapMode_t threadMapMode;
+  zoomMode_t threadZoomMode;
+  Double_t threadRWave;
+  Double_t threadImagePeak[NUM_THREADS];
+  Double_t threadPeakPhiDeg[NUM_THREADS];
+  Double_t threadPeakThetaDeg[NUM_THREADS];
+  
   std::vector<TThread*> mapThreads;
   std::vector<TThread*> corrThreads;
   std::vector<TThread*> upsampledCorrThreads;
