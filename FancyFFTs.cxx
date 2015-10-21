@@ -14,10 +14,10 @@ ClassImp(FancyFFTs)
 
 /* Define static members */
 /* https://stackoverflow.com/questions/18433752/c-access-private-static-member-from-public-static-method */
-std::map<int, fftw_plan> FancyFFTs::fRealToComplex;
-std::map<int, fftw_plan> FancyFFTs::fComplexToReal;
-std::map<int, double*> FancyFFTs::fReals;
-std::map<int, std::complex<double>*> FancyFFTs::fComplex;
+std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fRealToComplex;
+std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fComplexToReal;
+std::map<std::pair<int, int>, double*> FancyFFTs::fReals;
+std::map<std::pair<int, int>, std::complex<double>*> FancyFFTs::fComplex;
 FancyFFTsWisdomManager FancyFFTs::myWisdom;
 
 FancyFFTs::FancyFFTs(){
@@ -29,17 +29,20 @@ FancyFFTs::~FancyFFTs(){
 }
 
 
-bool FancyFFTs::makeNewPlanIfNeeded(int len){
+bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
   /* 
      Function which checks whether we've encountered a request to do an FFT of this length before.
      If we haven't then we need a new plan!
   */
-  std::map<int,fftw_plan>::iterator it = fRealToComplex.find(len);
+
+  std::pair<int, int> key(len, threadInd);
+  std::map<std::pair<int, int>,fftw_plan>::iterator it = fRealToComplex.find(key);
   if(it==fRealToComplex.end()){
-    fReals[len] = (double*) fftw_malloc(sizeof(double)*len);
-    fComplex[len] = (std::complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
-    fRealToComplex[len] = fftw_plan_dft_r2c_1d(len,fReals[len],(fftw_complex*)fComplex[len],FFTW_MEASURE);
-    fComplexToReal[len] = fftw_plan_dft_c2r_1d(len,(fftw_complex*)fComplex[len],fReals[len],FFTW_MEASURE);
+    std::cout << len << "\t" << threadInd << std::endl;
+    fReals[key] = (double*) fftw_malloc(sizeof(double)*len);
+    fComplex[key] = (std::complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
+    fRealToComplex[key] = fftw_plan_dft_r2c_1d(len,fReals[key],(fftw_complex*)fComplex[key],FFTW_MEASURE);
+    fComplexToReal[key] = fftw_plan_dft_c2r_1d(len,(fftw_complex*)fComplex[key],fReals[key],FFTW_MEASURE);
     return true;
   }
   else{
@@ -47,9 +50,8 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len){
   }
 }
 
-
-TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, bool dBScale){
-  double* powSpec = getPowerSpectrum(len, input, dt, normFlag);
+TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, bool dBScale, int threadInd){
+  double* powSpec = getPowerSpectrum(len, input, dt, normFlag, threadInd);
   int numFreqs = getNumFreqs(len);
   if(dBScale==true){
     for(int freqInd=0; freqInd < numFreqs; freqInd++){
@@ -59,7 +61,7 @@ TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, Pow
   return new TGraph(numFreqs, getFreqArray(len, dt), powSpec);
 }
 
-double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag){
+double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, int threadInd){
 
   /* 
      PowSpecNorm::conventionFlag determines (you guessed it) the normalization of the power spectrum.
@@ -112,10 +114,13 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
      Do FFT without putting the output in a new array.
      we need to normalize the output so lets do that when we move it.
   */
-  doFFT(len, input, false);
+  doFFT(len, input, false, threadInd);
 
+  
+  std::pair<int, int> key(len, threadInd);
+  
   /* Get the fftw_malloc'd array that the plan uses */
-  std::complex<double>* rawFftOutputPtr = (std::complex<double>*) fComplex[len];
+  std::complex<double>* rawFftOutputPtr = (std::complex<double>*) fComplex[key];
 
   const int powSpecLen = getNumFreqs(len);
   double* powSpec = new double[powSpecLen];
@@ -136,24 +141,25 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
   return powSpec;
 }
 
-std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputToNewArray){
+std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd){
   /* 
      Using std::complex<double> instead of the typdef fftw_complex double[2] 
      because CINT has a better time with it, even though it's (apparently) exactly the same.
   */
 
-  makeNewPlanIfNeeded(len);
+  std::pair<int, int> key(len, threadInd);
+  makeNewPlanIfNeeded(len, threadInd);
 
-  memcpy(fReals[len], input, sizeof(double)*len);
+  memcpy(fReals[key], input, sizeof(double)*len);
 
-  fftw_execute(fRealToComplex[len]);
+  fftw_execute(fRealToComplex[key]);
 
   if(copyOutputToNewArray==true){
     int numFreqs = getNumFreqs(len);
     std::complex<double>* output = new std::complex<double>[numFreqs];
 
     /* Seems to work, see http://www.fftw.org/doc/Complex-numbers.html */
-    memcpy(output, fComplex[len], sizeof(fftw_complex)*numFreqs);
+    memcpy(output, fComplex[key], sizeof(fftw_complex)*numFreqs);
     return output;
   }
   else{
@@ -161,28 +167,30 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
   }
 }
 
-double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray){
+double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd){
   
   /* 
      Normalization of 1/N done in this function. 
      Note: fftw_plan_c2r_1d DESTROYS THE INPUT ARRAY when executed.
   */
 
-  makeNewPlanIfNeeded(len);
+  std::pair<int, int> key(len, threadInd);
+
+  makeNewPlanIfNeeded(len, threadInd);
   int numFreqs = getNumFreqs(len);
 
-  memcpy(fComplex[len], input, sizeof(fftw_complex)*numFreqs);
-  fftw_execute(fComplexToReal[len]);
+  memcpy(fComplex[key], input, sizeof(fftw_complex)*numFreqs);
+  fftw_execute(fComplexToReal[key]);
   
   /* Normalization needed on the inverse transform */
-  double* invFftOutPtr = fReals[len];
+  double* invFftOutPtr = fReals[key];
   for(int i=0; i<len; i++){
     invFftOutPtr[i]/=len;
   }
 
   if(copyOutputToNewArray==true){
     double* output = new double[len];
-    memcpy(output, fReals[len], sizeof(double)*len);
+    memcpy(output, fReals[key], sizeof(double)*len);
     return output;
   }
   else{
@@ -211,25 +219,46 @@ int FancyFFTs::getNumFreqs(int len){
   return (len/2 + 1);
 }
 
+std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded){
+
+  std::complex<double>* fftPadded = new std::complex<double>[numFreqsPadded];
+
+  // Here I scale the padded FFT so that it is as if I fourier transformed a longer waveform.
+  // There is a scale factor of length picked up from a forward FFT.
+  Double_t scale = numFreqsPadded/numFreqs;
+  for(int freqInd=0; freqInd<numFreqs; freqInd++){
+    fftPadded[freqInd].real(fft[freqInd].real()*scale);
+    fftPadded[freqInd].imag(fft[freqInd].imag()*scale);
+  }
+  for(int freqInd=numFreqs; freqInd<numFreqsPadded; freqInd++){
+    fftPadded[freqInd] = 0;
+  }
+  
+  return fftPadded;
+}
+
+
 
 int FancyFFTs::printListOfKeys(){
   /* Returns number of plans, prints the lengths of the plans to screen.*/
 
-  std::vector<int> keys;
+  std::vector<std::pair<int, int> > keys;
 
-  for(std::map<int,fftw_plan>::iterator it = fRealToComplex.begin(); it != fRealToComplex.end(); it++){
+  std::map<std::pair<int, int>,fftw_plan>::iterator it;
+  for(it = fRealToComplex.begin(); it != fRealToComplex.end(); it++){
     keys.push_back(it->first);
   }
   
   /* Pretty sure in advance of testing that this list is not guarenteed to be sorted. */
-  std::vector<int> sortedIndices(keys.size());
-  TMath::Sort(int(keys.size()), &keys[0], &sortedIndices[0], kFALSE);
+  // std::vector<std::pair<int, int>> sortedIndices(keys.size());
+  // TMath::Sort(int(keys.size()), &keys[0], &sortedIndices[0], kFALSE);
 
   /* Print to terminal */
   std::cout << "Plan lengths in memory = [";
   for(int i=0; i<int(keys.size()); i++){
-    int j = sortedIndices.at(i);
-    std::cout << keys.at(j);
+    // int j = sortedIndices.at(i);
+    // std::cout << keys.at(j);
+    std::cout << "(" << keys.at(i).first << ", " << keys.at(i).second << ")";
     if(i < int(keys.size())-1 ) std::cout << ", ";
   }
   std::cout << "]" << std::endl;
@@ -238,20 +267,22 @@ int FancyFFTs::printListOfKeys(){
 }
 
 
-double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
+double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd){
   /* 
      Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
      Will assume lengths are the same for now.
   */
 
   /* Store output of FFT1 in tempVals */
-  std::complex<double>* tempVals1 = doFFT(len, v1, true);
+  std::complex<double>* tempVals1 = doFFT(len, v1, true, threadInd);
 
-  /* Leave output of FFT2 in internal arrays to avoid an unnessary copy */
-  doFFT(len, v2, false);
+  /* Leave output of FFT2 in internal arrays to avoid an unnecessary copy */
+  doFFT(len, v2, false, threadInd);
 
+  std::pair<int, int> key(len, threadInd);
+  
   /* Get pointer to internal array */
-  std::complex<double>* tempVals2 = (std::complex<double>*) fComplex[len];
+  std::complex<double>* tempVals2 = (std::complex<double>*) fComplex[key];
 
   /* Take the product */
   int numFreqs = getNumFreqs(len);
@@ -260,7 +291,7 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
   }
   
   /* Product back to time domain */
-  double* crossCorr = doInvFFT(len, tempVals1, true);
+  double* crossCorr = doInvFFT(len, tempVals1, true, threadInd);
   delete [] tempVals1;
 
   /* 
@@ -268,7 +299,6 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
      This takes out the second factor.
   */
   for(int i=0; i<len; i++){
-    // std::cout << crossCorr[i] << std::endl;
     crossCorr[i] /= len;
   }
 
@@ -276,25 +306,36 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
 }
 
 
-double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2){
+double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
+				  int threadInd){
   /* 
      Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
      Will assume lengths are the same for now.
   */
 
+  /* Stops tempVals returning NULL, normally done in doFFT step. 
+     But the nice thing about this class is it means that I won't be duplicating work. */
+  makeNewPlanIfNeeded(len, threadInd);
 
+  std::pair<int, int> key(len, threadInd);
   
   /* Grab array associated with plan from internal memory */
-  std::complex<double>* tempVals = (std::complex<double>*) fComplex[len];
+  std::complex<double>* tempVals = (std::complex<double>*) fComplex[key];
+
+  // TThread::Lock();
+  // std::cout << "threadInd = " << threadInd << "\tfComplex[key] = " << tempVals << std::endl << std::endl;
+  // TThread::UnLock();
+  
   
   /* Take the product */
   int numFreqs = getNumFreqs(len);
+
   for(int i=0; i<numFreqs; i++){
     tempVals[i] = fft1[i]*std::conj(fft2[i]);
   }
   
   /* Product back to time domain */
-  double* crossCorr = doInvFFT(len, tempVals, true);
+  double* crossCorr = doInvFFT(len, tempVals, true, threadInd);
 
   /* 
      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
