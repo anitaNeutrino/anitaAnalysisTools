@@ -23,6 +23,7 @@
 #include <TCanvas.h>
 #include <TLegend.h>
 #include <cfloat>
+#include <TColor.h>
 
 /*! \namespace RootTools
 \brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
@@ -61,6 +62,7 @@ namespace RootTools{
 				    Double_t lowerLimit, Double_t upperLimit);
 
   Int_t getPeakBinOfHistogram(TH1D* h);
+  Double_t getLowBinEdgeOfHistogramPeak(TH1D* h);
   Double_t getFullWidthHalfMax(TH1D* h);
   std::vector<Int_t> decodeL3Trigger(UInt_t numPhi, UInt_t l3Trigger);
 
@@ -100,9 +102,11 @@ namespace RootTools{
   TLegend* makeLegend(TH1D* hs[], Int_t numHists, TString titles[], TString opt = "l", 
 		      Double_t minX=0.8, Double_t minY=0.8,Double_t maxX=1, Double_t maxY=1);
 
+
+
   void saveCanvas(TCanvas* c1, TString fileName);
-
-
+  void setWhiteZeroColorScale();
+  void draw2D(TH2D* hist, TString opt);
 };
 
 #endif

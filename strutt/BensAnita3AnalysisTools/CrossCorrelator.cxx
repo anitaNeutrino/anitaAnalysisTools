@@ -17,7 +17,6 @@ Constructor and destructor functions
 
 /*!
   \brief Constructor
-  \param upsampleFactorTemp is the upsample factor, by default = 10.
 */
 CrossCorrelator::CrossCorrelator(){
   initializeVariables();
@@ -27,8 +26,10 @@ CrossCorrelator::CrossCorrelator(){
   \brief Destructor
 */
 CrossCorrelator::~CrossCorrelator(){
-  deleteAllWaveforms();
-  deleteCrossCorrelations();
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
+    deleteCrossCorrelations((AnitaPol::AnitaPol_t)pol);
+  }
 }
 
 
@@ -48,17 +49,18 @@ void CrossCorrelator::initializeVariables(){
     for(int combo=0; combo<NUM_COMBOS; combo++){
       crossCorrelations[pol][combo] = NULL;
     }
+    lastEventNormalized[pol] = 0;
+    eventNumber[pol] = 0;    
   }
-  lastEventNormalized = 0;
-  eventNumber = 0;
+
 
   nominalSamplingDeltaT = 1./2.6;
-  upsampleFactor = 40; // 0.38ns -> ~1ps
+  upsampleFactor = 40; // 0.38ns -> ~10ps
   correlationDeltaT = nominalSamplingDeltaT/upsampleFactor;
   numSamplesUpsampled = 2*NUM_SAMPLES*upsampleFactor;
 
-  deltaTMax = INT_MIN;
-  deltaTMin = INT_MAX;
+  deltaTMax = 0;
+  deltaTMin = 0;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
@@ -129,37 +131,32 @@ Waveform manipulation functions
   \brief Loops through all waveform graphs in the UsefulAnitaEvent and makes an evenly re-sampled, normalized copy of each one.
   \param usefulEvent points to the UsefulAnitaEvent of interest
 */
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent){
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
   // Potentially needed in a few places, so it gets its own function 
 
   // Pretty much just for profiling 
-  if(usefulEvent->eventNumber!=lastEventNormalized){
+  if(usefulEvent->eventNumber!=lastEventNormalized[pol]){
 
     // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
-    deleteAllWaveforms();
+    deleteAllWaveforms(pol);
 
     // Find the start time of all waveforms 
     Double_t earliestStart[NUM_POL] = {100};
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grs[AnitaPol::kVertical][ant] = usefulEvent->getGraph(ant, AnitaPol::kVertical);
-      grs[AnitaPol::kHorizontal][ant] = usefulEvent->getGraph(ant, AnitaPol::kHorizontal);
+      grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
 
-      for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-	if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
-	  earliestStart[pol] = grs[pol][ant]->GetX()[0];
-	}
+      if(grs[pol][ant]->GetX()[0]<earliestStart[pol]){
+	earliestStart[pol] = grs[pol][ant]->GetX()[0];
       }
     }
 
     // Interpolate with earliest start time 
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-	grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
-	Double_t mean; // don't care about this.
-	RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
-      }
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
+      Double_t mean; // don't care about this.
+      RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
     }
-    lastEventNormalized = usefulEvent->eventNumber;
+    lastEventNormalized[pol] = usefulEvent->eventNumber;
   }
 }
 
@@ -231,35 +228,59 @@ All correlation functions
 
 
 /*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times
-  \returns A vector length 2 of vector length numCombos containing the set of times of maximum correlation.
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times for the specified polarization.
+  \returns A vector of length numCombos containing the set of times of maximum correlation.
 */
-std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
+std::vector<Double_t> CrossCorrelator::getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol){
   
-  std::vector<std::vector<Double_t> > peakTimes(NUM_POL, std::vector<Double_t>(NUM_COMBOS, 0));
+  std::vector<Double_t> peakTimes(NUM_COMBOS, 0);
 
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-      Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
-      Int_t offset = maxInd >= numSamplesUpsampled/2 ? maxInd - numSamplesUpsampled : maxInd;
-      peakTimes.at(pol).at(combo) = offset*correlationDeltaT;      
-    }
+  for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+    Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
+    Int_t offset = maxInd >= numSamplesUpsampled/2 ? maxInd - numSamplesUpsampled : maxInd;
+    peakTimes.at(combo) = offset*correlationDeltaT;      
   }
   return peakTimes;
 }
 
 /*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times.
+  \returns A vector length 2 of vector length numCombos containing the set of times of maximum correlation.
+*/
+std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
+  
+  std::vector<std::vector<Double_t> > peakTimes;
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    peakTimes.push_back(getMaxCorrelationTimes((AnitaPol::AnitaPol_t)pol));
+  }
+  return peakTimes;
+}
+
+
+/*!
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values for the specified polarization.
+  \returns A vector of length numCombos containing the set of maximum correlation values.
+*/
+std::vector<Double_t> CrossCorrelator::getMaxCorrelationValues(AnitaPol::AnitaPol_t pol){
+  
+  std::vector<Double_t> peakVals(NUM_COMBOS, 0);
+  for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+    Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
+    peakVals.at(combo) = crossCorrelations[pol][combo][maxInd];
+  }
+  return peakVals;
+}
+
+
+/*!
+  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values.
   \returns A vector length 2 of vector length numCombos containing the set of maximum correlation values.
 */
 std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationValues(){
   
-  std::vector<std::vector<Double_t> > peakVals(NUM_POL, std::vector<Double_t>(NUM_COMBOS, 0));
+  std::vector<std::vector<Double_t> > peakVals;
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-      Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelations[pol][combo]);
-      peakVals.at(pol).at(combo) = crossCorrelations[pol][combo][maxInd];
-    }
+    peakVals.push_back(getMaxCorrelationValues((AnitaPol::AnitaPol_t)pol));    
   }
   return peakVals;
 }
@@ -273,32 +294,45 @@ std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationValues(){
 */
 void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent){
 
-  // Read TGraphs from events into memory (also deletes old TGraphs)   
-  getNormalizedInterpolatedTGraphs(usefulEvent);
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){  
+    correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol);
+  }
+}
+
+
+/*!
+  \brief Correlate the event
+
+  First step in interferometry, pass pointer to UsefulAnitaEvent in here, which populates the internal arrays of normalized, interpolated waveforms and set of cross correlations. These internal values are then used as look up tables for generating interferometic images.
+*/
+void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
+
+  // Read TGraphs from events into memory (also deletes old TGraphs)
+  getNormalizedInterpolatedTGraphs(usefulEvent, pol);
 
   // Cross correlate waveforms using the normalized TGraphs.
-  doAllCrossCorrelations();
+  doAllCrossCorrelations(pol);
 
   // Safety check to make sure we don't do any hard work twice.
-  eventNumber = usefulEvent->eventNumber;
+  eventNumber[pol] = usefulEvent->eventNumber;
+  
 }
+
 
 
 /*!
   \brief Loop over both polarizations and all combinations, and generate set of cross correlations.
 */
-void CrossCorrelator::doAllCrossCorrelations(){
+void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
 
   // Delete old cross correlations first 
-  deleteCrossCorrelations();
+  deleteCrossCorrelations(pol);
 
-  // Loop over polarizations and combinations generating set of cross correlations.
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t combo=0; combo<numCombos; combo++){
-      Int_t ant1 = comboToAnt1s.at(combo);
-      Int_t ant2 = comboToAnt2s.at(combo);
-      crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
-    }
+  // Loop over combinations generating set of cross correlations.
+  for(Int_t combo=0; combo<numCombos; combo++){
+    Int_t ant1 = comboToAnt1s.at(combo);
+    Int_t ant2 = comboToAnt2s.at(combo);
+    crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
   }
 }
 
@@ -612,9 +646,9 @@ void CrossCorrelator::createImageNameAndTitle(TString& name, TString& title, map
   name += rWave == 0 ? "" : "Spherical";
   name += zoomModeNames[zoomMode];
   name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
-  name += TString::Format("%u", eventNumber);
+  name += TString::Format("%u", eventNumber[pol]);
 
-  title = TString::Format("Event %u ", eventNumber);
+  title = TString::Format("Event %u ", eventNumber[pol]);
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
   title += rWave == 0 ? "" : TString::Format(" Spherical r=%4.2lf", rWave);
   title += " " + mapModeNames[mapMode];
@@ -727,28 +761,24 @@ Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Do
 /************************************************************************************************************
 Functions to delete pointers to internal variables
 ************************************************************************************************************/
-void CrossCorrelator::deleteCrossCorrelations(){
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    for(Int_t comboInd=0; comboInd<NUM_COMBOS; comboInd++){
-      if(crossCorrelations[pol][comboInd] != NULL){
-	delete [] crossCorrelations[pol][comboInd];
-	crossCorrelations[pol][comboInd] = NULL;
-      }
+void CrossCorrelator::deleteCrossCorrelations(AnitaPol::AnitaPol_t pol){
+  for(Int_t comboInd=0; comboInd<NUM_COMBOS; comboInd++){
+    if(crossCorrelations[pol][comboInd] != NULL){
+      delete [] crossCorrelations[pol][comboInd];
+      crossCorrelations[pol][comboInd] = NULL;
     }
   }
 }
 
-void CrossCorrelator::deleteAllWaveforms(){
+void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-      if(grs[pol][ant]){
-	delete grs[pol][ant];
-	grs[pol][ant] = NULL;
-      }
-      if(grsInterp[pol][ant]){
-	delete grsInterp[pol][ant];
-	grsInterp[pol][ant] = NULL;
-      }
+    if(grs[pol][ant]){
+      delete grs[pol][ant];
+      grs[pol][ant] = NULL;
+    }
+    if(grsInterp[pol][ant]){
+      delete grsInterp[pol][ant];
+      grsInterp[pol][ant] = NULL;
     }
   }
 }
@@ -778,16 +808,20 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
   // Generates a set of delta function like waveforms, correlates them 
 
   // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
-  deleteAllWaveforms();
 
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){  
+    deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
+  }
+
+
+  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       std::vector<Double_t> newVs = std::vector<Double_t>(numSamplesUpsampled, 0);
       std::vector<Double_t> newTimes = std::vector<Double_t>(numSamplesUpsampled, 0);      
       Int_t dt = numSamplesUpsampled/2 + getDeltaTExpectedSpherical(0, ant, 
-						  phiDegSource*TMath::DegToRad(), 
-						  thetaDegSource*TMath::DegToRad(), 
-						  rSource);
+								    phiDegSource*TMath::DegToRad(), 
+								    thetaDegSource*TMath::DegToRad(), 
+								    rSource);
       for(int samp=0; samp<numSamplesUpsampled; samp++){
 	newTimes[samp] = correlationDeltaT*samp;
 	if(samp==dt){
@@ -797,8 +831,8 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
       grsInterp[pol][ant] = new TGraph(numSamplesUpsampled, &newTimes[0], &newVs[0]);    
       RootTools::normalize(grsInterp[pol][ant]);
     }
+    doAllCrossCorrelations((AnitaPol::AnitaPol_t)pol);
   }
-  doAllCrossCorrelations();
 }
 
 
