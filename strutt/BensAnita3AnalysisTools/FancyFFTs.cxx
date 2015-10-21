@@ -274,3 +274,36 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2){
 
   return crossCorr;
 }
+
+
+double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2){
+  /* 
+     Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
+     Will assume lengths are the same for now.
+  */
+
+
+  
+  /* Grab array associated with plan from internal memory */
+  std::complex<double>* tempVals = (std::complex<double>*) fComplex[len];
+  
+  /* Take the product */
+  int numFreqs = getNumFreqs(len);
+  for(int i=0; i<numFreqs; i++){
+    tempVals[i] = fft1[i]*std::conj(fft2[i]);
+  }
+  
+  /* Product back to time domain */
+  double* crossCorr = doInvFFT(len, tempVals, true);
+
+  /* 
+     Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
+     This takes out the second factor.
+  */
+  for(int i=0; i<len; i++){
+    // std::cout << crossCorr[i] << std::endl;
+    crossCorr[i] /= len;
+  }
+
+  return crossCorr;
+}

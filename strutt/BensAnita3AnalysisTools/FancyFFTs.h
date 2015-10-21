@@ -56,6 +56,7 @@ public:
   static int getNumFreqs(int len);
   static int printListOfKeys();
   static double* crossCorrelate(int len, double* v1, double* v2);
+  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2);
   static int extendToPowerOfTwo(int len);
 
 
