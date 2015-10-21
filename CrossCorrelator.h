@@ -97,6 +97,7 @@ public:
   Waveform manipulation functions
   **********************************************************************************************************/
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  void doFFTs(AnitaPol::AnitaPol_t pol);
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
 
   /**********************************************************************************************************
@@ -107,6 +108,7 @@ public:
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
+  Double_t* crossCorrelateFourier(std::complex<Double_t>* fft1, std::complex<Double_t>* fft2);  
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
   std::vector<std::vector<Double_t> > getMaxCorrelationValues();
   std::vector<Double_t> getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol);
@@ -181,7 +183,7 @@ public:
   **********************************************************************************************************/
   void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
-
+  void deleteAllFFTs(AnitaPol::AnitaPol_t pol);
 
 
 
@@ -209,7 +211,8 @@ public:
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
-  TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs 
+  TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs
+  std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs   
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
   std::vector<Double_t> rArray; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions

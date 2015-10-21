@@ -29,6 +29,7 @@ CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
     deleteCrossCorrelations((AnitaPol::AnitaPol_t)pol);
+    deleteAllFFTs((AnitaPol::AnitaPol_t)pol);    
   }
 }
 
@@ -45,6 +46,7 @@ void CrossCorrelator::initializeVariables(){
       grs[pol][ant] = NULL;
       grsInterp[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
+      ffts[pol][ant] = NULL;
     }
     for(int combo=0; combo<NUM_COMBOS; combo++){
       crossCorrelations[pol][combo] = NULL;
@@ -153,13 +155,24 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
     // Interpolate with earliest start time 
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart[pol]);
-      Double_t mean; // don't care about this.
+      Double_t mean; // don't care enough about this to store it anywhere.
       RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
     }
     lastEventNormalized[pol] = usefulEvent->eventNumber;
   }
 }
 
+
+void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
+
+  deleteAllFFTs(pol); // First delete any FFTs that might still be knocking around
+
+  // Generate a new set of FFTs.
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    ffts[pol][ant] = FancyFFTs::doFFT(numSamplesUpsampled, grsInterp[pol][ant]->GetY(), true);
+  }
+  
+}
 
 /*!
   \brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
@@ -310,6 +323,9 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   // Read TGraphs from events into memory (also deletes old TGraphs)
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
 
+  // Generate set of ffts for cross correlation (each waveform only needs to be done once)
+  doFFTs(pol);
+  
   // Cross correlate waveforms using the normalized TGraphs.
   doAllCrossCorrelations(pol);
 
@@ -332,7 +348,8 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
   for(Int_t combo=0; combo<numCombos; combo++){
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);
-    crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
+    // crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
+    crossCorrelations[pol][combo] = crossCorrelateFourier(ffts[pol][ant2], ffts[pol][ant1]);    
   }
 }
 
@@ -344,6 +361,17 @@ Double_t* CrossCorrelator::crossCorrelateFourier(TGraph* gr1, TGraph* gr2){
   // Generate cross correlations, now using FancyFFTs 
   //  return  FFTtools::getCorrelation(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
   return FancyFFTs::crossCorrelate(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+}
+
+/*!
+  \brief Interface to FFT library to generate cross correlations.
+*/
+Double_t* CrossCorrelator::crossCorrelateFourier(std::complex<Double_t>* fft1, std::complex<Double_t>* fft2){
+  // std::cout << __PRETTY_FUNCTION__ << std::endl;
+  // Generate cross correlations, now using FancyFFTs 
+  //  return  FFTtools::getCorrelation(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+  // return FancyFFTs::crossCorrelate(gr1->GetN(), gr1->GetY(), gr2->GetY()) ;
+  return FancyFFTs::crossCorrelate(numSamplesUpsampled, fft1, fft2);
 }
 
 
@@ -779,6 +807,15 @@ void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
     if(grsInterp[pol][ant]){
       delete grsInterp[pol][ant];
       grsInterp[pol][ant] = NULL;
+    }
+  }
+}
+
+void CrossCorrelator::deleteAllFFTs(AnitaPol::AnitaPol_t pol){
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    if(ffts[pol][ant]){
+      delete ffts[pol][ant];
+      ffts[pol][ant] = NULL;
     }
   }
 }
