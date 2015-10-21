@@ -145,8 +145,6 @@ public:
   void fillDeltaTLookup();
   void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern);
   Double_t getBin0PhiDeg();
-  // void writeDeltaTsFile(); // Speed up initialization
-  // Int_t readDeltaTsFile(); // Speed up initialization
 
   /**********************************************************************************************************
   Image generation functions.
@@ -186,11 +184,9 @@ public:
   TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
 				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern);
   
+  // Not used any more potentially useful somewhere so I will leave it.
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
 
-  
-
-  // To be completed
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern,
 			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
 

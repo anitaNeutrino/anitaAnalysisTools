@@ -56,7 +56,6 @@ void CrossCorrelator::initializeVariables(){
     eventNumber[pol] = 0;
   }
 
-
   upsampleFactor = 40; // 0.38ns -> ~10ps
 
   numSamples = 2*NUM_SAMPLES; // Factor of two for padding 
@@ -91,10 +90,15 @@ void CrossCorrelator::initializeVariables(){
     threadArgVals.ptr = this;
     threadArgsVec.push_back(threadArgVals);
 
+    // Creation of fftw plans (what this function does)
+    // is not thread safe, so we need to create plans
+    // before doing any fftw plans inside a thread.
     FancyFFTs::makeNewPlanIfNeeded(numSamples, threadInd);
     FancyFFTs::makeNewPlanIfNeeded(numSamplesUpsampled, threadInd);
   }
 
+
+  // Create threads to be called later.
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
     
     TString name = TString::Format("threadCorr%ld", threadInd);
@@ -401,7 +405,7 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
 void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
 
   // Delete old cross correlations first 
-  deleteCrossCorrelations(pol);
+  deleteUpsampledCrossCorrelations(pol);
   deleteAllPaddedFFTs(pol);
 
   threadL3TrigPattern = l3TrigPattern;
@@ -547,15 +551,13 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   return 0;
 }
 
-// void CrossCorrelator::correlateForZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+
 void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){  
   // std::cerr << __PRETTY_FUNCTION__ << std::endl;
 
   deleteUpsampledCrossCorrelations(pol);
-  deleteAllPaddedFFTs(pol);
+  deleteAllPaddedFFTs(pol);  
 
-  threadL3TrigPattern = l3TrigPattern;
-  
   std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
   
   Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
@@ -1120,7 +1122,10 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
       peakThetaDeg = threadPeakThetaDeg[threadInd];
     }
   }
-  
+
+  threadImage = NULL;
+
+  // Now it's yours
   return hImage;
 }
 
