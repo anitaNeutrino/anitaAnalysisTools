@@ -23,6 +23,7 @@
 #include "TH2D.h"
 #include "Math/Interpolator.h"
 #include "Math/InterpolationTypes.h"
+#include "TThread.h"
 
 // standard c++ things
 #include <iostream>
@@ -30,6 +31,7 @@
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
+#define NUM_THREADS 16
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
@@ -54,6 +56,8 @@
 
 
 #define ALL_PHI_TRIGS (pow(2, NUM_PHI)-1)
+
+
 
 
 /*! \class CrossCorrelator
@@ -92,7 +96,8 @@ public:
   ~CrossCorrelator();
   void initializeVariables();  
   void printInfo();
-
+  Double_t normalizationTest();
+  
   /**********************************************************************************************************
   Waveform manipulation functions
   **********************************************************************************************************/
@@ -108,11 +113,14 @@ public:
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
-  Double_t* crossCorrelateFourier(std::complex<Double_t>* fft1, std::complex<Double_t>* fft2);  
+  Double_t* crossCorrelateFourier(std::complex<Double_t>* fft1, std::complex<Double_t>* fft2);
+  // Double_t* crossCorrelateFourier(FFTWComplex* fft1, FFTWComplex* fft2);    
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
   std::vector<std::vector<Double_t> > getMaxCorrelationValues();
   std::vector<Double_t> getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol);
   std::vector<Double_t> getMaxCorrelationValues(AnitaPol::AnitaPol_t pol);
+  void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
+  static void* doSomeCrossCorrelationsThreaded(void* args);
 
   /**********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
@@ -212,16 +220,30 @@ public:
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
   TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs
-  std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs   
+  std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
   std::vector<Double_t> rArray; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray; ///< Vector of antenna heights
 
   typedef Short_t dtIndex_t;
-  dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image (UChar_t to reduce size)  
+  dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image
   Int_t deltaTMax;
   Int_t deltaTMin;
+
+  // Double_t normFactor;
+
+  AnitaPol::AnitaPol_t threadPol;
+  std::vector<TThread*> threads;
+  struct threadArgs{
+    Long_t threadInd;
+    CrossCorrelator* ptr;
+  };
+
+private:
+  // Messing with this will muck up the threading.
+  std::vector<threadArgs> threadArgsVec;
+  
   
   ClassDef(CrossCorrelator, 0);
 };
