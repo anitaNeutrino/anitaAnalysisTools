@@ -29,7 +29,7 @@ CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
     deleteCrossCorrelations((AnitaPol::AnitaPol_t)pol);
-    deleteAllFFTs((AnitaPol::AnitaPol_t)pol);    
+    deleteAllFFTs((AnitaPol::AnitaPol_t)pol);
   }
 }
 
@@ -46,14 +46,14 @@ void CrossCorrelator::initializeVariables(){
       grsInterp[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
       ffts[pol][ant] = NULL;
-      fftsPadded[pol][ant] = NULL;      
+      fftsPadded[pol][ant] = NULL;
     }
     for(int combo=0; combo<NUM_COMBOS; combo++){
       crossCorrelations[pol][combo] = NULL;
-      crossCorrelationsUpsampled[pol][combo] = NULL;      
+      crossCorrelationsUpsampled[pol][combo] = NULL;
     }
     lastEventNormalized[pol] = 0;
-    eventNumber[pol] = 0;    
+    eventNumber[pol] = 0;
   }
 
 
@@ -103,11 +103,11 @@ void CrossCorrelator::initializeVariables(){
 				      (void*)&threadArgsVec.at(threadInd))
 			  );
 
-    // name = TString::Format("threadUpsampledCorr%ld", threadInd);
-    // upsampledCorrThreads.push_back(new TThread(name.Data(),
-    // 					       CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded,
-    // 					       (void*)&threadArgsVec.at(threadInd))
-    // 				   );
+    name = TString::Format("threadUpsampledCorr%ld", threadInd);
+    upsampledCorrThreads.push_back(new TThread(name.Data(),
+    					       CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded,
+    					       (void*)&threadArgsVec.at(threadInd))
+    				   );
     
     name = TString::Format("threadMap%ld", threadInd);
     mapThreads.push_back(new TThread(name.Data(),
@@ -127,7 +127,8 @@ void CrossCorrelator::printInfo(){
   std::cerr << "\tdeltaT min = " << deltaTMin << std::endl;
   std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
   std::cerr << "\tBin size phi (deg) = " << Double_t(PHI_RANGE)/NUM_BINS_PHI << std::endl;
-  std::cerr << "\tdeltaTs array size = " << sizeof(dtIndex_t)*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA << " bytes" << std::endl;
+  std::cerr << "\tdeltaTs array size = " << sizeof(dtIndex_t)*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA
+	    << " bytes" << std::endl;
 }
 
 
@@ -169,7 +170,9 @@ Waveform manipulation functions
   \brief Loops through all waveform graphs in the UsefulAnitaEvent and makes an evenly re-sampled, normalized copy of each one.
   \param usefulEvent points to the UsefulAnitaEvent of interest
 */
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
+
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent,
+						       AnitaPol::AnitaPol_t pol){
   // Potentially needed in a few places, so it gets its own function 
 
   // Pretty much just for profiling 
@@ -219,7 +222,7 @@ TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTi
   // std::vector<Double_t> newTimes = std::vector<Double_t>(numSamplesUpsampled, 0);
   // std::vector<Double_t> newVolts = std::vector<Double_t>(numSamplesUpsampled, 0);
   std::vector<Double_t> newTimes = std::vector<Double_t>(numSamples, 0);
-  std::vector<Double_t> newVolts = std::vector<Double_t>(numSamples, 0);    
+  std::vector<Double_t> newVolts = std::vector<Double_t>(numSamples, 0);
   Double_t thisStartTime = grIn->GetX()[0];
   Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
 
@@ -395,9 +398,108 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
 }
 
 
-/*!
-  \brief Loop over both polarizations and all combinations, and generate set of cross correlations.
-*/
+void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+
+  // Delete old cross correlations first 
+  deleteCrossCorrelations(pol);
+  deleteAllPaddedFFTs(pol);
+
+  threadL3TrigPattern = l3TrigPattern;
+  // Set variable for use in threads
+  threadPol = pol;
+
+  std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
+  
+  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+
+  Int_t numComboInd = combosToUse.size();
+  for(Int_t comboInd=0; comboInd < numComboInd; comboInd++){
+    Int_t combo=combosToUse.at(comboInd);
+
+    Int_t ant1 = comboToAnt1s.at(combo);
+    Int_t ant2 = comboToAnt2s.at(combo);
+
+    if(fftsPadded[pol][ant1]==NULL){
+      fftsPadded[pol][ant1] = FancyFFTs::zeroPadFFT(ffts[pol][ant1], numFreqs, numFreqsPadded);
+    }
+    if(fftsPadded[pol][ant2]==NULL){
+      fftsPadded[pol][ant2] = FancyFFTs::zeroPadFFT(ffts[pol][ant2], numFreqs, numFreqsPadded);
+    }
+  }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    upsampledCorrThreads.at(threadInd)->Run();
+  }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    upsampledCorrThreads.at(threadInd)->Join();
+  }
+}
+
+void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs){
+
+  // Disgusting hacks to get ROOT threading to compile inside a class.
+  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
+  Long_t threadInd = args->threadInd;
+  CrossCorrelator* ptr = args->ptr;
+  AnitaPol::AnitaPol_t pol = ptr->threadPol;
+  
+  std::vector<Int_t> combosToUse = ptr->combosToUseTriggered[ptr->threadL3TrigPattern];
+  Int_t numCombosAllThreads = combosToUse.size();
+  Int_t numCorrPerThread = numCombosAllThreads/NUM_THREADS;
+  Int_t numRemainder = numCombosAllThreads%NUM_THREADS;
+
+  Int_t startComboInd = threadInd*numCorrPerThread;
+  
+  for(int comboInd=startComboInd; comboInd<startComboInd+numCorrPerThread; comboInd++){
+    Int_t combo = combosToUse.at(comboInd);
+    Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    // TThread::Lock();
+    // std::cout << threadInd << "\t" << comboInd << "\t" << startComboInd << "\t" << startComboInd+numCorrPerThread << "\t" << numCorrPerThread << "\t" << combosToUse.size() << "\t" << numRemainder << "\t" << NUM_THREADS << "\t" << combo << "\t" << ant2 << "\t" << ant1 << "\t" << ptr->fftsPadded[pol][ant2] << "\t" << ptr->fftsPadded[pol][ant2] << std::endl;
+    // TThread::UnLock();
+    
+    ptr->crossCorrelationsUpsampled[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamplesUpsampled,
+									     ptr->fftsPadded[pol][ant2],
+									     ptr->fftsPadded[pol][ant1],
+									     threadInd);
+  }
+  // TThread::Lock();
+  // std::cout << "Thread " << threadInd << " got to here" << std::endl;
+  // TThread::UnLock();
+
+  
+  if(threadInd < numRemainder){
+    Int_t numDoneInAllThreads = NUM_THREADS*numCorrPerThread;
+    Int_t comboInd = numDoneInAllThreads + threadInd;
+    Int_t combo = combosToUse.at(comboInd);
+    Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    // TThread::Lock();
+    // std::cout << threadInd << "\t" << comboInd << "\t" << numCorrPerThread << "\t" << combosToUse.size() << "\t" << numRemainder << "\t" << NUM_THREADS << "\t" << combo << "\t" << ant2 << "\t" << ant1 << "\t" << ptr->fftsPadded[pol][ant2] << "\t" << ptr->fftsPadded[pol][ant2] << std::endl;
+    // TThread::UnLock();
+
+
+    
+    ptr->crossCorrelationsUpsampled[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamplesUpsampled,
+									     ptr->fftsPadded[pol][ant2],
+									     ptr->fftsPadded[pol][ant1],
+									     threadInd);
+    
+  }
+
+  // TThread::Lock();
+  // std::cout << "Thread " << threadInd << " got to here too" << std::endl;
+  // TThread::UnLock();
+
+  
+  return 0;
+}
+
+
+
+
 
 void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
 
@@ -424,7 +526,6 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
 
-
   
   Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
   Int_t startCombo = threadInd*numCorrPerThread;
@@ -440,27 +541,21 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
     ptr->crossCorrelations[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamples,
 								    ptr->ffts[pol][ant2],
 								    ptr->ffts[pol][ant1],
-								    threadInd);
-    // TThread::Lock();
-    // std::cout << "threadInd = " << threadInd << "\tcombo = " << combo
-    // 	      << "\tant1 = " << ant1 << "\tant2 = " << ant2 << std::endl;
-    // for(int i=0; i<5; i++){
-    //   std::cout << ptr->crossCorrelations[pol][combo][i] << ", ";
-    // }
-    // std::cout << std::endl << std::endl;
-    // TThread::UnLock();
-    
+								    threadInd);    
   }
   
   return 0;
 }
 
-void CrossCorrelator::correlateForZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+// void CrossCorrelator::correlateForZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){  
   // std::cerr << __PRETTY_FUNCTION__ << std::endl;
 
   deleteUpsampledCrossCorrelations(pol);
   deleteAllPaddedFFTs(pol);
 
+  threadL3TrigPattern = l3TrigPattern;
+  
   std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
   
   Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
@@ -872,11 +967,12 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
   
   TH2D* hImage = NULL;
   if(zoomMode == kZoomedOut){
-    hImage = makeBlankImage(name, title);    
+    hImage = makeBlankImage(name, title);
   }
   else if(zoomMode == kZoomedIn){
     hImage = makeBlankZoomedImage(name, title, zoomCenterPhiDeg, zoomCenterThetaDeg);
-    correlateForZoomedImage(pol, l3TrigPattern); // Pads FFTs for more finely grained correlation.
+    // doUpsampledCrossCorrelations(pol, l3TrigPattern); // Pads FFTs for more finely grained correlation.
+    doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern); // Pads FFTs for more finely grained correlation.    
     fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
   }
 
@@ -1157,5 +1253,3 @@ TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t 
 
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
-
-
