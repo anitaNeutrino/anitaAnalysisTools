@@ -18,6 +18,8 @@
 #include <TSystem.h>
 #include <TMath.h>
 #include <TGraph.h>
+// #include <TThread.h>
+
 #include "FancyFFTsWisdomManager.h"
 
 /* 
@@ -38,41 +40,49 @@ namespace PowSpecNorm {
 
 class FancyFFTs : public TObject{
 
+  friend class CrossCorrelator;
+  
 public:
   FancyFFTs(); /* Not used */
   ~FancyFFTs(); /* Not used */
 
 
   /* Real-to-complex and complex-to real functions */
-  static std::complex<double>* doFFT(Int_t len, double* input, bool copyOutputToNewArray);
-  static double* doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray);
+  static std::complex<double>* doFFT(Int_t len, double* input, bool copyOutputToNewArray, int threadInd=0);
+  static double* doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
 
   static double* getPowerSpectrum(int len, double* input, double dt, 
-				  PowSpecNorm::conventionFlag normFlag);
+				  PowSpecNorm::conventionFlag normFlag,
+				  int threadInd=0);
   static TGraph* getPowerSpectrumTGraph(int len, double* input, double dt, 
 					PowSpecNorm::conventionFlag normFlag,
-					bool dBScale);
+					bool dBScale, int threadInd=0);
   static double* getFreqArray(int len, double dt);
   static int getNumFreqs(int len);
   static int printListOfKeys();
-  static double* crossCorrelate(int len, double* v1, double* v2);
-  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2);
+  static double* crossCorrelate(int len, double* v1, double* v2, int threadInd=0);
+  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
+				int threadInd=0);
   static int extendToPowerOfTwo(int len);
+  static std::complex<double>* zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded);
 
 
 private:
 
-  static bool makeNewPlanIfNeeded(int len); /* Takes care of checking whether a plan exists or not */
-  /*
+ /* Takes care of checking whether a plan exists or not */
+  static bool makeNewPlanIfNeeded(int len,int threadInd=0);
+
+    /*
      std::maps which hold all the fftw goodies.
      The length is the key so we have an easy way to check if a plan already exists.
      The values are the input/ouput arrays and the plans, real-to-complex and complex-to-real.
   */
-  static std::map<int, fftw_plan> fRealToComplex;
-  static std::map<int, fftw_plan> fComplexToReal;
-  static std::map<int, double*> fReals;
-  // static std::map<int, fftw_complex*> fComplex;
-  static std::map<int, std::complex<double>*> fComplex;
+
+  static std::map<std::pair<int, int>, fftw_plan> fRealToComplex;
+  static std::map<std::pair<int, int>, fftw_plan> fComplexToReal;
+  static std::map<std::pair<int, int>, double*> fReals;
+  // static std::map<std::pair<int, int>, fftw_complex*> fComplex;
+  static std::map<std::pair<int, int>, std::complex<double>*> fComplex;
   static FancyFFTsWisdomManager myWisdom;
 
   ClassDef(FancyFFTs, 0);
