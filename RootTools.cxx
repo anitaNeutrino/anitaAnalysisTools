@@ -158,10 +158,12 @@ void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX
 				      Double_t lowerLimit, Double_t upperLimit){
 
   // Macro values from <cfloat> header
-  maxY=DBL_MIN;
-  maxX=DBL_MIN;
-  minY=DBL_MAX;
-  minX=DBL_MAX;
+  Double_t minPoss = -DBL_MAX;
+  Double_t maxPoss = DBL_MAX;
+  maxY=minPoss;
+  maxX=minPoss;
+  minY=maxPoss;
+  minX=maxPoss;
 
   for(int i=0; i<gr->GetN(); i++){
     if(gr->GetX()[i] >= lowerLimit && gr->GetX()[i] <=upperLimit){
@@ -174,7 +176,16 @@ void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX
 	minX = gr->GetX()[i];
       }
     }
-  } 
+  }
+
+  if(maxY==minPoss){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "!" << std::endl;
+    std::cerr << "Unable to find value in " << gr->GetName() << " > " << minPoss << std::endl;
+  }
+  if(minY==maxPoss){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "!" << std::endl;
+    std::cerr << "Unable to find value in " << gr->GetName() << " < " << maxPoss << std::endl;
+  }
 }
 
 
@@ -292,7 +303,7 @@ void RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
 */
 
 Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
-  Double_t max=DBL_MIN;
+  Double_t max=-DBL_MAX;
   Int_t maxIndex = -1;
   for(Int_t i=0; i < len; ++i){
     if(arr[i] > max){
@@ -300,6 +311,11 @@ Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
       maxIndex = i;
     }
   }
+  if(maxIndex==-1){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "!" << std::endl;
+    std::cerr << "Could not find an index > " << max << std::endl;
+  }
+  
   return maxIndex;
 }
 
@@ -636,8 +652,7 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
     colFactor = 254./(maxCol-minCol);
   }
 
-
-  Double_t max = DBL_MIN;
+  Double_t max = -DBL_MAX;
   Double_t min = DBL_MAX;
   Int_t numDrawn = 0;
   Int_t first = 0;
@@ -804,7 +819,7 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
     }
   }
 
-  Double_t maxOffset = DBL_MIN;
+  Double_t maxOffset = -DBL_MAX;
   Int_t maxSampInd = -1;
   for(UInt_t sampInd = 0; sampInd < extremaSamps.size()-1; sampInd++){
     Double_t offset = TMath::Abs(gr->GetY()[extremaSamps.at(sampInd)] - gr->GetY()[extremaSamps.at(sampInd+1)]);
@@ -839,11 +854,13 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
 
 void RootTools::saveCanvas(TCanvas* c, TString fileName){
 
-  std::cout << "Saving this canvas as an .eps and .root file..." << std::endl;
+  std::cout << "Saving this canvas as an .eps, .png, and .root file..." << std::endl;
   TString fName = fileName + ".eps";
   c->SaveAs(fName);
-  fName = fileName + ".root";
+  fName = fileName + ".png";
   c->SaveAs(fName);
+  fName = fileName + ".root";
+  c->SaveAs(fName);  
   std::cout << "...Complete!" << std::endl;
   c->Update();
 
@@ -894,7 +911,7 @@ Double_t RootTools::getFullWidthHalfMax(TH1D* h){
 Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
 
   Int_t n = h->GetNbinsX();
-  Double_t max = DBL_MIN;
+  Double_t max = -DBL_MAX;
   Int_t maxBin = 0;
   for(Int_t bin=1; bin<n; bin++){
     Double_t val = h->GetBinContent(bin);
@@ -904,6 +921,20 @@ Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
     }
   }
   return maxBin;
+}
+
+
+
+/*!
+  \brief Finds the bin containing the maximum value of a TH1D
+  \param h is a histogram
+  \returns the peak bin (in ROOT bin counting starts at 1)
+*/
+Double_t RootTools::getLowBinEdgeOfHistogramPeak(TH1D* h){
+
+  Int_t peakBin = getPeakBinOfHistogram(h);
+  Double_t lowBinEdgeOfPeak = h->GetXaxis()->GetBinLowEdge(peakBin);
+  return lowBinEdgeOfPeak;
 }
 
 
@@ -939,4 +970,34 @@ std::vector<Int_t> RootTools::decodeL3Trigger(UInt_t numPhi, UInt_t l3Trigger){
     decoded.at(phiSector) = doPhiSector;
   }
   return decoded;
+}
+
+
+
+/*!
+  \brief Set color scale where white is in the middle.
+
+  You need to draw things with RootTools::draw2DScaled(TH2D* hist, TString opt);
+*/
+
+void RootTools::setWhiteZeroColorScale(){
+  const int NRGBs = 3, NCont = 999;
+  gStyle->SetNumberContours(NCont);
+  Double_t stops[NRGBs] = { 0.00, 0.50, 1.00};
+  Double_t red[NRGBs]   = { 0.00, 1.00, 1.00};
+  Double_t green[NRGBs] = { 0.00, 1.00, 0.00};
+  Double_t blue[NRGBs]  = { 1.00, 1.00, 0.00};
+  TColor color;
+  color.InitializeColors();
+  color.CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont); 
+}
+
+
+void RootTools::draw2D(TH2D* hist, TString opt){
+  hist->Draw(opt);
+  Double_t max = TMath::Abs(hist->GetMaximum());
+  Double_t min = TMath::Abs(hist->GetMinimum());
+  Double_t limit = min > max ? min : max;
+  hist->SetMaximum(limit);
+  hist->SetMinimum(-limit);
 }

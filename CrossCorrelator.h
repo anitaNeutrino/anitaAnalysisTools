@@ -96,7 +96,7 @@ public:
   /**********************************************************************************************************
   Waveform manipulation functions
   **********************************************************************************************************/
-  void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent);
+  void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
 
   /**********************************************************************************************************
@@ -104,10 +104,13 @@ public:
   **********************************************************************************************************/
 
   void correlateEvent(UsefulAnitaEvent* realEvent);
-  void doAllCrossCorrelations();
+  void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
   std::vector<std::vector<Double_t> > getMaxCorrelationValues();
+  std::vector<Double_t> getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol);
+  std::vector<Double_t> getMaxCorrelationValues(AnitaPol::AnitaPol_t pol);
 
   /**********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
@@ -123,8 +126,8 @@ public:
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
   Double_t getBin0PhiDeg();
-  void writeDeltaTsFile(); // Speed up initialization
-  Int_t readDeltaTsFile(); // Speed up initialization
+  // void writeDeltaTsFile(); // Speed up initialization
+  // Int_t readDeltaTsFile(); // Speed up initialization
 
   /**********************************************************************************************************
   Image generation functions.
@@ -176,8 +179,8 @@ public:
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
   **********************************************************************************************************/
-  void deleteCrossCorrelations();
-  void deleteAllWaveforms();
+  void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
+  void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
 
 
 
@@ -187,14 +190,13 @@ public:
   **********************************************************************************************************/
   void correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource);
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
-
-
+  
   
   /**********************************************************************************************************
   Variables
   **********************************************************************************************************/
-  UInt_t eventNumber; ///< For tracking event number
-  UInt_t lastEventNormalized; ///< Prevents cross-correlation of the same event twice
+  UInt_t eventNumber[NUM_POL]; ///< For tracking event number
+  UInt_t lastEventNormalized[NUM_POL]; ///< Prevents cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; ///< ANITA-3 => 1./2.6 ns
   Double_t upsampleFactor; ///< Default = 1, 
   Double_t correlationDeltaT; ///< nominalSamplingDeltaT/upsampleFactor, deltaT of interpolation and cross correlation
