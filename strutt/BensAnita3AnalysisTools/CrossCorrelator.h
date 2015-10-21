@@ -109,19 +109,24 @@ public:
 
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   Double_t* crossCorrelateFourier(TGraph* gr1, TGraph* gr2);
   Double_t* crossCorrelateFourier(Int_t numSamplesTimeDomain,
 				  std::complex<Double_t>* fft1, std::complex<Double_t>* fft2,
 				  Int_t threadInd=0);
-  void correlateForZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern);
+
   // Double_t* crossCorrelateFourier(FFTWComplex* fft1, FFTWComplex* fft2);    
   std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
   std::vector<std::vector<Double_t> > getMaxCorrelationValues();
   std::vector<Double_t> getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol);
   std::vector<Double_t> getMaxCorrelationValues(AnitaPol::AnitaPol_t pol);
-  void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
-  void doAllUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);  
+
+  void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
+  void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol); // Launches threads
+
+  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern);
+  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern); // Launches threads
+
+  // Actual functions executed by thread
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);  
 
@@ -250,6 +255,7 @@ public:
   Int_t deltaTMin;
 
   AnitaPol::AnitaPol_t threadPol;
+  UInt_t threadL3TrigPattern;
   std::vector<TThread*> mapThreads;
   std::vector<TThread*> corrThreads;
   std::vector<TThread*> upsampledCorrThreads;

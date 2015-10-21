@@ -40,6 +40,9 @@ namespace PowSpecNorm {
 
 class FancyFFTs : public TObject{
 
+  // This class needs to a friend to CrossCorrelator so it can assign
+  // multiple plans of the same length, one for each thread
+  // and I've chosen to make the assign plan thing private.
   friend class CrossCorrelator;
   
 public:
