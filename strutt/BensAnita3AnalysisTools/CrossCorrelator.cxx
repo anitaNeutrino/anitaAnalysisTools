@@ -30,14 +30,18 @@ CrossCorrelator::~CrossCorrelator(){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
     deleteCrossCorrelations((AnitaPol::AnitaPol_t)pol);
     deleteAllFFTs((AnitaPol::AnitaPol_t)pol);
+    deleteAllPaddedFFTs((AnitaPol::AnitaPol_t)pol);    
+    deleteUpsampledCrossCorrelations((AnitaPol::AnitaPol_t)pol);
   }
 }
+
 
 
 /*!
   \brief Workhorse function to set internal variables.
 */
 void CrossCorrelator::initializeVariables(){
+
 
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -83,6 +87,13 @@ void CrossCorrelator::initializeVariables(){
   mapModeNames[kTriggered] = "Triggered";
   zoomModeNames[kZoomedOut] = "";
   zoomModeNames[kZoomedIn] = "Zoom";
+
+  threadImage = NULL;
+  threadPol = AnitaPol::kHorizontal;
+  threadMapMode = kGlobal;
+  threadZoomMode = kZoomedOut;
+  threadRWave = 0;
+  threadL3TrigPattern = 0;
 
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
     CrossCorrelator::threadArgs threadArgVals;
@@ -155,7 +166,6 @@ Double_t CrossCorrelator::getBin0PhiDeg(){
   }
   return phi0 - PHI_RANGE/2;
 }
-
 
 
 
@@ -402,14 +412,102 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
 }
 
 
-void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
 
   // Delete old cross correlations first 
-  deleteUpsampledCrossCorrelations(pol);
+  deleteCrossCorrelations(pol);
+
+  // Set variable for use in threads
+  threadPol = pol;
+  
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    corrThreads.at(threadInd)->Run();
+  }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    corrThreads.at(threadInd)->Join();
+  }
+}
+
+void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
+
+  // Disgusting hacks to get ROOT threading to compile inside a class.
+  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
+  Long_t threadInd = args->threadInd;
+  CrossCorrelator* ptr = args->ptr;
+  AnitaPol::AnitaPol_t pol = ptr->threadPol;
+
+  
+  Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
+  Int_t startCombo = threadInd*numCorrPerThread;
+  // TThread::Lock();
+  // std::cout << threadInd << "\t" << ptr << "\t" << pol << "\t" << startCombo << std::endl;
+  // TThread::UnLock();
+
+  
+  for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
+    Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    
+    ptr->crossCorrelations[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamples,
+								    ptr->ffts[pol][ant2],
+								    ptr->ffts[pol][ant1],
+								    threadInd);
+  }
+  
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){  
+
   deleteAllPaddedFFTs(pol);
+  deleteUpsampledCrossCorrelations(pol);
+
+  std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
+  
+  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+
+  for(int phiSector=0; phiSector<NUM_PHI; phiSector++){
+    Int_t numComboInd = combosToUse.size();
+    for(Int_t comboInd=0; comboInd < numComboInd; comboInd++){
+      Int_t combo=combosToUse.at(comboInd);
+
+      if(crossCorrelationsUpsampled[pol][combo]==NULL){
+
+	Int_t ant1 = comboToAnt1s.at(combo);
+	Int_t ant2 = comboToAnt2s.at(combo);
+
+	if(fftsPadded[pol][ant1]==NULL){
+	  fftsPadded[pol][ant1] = FancyFFTs::zeroPadFFT(ffts[pol][ant1], numFreqs, numFreqsPadded);
+	}
+	if(fftsPadded[pol][ant2]==NULL){
+	  fftsPadded[pol][ant2] = FancyFFTs::zeroPadFFT(ffts[pol][ant2], numFreqs, numFreqsPadded);
+	}
+
+	crossCorrelationsUpsampled[pol][combo] = crossCorrelateFourier(numSamplesUpsampled,
+								       fftsPadded[pol][ant2],
+								       fftsPadded[pol][ant1]);
+      }
+    }
+  }
+}
+
+
+void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+
+  deleteAllPaddedFFTs(pol);
+  deleteUpsampledCrossCorrelations(pol);
 
   threadL3TrigPattern = l3TrigPattern;
-  // Set variable for use in threads
   threadPol = pol;
 
   std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
@@ -505,95 +603,8 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 
 
 
-void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
-
-  // Delete old cross correlations first 
-  deleteCrossCorrelations(pol);
-
-  // Set variable for use in threads
-  threadPol = pol;
-  
-  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
-    corrThreads.at(threadInd)->Run();
-  }
-
-  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
-    corrThreads.at(threadInd)->Join();
-  }
-}
-
-void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
-
-  // Disgusting hacks to get ROOT threading to compile inside a class.
-  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
-  Long_t threadInd = args->threadInd;
-  CrossCorrelator* ptr = args->ptr;
-  AnitaPol::AnitaPol_t pol = ptr->threadPol;
-
-  
-  Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
-  Int_t startCombo = threadInd*numCorrPerThread;
-  // TThread::Lock();
-  // std::cout << threadInd << "\t" << ptr << "\t" << pol << "\t" << startCombo << std::endl;
-  // TThread::UnLock();
-
-  
-  for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
-    Int_t ant1 = ptr->comboToAnt1s.at(combo);
-    Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    
-    ptr->crossCorrelations[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamples,
-								    ptr->ffts[pol][ant2],
-								    ptr->ffts[pol][ant1],
-								    threadInd);    
-  }
-  
-  return 0;
-}
 
 
-void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){  
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
-
-  deleteUpsampledCrossCorrelations(pol);
-  deleteAllPaddedFFTs(pol);  
-
-  std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
-  
-  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
-
-  for(int phiSector=0; phiSector<NUM_PHI; phiSector++){
-    Int_t numComboInd = combosToUse.size();
-    for(Int_t comboInd=0; comboInd < numComboInd; comboInd++){
-      Int_t combo=combosToUse.at(comboInd);
-
-      if(crossCorrelationsUpsampled[pol][combo]==NULL){
-
-	Int_t ant1 = comboToAnt1s.at(combo);
-	Int_t ant2 = comboToAnt2s.at(combo);
-
-	// std::cerr << combo << "\t" << ant1 << "\t" << fftsPadded[pol][ant1] << "\t"
-	// 	  << ant2 << "\t" << fftsPadded[pol][ant2] << std::endl;
-      
-	if(fftsPadded[pol][ant1]==NULL){
-	  // std::cerr << pol << "\t" << ant1 << std::endl;
-	  fftsPadded[pol][ant1] = FancyFFTs::zeroPadFFT(ffts[pol][ant1], numFreqs, numFreqsPadded);
-	  // std::cerr << pol << "\t" << ant1 << "\t" << fftsPadded[pol][ant1] << std::endl;
-	}
-	if(fftsPadded[pol][ant2]==NULL){
-	  // std::cerr << pol << "\t" << ant2 << std::endl;
-	  fftsPadded[pol][ant2] = FancyFFTs::zeroPadFFT(ffts[pol][ant2], numFreqs, numFreqsPadded);
-	  // std::cerr << pol << "\t" << ant2 << "\t" << fftsPadded[pol][ant2] << std::endl;
-	}
-
-	crossCorrelationsUpsampled[pol][combo] = crossCorrelateFourier(numSamplesUpsampled,
-								       fftsPadded[pol][ant2],
-								       fftsPadded[pol][ant1]);
-      }
-    }
-  }
-}
 
 
 
@@ -607,7 +618,6 @@ Double_t* CrossCorrelator::crossCorrelateFourier(TGraph* gr1, TGraph* gr2){
 /*!
   \brief Interface to FFT library to generate cross correlations.
 */
-// Double_t* CrossCorrelator::crossCorrelateFourier(FFTWComplex* fft1, FFTWComplex* fft2){
 Double_t* CrossCorrelator::crossCorrelateFourier(Int_t numSamplesInTimeDomain,
 						 std::complex<Double_t>* fft1,
 						 std::complex<Double_t>* fft2,
@@ -708,29 +718,29 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
   
 }
 
-void CrossCorrelator::fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern){
+// void CrossCorrelator::fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern){
 
-  std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
-  Double_t phiMin = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
-  Double_t thetaMin = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
+//   std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
+//   Double_t phiMin = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
+//   Double_t thetaMin = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
 
-  for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-    Double_t phiDeg = phiMin + phiBin*Double_t(PHI_RANGE_ZOOM)/NUM_BINS_PHI_ZOOM;
-    Double_t phiWave = TMath::DegToRad()*phiDeg;
-    for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-      Double_t thetaDeg = thetaMin + THETA_RANGE_ZOOM*((Double_t)thetaBin/NUM_BINS_THETA_ZOOM);
-      Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-      for(UInt_t comboInd=0; comboInd<combosToUse.size(); comboInd++){
-	Int_t combo = combosToUse.at(comboInd);
-	Int_t ant1 = comboToAnt1s.at(combo);
-	Int_t ant2 = comboToAnt2s.at(combo);
-	Double_t deltaT = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
-	Int_t offset = TMath::Nint(deltaT/correlationDeltaT);
-	deltaTsZoom[phiBin][thetaBin][combo] = offset;
-      }
-    }
-  }
-}
+//   for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+//     Double_t phiDeg = phiMin + phiBin*Double_t(PHI_RANGE_ZOOM)/NUM_BINS_PHI_ZOOM;
+//     Double_t phiWave = TMath::DegToRad()*phiDeg;
+//     for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+//       Double_t thetaDeg = thetaMin + THETA_RANGE_ZOOM*((Double_t)thetaBin/NUM_BINS_THETA_ZOOM);
+//       Double_t thetaWave = TMath::DegToRad()*thetaDeg;
+//       for(UInt_t comboInd=0; comboInd<combosToUse.size(); comboInd++){
+// 	Int_t combo = combosToUse.at(comboInd);
+// 	Int_t ant1 = comboToAnt1s.at(combo);
+// 	Int_t ant2 = comboToAnt2s.at(combo);
+// 	Double_t deltaT = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
+// 	Int_t offset = TMath::Nint(deltaT/correlationDeltaT);
+// 	deltaTsZoom[phiBin][thetaBin][combo] = offset;
+//       }
+//     }
+//   }
+// }
 
 void CrossCorrelator::fillDeltaTLookup(){
   
@@ -883,15 +893,17 @@ TH2D* CrossCorrelator::makeBlankZoomedImage(TString name, TString title,
 
 TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave){
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;
+
   return makeGlobalSphericalImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg);  
+
 }
 
-TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-						Double_t& peakPhiDeg, Double_t& peakThetaDeg){
-  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-  // 		   kGlobal, kZoomedOut);
+TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
+						Double_t& imagePeak, Double_t& peakPhiDeg,
+						Double_t& peakThetaDeg){
+
   return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-			   kGlobal, kZoomedOut);
+  			   kGlobal, kZoomedOut);
 }
 
 
@@ -903,8 +915,7 @@ TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Dou
 TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
 						   Double_t& imagePeak, Double_t& peakPhiDeg,
 						   Double_t& peakThetaDeg, UInt_t l3TrigPattern){
-  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
-  // 		   l3TrigPattern, kTriggered, kZoomedOut);
+
   return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
 			   l3TrigPattern, kTriggered, kZoomedOut);  
 }
@@ -912,16 +923,16 @@ TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Dou
 
 TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 				       Double_t& peakThetaDeg){
-  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-  // 		   kGlobal, kZoomedOut);
+
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
 			   kGlobal, kZoomedOut);
 }
 
 
-TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-					  Double_t& peakThetaDeg, UInt_t l3TrigPattern){
-  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern, kTriggered, kZoomedOut);
+TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
+					  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+					  UInt_t l3TrigPattern){
+
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
 			   l3TrigPattern, kTriggered, kZoomedOut);  
 }
@@ -931,8 +942,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 				       Double_t& peakThetaDeg, UInt_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
-  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-  // 		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
 			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
@@ -967,12 +976,10 @@ void CrossCorrelator::createImageNameAndTitle(TString& name, TString& title, map
   title += " Map";
 }
 
-TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-				 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
-				 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
-				 Double_t zoomCenterThetaDeg){
 
-
+TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern,
+					     mapMode_t mapMode, zoomMode_t zoomMode,
+					     Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
   fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
 
   TString name, title;
@@ -987,6 +994,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
   }
 
   threadImage = hImage;
+  threadPol = pol;
   threadMapMode = mapMode;
   threadZoomMode = zoomMode;
   threadRWave = rWave;
@@ -996,14 +1004,21 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
     // Pads FFTs for more finely grained correlation result for zoomed in map
     // doUpsampledCrossCorrelations(pol, l3TrigPattern);
     doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
-    fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
+    // fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
   }
+  return hImage;
+}
 
-  // std::cout << zoomMode << "\t" << zoomModeNames[zoomMode] << "\t" << l3TrigPattern << std::endl;
-  // for(int phiSect=0; phiSect<NUM_PHI; phiSect++){
-  //   std::cout << phiSect << "\t" << combosToUse[phiSect].size() << std::endl;
-  // }
-  // std::cout << std::endl << std::endl;
+
+
+TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
+				 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+				 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
+				 Double_t zoomCenterThetaDeg){
+
+  TH2D* hImage = prepareForImageMaking(pol, rWave, l3TrigPattern,
+				       mapMode, zoomMode, zoomCenterPhiDeg,
+				       zoomCenterThetaDeg);
 
   imagePeak = -DBL_MAX;
   Int_t peakPhiBin = -1;
@@ -1017,8 +1032,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
     combosToUse = combosToUseGlobal[0];
   }
 
-  for(Int_t phiInd = 0; phiInd < hImage->GetNbinsX(); phiInd++){
-    Int_t phiBin = phiInd;
+  for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
     if(phiSector!=lastPhiSector && mapMode==kGlobal){
       combosToUse = combosToUseGlobal[phiSector];
@@ -1042,7 +1056,13 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 	}
 	// If we are in zoomed in & plane wave mode then calculate
 	else if(zoomMode==kZoomedIn && rWave==0){
-	  offset = deltaTsZoom[phiBin][thetaBin][combo];
+	  // offset = deltaTsZoom[phiBin][thetaBin][combo];
+	  // offset = offset < 0 ? offset + numSamplesUpsampled : offset;
+	  // correlations += crossCorrelationsUpsampled[pol][combo][offset];
+	  Int_t ant1 = comboToAnt1s.at(combo);
+	  Int_t ant2 = comboToAnt2s.at(combo);
+	  Double_t deltaT = getDeltaTExpected(ant1, ant2, phiWave, thetaWave);
+	  offset = TMath::Nint(deltaT/correlationDeltaT);
 	  offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	  correlations += crossCorrelationsUpsampled[pol][combo][offset];
 	}
@@ -1078,31 +1098,9 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
 					 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 					 Double_t zoomCenterThetaDeg){
 
-  fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
-
-  TString name, title;
-  createImageNameAndTitle(name, title, mapMode, zoomMode, rWave, pol);
-  
-  TH2D* hImage = NULL;
-  if(zoomMode == kZoomedOut){
-    hImage = makeBlankImage(name, title);
-  }
-  else if(zoomMode == kZoomedIn){
-    hImage = makeBlankZoomedImage(name, title, zoomCenterPhiDeg, zoomCenterThetaDeg);
-  }
-
-  threadImage = hImage;
-  threadMapMode = mapMode;
-  threadZoomMode = zoomMode;
-  threadRWave = rWave;
-  threadL3TrigPattern = l3TrigPattern;
-  
-  if(zoomMode == kZoomedIn){
-    // Pads FFTs for more finely grained correlation result for zoomed in map
-    // doUpsampledCrossCorrelations(pol, l3TrigPattern);
-    doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
-    // fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
-  }
+  TH2D* hImage = prepareForImageMaking(pol, rWave, l3TrigPattern,
+				       mapMode, zoomMode,  zoomCenterPhiDeg,
+				       zoomCenterThetaDeg);
 
   // LAUNCH THREADS HERE
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
@@ -1123,8 +1121,9 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
     }
   }
 
+  // Remove global pointer so we can't accidentally delete it
   threadImage = NULL;
-
+  
   // Now it's yours
   return hImage;
 }
@@ -1154,8 +1153,7 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     combosToUse = ptr->combosToUseTriggered[ptr->threadL3TrigPattern];
   }
 
-  for(Int_t phiInd = startPhiBin; phiInd < startPhiBin+numPhiBinsThread; phiInd++){
-    Int_t phiBin = phiInd;
+  for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
     if(mapMode==kGlobal){
       combosToUse = ptr->combosToUseGlobal[phiSector];
@@ -1219,17 +1217,18 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 
 
 
-Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi){
+Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeak,
+					Double_t& imagePeakTheta, Double_t& imagePeakPhi){
 
   Int_t nx = hist->GetNbinsX();
   Int_t ny = hist->GetNbinsY();
 
-  Double_t maxVal = -2;
+  imagePeak = -DBL_MAX;
   for(Int_t by = 1; by<=ny; by++){
     for(Int_t bx = 1; bx<=nx; bx++){
       Double_t val = hist->GetBinContent(bx, by);
-      if(val > maxVal){
-	maxVal = val;
+      if(val > imagePeak){
+	imagePeak = val;
 	imagePeakPhi = hist->GetXaxis()->GetBinLowEdge(bx);
 	imagePeakTheta = hist->GetYaxis()->GetBinLowEdge(by);
       }
@@ -1288,7 +1287,6 @@ void CrossCorrelator::deleteAllFFTs(AnitaPol::AnitaPol_t pol){
   }
 }
 
-
 void CrossCorrelator::deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol){
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     if(fftsPadded[pol][ant]){
@@ -1297,7 +1295,6 @@ void CrossCorrelator::deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol){
     }
   }
 }
-
 
 
 

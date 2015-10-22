@@ -38,7 +38,7 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
   std::pair<int, int> key(len, threadInd);
   std::map<std::pair<int, int>,fftw_plan>::iterator it = fRealToComplex.find(key);
   if(it==fRealToComplex.end()){
-    std::cout << len << "\t" << threadInd << std::endl;
+    // std::cout << len << "\t" << threadInd << std::endl;
     fReals[key] = (double*) fftw_malloc(sizeof(double)*len);
     fComplex[key] = (std::complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
     fRealToComplex[key] = fftw_plan_dft_r2c_1d(len,fReals[key],(fftw_complex*)fComplex[key],FFTW_MEASURE);
@@ -179,7 +179,15 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
   makeNewPlanIfNeeded(len, threadInd);
   int numFreqs = getNumFreqs(len);
 
-  memcpy(fComplex[key], input, sizeof(fftw_complex)*numFreqs);
+  std::complex<double>* tempVals = (std::complex<double>*) fComplex[key];
+  
+  // In the case that we cleverly left the fft in the internal array skip the copy
+  if(tempVals!=input){ 
+    // In fact this is undefined behaviour!
+    memcpy(tempVals, input, sizeof(fftw_complex)*numFreqs);
+  }
+
+  // Do inverse FFT.
   fftw_execute(fComplexToReal[key]);
   
   /* Normalization needed on the inverse transform */
@@ -190,7 +198,10 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
 
   if(copyOutputToNewArray==true){
     double* output = new double[len];
-    memcpy(output, fReals[key], sizeof(double)*len);
+    memcpy(output, invFftOutPtr, sizeof(double)*len);
+
+    // std::cout << output << "\t" << invFftOutPtr << "\t" << len << "\t" << sizeof(double)*len << std::endl;
+    
     return output;
   }
   else{
@@ -224,7 +235,7 @@ std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, int numFr
   std::complex<double>* fftPadded = new std::complex<double>[numFreqsPadded];
 
   // Here I scale the padded FFT so that it is as if I fourier transformed a longer waveform.
-  // There is a scale factor of length picked up from a forward FFT.
+  // (There is a scale factor of length picked up from a forward FFT.)
   Double_t scale = numFreqsPadded/numFreqs;
   for(int freqInd=0; freqInd<numFreqs; freqInd++){
     fftPadded[freqInd].real(fft[freqInd].real()*scale);
@@ -273,16 +284,16 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
      Will assume lengths are the same for now.
   */
 
-  /* Store output of FFT1 in tempVals */
-  std::complex<double>* tempVals1 = doFFT(len, v1, true, threadInd);
+  /* Store output of FFT2 in tempVals */
+  std::complex<double>* tempVals2 = doFFT(len, v2, true, threadInd);
 
-  /* Leave output of FFT2 in internal arrays to avoid an unnecessary copy */
-  doFFT(len, v2, false, threadInd);
+  /* Leave output of FFT1 in internal arrays to avoid an unnecessary copy */
+  doFFT(len, v1, false, threadInd);
 
   std::pair<int, int> key(len, threadInd);
   
   /* Get pointer to internal array */
-  std::complex<double>* tempVals2 = (std::complex<double>*) fComplex[key];
+  std::complex<double>* tempVals1 = (std::complex<double>*) fComplex[key];
 
   /* Take the product */
   int numFreqs = getNumFreqs(len);
@@ -312,6 +323,7 @@ double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::comp
      Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
      Will assume lengths are the same for now.
   */
+
 
   /* Stops tempVals returning NULL, normally done in doFFT step. 
      But the nice thing about this class is it means that I won't be duplicating work. */

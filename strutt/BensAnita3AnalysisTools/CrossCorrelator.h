@@ -185,7 +185,7 @@ public:
 				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern);
   
   // Not used any more potentially useful somewhere so I will leave it.
-  Double_t findImagePeak(TH2D* hist, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
+  Double_t findImagePeak(TH2D* hist, Double_t& imagePeak, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
 
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern,
 			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
@@ -196,7 +196,11 @@ public:
 
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
   
+  TH2D* prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern,
+			      mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
+			      Double_t zoomCenterThetaDeg);
 
+  
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
   **********************************************************************************************************/
@@ -246,9 +250,9 @@ public:
   std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray; ///< Vector of antenna heights
 
-  typedef Short_t dtIndex_t;
+  typedef Char_t dtIndex_t;
   dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
-  dtIndex_t deltaTsZoom[NUM_BINS_PHI_ZOOM][NUM_BINS_THETA_ZOOM][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making a zoomed in image, must recalculated each event (probably)
+  // dtIndex_t deltaTsZoom[NUM_BINS_PHI_ZOOM][NUM_BINS_THETA_ZOOM][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making a zoomed in image, must recalculated each event (probably)
 
   // pairs for making an image
   Int_t deltaTMax;
@@ -274,7 +278,7 @@ public:
   };
 
 private:
-  // Messing with this will muck up the threading.
+  // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
   
   
