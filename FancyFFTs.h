@@ -18,7 +18,7 @@
 #include <TSystem.h>
 #include <TMath.h>
 #include <TGraph.h>
-// #include <TThread.h>
+#include <TThread.h>
 
 #include "FancyFFTsWisdomManager.h"
 
