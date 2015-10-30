@@ -47,7 +47,7 @@ void CrossCorrelator::initializeVariables(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = NULL;
-      grsInterp[pol][ant] = NULL;
+      grsResampled[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
       ffts[pol][ant] = NULL;
       fftsPadded[pol][ant] = NULL;
@@ -112,23 +112,8 @@ void CrossCorrelator::initializeVariables(){
   // Create threads to be called later.
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
     
-    TString name = TString::Format("threadCorr%ld", threadInd);
-    corrThreads.push_back(new TThread(name.Data(),
-				      CrossCorrelator::doSomeCrossCorrelationsThreaded,
-				      (void*)&threadArgsVec.at(threadInd))
-			  );
 
-    name = TString::Format("threadUpsampledCorr%ld", threadInd);
-    upsampledCorrThreads.push_back(new TThread(name.Data(),
-    					       CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded,
-    					       (void*)&threadArgsVec.at(threadInd))
-    				   );
     
-    name = TString::Format("threadMap%ld", threadInd);
-    mapThreads.push_back(new TThread(name.Data(),
-				     CrossCorrelator::makeSomeOfImageThreaded,
-				     (void*)&threadArgsVec.at(threadInd))
-			 );
   }
 
 }
@@ -207,10 +192,37 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
 
     // Interpolate with earliest start time 
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grsInterp[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart.at(pol));
+      grsResampled[pol][ant] = interpolateWithStartTime(grs[pol][ant], earliestStart.at(pol));
       Double_t mean; // don't care enough about this to store it anywhere.
-      RootTools::normalize(grsInterp[pol][ant], mean, interpRMS[pol][ant]);
+      RootTools::normalize(grsResampled[pol][ant], mean, interpRMS[pol][ant]);
     }
+
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+
+      TString name, title;
+      TString name2, title2;      
+      if(pol==AnitaPol::kHorizontal){
+	name = TString::Format("gr%dH_%u", ant, usefulEvent->eventNumber);
+	name2 = TString::Format("grInterp%dH_%u", ant, usefulEvent->eventNumber);
+	title = TString::Format("Antenna %d HPOL eventNumber %u", ant, usefulEvent->eventNumber);
+	title2 = TString::Format("Antenna %d HPOL eventNumber %u (evenly resampled)",
+				 ant, usefulEvent->eventNumber);
+      }
+      else if(pol==AnitaPol::kVertical){
+	name = TString::Format("gr%dV_%u", ant, usefulEvent->eventNumber);
+	name2 = TString::Format("grInterp%dV_%u", ant, usefulEvent->eventNumber);
+	title = TString::Format("Antenna %d VPOL eventNumber %u", ant, usefulEvent->eventNumber);
+	title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
+				 ant, usefulEvent->eventNumber);
+
+      }
+      title += "; Time (ns); Voltage (mV)";
+      grs[pol][ant]->SetName(name);
+      grsResampled[pol][ant]->SetName(name2);
+      grs[pol][ant]->SetTitle(title);
+      grsResampled[pol][ant]->SetTitle(title2);
+    }
+    
     lastEventNormalized[pol] = usefulEvent->eventNumber;
   // }
 }
@@ -222,7 +234,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   // Generate a new set of FFTs.
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    ffts[pol][ant] = FancyFFTs::doFFT(numSamples, grsInterp[pol][ant]->GetY(), true);    
+    ffts[pol][ant] = FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), true);    
   }
 }
 
@@ -299,66 +311,6 @@ All correlation functions
 
 
 /*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times for the specified polarization.
-  \returns A vector of length numCombos containing the set of times of maximum correlation.
-*/
-std::vector<Double_t> CrossCorrelator::getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol){
-  
-  std::vector<Double_t> peakTimes(NUM_COMBOS, 0);
-
-  for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-    Int_t maxInd = RootTools::getIndexOfMaximum(numSamples, crossCorrelations[pol][combo]);
-    Int_t offset = maxInd >= numSamples/2 ? maxInd - numSamples : maxInd;
-    peakTimes.at(combo) = offset*nominalSamplingDeltaT;      
-  }
-  return peakTimes;
-}
-
-/*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum times.
-  \returns A vector length 2 of vector length numCombos containing the set of times of maximum correlation.
-*/
-std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationTimes(){
-  
-  std::vector<std::vector<Double_t> > peakTimes;
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    peakTimes.push_back(getMaxCorrelationTimes((AnitaPol::AnitaPol_t)pol));
-  }
-  return peakTimes;
-}
-
-
-/*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values for the specified polarization.
-  \returns A vector of length numCombos containing the set of maximum correlation values.
-*/
-std::vector<Double_t> CrossCorrelator::getMaxCorrelationValues(AnitaPol::AnitaPol_t pol){
-  
-  std::vector<Double_t> peakVals(NUM_COMBOS, 0);
-  for(Int_t combo=0; combo<NUM_COMBOS; combo++){
-    Int_t maxInd = RootTools::getIndexOfMaximum(numSamples, crossCorrelations[pol][combo]);
-    peakVals.at(combo) = crossCorrelations[pol][combo][maxInd];
-  }
-  return peakVals;
-}
-
-
-/*!
-  \brief Loops through the set of cross correlations and returns a vector of vectors containing the maximum correlation values.
-  \returns A vector length 2 of vector length numCombos containing the set of maximum correlation values.
-*/
-std::vector<std::vector<Double_t> > CrossCorrelator::getMaxCorrelationValues(){
-  
-  std::vector<std::vector<Double_t> > peakVals;
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    peakVals.push_back(getMaxCorrelationValues((AnitaPol::AnitaPol_t)pol));
-  }
-  return peakVals;
-}
-
-
-
-/*!
   \brief Correlate the event
 
   First step in interferometry, pass pointer to UsefulAnitaEvent in here, which populates the internal arrays of normalized, interpolated waveforms and set of cross correlations. These internal values are then used as look up tables for generating interferometic images.
@@ -376,6 +328,7 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent){
 
   First step in interferometry, pass pointer to UsefulAnitaEvent in here, which populates the internal arrays of normalized, interpolated waveforms and set of cross correlations. These internal values are then used as look up tables for generating interferometic images.
 */
+
 void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
@@ -383,9 +336,10 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
 
   // Generate set of ffts for cross correlation (each waveform only needs to be done once)
   doFFTs(pol);
-  
+
+  // Now cross correlate those already FFT'd waveforms
   // doAllCrossCorrelations(pol);
-  doAllCrossCorrelationsThreaded(pol);  
+  doAllCrossCorrelationsThreaded(pol);
 
   // Safety check to make sure we don't do any hard work twice.
   eventNumber[pol] = usefulEvent->eventNumber;
@@ -406,7 +360,7 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
   for(Int_t combo=0; combo<numCombos; combo++){
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);
-    // crossCorrelations[pol][combo] = crossCorrelateFourier(grsInterp[pol][ant2], grsInterp[pol][ant1]);
+    // crossCorrelations[pol][combo] = crossCorrelateFourier(grsResampled[pol][ant2], grsResampled[pol][ant1]);
     crossCorrelations[pol][combo] = crossCorrelateFourier(numSamples, ffts[pol][ant2], ffts[pol][ant1]);
   }
 }
@@ -421,12 +375,27 @@ void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
   threadPol = pol;
   
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    TString name = TString::Format("threadCorr%ld", threadInd);
+    corrThreads.push_back(new TThread(name.Data(),
+				      CrossCorrelator::doSomeCrossCorrelationsThreaded,
+				      (void*)&threadArgsVec.at(threadInd))
+			  );
+  }
+  
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     corrThreads.at(threadInd)->Run();
   }
 
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     corrThreads.at(threadInd)->Join();
   }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    delete corrThreads.at(threadInd);
+  }
+
+  corrThreads.clear();
+  
 }
 
 void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
@@ -531,12 +500,26 @@ void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t 
   }
 
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    TString name = TString::Format("threadUpsampledCorr%ld", threadInd);
+    upsampledCorrThreads.push_back(new TThread(name.Data(),
+    					       CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded,
+    					       (void*)&threadArgsVec.at(threadInd))
+    				   );
+  }
+  
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     upsampledCorrThreads.at(threadInd)->Run();
   }
 
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     upsampledCorrThreads.at(threadInd)->Join();
   }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    delete upsampledCorrThreads.at(threadInd);
+  }
+  upsampledCorrThreads.clear();
+  
 }
 
 void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs){
@@ -624,6 +607,68 @@ Double_t* CrossCorrelator::crossCorrelateFourier(Int_t numSamplesInTimeDomain,
 						 Int_t threadInd){  
   return FancyFFTs::crossCorrelate(numSamplesInTimeDomain, fft1, fft2, threadInd);  
 }
+
+
+
+
+
+
+
+
+/************************************************************************************************************
+Get correlation summary information
+************************************************************************************************************/
+
+
+
+void CrossCorrelator::getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
+						 Double_t& time, Double_t& value){
+
+  Int_t maxInd = RootTools::getIndexOfMaximum(numSamples, crossCorrelations[pol][combo]);
+  Int_t offset = maxInd >= numSamples/2 ? maxInd - numSamples : maxInd;
+  value = crossCorrelations[pol][combo][maxInd];
+  time = offset*nominalSamplingDeltaT;
+}
+
+
+void CrossCorrelator::getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+						 Double_t& time, Double_t& value){
+  Int_t combo = comboIndices[ant1][ant2];
+  getMaxCorrelationTimeValue(pol, combo, time, value);
+}
+
+void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
+							  Double_t& time, Double_t& value){
+
+ Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
+  Int_t offset = maxInd >= numSamplesUpsampled/2 ? maxInd - numSamplesUpsampled : maxInd;
+  value = crossCorrelationsUpsampled[pol][combo][maxInd];
+  time = offset*correlationDeltaT;
+}
+
+
+void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+							  Double_t& time, Double_t& value){
+  Int_t combo = comboIndices[ant1][ant2];
+  getMaxUpsampledCorrelationTimeValue(pol, combo, time, value);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1104,6 +1149,14 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
 
   // LAUNCH THREADS HERE
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    TString name = TString::Format("threadMap%ld", threadInd);
+    mapThreads.push_back(new TThread(name.Data(),
+				     CrossCorrelator::makeSomeOfImageThreaded,
+				     (void*)&threadArgsVec.at(threadInd))
+			 );
+  }
+
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     mapThreads.at(threadInd)->Run();
   }
 
@@ -1111,6 +1164,12 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
     mapThreads.at(threadInd)->Join();
   }
 
+  for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
+    delete mapThreads.at(threadInd);
+  }
+  mapThreads.clear();
+  
+  
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
@@ -1235,7 +1294,7 @@ Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeak,
     }
   }
 
-  return maxVal;
+  return imagePeak;
   
 }
 
@@ -1271,9 +1330,9 @@ void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
       delete grs[pol][ant];
       grs[pol][ant] = NULL;
     }
-    if(grsInterp[pol][ant]){
-      delete grsInterp[pol][ant];
-      grsInterp[pol][ant] = NULL;
+    if(grsResampled[pol][ant]){
+      delete grsResampled[pol][ant];
+      grsResampled[pol][ant] = NULL;
     }
   }
 }
@@ -1340,8 +1399,8 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
 	  newVs[samp] = numSamples;
 	}
       }
-      grsInterp[pol][ant] = new TGraph(numSamples, &newTimes[0], &newVs[0]);    
-      RootTools::normalize(grsInterp[pol][ant]);
+      grsResampled[pol][ant] = new TGraph(numSamples, &newTimes[0], &newVs[0]);    
+      RootTools::normalize(grsResampled[pol][ant]);
     }
     doAllCrossCorrelations((AnitaPol::AnitaPol_t)pol);
   }
@@ -1407,3 +1466,77 @@ TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t 
 
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
+
+
+TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg, UInt_t l3Trigger){
+  // Sums all l3 triggered phi-sector waveforms together to make the coherently summed waveform
+
+  Double_t phiRad = phiDeg*TMath::DegToRad();
+  Double_t thetaRad = thetaDeg*TMath::DegToRad();
+  Int_t numAnts = 0;
+  Int_t firstAnt = -1;
+
+  std::pair<Int_t, Int_t> key(numSamplesUpsampled, 0);
+  TGraph* grCoherent = NULL;
+  Double_t* vArray = FancyFFTs::fReals[key];
+  
+  for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
+    Int_t doPhiSector = RootTools::getBit(phiSector, l3Trigger);
+    if(doPhiSector > 0){
+      for(Int_t ring=0; ring<NUM_RING; ring++){
+	Int_t ant= phiSector + ring*NUM_PHI;
+	FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][ant], false);
+
+	if(firstAnt==-1){
+	  std::vector<Double_t> tArray(numSamplesUpsampled, 0);
+	  Double_t t0 = grsResampled[pol][ant]->GetX()[0];
+	  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+	    tArray.at(samp) = t0 + samp*correlationDeltaT;
+	    vArray[samp] *= interpRMS[pol][ant];
+	  }
+	  firstAnt = ant;
+	  grCoherent = new TGraph(numSamplesUpsampled, &tArray[0], &vArray[0]);
+	}
+	else{
+	  Double_t deltaT = getDeltaTExpected(firstAnt, ant, phiRad, thetaRad);
+	  Int_t offset = TMath::Nint(deltaT/correlationDeltaT);
+	  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+	    Int_t samp2 = samp + offset;
+	    if(samp2 >= 0 && samp2 < numSamplesUpsampled){
+	      grCoherent->GetY()[samp] += vArray[samp2]*interpRMS[pol][ant];
+	    }
+	  }
+	}
+	numAnts++;
+      }
+    }
+  }
+
+  // Normalize
+  if(numAnts > 0){
+    TString name;
+    TString title;
+    for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+      grCoherent->GetY()[samp]/=numAnts;
+    }
+
+    if(pol==AnitaPol::kHorizontal){
+      name = TString::Format("grCoherentH_%u", eventNumber[pol]);
+      title = "HPOL ";
+    }
+    else{
+      name = TString::Format("grCoherentV_%u", eventNumber[pol]);
+      title = "VPOL ";      
+    }
+
+    title += TString::Format("Coherently Summed Waveform for arrival direction elevation %lf (Deg) and azimuth %lf (Deg); Time (ns); Voltage (mV)", thetaDeg, phiDeg);
+
+    grCoherent->SetName(name);
+    grCoherent->SetTitle(title);    
+  }
+  
+  return grCoherent;
+  
+}
+
+

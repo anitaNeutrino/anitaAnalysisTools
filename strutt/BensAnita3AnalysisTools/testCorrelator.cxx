@@ -10,6 +10,7 @@
 
 #include <CrossCorrelator.h>
 #include <RootTools.h>
+#include <FFTtools.h>
 
 #include <TGraph.h>
 #include <TFile.h>
@@ -25,13 +26,15 @@ void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
 void hackyNormalizationTest();
+void testCoherentlySummedWaveform();
 // void testFileWriting();
 
 int main(){
 
   //  testImageGPUStyle();
   //  testNewCombinatorics();
-  testImageFullStyle();
+  // testImageFullStyle();
+  testCoherentlySummedWaveform();  
   // hackyNormalizationTest();
   //  testFileWriting();
 
@@ -50,6 +53,121 @@ int main(){
 //   }
 //   std::cout << std::endl;
 // }
+
+void testCoherentlySummedWaveform(){
+  /*
+    This function tests the full +-2 phi-sector reconstruction.
+   */
+
+  char eventFileName[1024];
+
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  CalibratedAnitaEvent* event = NULL;  
+  eventTree->SetBranchAddress("event", &event);
+
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+
+  TFile* outFile = new TFile("/tmp/testCoherentlySummedWaveform.root","recreate");
+  TTree* corrTree = new TTree("corrTree","corrTree");
+  Double_t imagePeak;
+  Double_t imagePeakZoom;  
+  corrTree->Branch("imagePeak", &imagePeak);
+
+  CrossCorrelator* cc = new CrossCorrelator();
+
+  headTree->BuildIndex("eventNumber");
+  eventTree->BuildIndex("eventNumber");  
+  
+  imagePeak = -1;
+  imagePeakZoom = -1;    
+  Double_t peakPhiDeg = -1;
+  Double_t peakThetaDeg = -1;
+  Double_t peakPhiDegZoom = -1;
+  Double_t peakThetaDegZoom = -1;
+
+  const Long64_t eventNumber = 60832108;
+  headTree->GetEntryWithIndex(eventNumber);
+  eventTree->GetEntryWithIndex(eventNumber);
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;  
+
+  
+  // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+  UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
+  cc->correlateEvent(realEvent);
+
+  // writeCorrelationGraphs(cc);
+
+  std::vector<TH2D*> hImages;
+  std::vector<TH2D*> hZoomedImages;    
+
+  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
+  
+  UInt_t l3TrigPattern = 0;
+  if(pol==AnitaPol::kHorizontal){
+    l3TrigPattern = header->l3TrigPatternH;
+  }
+  else if(pol==AnitaPol::kVertical){
+    l3TrigPattern = header->l3TrigPattern;
+  }
+  else{
+    std::cerr << "??????????????????????" << std::endl;
+  }
+  std::cout << l3TrigPattern << std::endl;
+      
+  hImages.push_back(cc->makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern));
+  hZoomedImages.push_back(cc->makeZoomedImage(pol, imagePeakZoom, peakPhiDegZoom, peakThetaDegZoom,
+					      l3TrigPattern, peakPhiDeg, peakThetaDeg));
+
+  TGraph* grCoherent = cc->makeCoherentlySummedWaveform(pol, peakPhiDegZoom, peakThetaDegZoom,
+  							l3TrigPattern);
+
+  if(grCoherent){
+    grCoherent->Write();
+    TGraph* grHilbert = FFTtools::getHilbertEnvelope(grCoherent);
+
+
+    grHilbert->SetName("grHilbert");
+    grHilbert->Write();  
+
+    delete grCoherent;
+    grCoherent = NULL;
+    delete grHilbert;
+    grHilbert = NULL;        
+  }
+
+  
+  for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
+    Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
+    if(doPhiSector > 0){
+      for(int ring=0; ring<NUM_RING; ring++){
+	int ant = phiSector + NUM_PHI*ring;
+	cc->grsResampled[pol][ant]->Write();
+      }
+    }
+  }
+      
+    
+  delete realEvent;
+
+  outFile->Write();
+  outFile->Close();
+
+  delete cc;
+
+}
+
 
 
 void testNewCombinatorics(){
@@ -103,7 +221,8 @@ void testNewCombinatorics(){
   Double_t peakPhiDeg = -1;
   Double_t peakThetaDeg = -1;
   
-  TH2D* hImage = cc->makeGlobalImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg);
+  // TH2D* hImage = cc->makeGlobalImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg);
+  TH2D* hImage = cc->makeTriggeredImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg, header->l3TrigPatternH);  
   hImage->Write();
   delete hImage;
 
@@ -146,11 +265,11 @@ void testImageFullStyle(){
 
   //  Long64_t numEntries = eventTree->GetEntries();
   Long64_t numEntries = 200; //eventTree->GetEntries();
-  numEntries = 108;
+  numEntries = 408;
 
   CrossCorrelator* cc = new CrossCorrelator();
 
-  for(Long64_t entry=107; entry<numEntries; entry++){
+  for(Long64_t entry=407; entry<numEntries; entry++){
 
     imagePeak = -1;
     Double_t peakPhiDeg = -1;
@@ -169,6 +288,12 @@ void testImageFullStyle(){
     for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
       hImages.push_back(cc->makeGlobalImage(AnitaPol::AnitaPol_t(pol), imagePeak, peakPhiDeg, peakThetaDeg));
     }
+
+    // hImages.push_back(cc->makeTriggeredImage(AnitaPol::kHorizontal, imagePeak, peakPhiDeg, peakThetaDeg,
+    // 					     header->l3TrigPatternH));  
+    // hImages.push_back(cc->makeTriggeredImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg,
+    // 					     header->l3TrigPattern));  
+
     
     delete realEvent;
   }

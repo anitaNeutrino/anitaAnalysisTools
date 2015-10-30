@@ -115,11 +115,19 @@ public:
 				  Int_t threadInd=0);
 
   // Double_t* crossCorrelateFourier(FFTWComplex* fft1, FFTWComplex* fft2);    
-  std::vector<std::vector<Double_t> > getMaxCorrelationTimes();
-  std::vector<std::vector<Double_t> > getMaxCorrelationValues();
-  std::vector<Double_t> getMaxCorrelationTimes(AnitaPol::AnitaPol_t pol);
-  std::vector<Double_t> getMaxCorrelationValues(AnitaPol::AnitaPol_t pol);
 
+  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
+				  Double_t& time, Double_t& value);
+
+  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+				  Double_t& time, Double_t& value);
+  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
+					   Double_t& time, Double_t& value);
+  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+					   Double_t& time, Double_t& value);
+
+
+  
   void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol); // Launches threads
 
@@ -143,7 +151,7 @@ public:
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UInt_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
-  void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern);
+  // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern);
   Double_t getBin0PhiDeg();
 
   /**********************************************************************************************************
@@ -200,6 +208,9 @@ public:
 			      mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 			      Double_t zoomCenterThetaDeg);
 
+
+  TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t peakPhiDeg, Double_t peakThetaDeg, UInt_t l3Trigger);
+
   
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
@@ -242,7 +253,7 @@ public:
   Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
   Double_t* crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS]; ///< Arrays for upsampled cross correlations
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
-  TGraph* grsInterp[NUM_POL][NUM_SEAVEYS]; ///< Interpolated TGraphs
+  TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; ///< Evenly resampled TGraphs
   std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs
   std::complex<Double_t>* fftsPadded[NUM_POL][NUM_SEAVEYS]; ///< Padded with zeros.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
@@ -257,6 +268,7 @@ public:
   // pairs for making an image
   Int_t deltaTMax;
   Int_t deltaTMin;
+
 
   AnitaPol::AnitaPol_t threadPol;
   UInt_t threadL3TrigPattern;
