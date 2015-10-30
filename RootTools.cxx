@@ -953,30 +953,19 @@ void RootTools::makeZaxisScaleEqualAboutZero(TH2D* h){
   else{
     h->SetMinimum(-max);
   }
-
 }
 
 /*!
-  \brief For decoding ANITA-3 l3triggers.
-  \param numPhi should be 16 really, but just want to make this function very general.
-  \param l3Trigger is the bit mask to be decoded.
+  \brief For decoding bit masks
+  \param bitIndex is the bit to get (count from 0)
+  \param bitMask is the bitMask
 */
-
-std::vector<Int_t> RootTools::decodeL3Trigger(UInt_t numPhi, UInt_t l3Trigger){
-
-  std::vector<Int_t> decoded(numPhi, 0);
-  for(UInt_t phiSector=0; phiSector<numPhi; phiSector++){
-    UInt_t doPhiSector = ((l3Trigger >> phiSector) & 1);
-    decoded.at(phiSector) = doPhiSector;
-  }
-  return decoded;
+Int_t RootTools::getBit(UInt_t bitIndex, UInt_t bitMask){
+  return ((bitMask >> bitIndex) & 1);
 }
-
-
 
 /*!
   \brief Set color scale where white is in the middle.
-
   You need to draw things with RootTools::draw2DScaled(TH2D* hist, TString opt);
 */
 

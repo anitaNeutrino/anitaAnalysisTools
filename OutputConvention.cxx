@@ -44,14 +44,55 @@ TString OutputConvention::getOutputFileName(){
 
 TString OutputConvention::getDateTimeSuffix(){
   if(dateTimeSuffix==""){
-    dateTimeSuffix = TString::Format("_%d-%d-%d_%d-%d-%d",
-				     dateTime.GetYear(),
-				     dateTime.GetMonth(),
-				     dateTime.GetDay(),
-				     dateTime.GetHour(),
-				     dateTime.GetMinute(),
-				     dateTime.GetSecond()
-				     );
+    // dateTimeSuffix = TString::Format("_%d-%d-%d_%d-%d-%d",
+    // 				     dateTime.GetYear(),
+    // 				     dateTime.GetMonth(),
+    // 				     dateTime.GetDay(),
+    // 				     dateTime.GetHour(),
+    // 				     dateTime.GetMinute(),
+    // 				     dateTime.GetSecond()
+    // 				     );
+    dateTimeSuffix = TString::Format("_%d", dateTime.GetYear());
+
+    Int_t m = dateTime.GetMonth();
+    if(m < 10){
+      dateTimeSuffix += TString::Format("_0%d", m);
+    }
+    else{
+      dateTimeSuffix += TString::Format("_%d", m);
+    }
+
+    Int_t d = dateTime.GetDay();
+    if(d < 10){
+      dateTimeSuffix += TString::Format("_0%d", d);
+    }
+    else{
+      dateTimeSuffix += TString::Format("_%d", d);
+    }
+
+    Int_t h = dateTime.GetHour();
+    if(h < 10){
+      dateTimeSuffix += TString::Format("_0%d", h);
+    }
+    else{
+      dateTimeSuffix += TString::Format("_%d", h);
+    }
+
+    Int_t m2 = dateTime.GetMinute();
+    if(m2 < 10){
+      dateTimeSuffix += TString::Format("_0%d", m2);
+    }
+    else{
+      dateTimeSuffix += TString::Format("_%d", m2);
+    }
+
+    Int_t s = dateTime.GetSecond();
+    if(s < 10){
+      dateTimeSuffix += TString::Format("_0%d", s);
+    }
+    else{
+      dateTimeSuffix += TString::Format("_%d", s);
+    }
   }
   return dateTimeSuffix;
 }
