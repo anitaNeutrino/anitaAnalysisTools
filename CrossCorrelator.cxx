@@ -30,12 +30,10 @@ CrossCorrelator::~CrossCorrelator(){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
     deleteCrossCorrelations((AnitaPol::AnitaPol_t)pol);
     deleteAllFFTs((AnitaPol::AnitaPol_t)pol);
-    deleteAllPaddedFFTs((AnitaPol::AnitaPol_t)pol);    
+    deleteAllPaddedFFTs((AnitaPol::AnitaPol_t)pol);
     deleteUpsampledCrossCorrelations((AnitaPol::AnitaPol_t)pol);
   }
 }
-
-
 
 /*!
   \brief Workhorse function to set internal variables.
@@ -64,15 +62,23 @@ void CrossCorrelator::initializeVariables(){
 
   numSamples = 2*NUM_SAMPLES; // Factor of two for padding 
   numSamplesUpsampled = numSamples*upsampleFactor; // For upsampling
-  
+
   nominalSamplingDeltaT = 1./2.6;
   correlationDeltaT = nominalSamplingDeltaT/upsampleFactor;
-
 
   deltaTMax = 0;
   deltaTMin = 0;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  // geom->useKurtAnitaIIINumbers(1);
+  // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  // for(int surf=0; surf<12; surf++){
+  //   for(int chan=0; chan < 9; chan++){
+  //     cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+  //   }
+  // }
+  // std::cout << this << std::endl;
+  
   for(int ant=0; ant<NUM_SEAVEYS; ant++){
     rArray.push_back(geom->getAntR(ant));
     zArray.push_back(geom->getAntZ(ant));
@@ -343,7 +349,6 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
 
   // Safety check to make sure we don't do any hard work twice.
   eventNumber[pol] = usefulEvent->eventNumber;
-  
 }
 
 
@@ -435,7 +440,7 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 
 
 
-void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){  
+void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern){
 
   deleteAllPaddedFFTs(pol);
   deleteUpsampledCrossCorrelations(pol);
@@ -471,7 +476,7 @@ void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UIn
 }
 
 
-void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern){
+void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern){
 
   deleteAllPaddedFFTs(pol);
   deleteUpsampledCrossCorrelations(pol);
@@ -763,7 +768,7 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
   
 }
 
-// void CrossCorrelator::fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern){
+// void CrossCorrelator::fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UShort_t l3TrigPattern){
 
 //   std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
 //   Double_t phiMin = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
@@ -829,7 +834,7 @@ Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
   
 }
     
-void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UInt_t l3TrigPattern){
+void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern){
   
   if(mapMode==kTriggered){
     std::map<UInt_t,std::vector<Int_t> >::iterator it = combosToUseTriggered.find(l3TrigPattern);
@@ -952,14 +957,14 @@ TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double
 }
 
 
-TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern){
+TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern){
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;
   return makeTriggeredSphericalImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern);
 }
 
 TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
 						   Double_t& imagePeak, Double_t& peakPhiDeg,
-						   Double_t& peakThetaDeg, UInt_t l3TrigPattern){
+						   Double_t& peakThetaDeg, UShort_t l3TrigPattern){
 
   return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
 			   l3TrigPattern, kTriggered, kZoomedOut);  
@@ -976,7 +981,7 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& image
 
 TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 					  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-					  UInt_t l3TrigPattern){
+					  UShort_t l3TrigPattern){
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
 			   l3TrigPattern, kTriggered, kZoomedOut);  
@@ -984,7 +989,7 @@ TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& im
 
 
 TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-				       Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+				       Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
@@ -992,7 +997,7 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 
 }
 
-TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern,
+TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg,Double_t zoomCenterThetaDeg){
 
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;    
@@ -1022,7 +1027,7 @@ void CrossCorrelator::createImageNameAndTitle(TString& name, TString& title, map
 }
 
 
-TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern,
+TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern,
 					     mapMode_t mapMode, zoomMode_t zoomMode,
 					     Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
   fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
@@ -1057,7 +1062,7 @@ TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t 
 
 
 TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-				 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+				 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 				 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 				 Double_t zoomCenterThetaDeg){
 
@@ -1139,7 +1144,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 }
 
 TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-					 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+					 Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 					 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 					 Double_t zoomCenterThetaDeg){
 
@@ -1187,6 +1192,43 @@ TH2D* CrossCorrelator::makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWav
   return hImage;
 }
 
+
+TGraph* CrossCorrelator::makeTrigPatternGraph(TString name, UShort_t l3TrigPattern, Color_t col, Int_t fillStyle){
+  // Something pretty for MagicDisplay integration.
+  Double_t phiMin = getBin0PhiDeg();
+  Double_t thetaMin = -THETA_RANGE/2;
+  Double_t thetaMax = THETA_RANGE/2;
+  
+  TGraph* gr = new TGraph();
+  gr->SetName(name);
+
+  Int_t numPoints = gr->GetN();
+  gr->SetPoint(numPoints, phiMin, thetaMin);
+  numPoints++;
+  
+  for(int phiSect=0; phiSect<NUM_PHI; phiSect++){
+    
+    if(RootTools::getBit(phiSect, l3TrigPattern)){
+      gr->SetPoint(numPoints, phiMin+PHI_RANGE*phiSect, thetaMax);
+      numPoints++;
+      gr->SetPoint(numPoints, phiMin+PHI_RANGE*(phiSect+1), thetaMax);
+      numPoints++;
+    }
+    else{
+      gr->SetPoint(numPoints, phiMin+PHI_RANGE*phiSect, thetaMin);
+      numPoints++;
+      gr->SetPoint(numPoints, phiMin+PHI_RANGE*(phiSect+1), thetaMin);
+      numPoints++;
+    }
+  }
+  gr->SetPoint(numPoints, phiMin+PHI_RANGE*NUM_PHI, thetaMin);
+  numPoints++;
+  
+  gr->SetLineColor(col);
+  gr->SetFillColor(col);
+  gr->SetFillStyle(fillStyle);
+  return gr;
+}
 
 
 void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
