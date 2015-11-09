@@ -11,6 +11,7 @@
 
 // Ryan things
 #include "UsefulAnitaEvent.h"
+#include "AnitaEventCalibrator.h"
 #include "AnitaGeomTool.h"
 // #include "FFTtools.h"
 #include "FancyFFTs.h"
@@ -131,8 +132,8 @@ public:
   void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol); // Launches threads
 
-  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern);
-  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern); // Launches threads
+  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern);
+  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern); // Launches threads
 
   // Actual functions executed by thread
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
@@ -148,10 +149,10 @@ public:
   Precalculate DeltaTs during initialization where appropriate
   **********************************************************************************************************/
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
-  void fillCombosToUseIfNeeded(mapMode_t mapMode, UInt_t l3TrigPattern);
+  void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
-  // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UInt_t l3TrigPattern);
+  // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UShort_t l3TrigPattern);
   Double_t getBin0PhiDeg();
 
   /**********************************************************************************************************
@@ -168,11 +169,11 @@ public:
   // Workhorse function which is called by many aliases.
   // Don't call directly unless you want to pass a lot of redundant parameters
   TH2D* makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
-		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+		  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 		  mapMode_t mapMode, zoomMode_t zoomMode,
 		  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
   TH2D* makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
-			  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern,
+			  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 			  mapMode_t mapMode, zoomMode_t zoomMode,
 			  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
 
@@ -181,33 +182,34 @@ public:
 			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
 
   TH2D* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-			   Double_t& peakThetaDeg, UInt_t l3TrigPattern);
+			   Double_t& peakThetaDeg, UShort_t l3TrigPattern);
   
 
   TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave);
   TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
 				 Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
 
-  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern);
+  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern);
   TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UInt_t l3TrigPattern);
+				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern);
   
   // Not used any more potentially useful somewhere so I will leave it.
   Double_t findImagePeak(TH2D* hist, Double_t& imagePeak, Double_t& imagePeakTheta, Double_t& imagePeakPhi);
 
-  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UInt_t l3TrigPattern,
+  TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
 			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
 
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-			Double_t& peakThetaDeg, UInt_t l3TrigPattern, Double_t zoomCenterPhiDeg,
+			Double_t& peakThetaDeg, UShort_t l3TrigPattern, Double_t zoomCenterPhiDeg,
 			Double_t zoomCenterThetaDeg);
 
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
   
-  TH2D* prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UInt_t l3TrigPattern,
+  TH2D* prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern,
 			      mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 			      Double_t zoomCenterThetaDeg);
 
+  TGraph* makeTrigPatternGraph(TString name, UShort_t l3TrigPattern, Color_t col, Int_t fillStyle);
 
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t peakPhiDeg, Double_t peakThetaDeg, UInt_t l3Trigger);
 
@@ -238,7 +240,7 @@ public:
   UInt_t eventNumber[NUM_POL]; ///< For tracking event number
   UInt_t lastEventNormalized[NUM_POL]; ///< Prevents cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; ///< ANITA-3 => 1./2.6 ns
-  Double_t upsampleFactor; ///< Default = 1, 
+  Int_t upsampleFactor; ///< Default = 1, 
   Double_t correlationDeltaT; ///< nominalSamplingDeltaT/upsampleFactor, deltaT of interpolation and cross correlation
   Int_t numSamples; ///< Number of samples in waveform after padding
   Int_t numSamplesUpsampled; ///< Number of samples in waveform after padding and up sampling

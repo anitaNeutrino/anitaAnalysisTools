@@ -11,19 +11,23 @@
 #ifndef ROOTTOOLS_H
 #define ROOTTOOLS_H
 
-#include <TObjArray.h>
-#include <TGraph.h>
-#include <TTree.h>
-#include <TAxis.h>
-#include <TMath.h>
-#include <iostream>
-#include <TH2.h>
-#include <TH1D.h>
-#include <TStyle.h>
-#include <TCanvas.h>
-#include <TLegend.h>
-#include <cfloat>
-#include <TColor.h>
+#include "TObjArray.h"
+#include "TGraph.h"
+#include "TTree.h"
+#include "TAxis.h"
+#include "TMath.h"
+#include "iostream"
+#include "TH2.h"
+#include "TH1D.h"
+#include "TStyle.h"
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "cfloat"
+#include "TColor.h"
+#include "TChain.h"
+
+#include "RawAnitaHeader.h"
+#include "Adu5Pat.h"
 
 /*! \namespace RootTools
 \brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
@@ -106,6 +110,12 @@ namespace RootTools{
   void saveCanvas(TCanvas* c1, TString fileName);
   void setWhiteZeroColorScale();
   void draw2D(TH2D* hist, TString opt);
-};
+
+
+  /* Load ROOT data into chains quickly*/
+  TChain* getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& headPtr);
+  TChain* getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat);  
+
+}
 
 #endif

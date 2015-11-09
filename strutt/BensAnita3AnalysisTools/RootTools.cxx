@@ -665,9 +665,9 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
 	}
 
 	if(colWeights!=NULL){
-	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
-	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
-	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(colWeights[grInd]*colFactor));
+	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(Color_t(colWeights[grInd]*colFactor)));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(Color_t(colWeights[grInd]*colFactor)));
+	  grs[grInd]->SetMarkerColor(gStyle->GetColorPalette(Color_t(colWeights[grInd]*colFactor)));
 	}
 	else{
 	  grs[grInd]->SetLineColor(gStyle->GetColorPalette(grInd*Int_t(254./(numGrs-1))));
@@ -989,4 +989,34 @@ void RootTools::draw2D(TH2D* hist, TString opt){
   Double_t limit = min > max ? min : max;
   hist->SetMaximum(limit);
   hist->SetMinimum(-limit);
+}
+
+/*!
+  \brief Get a TChain of the ANITA-3 header data.
+  \param firstRun is the first run.
+  \param lastRun is the last run.
+*/
+
+TChain* RootTools::getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& headPtr){
+  TChain* c = new TChain("headTree");
+  for(Int_t run=firstRun; run <= lastRun; run++){
+    c->Add(TString::Format("~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run));
+  }
+  c->SetBranchAddress("header", &headPtr);
+  return c;
+}
+
+/*!
+  \brief Get a TChain of the ANITA-3 adu5Pat data.
+  \param firstRun is the first run.
+  \param lastRun is the last run.
+*/
+
+TChain* RootTools::getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat){
+  TChain* c = new TChain("adu5PatTree");
+  for(Int_t run=firstRun; run <= lastRun; run++){
+    c->Add(TString::Format("~/UCL/ANITA/flight1415/root/run%d/gpsFile%d.root", run, run));
+  }
+  c->SetBranchAddress("pat", &pat);
+  return c;
 }

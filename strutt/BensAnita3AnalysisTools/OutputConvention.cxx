@@ -56,18 +56,18 @@ TString OutputConvention::getDateTimeSuffix(){
 
     Int_t m = dateTime.GetMonth();
     if(m < 10){
-      dateTimeSuffix += TString::Format("_0%d", m);
+      dateTimeSuffix += TString::Format("-0%d", m);
     }
     else{
-      dateTimeSuffix += TString::Format("_%d", m);
+      dateTimeSuffix += TString::Format("-%d", m);
     }
 
     Int_t d = dateTime.GetDay();
     if(d < 10){
-      dateTimeSuffix += TString::Format("_0%d", d);
+      dateTimeSuffix += TString::Format("-0%d", d);
     }
     else{
-      dateTimeSuffix += TString::Format("_%d", d);
+      dateTimeSuffix += TString::Format("-%d", d);
     }
 
     Int_t h = dateTime.GetHour();
@@ -80,18 +80,18 @@ TString OutputConvention::getDateTimeSuffix(){
 
     Int_t m2 = dateTime.GetMinute();
     if(m2 < 10){
-      dateTimeSuffix += TString::Format("_0%d", m2);
+      dateTimeSuffix += TString::Format("-0%d", m2);
     }
     else{
-      dateTimeSuffix += TString::Format("_%d", m2);
+      dateTimeSuffix += TString::Format("-%d", m2);
     }
 
     Int_t s = dateTime.GetSecond();
     if(s < 10){
-      dateTimeSuffix += TString::Format("_0%d", s);
+      dateTimeSuffix += TString::Format("-0%d", s);
     }
     else{
-      dateTimeSuffix += TString::Format("_%d", s);
+      dateTimeSuffix += TString::Format("-%d", s);
     }
   }
   return dateTimeSuffix;
