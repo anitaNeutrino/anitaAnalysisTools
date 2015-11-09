@@ -16,6 +16,7 @@
 #include <fftw3.h>
 #include <TObject.h>
 #include <TSystem.h>
+#include <stdlib.h>
 
 class FancyFFTsWisdomManager : public TObject{
 public:
