@@ -16,7 +16,10 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
 
   // std::cout << "FancyFFTsWisdomManager::FancyFFTsWisdomManager()" << std::endl;  
   const char* anitaUtilEnv = "ANITA_UTIL_INSTALL_DIR";
-  wisdomDir = getenv(anitaUtilEnv);
+  const char* wisdomDirTemp = getenv(anitaUtilEnv);
+  char* wisdomDirTemp2 = new char[FILENAME_MAX];
+  sprintf(wisdomDirTemp2, "%s/etc", wisdomDirTemp);
+  wisdomDir = wisdomDirTemp2;
   FILE* wisdomFile = NULL;
   
   if(wisdomDir==NULL){// no environment variable
@@ -25,7 +28,7 @@ FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
   }
   else{
     char wisdomFileName[FILENAME_MAX];
-    sprintf(wisdomFileName, "%s/fftw.wis", wisdomDir);
+    sprintf(wisdomFileName, "%s/fftw.wisdom", wisdomDir);
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
     wisdomFile = fopen(wisdomFileName, "r");
@@ -49,7 +52,7 @@ FancyFFTsWisdomManager::~FancyFFTsWisdomManager(){
   // std::cout << "FancyFFTsWisdomManager::~FancyFFTsWisdomManager()" << std::endl;  
   if(wisdomDir != NULL){
     char wisdomFileName[FILENAME_MAX];
-    sprintf(wisdomFileName, "%s/fftw.wis", wisdomDir);
+    sprintf(wisdomFileName, "%s/fftw.wisdom", wisdomDir);
 
     /* ... sigh... is more backwards compatible but doing even more c style*/
     FILE* wisdomFile = fopen(wisdomFileName, "w");

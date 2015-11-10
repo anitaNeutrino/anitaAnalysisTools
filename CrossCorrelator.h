@@ -27,7 +27,7 @@
 #include "TThread.h"
 
 // standard c++ things
-#include <iostream>
+#include "iostream"
 
 
 // Offline reconstruction definitions
@@ -49,8 +49,10 @@
 #define PHI_RANGE_ZOOM 6.4
 
 // Anita Geometry definitions, shouldn't really be here
-#define NUM_POL 2
-#define NUM_RING 3
+#define NUM_POL AnitaPol::kNotAPol
+#define NUM_RING AnitaRing::kNotARing
+
+// Number of phi-sectors to cross correlate between
 #define DELTA_PHI_SECT 2
 
 #define SPEED_OF_LIGHT 2.99792458e8
@@ -67,7 +69,7 @@ Does all the heavy lifting of getting waveforms from a UsefulAnitaEvent, cross c
 */
 
 
-class CrossCorrelator : public TObject{
+class CrossCorrelator{
 
 public:
 
@@ -142,8 +144,10 @@ public:
   /**********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
   **********************************************************************************************************/
-  Double_t getDeltaTExpected(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
-  Int_t getDeltaTExpectedSpherical(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Double_t rWave);
+  Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+			     Double_t phiWave, Double_t thetaWave);
+  Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+				   Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
   /**********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
@@ -152,6 +156,8 @@ public:
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
+  void writeDeltaTsFile();
+  Int_t readDeltaTsFile();
   // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UShort_t l3TrigPattern);
   Double_t getBin0PhiDeg();
 
@@ -259,13 +265,12 @@ public:
   std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs
   std::complex<Double_t>* fftsPadded[NUM_POL][NUM_SEAVEYS]; ///< Padded with zeros.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
-  std::vector<Double_t> rArray; ///< Vector of antenna radial positions
-  std::vector<Double_t> phiArrayDeg; ///< Vector of antenna azimuth positions
-  std::vector<Double_t> zArray; ///< Vector of antenna heights
+  std::vector<Double_t> rArray[NUM_POL]; ///< Vector of antenna radial positions
+  std::vector<Double_t> phiArrayDeg[NUM_POL]; ///< Vector of antenna azimuth positions
+  std::vector<Double_t> zArray[NUM_POL]; ///< Vector of antenna heights
 
   typedef Char_t dtIndex_t;
-  dtIndex_t deltaTs[NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
-  // dtIndex_t deltaTsZoom[NUM_BINS_PHI_ZOOM][NUM_BINS_THETA_ZOOM][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making a zoomed in image, must recalculated each event (probably)
+  dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
 
   // pairs for making an image
   Int_t deltaTMax;
@@ -294,8 +299,7 @@ public:
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
-  
-  
-  ClassDef(CrossCorrelator, 0);
+  UInt_t positionHash;
+  Int_t readDeltaTsFileSuccess;
 };
 #endif

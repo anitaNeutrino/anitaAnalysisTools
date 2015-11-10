@@ -10,8 +10,6 @@
 
 #include "FancyFFTs.h"
 
-ClassImp(FancyFFTs)
-
 /* Define static members */
 /* https://stackoverflow.com/questions/18433752/c-access-private-static-member-from-public-static-method */
 std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fRealToComplex;

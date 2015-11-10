@@ -11,8 +11,8 @@
 #ifndef PROGRESSBAR_H
 #define PROGRESSBAR_H
 
-#include <TObject.h>
-#include <TStopwatch.h>
+#include "TObject.h"
+#include "TStopwatch.h"
 #include <iostream>
 
 class ProgressBar : public TObject{

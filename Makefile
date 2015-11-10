@@ -5,6 +5,9 @@
 ##############################################################################
 include Makefile.arch
 
+#If you have the 64-bit version of fftw installed, try this to help CINT out.
+#CINTFLAGS=-DFFTW_64_BIT
+
 #Site Specific  Flags
 SYSINCLUDES	= -I/usr/local/include
 SYSLIBS         = 
@@ -18,11 +21,11 @@ ANITA_UTIL_LIB_DIR=${ANITA_UTIL_INSTALL_DIR}/lib
 ANITA_UTIL_INC_DIR=${ANITA_UTIL_INSTALL_DIR}/include
 LD_ANITA_UTIL=-L$(ANITA_UTIL_LIB_DIR) -lAnitaEvent -lAnitaCorrelator
 INC_ANITA_UTIL=-I$(ANITA_UTIL_INC_DIR)
-ANITA_UTIL_CALIB_DIR=$(ANITA_UTIL_INSTALL_DIR)/share/anitaCalib
+ANITA_UTIL_ETC_DIR=$(ANITA_UTIL_INSTALL_DIR)/etc
 else
 ANITA_UTIL_LIB_DIR=/usr/local/lib
 ANITA_UTIL_INC_DIR=/usr/local/include
-ANITA_UTIL_CALIB_DIR=/usr/local/share/anitaCalib
+ANITA_UTIL_ETC_DIR=/usr/local/etc
 ifdef EVENT_READER_DIR
 LD_ANITA_UTIL=-L$(EVENT_READER_DIR)  -lAnitaEvent
 INC_ANITA_UTIL=-I$(EVENT_READER_DIR)
@@ -129,7 +132,6 @@ $(DICT).C : $(CLASS_HEADERS)
 
 clean:
 	@rm -f *Dict*
-	@rm -f $(ANITA_UTIL_INSTALL_DIR)/share/crossCorrelator.dts
 	@rm -f *.${OBJSUF}
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
@@ -152,4 +154,4 @@ else
 endif
 	install -c -m 644  $(CLASS_HEADERS) $(ANITA_UTIL_INC_DIR)
 
-
+	install -d $(ANITA_UTIL_ETC_DIR)
