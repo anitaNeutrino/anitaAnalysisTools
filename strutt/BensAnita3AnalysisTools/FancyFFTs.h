@@ -11,14 +11,20 @@
 #ifndef FANCYFFTS_H
 #define FANCYFFTS_H
 
+#ifdef __CINT__
+#ifdef FFTW_64_BIT // Hack for Hawaii install of FFTW
+typedef struct {char a[16];} __float128; /* 16 chars have the same size as one __float128 */
+#endif
+#endif
+
 #include <iostream>
 #include <map>
 #include <algorithm>
-#include <TObject.h>
-#include <TSystem.h>
-#include <TMath.h>
-#include <TGraph.h>
-#include <TThread.h>
+#include "TObject.h"
+#include "TSystem.h"
+#include "TMath.h"
+#include "TGraph.h"
+#include "TThread.h"
 
 #include "FancyFFTsWisdomManager.h"
 
@@ -38,7 +44,7 @@ namespace PowSpecNorm {
   };
 }
 
-class FancyFFTs : public TObject{
+class FancyFFTs{
 
   // This class needs to a friend to CrossCorrelator so it can assign
   // multiple plans of the same length, one for each thread
@@ -87,8 +93,6 @@ private:
   // static std::map<std::pair<int, int>, fftw_complex*> fComplex;
   static std::map<std::pair<int, int>, std::complex<double>*> fComplex;
   static FancyFFTsWisdomManager myWisdom;
-
-  ClassDef(FancyFFTs, 0);
 };
 
 

@@ -8,14 +8,14 @@
 *************************************************************************************************************** */
 
 
-#include <CrossCorrelator.h>
-#include <RootTools.h>
-#include <FFTtools.h>
+#include "CrossCorrelator.h"
+#include "RootTools.h"
+#include "FFTtools.h"
 
-#include <TGraph.h>
-#include <TFile.h>
-#include <TTree.h>
-#include <TChain.h>
+#include "TGraph.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TChain.h"
 
 #include <RawAnitaHeader.h>
 #include <UsefulAnitaEvent.h>
@@ -139,12 +139,12 @@ void testCoherentlySummedWaveform(){
 
 
     grHilbert->SetName("grHilbert");
-    grHilbert->Write();  
+    grHilbert->Write();
 
     delete grCoherent;
     grCoherent = NULL;
     delete grHilbert;
-    grHilbert = NULL;        
+    grHilbert = NULL;
   }
 
   
@@ -153,7 +153,12 @@ void testCoherentlySummedWaveform(){
     if(doPhiSector > 0){
       for(int ring=0; ring<NUM_RING; ring++){
 	int ant = phiSector + NUM_PHI*ring;
-	cc->grsResampled[pol][ant]->Write();
+	TGraph* gr = (TGraph*) cc->grsResampled[pol][ant]->Clone();
+	for(Int_t samp=0; samp<gr->GetN(); samp++){
+	  gr->GetY()[samp]*=cc->interpRMS[pol][ant];
+	}
+	gr->SetName(TString::Format("grInterp_%d", ant));
+	gr->Write();
       }
     }
   }
