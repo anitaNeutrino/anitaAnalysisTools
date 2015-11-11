@@ -12,22 +12,26 @@
 #ifndef FANCYFFTS_WISDOM_MANAGER_H
 #define FANCYFFTS_WISDOM_MANAGER_H
 
+#ifdef __CINT__
+#ifdef FFTW_64_BIT // Hack for Hawaii install of FFTW
+typedef struct {char a[16];} __float128; /* 16 chars have the same size as one __float128 */
+#endif
+#endif
+
 #include <iostream>
 #include <fftw3.h>
 #include "TObject.h"
 #include "TSystem.h"
 #include <stdlib.h>
 
-class FancyFFTsWisdomManager : public TObject{
+class FancyFFTsWisdomManager{
 public:
   FancyFFTsWisdomManager();
   ~FancyFFTsWisdomManager();
   
 private:
-  int wisdomImportSuccess;
   const char* wisdomDir;
 
-  ClassDef(FancyFFTsWisdomManager, 0);
 };
 
 
