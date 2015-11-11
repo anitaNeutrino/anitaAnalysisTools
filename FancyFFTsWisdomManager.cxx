@@ -10,8 +10,6 @@
 
 #include "FancyFFTsWisdomManager.h"
 
-ClassImp(FancyFFTsWisdomManager)
-
 FancyFFTsWisdomManager::FancyFFTsWisdomManager(){
 
   // std::cout << "FancyFFTsWisdomManager::FancyFFTsWisdomManager()" << std::endl;  
