@@ -76,17 +76,17 @@ public:
   /**********************************************************************************************************
   typdef enums: flags for making maps
   **********************************************************************************************************/
-  typedef enum {
+  enum mapMode_t{
     kGlobal,
     kTriggered,
     kNumMapModes
-  } mapMode_t;
+  };
 
-  typedef enum{
+  enum zoomMode_t{
     kZoomedOut,
     kZoomedIn,
     kNumZoomModes
-  } zoomMode_t;
+  };
   TString mapModeNames[kNumMapModes];
   TString zoomModeNames[kNumZoomModes];
 
