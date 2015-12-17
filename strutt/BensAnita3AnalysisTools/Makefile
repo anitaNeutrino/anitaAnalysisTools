@@ -59,10 +59,19 @@ LIBS += -lprofiler -ltcmalloc
 endif
 
 
+
 # I use git svn and am too infrequent a commiter by nature...
 # Use this flag to prompt a local commit after every compile
 # (You probably don't actually want to commit after every compile, but the prompt is nice)
 #FORCE_GIT=1 
+
+
+
+# For the first time, I've come across something that changed across ROOT versions...
+# So now we have to hack in this compile time macro.
+ifeq ($(shell test $(shell root-config --version | cut -c1) -ge 6; echo $$?) ,  0) 
+CXXFLAGS += -DIS_ROOT_6
+endif
 
 
 # For those who like really bloody pedantic compiler warnings... like me
@@ -71,12 +80,11 @@ ifdef HARDCORE_MODE
 CXXFLAGS += -Wall -Wextra -Wshadow -Werror #-Wpedantic
 endif
 
-
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 DICT = benToolsDict
-LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h
+LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar testOutputConvention testAveragePowerSpectrum
 
 #Now the bits we're actually compiling
@@ -155,3 +163,6 @@ endif
 	install -c -m 644  $(CLASS_HEADERS) $(ANITA_UTIL_INC_DIR)
 
 	install -d $(ANITA_UTIL_ETC_DIR)
+
+	install -d $(ANITA_UTIL_INSTALL_DIR)/share/anitaMap
+	for file in anitaMap/*.png; do install -c -m 644 "$${file}" $(ANITA_UTIL_INSTALL_DIR)/share/anitaMap; done

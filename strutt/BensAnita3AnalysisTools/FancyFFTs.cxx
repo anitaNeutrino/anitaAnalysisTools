@@ -16,7 +16,6 @@ std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fRealToComplex;
 std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fComplexToReal;
 std::map<std::pair<int, int>, double*> FancyFFTs::fReals;
 std::map<std::pair<int, int>, std::complex<double>*> FancyFFTs::fComplex;
-FancyFFTsWisdomManager FancyFFTs::myWisdom;
 
 FancyFFTs::FancyFFTs(){
   std::cout << "FancyFFTs::FancyFFTs()" << std::endl;
