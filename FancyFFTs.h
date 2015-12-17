@@ -20,8 +20,6 @@
 #include "TGraph.h"
 #include "TThread.h"
 
-#include "FancyFFTsWisdomManager.h"
-
 /* 
    Will use std::complex<double> for i/o as should be bit-to-bit identical to typdef fftw_complex double[2].
    So long as <complex> is included in front of fftw3.h.
@@ -98,7 +96,6 @@ private:
   static std::map<std::pair<int, int>, double*> fReals;
   // static std::map<std::pair<int, int>, fftw_complex*> fComplex;
   static std::map<std::pair<int, int>, std::complex<double>*> fComplex;
-  static FancyFFTsWisdomManager myWisdom;
 };
 
 

@@ -39,18 +39,48 @@ AntarcticaMapPlotter::~AntarcticaMapPlotter(){
 void AntarcticaMapPlotter::initializeInternals(){
   /* The numbers in this function also come from Matt Mottram or Ryan */
   
-  TrueScaleLat=71;
-  CentralMeridian=0;
-  RadiusOfEarth=6378.1e3; //Metres
-  xOffest=375;
-  yOffset=312.5; 
-  scale=271.5/2.19496e+06;
-  xSize=750;
-  ySize=625;
+  // This image taken from http://earthobservatory.nasa.gov/IOTD/view.php?id=6087
+  TString mapName = "antarcticaMosaic.png";
+  // TString mapName = "antarcticaIceMapBW.png";
   
 
-  img = TImage::Open("~/Repositories/Install/share/anitaMap/antarcticaIceMapBW.png");
-  img->SetConstRatio(kFALSE);  
+  if(mapName=="antarcticaMosaic.png"){
+    TrueScaleLat=71;
+    RadiusOfEarth=6378.1e3; //Metres
+    xOffest=381.5; //369; //394; //400; //375;
+    yOffset=337; //312.5;
+    // scale=271.5/2.19496e+06;
+    scale=265/2.19496e+06;
+    xSize=725; //700; //750; //2701
+    ySize=625; //2333
+  }
+  else{
+    TrueScaleLat=71;
+    RadiusOfEarth=6378.1e3; //Metres
+    xOffest=375;
+    yOffset=312.5; 
+    // xOffest=0;
+    // yOffset=0;
+    scale=271.5/2.19496e+06;
+    xSize=750;
+    ySize=625;
+  }
+
+  const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+
+  TString mapFileName = TString::Format("%s/share/anitaMap/%s", anitaUtilInstallDir, mapName.Data());
+  img = TImage::Open(mapFileName);
+  if(img){
+    img->SetConstRatio(kFALSE);
+  }
+  else{
+    std::cerr << "Warning in " << __FILE__ << "! Unable to open " << mapFileName.Data()
+	      << ", check ANITA_UTIL_INSTALL_DIR environment variable is correctly set" << std::endl; 
+  }
+
+  hCurrent = NULL;
+  grCurrent = NULL;
+  
 }
 
 /*!
@@ -71,11 +101,14 @@ void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longi
   x=r*TMath::Sin(longitude*TMath::DegToRad());
 
   y*=scale;
-  y+=yOffset;
-  y/=ySize;
   x*=scale;
+
+  y+=yOffset;
   x+=xOffest;
+
+  y/=ySize;
   x/=xSize;
+
 }
 
 
@@ -104,7 +137,9 @@ void AntarcticaMapPlotter::DrawHist(TString opt){
   can->SetBottomMargin(0.03);
   can->SetLeftMargin(0.03);
   can->SetRightMargin(0.15);
-  img->Draw("same");  
+  if(img){
+    img->Draw("same");
+  }
   hCurrent->Draw(opt + "same");
 }
 
@@ -122,7 +157,9 @@ void AntarcticaMapPlotter::DrawTGraph(TString opt){
   can->SetBottomMargin(0.03);
   can->SetLeftMargin(0.03);
   can->SetRightMargin(0.15);
-  img->Draw("same");  
+  if(img){
+    img->Draw("same");
+  }
   grCurrent->Draw(opt + "same");
 }
 

@@ -40,16 +40,20 @@ void testAntarcticaMapPlotterInRoot(){
 
   std::vector<Double_t> lats;
   std::vector<Double_t> longs;
-  Double_t latVal = -90;
+  // Double_t latVal = -90;
+  Double_t latVal = -80;  
   Double_t longVal=0;
   
   Int_t numPoints = 0;
-  while(latVal < -65){
+  // while(latVal < -65){
+  // for(int longInd=0; longInd<360; longInd++){
+  for(int longInd=0; longInd<360*3; longInd++){
+    if(longInd==360 || longInd==(360*2)) latVal += 10;
 
     lats.push_back(latVal);
     longs.push_back(longVal);
 
-    latVal += 5./360;
+    // latVal += 5./360;
     longVal += 1;
     
     numPoints++;
@@ -57,6 +61,7 @@ void testAntarcticaMapPlotterInRoot(){
   
   amp->addTGraph("grTest", "More Testing", numPoints, &lats[0], &longs[0]);
   amp->getCurrentTGraph()->SetMarkerStyle(8);
+
   amp->getCurrentTGraph()->SetMarkerSize(0.2);
   amp->getCurrentTGraph()->SetMarkerColor(2);    
   amp->DrawTGraph("psame");

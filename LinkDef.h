@@ -9,7 +9,6 @@
 #pragma link C++ namespace RootTools+;
 #pragma link C++ class FancyFFTs+;
 #pragma link C++ namespace PowSpecNorm+;
-#pragma link C++ class FancyFFTsWisdomManager+;
 #pragma link C++ class ProgressBar+;
 
 #endif

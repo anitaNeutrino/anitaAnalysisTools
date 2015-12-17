@@ -99,8 +99,6 @@ void CrossCorrelator::initializeVariables(){
   if(readDeltaTsFileSuccess!=0){
     fillDeltaTLookup();
   }
-  
-
   // printInfo();
 
   mapModeNames[kGlobal] = "Global";
@@ -128,16 +126,45 @@ void CrossCorrelator::initializeVariables(){
     FancyFFTs::makeNewPlanIfNeeded(numSamplesUpsampled, threadInd);
   }
 
-
-  // Create threads to be called later.
-  for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
-    
-
-    
+  // Set the cacheOffsets so they get updated on the first pass
+  for(Int_t combo=0; combo<NUM_COMBOS; combo++){
+    cacheOffsets[combo] = -numSamples*10;
+    cachePols[combo] = AnitaPol::kNotAPol;  
   }
 
 }
 
+
+void CrossCorrelator::updateCache(Int_t polInd, Int_t combo, Int_t offset, Int_t numSamps){
+
+  // Save the index we're aligning the cache to
+  cacheOffsets[combo] = offset;
+  cachePols[combo] = polInd;
+
+  // Copy correlations to cache
+  for(Int_t cacheInd=0; cacheInd<NUM_CORRS_TO_CACHE; cacheInd++){
+
+    // Center cache on offset.     
+    Int_t thisOffset = offset + cacheInd - NUM_CORRS_TO_CACHE/2;
+    if(thisOffset < 0){
+      thisOffset += numSamps;
+    }
+    else if(thisOffset >= numSamps){
+      thisOffset -= numSamples;
+    }
+    if(thisOffset >= 0 && thisOffset < numSamps){
+      if(numSamps==numSamples){
+	corrCache[combo*NUM_CORRS_TO_CACHE + cacheInd] = crossCorrelations[polInd][combo][thisOffset];
+      }
+      else{
+	corrCache[combo*NUM_CORRS_TO_CACHE + cacheInd] = crossCorrelationsUpsampled[polInd][combo][thisOffset];
+      }
+    }
+    else{
+      corrCache[combo*NUM_CORRS_TO_CACHE + cacheInd] = -9999;
+    }
+  }  
+}
 
 
 void CrossCorrelator::printInfo(){
@@ -958,6 +985,8 @@ TH2D* CrossCorrelator::makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double
 
   return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
   			   kGlobal, kZoomedOut);
+  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+  // 		   kGlobal, kZoomedOut);
 }
 
 
@@ -971,7 +1000,9 @@ TH2D* CrossCorrelator::makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Dou
 						   Double_t& peakThetaDeg, UShort_t l3TrigPattern){
 
   return makeImageThreaded(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
-			   l3TrigPattern, kTriggered, kZoomedOut);  
+  			   l3TrigPattern, kTriggered, kZoomedOut);
+  // return makeImage(pol, rWave, imagePeak, peakPhiDeg, peakThetaDeg,
+  // 		   l3TrigPattern, kTriggered, kZoomedOut);    
 }
 
 
@@ -979,7 +1010,9 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& image
 				       Double_t& peakThetaDeg){
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-			   kGlobal, kZoomedOut);
+  			   kGlobal, kZoomedOut);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
+  // 		   kGlobal, kZoomedOut);  
 }
 
 TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol){
@@ -993,7 +1026,9 @@ TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& im
 					  UShort_t l3TrigPattern){
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
-			   l3TrigPattern, kTriggered, kZoomedOut);  
+  			   l3TrigPattern, kTriggered, kZoomedOut);  
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
+  // 		   l3TrigPattern, kTriggered, kZoomedOut);  
 }
 
 
@@ -1002,7 +1037,9 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
+  // 		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
 }
 
@@ -1075,6 +1112,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 				 mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
 				 Double_t zoomCenterThetaDeg){
 
+
   TH2D* hImage = prepareForImageMaking(pol, rWave, l3TrigPattern,
 				       mapMode, zoomMode, zoomCenterPhiDeg,
 				       zoomCenterThetaDeg);
@@ -1091,6 +1129,8 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
     combosToUse = combosToUseGlobal[0];
   }
 
+  
+  
   for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
     if(phiSector!=lastPhiSector && mapMode==kGlobal){
@@ -1110,8 +1150,21 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 	// If we are in zoomed out & plane wave mode then use the lookup table for a big speedup
 	if(zoomMode==kZoomedOut && rWave==0){
 	  offset = deltaTs[pol][phiBin][thetaBin][combo];
-	  offset = offset < 0 ? offset + numSamples : offset;
-	  correlations += crossCorrelations[pol][combo][offset];
+	  // offset = offset < 0 ? offset + numSamples : offset;
+	  // correlations += crossCorrelations[pol][combo][offset];
+
+	  Int_t distanceFromCacheCenter = offset - cacheOffsets[combo];
+	  // std::cout << "HERE0" << std::endl;
+	  // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;
+	  if(TMath::Abs(distanceFromCacheCenter) >= NUM_CORRS_TO_CACHE/2 || pol!=cachePols[combo]){
+	    updateCache(pol, combo, offset, numSamples);
+	    distanceFromCacheCenter = offset - cacheOffsets[combo];
+	    // std::cout << "HERE1" << std::endl;
+	    // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;
+	  }
+	  // std::cout << "HERE2" << std::endl;
+	  // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;
+	  correlations += corrCache[NUM_CORRS_TO_CACHE*combo + distanceFromCacheCenter + NUM_CORRS_TO_CACHE/2];
 	}
 	// If we are in zoomed in & plane wave mode then calculate
 	else if(zoomMode==kZoomedIn && rWave==0){
@@ -1122,8 +1175,21 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 	  Int_t ant2 = comboToAnt2s.at(combo);
 	  Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
 	  offset = TMath::Nint(deltaT/correlationDeltaT);
-	  offset = offset < 0 ? offset + numSamplesUpsampled : offset;
-	  correlations += crossCorrelationsUpsampled[pol][combo][offset];
+	  Int_t distanceFromCacheCenter = offset - cacheOffsets[combo];
+	  // std::cout << "HERE0" << std::endl;
+	  // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;
+	  if(TMath::Abs(distanceFromCacheCenter) >= NUM_CORRS_TO_CACHE/2 || pol!=cachePols[combo]){
+	    updateCache(pol, combo, offset, numSamplesUpsampled);
+	    distanceFromCacheCenter = offset - cacheOffsets[combo];
+	    // std::cout << "HERE1" << std::endl;
+	    // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;
+	  }
+	  // std::cout << "HERE2" << std::endl;
+	  // std::cout << distanceFromCacheCenter << "\t" << offset << std::endl;	  
+	  correlations += corrCache[NUM_CORRS_TO_CACHE*combo + distanceFromCacheCenter + NUM_CORRS_TO_CACHE/2];
+	  
+	  // offset = offset < 0 ? offset + numSamplesUpsampled : offset;
+	  // correlations += crossCorrelationsUpsampled[pol][combo][offset];
 	}
 	// If we are in zoomed out & spherical wave mode then calculate
 	else{
@@ -1612,10 +1678,8 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 Int_t CrossCorrelator::readDeltaTsFile(){
   /* Returns 0 on success */
 
-  const char* anitaUtilInstallDirEnv = "ANITA_UTIL_INSTALL_DIR";
-  const char* anitaUtilInstallDir = getenv(anitaUtilInstallDirEnv);
   char dtsFileName[FILENAME_MAX];
-  sprintf(dtsFileName, "%s/etc/crossCorrelator%u.dts", anitaUtilInstallDir, positionHash);
+  sprintf(dtsFileName, "/tmp/crossCorrelator%u.dts", positionHash);
   Int_t success = 0;
   FILE* dtsFile = fopen(dtsFileName, "r");
   if(dtsFile != NULL){
@@ -1633,10 +1697,8 @@ Int_t CrossCorrelator::readDeltaTsFile(){
 void CrossCorrelator::writeDeltaTsFile(){
   /* Write sets of deltaTs into a file to try and speed up class initialization by reading it */
 
-  const char* anitaUtilInstallDirEnv = "ANITA_UTIL_INSTALL_DIR";
-  const char* anitaUtilInstallDir = getenv(anitaUtilInstallDirEnv);
   char dtsFileName[FILENAME_MAX];
-  sprintf(dtsFileName, "%s/etc/crossCorrelator%u.dts", anitaUtilInstallDir, positionHash);
+  sprintf(dtsFileName, "/tmp/crossCorrelator%u.dts", positionHash);
   FILE* dtsFile = fopen(dtsFileName, "w");
   UInt_t numBytes = sizeof(dtIndex_t)*NUM_POL*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA*NUM_COMBOS;
   fwrite(deltaTs,numBytes, 1, dtsFile);

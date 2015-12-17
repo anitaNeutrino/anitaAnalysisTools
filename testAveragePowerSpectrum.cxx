@@ -63,8 +63,8 @@ void testAveragePowerSpectrum(){
   const Int_t numSamps = 256;
   const Double_t deltaT = 1./2.6;
 
-  AveragePowerSpectrum aps(deltaT, numSamps);
-  AveragePowerSpectrum aps2(deltaT, numSamps);  
+  AveragePowerSpectrum aps("aps", deltaT, numSamps);
+  AveragePowerSpectrum aps2("aps2", deltaT, numSamps);  
   
   for(Long64_t entry=0; entry<numEntries; entry++){
 

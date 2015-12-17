@@ -25,7 +25,7 @@
 #include "TThread.h"
 
 // standard c++ things
-#include "iostream"
+#include <iostream>
 
 
 // Offline reconstruction definitions
@@ -48,6 +48,8 @@
 #define NUM_BINS_PHI_ZOOM 64
 #define THETA_RANGE_ZOOM 6.4
 #define PHI_RANGE_ZOOM 6.4
+
+#define NUM_CORRS_TO_CACHE 16
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -225,8 +227,8 @@ public:
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
   **********************************************************************************************************/
-  void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
-  void deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol);
+  // void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
+  // void deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
   // void deleteAllFFTs(AnitaPol::AnitaPol_t pol);
   void deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol);
@@ -272,6 +274,12 @@ public:
   std::vector<Double_t> rArray[NUM_POL]; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg[NUM_POL]; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; ///< Vector of antenna heights
+
+
+  void updateCache(Int_t polInd, Int_t combo, Int_t offset, Int_t numSamples);
+  Int_t cacheOffsets[NUM_COMBOS];
+  Int_t cachePols[NUM_COMBOS];
+  Double_t corrCache[NUM_COMBOS*NUM_CORRS_TO_CACHE];
 
   typedef Char_t dtIndex_t;
   dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
