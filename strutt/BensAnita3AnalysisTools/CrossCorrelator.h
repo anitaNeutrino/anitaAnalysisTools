@@ -154,8 +154,6 @@ public:
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
-  void writeDeltaTsFile();
-  Int_t readDeltaTsFile();
   // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UShort_t l3TrigPattern);
   Double_t getBin0PhiDeg();
 
@@ -300,7 +298,5 @@ public:
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
-  UInt_t positionHash;
-  Int_t readDeltaTsFileSuccess;
 };
 #endif
