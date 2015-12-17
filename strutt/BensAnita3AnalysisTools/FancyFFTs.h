@@ -78,6 +78,8 @@ public:
 				double* output, int threadInd=0);
   static int extendToPowerOfTwo(int len);
   static std::complex<double>* zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded);
+  static std::complex<double>* zeroPadFFT(std::complex<double>* fft, std::complex<double>* output,
+					  int numFreqs, int numFreqsPadded);  
 
 
 private:

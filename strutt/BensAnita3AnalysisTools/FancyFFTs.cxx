@@ -266,8 +266,18 @@ int FancyFFTs::getNumFreqs(int len){
 }
 
 std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded){
+  return zeroPadFFT(fft, NULL, numFreqs, numFreqsPadded);
+}
 
-  std::complex<double>* fftPadded = new std::complex<double>[numFreqsPadded];
+std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, std::complex<double>* output, int numFreqs, int numFreqsPadded){
+
+  std::complex<double>* fftPadded = NULL;
+  if(output==NULL){
+    fftPadded = new std::complex<double>[numFreqsPadded];
+  }
+  else{
+    fftPadded = output;
+  }
 
   // Here I scale the padded FFT so that it is as if I fourier transformed a longer waveform.
   // (There is a scale factor of length picked up from a forward FFT.)
