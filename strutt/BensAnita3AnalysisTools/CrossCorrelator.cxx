@@ -83,13 +83,15 @@ void CrossCorrelator::initializeVariables(){
   // std::cout << this << std::endl;
 
   TString positionString;
+  // std::cout << "pol\tant\trArray\tzArray\tphiArray" << std::endl;
   for(Int_t pol=0; pol < NUM_POL; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
-      rArray[pol].push_back(geom->getAntR(ant));
-      zArray[pol].push_back(geom->getAntZ(ant));
-      phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant)*TMath::RadToDeg());
+      rArray[pol].push_back(geom->getAntR(ant, AnitaPol::AnitaPol_t(pol)));
+      zArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
+      phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
 
-      positionString += TString::Format("%lf %lf %lf ", rArray[pol].at(ant), zArray[pol].at(ant), phiArrayDeg[pol].at(ant)); 
+      positionString += TString::Format("%lf %lf %lf ", rArray[pol].at(ant), zArray[pol].at(ant), phiArrayDeg[pol].at(ant));
+      // std::cout << pol << "\t" << ant << "\t" << rArray[pol].at(ant) << "\t" << zArray[pol].at(ant) << "\t" << phiArrayDeg[pol].at(ant) << std::endl;
     }
   }
   positionHash = positionString.Hash();
@@ -119,9 +121,10 @@ void CrossCorrelator::initializeVariables(){
     threadArgVals.ptr = this;
     threadArgsVec.push_back(threadArgVals);
 
-    // Creation of fftw plans (what this function does)
-    // is not thread safe, so we need to create plans
-    // before doing any fftw plans inside a thread.
+    // Creation of fftw plans is not thread safe, 
+    // so we need to create plans before doing any fftw
+    // plans inside a thread.
+    
     FancyFFTs::makeNewPlanIfNeeded(numSamples, threadInd);
     FancyFFTs::makeNewPlanIfNeeded(numSamplesUpsampled, threadInd);
   }
@@ -948,6 +951,11 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& image
 
   return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
 			   kGlobal, kZoomedOut);
+}
+
+TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol){
+  Double_t imagePeak, peakPhiDeg, peakThetaDeg;
+  return makeGlobalImage(pol, imagePeak, peakPhiDeg, peakThetaDeg);
 }
 
 

@@ -41,6 +41,8 @@
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
+// #define NUM_BINS_THETA_ZOOM 256
+// #define NUM_BINS_PHI_ZOOM 256
 #define NUM_BINS_THETA_ZOOM 64
 #define NUM_BINS_PHI_ZOOM 64
 #define THETA_RANGE_ZOOM 6.4
@@ -184,6 +186,7 @@ public:
 
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol);
 
   TH2D* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 			   Double_t& peakThetaDeg, UShort_t l3TrigPattern);
