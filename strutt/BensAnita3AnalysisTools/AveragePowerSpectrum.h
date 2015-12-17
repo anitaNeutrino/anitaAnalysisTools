@@ -9,12 +9,20 @@
 #ifndef AVERAGEPOWERSPECTRUM_H
 #define AVERAGEPOWERSPECTRUM_H
 
-#include <TGraph.h>
-#include "FancyFFTs.h"
+#include "TGraph.h"
 #include "TH1D.h"
+#include "TH2D.h"
 #include "TF1.h"
+#include "TNamed.h"
 
-class AveragePowerSpectrum {
+#include "FancyFFTs.h"
+
+
+#define NUM_AMPLITUDE_BINS 64
+#define INITIAL_MAX_AMPLITUDE 4
+#define INITIAL_MIN_AMPLITUDE 0
+
+class AveragePowerSpectrum : public TNamed {
 
 public:
 
@@ -23,34 +31,55 @@ public:
     kSummed /// < This mode sums each event into a total
   };
   
-  AveragePowerSpectrum(TString histBaseNameIn, Double_t dt, Int_t n, mode_t powSpecMode=kRolling);
+  AveragePowerSpectrum();
+  AveragePowerSpectrum(TString name, TString title, Double_t dt, Int_t n, mode_t powSpecMode=kRolling);
   ~AveragePowerSpectrum();
 
   size_t add(TGraph* gr);
-  TGraph* get(TString name, TString title);
-  TGraph* getScaled(TString name, TString title);
-  void emptyRolling(); ///< Deletes all the power spectra and empties the vector
-  void emptyRayleighs(); ///< Writes all the Rayleigh histograms and deletes them
+
+
+  
+  TGraph* makeAvePowSpecTGraph(); ///< Creates and returns a TGraph of the average power spectrum.
+  TGraph* makeAvePowSpecTGraph_dB(); ///< Creates and returns a TGraph of the average power spectrum with dB scale and bins in MHz bins.
+
+
+  
+  void deleteRayleighDistributions(); ///< Deletes the Rayleigh Histograms
+
+  void fitRayleighHistogram(Int_t freqInd);
+  void fitAllRayleighHistograms();
+  
+
+  TH1D* getRayleighHistogram(Int_t freqInd);
+  TH1D* getRayleighHistogramFromFrequencyMHz(Double_t freqMHz);
+  TF1* getRayleighHistogramFit(Int_t freqInd);  
+
+  TH2D* makeRayleigh2DHistogram();
+  
+
   static TF1* makeRayleighFunction(TString name, Double_t xMin, Double_t xMax);
+  static TString getRayleighFunctionText();
 
-private:
-  Double_t deltaT;
+
   Double_t numSamples;
+  Double_t deltaT;
+  Double_t deltaF;  
   Int_t numFreqs;
-  Int_t count;
-  TString histBaseName;
-
-  Double_t* freqArray; ///< Array of frequency values
-  std::vector<Double_t*> storedPowSpecs; ///< vector
-  AveragePowerSpectrum::mode_t mode; ///< How we store the average power spectrum in the rolling case
+  Double_t* freqArray;//[numFreqs] ///< Array of frequency values  
   std::vector<Double_t> summedPowSpec; ///< How we store the average power spectrum in the summed case
   std::vector<TH1D*> hRayleighs; ///< Histograms for Rayleigh distributions
-
+  std::vector<TF1*> hRayleighFits; ///< Fits to Rayleigh distributions histograms
   std::vector<std::vector<Double_t> > psdOutliers;///< Storage for outlier values, if get too many then add them to rayeligh histogram
   UInt_t maxNumOutliers; ///< Critical number of outliers before adding them, set in constructor.
+  Int_t count;
+  AveragePowerSpectrum::mode_t mode; ///< How we store the average power spectrum in the rolling case
+  std::vector<std::vector<Double_t> > storedPowSpecs; ///< vector
+
   
+  ClassDef(AveragePowerSpectrum, 1);
 };
 
+  
 
 
 

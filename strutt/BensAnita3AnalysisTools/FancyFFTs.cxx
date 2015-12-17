@@ -72,7 +72,8 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
      For a thorough explanation see Ryan's presentation:
      http://www.hep.ucl.ac.uk/~rjn/saltStuff/fftNormalisation.pdf
   */
-
+  
+  const double ohms = 50; // Assuming 50 Ohm termination
   double conventionNorm = 1;
   switch (normFlag){
   case PowSpecNorm::kSum:
@@ -108,6 +109,18 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
     conventionNorm = dt*dt; /* since df = 1./(len*dt) */
     break;
 
+
+  case PowSpecNorm::kPowSpecDensity_dBm:
+    /* 
+       Sum of df*psd[i] for each psd[i] in output == sum over dt*V[i]*V[i]/df/ohms for each V[i] in input
+                                                  == sum over N*dt*dt*V[i]*V[i]/ohms for each V[i] in input
+       Makes this function return the "power spectral density" (assuming 50 Ohm termination).
+       i.e. frequency bins are normalized such that zero padding the waveform won't affect bin content.
+    */
+
+    conventionNorm = dt*dt/ohms; /* since df = 1./(len*dt) */
+    break;
+    
   default:
     /* You shouldn't get here and now I'm going to tell you that. */
     std::cerr << "Invalid PowSpecNorm::conventionFlag in FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag) " << std::endl;
@@ -206,7 +219,7 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output
   
   /* 
      Normalization of 1/N done in this function. 
-     Note: fftw_plan_c2r_1d DESTROYS THE INPUT ARRAY when executed.
+     Note: fftw_plan_c2r_1d USES AND MESSES UP THE INPUT ARRAY when executed.
   */
 
   std::pair<int, int> key(len, threadInd);

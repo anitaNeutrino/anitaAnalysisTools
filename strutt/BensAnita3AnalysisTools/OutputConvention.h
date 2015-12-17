@@ -13,7 +13,12 @@
 #include "TDatime.h"
 #include "TString.h"
 #include "TFile.h"
+
+
 #include <stdlib.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <iostream>
 
 class OutputConvention{
 
@@ -23,7 +28,7 @@ public:
   ~OutputConvention();
 
   TString getOutputFileName();
-
+  void setSubdirectory(TString subDirName);
   
 private:
   int argc;
@@ -32,10 +37,12 @@ private:
   TString outputDir;
   TString dateTimeSuffix;
   TString outFileName;
+  TString subDir;
+
   
   TString getDateTimeSuffix();
   TString getOutputDir();
-
+  
   
   
 };

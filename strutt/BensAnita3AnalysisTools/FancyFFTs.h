@@ -32,7 +32,8 @@ namespace PowSpecNorm {
     kSum = 0,
     kAverage = 1,
     kTimeIntegral = 2,
-    kPowSpecDensity = 3
+    kPowSpecDensity = 3,
+    kPowSpecDensity_dBm = 4
   };
 }
 

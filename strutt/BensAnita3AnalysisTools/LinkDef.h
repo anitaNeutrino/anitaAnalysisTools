@@ -10,6 +10,8 @@
 #pragma link C++ class FancyFFTs+;
 #pragma link C++ namespace PowSpecNorm+;
 #pragma link C++ class ProgressBar+;
+#pragma link C++ class AveragePowerSpectrum+;
+// #pragma link C++ enum mode_t;
 
 #endif
 

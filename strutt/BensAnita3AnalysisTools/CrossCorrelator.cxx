@@ -29,6 +29,9 @@ CrossCorrelator::~CrossCorrelator(){
   }
 }
 
+
+
+
 /*!
   \brief Workhorse function to set internal variables.
 */
@@ -65,7 +68,7 @@ void CrossCorrelator::initializeVariables(){
   //   }
   // }
   // std::cout << this << std::endl;
-  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  // AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
 
   // std::cout << "pol\tant\trArray\tzArray\tphiArray" << std::endl;
   for(Int_t pol=0; pol < NUM_POL; pol++){
@@ -74,9 +77,9 @@ void CrossCorrelator::initializeVariables(){
       zArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
       phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
 
-      Int_t surf, chan, ant2;
-      geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, AnitaPol::AnitaPol_t (pol), surf, chan, ant2);
-      std::cout << pol << "\t" << ant << "\t" << rArray[pol].at(ant) << "\t" << zArray[pol].at(ant) << "\t" << phiArrayDeg[pol].at(ant) << "\t" << cal->relativePhaseCenterToAmpaDelays[surf][chan] << std::endl;
+      // Int_t surf, chan, ant2;
+      // geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, AnitaPol::AnitaPol_t (pol), surf, chan, ant2);
+      // std::cout << pol << "\t" << ant << "\t" << rArray[pol].at(ant) << "\t" << zArray[pol].at(ant) << "\t" << phiArrayDeg[pol].at(ant) << "\t" << cal->relativePhaseCenterToAmpaDelays[surf][chan] << std::endl;
     }
   }
 
@@ -307,8 +310,6 @@ void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
   for(Int_t combo=0; combo<numCombos; combo++){
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);
-    // crossCorrelations[pol][combo] = crossCorrelateFourier(grsResampled[pol][ant2], grsResampled[pol][ant1]);
-    // crossCorrelations[pol][combo] = crossCorrelateFourier(numSamples, ffts[pol][ant2], ffts[pol][ant1]);
     FancyFFTs::crossCorrelate(numSamples, ffts[pol][ant2], ffts[pol][ant1], crossCorrelations[pol][combo]);        
   }
 }
@@ -354,35 +355,18 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
 
-  
   Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
   Int_t startCombo = threadInd*numCorrPerThread;
-  // TThread::Lock();
-  // std::cout << threadInd << "\t" << ptr << "\t" << pol << "\t" << startCombo << std::endl;
-  // TThread::UnLock();
 
-  
   for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    
-    // ptr->crossCorrelations[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamples,
-    // 								    ptr->ffts[pol][ant2],
-    // 								    ptr->ffts[pol][ant1],
-    // 								    threadInd);
-    // DONE
-    // ptr->crossCorrelations[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamples,
-    // 								    ptr->ffts[pol][ant2],
-    // 								    ptr->ffts[pol][ant1],
-    // 								    ptr->crossCorrelations[pol][combo],
-    // 								    threadInd);    
     FancyFFTs::crossCorrelate(ptr->numSamples,
 			      ptr->ffts[pol][ant2],
 			      ptr->ffts[pol][ant1],
 			      ptr->crossCorrelations[pol][combo],
-			      threadInd);    
-  }
-  
+			      threadInd);
+  }  
   return 0;
 }
 
@@ -438,9 +422,6 @@ void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, USh
 
 
 void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern){
-
-  // deleteAllPaddedFFTs(pol);
-  // deleteUpsampledCrossCorrelations(pol);
 
   threadL3TrigPattern = l3TrigPattern;
   threadPol = pol;
@@ -510,9 +491,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
     Int_t combo = combosToUse.at(comboInd);
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    // TThread::Lock();
-    // std::cout << threadInd << "\t" << comboInd << "\t" << startComboInd << "\t" << startComboInd+numCorrPerThread << "\t" << numCorrPerThread << "\t" << combosToUse.size() << "\t" << numRemainder << "\t" << NUM_THREADS << "\t" << combo << "\t" << ant2 << "\t" << ant1 << "\t" << ptr->fftsPadded[pol][ant2] << "\t" << ptr->fftsPadded[pol][ant2] << std::endl;
-    // TThread::UnLock();
     
     FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
 			      ptr->fftsPadded[pol][ant2],
@@ -520,10 +498,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 			      ptr->crossCorrelationsUpsampled[pol][combo],
 			      threadInd);
   }
-  // TThread::Lock();
-  // std::cout << "Thread " << threadInd << " got to here" << std::endl;
-  // TThread::UnLock();
-
   
   if(threadInd < numRemainder){
     Int_t numDoneInAllThreads = NUM_THREADS*numCorrPerThread;
@@ -531,16 +505,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
     Int_t combo = combosToUse.at(comboInd);
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    // TThread::Lock();
-    // std::cout << threadInd << "\t" << comboInd << "\t" << numCorrPerThread << "\t" << combosToUse.size() << "\t" << numRemainder << "\t" << NUM_THREADS << "\t" << combo << "\t" << ant2 << "\t" << ant1 << "\t" << ptr->fftsPadded[pol][ant2] << "\t" << ptr->fftsPadded[pol][ant2] << std::endl;
-    // TThread::UnLock();
 
-
-    
-    // ptr->crossCorrelationsUpsampled[pol][combo] = ptr->crossCorrelateFourier(ptr->numSamplesUpsampled,
-    // 									     ptr->fftsPadded[pol][ant2],
-    // 									     ptr->fftsPadded[pol][ant1],
-    // 									     threadInd);
     FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
 			      ptr->fftsPadded[pol][ant2],
 			      ptr->fftsPadded[pol][ant1],
@@ -548,12 +513,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 			      threadInd);
     
   }
-
-  // TThread::Lock();
-  // std::cout << "Thread " << threadInd << " got to here too" << std::endl;
-  // TThread::UnLock();
-
-  
   return 0;
 }
 
@@ -667,6 +626,19 @@ Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1
   Double_t tdiff = 1e9*((cos(-thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
   return tdiff;
 }
+
+// Moving parts...
+// tan(-thetaW) NUM_BINS_THETA
+// cos(-thetaW) NUM_BINS_THETA
+// cos(phiWave * TMath::DegToRad()*phiArray[pol].at(ant) NUM_BINS_PHI*NUM_POL*NUM_ANTS
+// 
+
+// Double_t tanThetaWave[NUM_BINS_THETA];
+
+// Int_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+// 					     Double_t phiWave, Double_t thetaWave){
+  
+// }
 
 
 Int_t CrossCorrelator::getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave, Double_t rWave){
@@ -1016,10 +988,7 @@ TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t 
   threadL3TrigPattern = l3TrigPattern;
   
   if(zoomMode == kZoomedIn){
-    // Pads FFTs for more finely grained correlation result for zoomed in map
-    // doUpsampledCrossCorrelations(pol, l3TrigPattern);
     doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
-    // fillDeltaTLookupZoomed(zoomCenterPhiDeg, zoomCenterThetaDeg, l3TrigPattern);
   }
   return hImage;
 }
@@ -1216,12 +1185,11 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   mapMode_t mapMode = ptr->threadMapMode;
   zoomMode_t zoomMode = ptr->threadZoomMode;
   Double_t rWave = ptr->threadRWave;
-  
   TH2D* hImage = ptr->threadImage;
 
   Int_t numPhiBinsThread = hImage->GetNbinsX()/NUM_THREADS;
   Int_t startPhiBin = threadInd*numPhiBinsThread;
-  
+
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
@@ -1253,9 +1221,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	}
 	// If we are in zoomed in & plane wave mode then calculate
 	else if(zoomMode==kZoomedIn && rWave==0){
-	  // offset = ptr->deltaTsZoom[phiBin][thetaBin][combo];
-	  // offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
-	  // correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
 	  Double_t deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
@@ -1323,25 +1288,6 @@ Double_t CrossCorrelator::findImagePeak(TH2D* hist, Double_t& imagePeak,
 /************************************************************************************************************
 Functions to delete pointers to internal variables
 ************************************************************************************************************/
-// void CrossCorrelator::deleteCrossCorrelations(AnitaPol::AnitaPol_t pol){
-//   for(Int_t comboInd=0; comboInd<NUM_COMBOS; comboInd++){
-//     if(crossCorrelations[pol][comboInd] != NULL){
-//       delete [] crossCorrelations[pol][comboInd];
-//       crossCorrelations[pol][comboInd] = NULL;
-//     }
-//   }
-// }
-
-// void CrossCorrelator::deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol){
-//   for(Int_t comboInd=0; comboInd<NUM_COMBOS; comboInd++){
-//     if(crossCorrelationsUpsampled[pol][comboInd] != NULL){
-//       delete [] crossCorrelationsUpsampled[pol][comboInd];
-//       crossCorrelationsUpsampled[pol][comboInd] = NULL;
-//     }
-//   }
-// }
-
-
 void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     if(grs[pol][ant]){
@@ -1354,26 +1300,6 @@ void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
     }
   }
 }
-
-// void CrossCorrelator::deleteAllFFTs(AnitaPol::AnitaPol_t pol){
-//   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-//     if(ffts[pol][ant]){
-//       delete [] ffts[pol][ant];
-//       ffts[pol][ant] = NULL;
-//     }
-//   }
-// }
-
-// void CrossCorrelator::deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol){
-//   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-//     if(fftsPadded[pol][ant]){
-//       delete [] fftsPadded[pol][ant];
-//       fftsPadded[pol][ant] = NULL;
-//     }
-//   }
-// }
-
-
 
 
 
@@ -1392,6 +1318,130 @@ void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
 /************************************************************************************************************
 Functions for debugging or testing
 ************************************************************************************************************/
+
+
+/*!
+  \brief Used to validate that I am testing the geometry I think I am. Returns 0 on success and 1 on failure.
+  \param pathToLindasFile is the relative path to Linda's file.
+  \param pol is the polarization of the channels under test.
+*/
+Int_t CrossCorrelator::validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol){
+  
+  // Since I am simulataneously testing many of Linda's geometries on lots of different files
+  // I need the help of a machine to check I'm testing the geometry I think I'm testing.
+  
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+
+
+  std::ifstream lindasNums(pathToLindasFile.Data());
+
+  Int_t ant;
+  Double_t dr, dPhiRad, dz, dt;
+
+  Double_t sumOfErrors = 0;
+  while(lindasNums >> ant >> dr >> dz >> dPhiRad >> dt){
+    
+    Int_t surf, chan, ant2;
+    geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
+				       surf, chan, ant2);
+
+    Double_t newR = geom->rPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dr;
+    Double_t newPhi = geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dPhiRad;
+    Double_t newZ = geom->zPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dz;
+    Double_t newT = dt;
+    
+    Double_t geomR = geom->rPhaseCentreFromVerticalHorn[ant][pol];
+    Double_t geomPhi = geom->azPhaseCentreFromVerticalHorn[ant][pol];
+    Double_t geomZ = geom->zPhaseCentreFromVerticalHorn[ant][pol];
+    Double_t calT = cal->relativePhaseCenterToAmpaDelays[surf][chan];
+
+    Double_t ddr = geomR - newR;
+    Double_t ddPhi = geomPhi - newPhi;
+    if(ddPhi >= TMath::Pi()){
+      ddPhi -= TMath::TwoPi();
+    }
+    else if(ddPhi < -TMath::Pi()){
+      ddPhi += TMath::TwoPi();
+    }
+    Double_t ddZ = geomZ - newZ;
+    Double_t ddT = calT - newT;
+           
+    // std::cerr << ant << "\t";
+    // std::cerr << ddr << "\t";
+    // std::cerr << ddPhi << "\t";
+    // std::cerr << ddZ << "\t";
+    // std::cerr << ddT << "\t";
+    // std::cerr << std::endl;
+
+    sumOfErrors += TMath::Abs(ddr);
+    sumOfErrors += TMath::Abs(ddPhi);
+    sumOfErrors += TMath::Abs(ddZ);
+    sumOfErrors += TMath::Abs(ddT);
+    
+  }
+
+  const Double_t errorTolerance = 1e-5;
+  if(sumOfErrors < errorTolerance){
+    return 0;
+  }
+  else{
+    return 1;
+  }
+}
+
+
+/*!
+  \brief Used to validate that I am testing the geometry I think I am. Returns 1 if could not open file.
+  \param pathToLindasFile is the relative path to Linda's file.
+  \param pol is the polarization of the channels under test.
+*/
+Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol){
+  
+  // Since I am simulataneously testing many of Linda's geometries on lots of different files
+  // I need the help of a machine to check I'm testing the geometry I think I'm testing.
+  
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+
+
+  std::ifstream lindasNums(pathToLindasFile.Data());
+  if(lindasNums.is_open()==0){
+    return 1; // This is an error
+  }
+  
+  Int_t ant;
+  Double_t dr, dPhiRad, dz, dt;
+
+  while(lindasNums >> ant >> dr >> dz >> dPhiRad >> dt){
+    
+    Int_t surf, chan, ant2;
+    geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
+				       surf, chan, ant2);
+
+    Double_t newR = geom->rPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dr;
+    Double_t newPhi = geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dPhiRad;
+    Double_t newZ = geom->zPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dz;
+    Double_t newT = dt;
+
+    if(newPhi >= TMath::Pi()){
+      newPhi -= TMath::TwoPi();
+    }
+    else if(newPhi < -TMath::Pi()){
+      newPhi += TMath::TwoPi();
+    }
+    
+    geom->rPhaseCentreFromVerticalHorn[ant][pol] = newR;
+    geom->azPhaseCentreFromVerticalHorn[ant][pol] = newPhi;
+    geom->zPhaseCentreFromVerticalHorn[ant][pol] = newZ;
+    cal->relativePhaseCenterToAmpaDelays[surf][chan] = newT;
+
+           
+  }
+  return 0;
+}
+
+
 
 void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource){
   // Generates a set of delta function like waveforms, correlates them 
