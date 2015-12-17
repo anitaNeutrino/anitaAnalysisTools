@@ -9,11 +9,9 @@ AveragePowerSpectrum::AveragePowerSpectrum(Double_t dt, Int_t nSamp){
 
 AveragePowerSpectrum::~AveragePowerSpectrum(){
   delete [] freqArray;
-  for(UInt_t eventIndex=0; eventIndex<storedPowSpecs.size(); eventIndex++){
-    delete [] storedPowSpecs.at(eventIndex);
-    storedPowSpecs.at(eventIndex) = NULL;
-  }
+  this->empty();
 }
+
 
 size_t AveragePowerSpectrum::add(TGraph* gr){
 
@@ -21,6 +19,13 @@ size_t AveragePowerSpectrum::add(TGraph* gr){
   storedPowSpecs.push_back(ps);
   
   return storedPowSpecs.size();;
+}
+
+void AveragePowerSpectrum::empty(){
+  while(!storedPowSpecs.empty()){
+    delete [] storedPowSpecs.back();
+    storedPowSpecs.pop_back();    
+  }
 }
 
 

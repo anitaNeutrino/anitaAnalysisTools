@@ -20,7 +20,8 @@ public:
 
   size_t add(TGraph* gr);
   TGraph* get(TString name, TString title);
-  TGraph* getScaled(TString name, TString title);  
+  TGraph* getScaled(TString name, TString title);
+  void empty(); ///< Deletes all the power spectra and empties the vector  
 
 
 private:
