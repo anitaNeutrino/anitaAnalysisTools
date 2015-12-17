@@ -57,6 +57,11 @@ public:
   static double* getPowerSpectrum(int len, double* input, double dt, 
 				  PowSpecNorm::conventionFlag normFlag,
 				  int threadInd=0);
+
+  static double* getPowerSpectrum(int len, double* input, double dt, 
+				  PowSpecNorm::conventionFlag normFlag,
+				  double* outputPtr, int threadInd=0);
+
   static TGraph* getPowerSpectrumTGraph(int len, double* input, double dt, 
 					PowSpecNorm::conventionFlag normFlag,
 					bool dBScale, int threadInd=0);

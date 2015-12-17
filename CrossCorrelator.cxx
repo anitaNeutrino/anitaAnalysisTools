@@ -258,56 +258,11 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
   }
 }
 
-/*!
-  \brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
-  \param grIn points to the TGraph containing the waveform to interpolate
-  \param startTime is the start time for interpolation: zero pads if this is earlier than the TGraph start time.
-*/
+
+
 TGraph* CrossCorrelator::interpolateWithStartTime(TGraph* grIn, Double_t startTime){
-
-  // std::vector<Double_t> newTimes = std::vector<Double_t>(numSamplesUpsampled, 0);
-  // std::vector<Double_t> newVolts = std::vector<Double_t>(numSamplesUpsampled, 0);
-  std::vector<Double_t> newTimes = std::vector<Double_t>(numSamples, 0);
-  std::vector<Double_t> newVolts = std::vector<Double_t>(numSamples, 0);
-  Double_t thisStartTime = grIn->GetX()[0];
-  Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
-
-
-  // Quantizes the start and end times so data poInt_ts lie at Int_teger multiples of nominal sampling 
-  // startTime = correlationDeltaT*TMath::Nint(startTime/correlationDeltaT + 0.5);
-  // lastTime = correlationDeltaT*TMath::Nint(lastTime/correlationDeltaT - 0.5);
-  startTime = nominalSamplingDeltaT*TMath::Nint(startTime/nominalSamplingDeltaT + 0.5);
-  lastTime = nominalSamplingDeltaT*TMath::Nint(lastTime/nominalSamplingDeltaT - 0.5);  
-
-   //ROOT Int_terpolator object constructor takes std::vector objects
-  std::vector<Double_t> tVec(grIn->GetX(), grIn->GetX() + grIn->GetN());
-  std::vector<Double_t> vVec(grIn->GetY(), grIn->GetY() + grIn->GetN());
-  
-  // This is ROOT's Int_terpolator object
-  ROOT::Math::Interpolator chanInterp(tVec,vVec,ROOT::Math::Interpolation::kAKIMA);
-  
-  // Put new data Int_to arrays
-  Double_t time = startTime;
-  // for(Int_t samp = 0; samp < numSamplesUpsampled; samp++){
-  for(Int_t samp = 0; samp < numSamples; samp++){    
-    newTimes.at(samp) = time;
-    if(time >= thisStartTime && time <= lastTime){
-      newVolts.at(samp) = chanInterp.Eval(time);
-    }
-    else{
-      newVolts.at(samp) = 0;
-    }
-    time += nominalSamplingDeltaT;
-  }
-
-  // return new TGraph(numSamplesUpsampled, &newTimes[0], &newVolts[0]);
-  return new TGraph(numSamples, &newTimes[0], &newVolts[0]);  
-
+  return RootTools::interpolateWithStartTime(grIn, startTime, nominalSamplingDeltaT, numSamples);
 }
-
-
-
-
 
 
 

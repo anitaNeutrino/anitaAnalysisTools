@@ -25,6 +25,9 @@
 #include "cfloat"
 #include "TColor.h"
 #include "TChain.h"
+#include "Math/Interpolator.h"
+#include "Math/InterpolationTypes.h"
+
 
 #include "RawAnitaHeader.h"
 #include "Adu5Pat.h"
@@ -93,6 +96,7 @@ namespace RootTools{
   TGraph* makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt);
   TGraph* makeDerivativeTGraph(TGraph* gr);
   TGraph* makeUnwrappedCorrelationGraph(TGraph* gr);
+  TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
 
   TH1D* plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xMin, Double_t xMax);
   TCanvas* drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanvas* can=NULL, 

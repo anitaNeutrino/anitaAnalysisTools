@@ -539,6 +539,55 @@ TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
 
 
 /*!
+  \brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
+  \param grIn points to the TGraph containing the waveform to interpolate
+  \param startTime is the start time for interpolation: zero pads if this is earlier than the TGraph start time.
+  \param dt is the time between samples
+  \param nSamp is the time number of samples
+*/
+
+TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp){  
+
+  std::vector<Double_t> newTimes = std::vector<Double_t>(nSamp, 0);
+  std::vector<Double_t> newVolts = std::vector<Double_t>(nSamp, 0);
+  Double_t thisStartTime = grIn->GetX()[0];
+  Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
+
+
+  // Quantizes the start and end times so data poInt_ts lie at Int_teger multiples of nominal sampling 
+  // startTime = correlationDeltaT*TMath::Nint(startTime/correlationDeltaT + 0.5);
+  // lastTime = correlationDeltaT*TMath::Nint(lastTime/correlationDeltaT - 0.5);
+  startTime = dt*TMath::Nint(startTime/dt + 0.5);
+  lastTime = dt*TMath::Nint(lastTime/dt - 0.5);  
+
+   //ROOT Int_terpolator object constructor takes std::vector objects
+  std::vector<Double_t> tVec(grIn->GetX(), grIn->GetX() + grIn->GetN());
+  std::vector<Double_t> vVec(grIn->GetY(), grIn->GetY() + grIn->GetN());
+  
+  // This is ROOT's Int_terpolator object
+  ROOT::Math::Interpolator chanInterp(tVec,vVec,ROOT::Math::Interpolation::kAKIMA);
+  
+  // Put new data Int_to arrays
+  Double_t time = startTime;
+  for(Int_t samp = 0; samp < nSamp; samp++){    
+    newTimes.at(samp) = time;
+    if(time >= thisStartTime && time <= lastTime){
+      newVolts.at(samp) = chanInterp.Eval(time);
+    }
+    else{
+      newVolts.at(samp) = 0;
+    }
+    time += dt;
+  }
+  return new TGraph(nSamp, &newTimes[0], &newVolts[0]);  
+
+}
+
+
+
+
+
+/*!
   \brief Draws an array of histograms with a rainbow on a single TCanvas
   \param hs is a pointer to an array of pointers to the histograms. 
   \param numHists is the number of histograms.
