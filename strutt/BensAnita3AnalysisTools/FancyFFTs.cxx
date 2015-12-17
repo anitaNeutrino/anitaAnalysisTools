@@ -153,7 +153,20 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
   return powSpec;
 }
 
+
+
+
+
 std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd){
+  return doFFT(len, input, NULL, copyOutputToNewArray, threadInd);
+}
+
+std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<double>* output, int threadInd){
+  return doFFT(len, input, output, true, threadInd);
+}
+
+
+std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<double>* output, bool copyOutputToNewArray, int threadInd){
   /* 
      Using std::complex<double> instead of the typdef fftw_complex double[2] 
      because CINT has a better time with it, even though it's (apparently) exactly the same.
@@ -168,8 +181,11 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
 
   if(copyOutputToNewArray==true){
     int numFreqs = getNumFreqs(len);
-    std::complex<double>* output = new std::complex<double>[numFreqs];
-
+    std::complex<double>* theOutput = output;
+    if(output==NULL){
+      theOutput = new std::complex<double>[numFreqs];
+    }
+    
     /* Seems to work, see http://www.fftw.org/doc/Complex-numbers.html */
     memcpy(output, fComplex[key], sizeof(fftw_complex)*numFreqs);
     return output;
@@ -180,6 +196,14 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputTo
 }
 
 double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd){
+  return doInvFFT(len, input, NULL, copyOutputToNewArray, threadInd);
+}
+
+double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output, int threadInd){
+  return doInvFFT(len, input, output, true, threadInd);
+}
+
+double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output, bool copyOutputToNewArray, int threadInd){
   
   /* 
      Normalization of 1/N done in this function. 
@@ -208,13 +232,13 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutpu
     invFftOutPtr[i]/=len;
   }
 
+  double* theOutput = output;
   if(copyOutputToNewArray==true){
-    double* output = new double[len];
-    memcpy(output, invFftOutPtr, sizeof(double)*len);
-
-    // std::cout << output << "\t" << invFftOutPtr << "\t" << len << "\t" << sizeof(double)*len << std::endl;
-    
-    return output;
+    if(theOutput==NULL){
+      theOutput = new double[len];
+    }  
+    memcpy(theOutput, invFftOutPtr, sizeof(double)*len);
+    return theOutput;    
   }
   else{
     return NULL;
@@ -329,8 +353,12 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
 }
 
 
+double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2, int threadInd){
+  return crossCorrelate(len, fft1, fft2, NULL, threadInd);
+}
+
 double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
-				  int threadInd){
+				  double* output, int threadInd){
   /* 
      Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
      Will assume lengths are the same for now.
@@ -357,9 +385,18 @@ double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::comp
   for(int i=0; i<numFreqs; i++){
     tempVals[i] = fft1[i]*std::conj(fft2[i]);
   }
-  
-  /* Product back to time domain */
-  double* crossCorr = doInvFFT(len, tempVals, true, threadInd);
+
+  /* Product back to time domain */  
+  double* crossCorr = output;
+  if(crossCorr==NULL){
+    /* Allocates new memory */
+    crossCorr = doInvFFT(len, tempVals, true, threadInd);
+  }
+  else{
+    /* Does not allocate new memory */
+    crossCorr = doInvFFT(len, tempVals, crossCorr, true, threadInd);    
+  }
+
 
   /* 
      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
