@@ -6,11 +6,17 @@ OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
   argv = argvIn;
   outFileName = "";
   dateTimeSuffix = "";
-  outputDir = "";  
+  outputDir = "";
+  subDir = "";
 }
 
 OutputConvention::~OutputConvention(){
   
+}
+
+
+void OutputConvention::setSubdirectory(TString subDirName){
+  subDir = subDirName;
 }
 
 
@@ -104,6 +110,27 @@ TString OutputConvention::getOutputDir(){
   const char* outputDirPoss = getenv("OUTPUT_DIR");
   if(outputDirPoss!=NULL){
     outputDir += TString::Format("%s/", outputDirPoss); // Add trailing forward slash...
-  }  
+  }
+
+  TString outputDirPlusSubDir = outputDir;
+  if(subDir!=""){
+    outputDirPlusSubDir += subDir + "/";
+  }
+
+  // Try to make output dir plus subDir
+  int status = mkdir(outputDirPlusSubDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  if(status!=0 && errno!=EEXIST){
+    // If that fails try to make output dir only
+    status = mkdir(outputDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+    if(status!=0 && errno!=EEXIST){
+      // If that fails then give up and set output dir to nothing (i.e. the pwd)
+      outputDir = "";
+    }
+  }
+  else{ // If subdir was fine then we can return it.
+    outputDir = outputDirPlusSubDir;
+  }
+
   return outputDir;
 }

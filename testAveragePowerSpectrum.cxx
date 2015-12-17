@@ -32,9 +32,6 @@ int main(){
 }
 
 void testAveragePowerSpectrum(){
-  /*
-    This function tests the full +-2 phi-sector reconstruction.
-   */
 
   char eventFileName[1024];
 
@@ -60,11 +57,12 @@ void testAveragePowerSpectrum(){
 
 
   const Long64_t numEntries = 1000;
-  const Int_t numSamps = 256;
+  // const Int_t numSamps = 256;
+  const Int_t numSamps = 256*16;  
   const Double_t deltaT = 1./2.6;
 
-  AveragePowerSpectrum aps("aps", deltaT, numSamps);
-  AveragePowerSpectrum aps2("aps2", deltaT, numSamps);  
+  AveragePowerSpectrum aps("aps", "Antenna 16TH", deltaT, numSamps, AveragePowerSpectrum::kSummed);
+  AveragePowerSpectrum aps2("aps2", "Antenna 8MH", deltaT, numSamps);  
   
   for(Long64_t entry=0; entry<numEntries; entry++){
 
@@ -88,12 +86,16 @@ void testAveragePowerSpectrum(){
     
   }
   
-  // TGraph* gr = aps.getScaled("grAps16", ";Frequency (MHz); Power Spectral Density (dB/MHz)"); 
-  TGraph* gr = aps.get("grAps16", ";Frequency (MHz); Power Spectral Density (/MHz)"); 
+  TGraph* gr = aps.makeAvePowSpecTGraph();
   gr->Write();
-  TGraph* gr2 = aps2.get("grAps24", ";Frequency (MHz); Power Spectral Density (/MHz)");
+  TGraph* gr2 = aps2.makeAvePowSpecTGraph_dB();
   gr2->Write();
 
+  aps.fitAllRayleighHistograms();
+
+  aps.Write();
+  aps2.Write();  
+  
   outFile->Write();
   outFile->Close();
 

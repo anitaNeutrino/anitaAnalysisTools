@@ -36,18 +36,16 @@
 #define NUM_SAMPLES 256
 #define UPSAMPLE_FACTOR 40
 
-// Image definitions
+// // Image definitions
 #define NUM_BINS_THETA 150
 #define NUM_BINS_PHI 25
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
-// #define NUM_BINS_THETA_ZOOM 256
-// #define NUM_BINS_PHI_ZOOM 256
-#define NUM_BINS_THETA_ZOOM 64
-#define NUM_BINS_PHI_ZOOM 64
-#define THETA_RANGE_ZOOM 6.4
-#define PHI_RANGE_ZOOM 6.4
+#define NUM_BINS_THETA_ZOOM 63
+#define NUM_BINS_PHI_ZOOM 70
+#define THETA_RANGE_ZOOM 6.3
+#define PHI_RANGE_ZOOM 6.3
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -235,7 +233,8 @@ public:
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
 					 Int_t ant1, Int_t ant2);
-  
+  Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
+  Int_t validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   
   /**********************************************************************************************************
   Variables

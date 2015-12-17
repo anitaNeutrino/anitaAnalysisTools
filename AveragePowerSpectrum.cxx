@@ -1,31 +1,53 @@
 #include "AveragePowerSpectrum.h"
 
-AveragePowerSpectrum::AveragePowerSpectrum(TString histBaseNameIn, Double_t dt, Int_t nSamp, AveragePowerSpectrum::mode_t psMode){
+ClassImp(AveragePowerSpectrum);
+
+
+
+AveragePowerSpectrum::AveragePowerSpectrum(){
+  // Don't use this.
+  freqArray = NULL;
+}
+
+
+AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title, Double_t dt,
+					   Int_t nSamp, AveragePowerSpectrum::mode_t psMode){
 
 
   deltaT = dt;
   numSamples = nSamp;
   numFreqs = FancyFFTs::getNumFreqs(nSamp);
   freqArray = FancyFFTs::getFreqArray(nSamp, dt);
+  for(Int_t freqInd=0; freqInd<numFreqs; freqInd++){
+    freqArray[freqInd] *= 1e3; // GHz -> MHz;
+  }  
+  deltaF = freqArray[1]-freqArray[0];
+
   mode = psMode;
   count=0;
-  histBaseName = histBaseNameIn;
-  
-  const Int_t numPowBins = 64;
-  const Double_t maxPow = 128;
-  const Double_t minPow = 0;
-  maxNumOutliers = 10;
-  
+  SetName(name);
+  SetTitle(title);  
+
+  // Default power spec histogram values.
+  maxNumOutliers = 5;
+
   for(Int_t freqInd=0; freqInd<numFreqs; freqInd++){
     psdOutliers.push_back(std::vector<Double_t>(0, 0));
     summedPowSpec.push_back(0);
 
-    TString name = histBaseName + TString::Format("_%d_%d", freqInd, numFreqs);
-    TH1D* hTemp = new TH1D(name, name, numPowBins, minPow, maxPow);
-    hTemp->Sumw2(2);
+    TString histName = name + TString::Format("_%d", freqInd);
+    TString histTitle = title + TString::Format(" Rayleigh Distribution for %4.2lf MHz bin",
+					       freqArray[freqInd]);
+    histTitle += "; Amplitude (mV/MHz); Number of events";
+    TH1D* hTemp = new TH1D(histName, histTitle,
+			   NUM_AMPLITUDE_BINS,
+			   INITIAL_MIN_AMPLITUDE,
+			   INITIAL_MAX_AMPLITUDE);
+    hTemp->SetDirectory(0);
+    hTemp->Sumw2();
 
-    // This prepocessor variable should be defined in the Makefile and (I hope)
-    // is querying the ROOT version. At the moment it asks whether the
+    // This prepocessor variable is defined in the Makefile and is (I hope)
+    // querying the ROOT major version number. At the moment it asks whether the
     // ROOT major version number is >= 6, hence the name.
     // It works for me, for now.
 #ifdef IS_ROOT_6
@@ -34,27 +56,39 @@ AveragePowerSpectrum::AveragePowerSpectrum(TString histBaseNameIn, Double_t dt, 
     hTemp->SetBit(TH1::kCanRebin);
 #endif
 
-
+    hRayleighs.push_back(hTemp);
+    hRayleighFits.push_back(NULL);    
   }
 }
 
 AveragePowerSpectrum::~AveragePowerSpectrum(){
-  emptyRolling();
-  emptyRayleighs();  
-  delete [] freqArray;
+  deleteRayleighDistributions();
+  if(freqArray){
+    delete [] freqArray;
+    freqArray = NULL;
+  }
 }
 
 
+TString AveragePowerSpectrum::getRayleighFunctionText(){
+  return "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
+}
+
 TF1* AveragePowerSpectrum::makeRayleighFunction(TString name, Double_t xMin, Double_t xMax){
-  TF1* fRay = new TF1(name, "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))", xMin, xMax);
+  TF1* fRay = new TF1(name, getRayleighFunctionText(), xMin, xMax);
   return fRay;
 }
 
 size_t AveragePowerSpectrum::add(TGraph* gr){
 
-  Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), deltaT, PowSpecNorm::kPowSpecDensity);
+  // Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), 1e-3*deltaT, PowSpecNorm::kPowSpecDensity);
+  // Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), deltaT, PowSpecNorm::kPowSpecDensity);
+
+  // Returns the sum over V[i]*V[i], does not normalize bin width by frequency.
+  Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), deltaT, PowSpecNorm::kSum);
   for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
-    Double_t sqrtPSD = TMath::Sqrt(ps[freqInd]);
+    // Double_t sqrtPSD = TMath::Sqrt(ps[freqInd]);
+    Double_t sqrtPSD = TMath::Sqrt(ps[freqInd])/(deltaF);
     TH1D* h = hRayleighs.at(freqInd);
     Double_t histMaxVal = h->GetXaxis()->GetBinLowEdge(h->GetNbinsX()+1);
     if(sqrtPSD < histMaxVal){
@@ -64,21 +98,9 @@ size_t AveragePowerSpectrum::add(TGraph* gr){
       psdOutliers.at(freqInd).push_back(sqrtPSD);
       if(psdOutliers.at(freqInd).size() > maxNumOutliers){
 	std::vector<Double_t> newOutliers;
-
-	// for(int index = psdOutliers.at(freqInd).size()-1; index >= 0; index--){
 	for(UInt_t index = 0; index < psdOutliers.at(freqInd).size(); index++){	    
 	  Double_t outlier = psdOutliers.at(freqInd).at(index);
 	  if(outlier < histMaxVal*2){
-
-
-#ifndef IS_ROOT_6
-	    // Need to rebin the axis ourselves for ROOT versions lower than 6?
-	    if(h->GetXaxis()->GetBinLowEdge(h->GetNbinsX()+1) <= histMaxVal){
-	      h->RebinAxis(histMaxVal*2, h->GetXaxis());
-	    }
-#endif
-
-
 	    h->Fill(outlier);
 	  }
 	  else{
@@ -92,45 +114,140 @@ size_t AveragePowerSpectrum::add(TGraph* gr){
       }
     }
   }
-  
+
+  size_t retVal = 0;
   if(mode==AveragePowerSpectrum::kRolling){
-    storedPowSpecs.push_back(ps);
-    return storedPowSpecs.size();
+    storedPowSpecs.push_back(std::vector<Double_t> (ps, ps+numFreqs));
+    retVal = storedPowSpecs.size();
   }
   else{
     for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
-      // if(histBaseName.Contains("North")){
-      // 	std::cout << histBaseName.Data() << "\t" << freqInd << ps[freqInd] << "\t" << summedPowSpec.at(freqInd) << "\t" << count << std::endl;
-      // 	}
       summedPowSpec.at(freqInd) += ps[freqInd];
     }
-    delete [] ps;
     count++;
-    return count;
+    retVal = count;
+  }
+
+  
+  delete [] ps;
+  return retVal;
+}
+
+
+TH1D* AveragePowerSpectrum::getRayleighHistogramFromFrequencyMHz(Double_t freqMHz){
+
+  Int_t bestFreqInd=0;
+  Double_t bestFreqDiff = DBL_MAX;
+  for(Int_t freqInd=0; freqInd < numFreqs-1; freqInd++){
+    Double_t freqDiff = TMath::Abs(freqArray[freqInd] - freqMHz);
+    if(freqDiff < bestFreqDiff){
+      bestFreqInd = freqInd;
+      bestFreqDiff = freqDiff;
+    }
+  }
+  return hRayleighs.at(bestFreqInd);
+}
+
+
+TH1D* AveragePowerSpectrum::getRayleighHistogram(Int_t freqInd){
+  return hRayleighs.at(freqInd);
+}
+
+TF1* AveragePowerSpectrum::getRayleighHistogramFit(Int_t freqInd){
+  TH1D* h = hRayleighs.at(freqInd);
+  TString funcName = TString::Format("fit_%d", freqInd);
+  TF1* f = (TF1*) h->FindObject(funcName);
+  return f;
+}
+
+
+TH2D* AveragePowerSpectrum::makeRayleigh2DHistogram(){
+
+  Double_t maxVal = 0;
+  for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
+    TH1D* h = getRayleighHistogram(freqInd);
+    Double_t xMax = h->GetXaxis()->GetBinLowEdge(h->GetNbinsX()+1);
+    if(xMax > maxVal){
+      maxVal = xMax;
+    }
+  }
+
+
+  TString name = TString::Format("h2D_%s", GetName());
+  TString title = TString::Format("%s Rayleigh Distribution Summary", GetTitle());
+  
+  TH2D* h2 = new TH2D(name, title, numFreqs, 0, freqArray[numFreqs-1],
+		      NUM_AMPLITUDE_BINS, 0, maxVal);
+
+  h2->GetXaxis()->SetTitle("Frequency (MHz)");
+  h2->GetXaxis()->SetNoExponent(1);
+  h2->GetYaxis()->SetTitle("Amplitude (mV/MHz)");  
+  h2->GetYaxis()->SetNoExponent(1);
+  h2->Sumw2();
+  
+  for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
+    TH1D* h = getRayleighHistogram(freqInd);
+    for(Int_t binx=1; binx<=h->GetNbinsX(); binx++){
+      Double_t freqMHz = freqArray[freqInd];
+      Double_t amplitude = h->GetBinCenter(binx);
+      Double_t weight = h->GetBinContent(binx);      
+      
+      h2->Fill(freqMHz, amplitude, weight);
+    }
+  }
+  
+  return h2;
+  
+}
+
+void AveragePowerSpectrum::fitAllRayleighHistograms(){
+  for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
+    fitRayleighHistogram(freqInd);
   }
 }
 
-void AveragePowerSpectrum::emptyRolling(){
-  while(!storedPowSpecs.empty()){
-    delete [] storedPowSpecs.back();
-    storedPowSpecs.pop_back();    
+void AveragePowerSpectrum::fitRayleighHistogram(Int_t freqInd){
+
+  TH1D* h = getRayleighHistogram(freqInd);
+
+  if(h->Integral() > 0){ // Fit will fail with empty histogram
+
+    TString fitName = TString::Format("fit_%d", freqInd);
+    TF1* fit = hRayleighFits.at(freqInd);
+
+    if(fit==NULL){
+      fit = makeRayleighFunction(fitName,
+				 h->GetXaxis()->GetBinLowEdge(1),
+				 h->GetXaxis()->GetBinLowEdge(h->GetNbinsX()+1));
+    }
+    fit->SetParameter(1, h->GetMean());
+    h->Fit(fit, "Q0");
+    
+    h->GetFunction(fit->GetName())->ResetBit(TF1::kNotDraw);
+
+    delete fit;
   }
 }
 
-void AveragePowerSpectrum::emptyRayleighs(){
+void AveragePowerSpectrum::deleteRayleighDistributions(){
   while(!hRayleighs.empty()){
     TH1D* hTemp = hRayleighs.back();
-    hTemp->Write();
     delete hTemp;
     hRayleighs.pop_back();    
   }
 }
 
-TGraph* AveragePowerSpectrum::get(TString name, TString title){
+TGraph* AveragePowerSpectrum::makeAvePowSpecTGraph(){
 
+  TString name = TString::Format("gr_%s", GetName());
+  TString title = TString::Format("%s Average Power Spectrum", GetTitle());
+  
   std::vector<Double_t> avePowSpec(numFreqs);
+  
   if(mode==AveragePowerSpectrum::kRolling){
+
     UInt_t numEvents = storedPowSpecs.size();
+
     for(UInt_t eventInd=0; eventInd < numEvents; eventInd++){
       for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
 	avePowSpec.at(freqInd) += storedPowSpecs.at(eventInd)[freqInd];
@@ -141,13 +258,19 @@ TGraph* AveragePowerSpectrum::get(TString name, TString title){
     }
   }
   else{
+
     for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
-      // std::cerr << freqInd << "\t" << avePowSpec.at(freqInd) << "\t" << summedPowSpec.at(freqInd) << "\t" << count << std::endl;
-      Double_t norm = count > 0 ? count : 1;
-      avePowSpec.at(freqInd) = summedPowSpec.at(freqInd)/norm;
+      if(count > 0){
+	avePowSpec.at(freqInd) = summedPowSpec.at(freqInd)/count;
+      }
     }
   }
 
+  // Double_t ohms = 50;
+  for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
+    avePowSpec.at(freqInd)/=(deltaF);
+  }
+  
   TGraph* gr = new TGraph(numFreqs, freqArray, &avePowSpec[0]);
   gr->SetName(name);
   gr->SetTitle(title);
@@ -155,15 +278,15 @@ TGraph* AveragePowerSpectrum::get(TString name, TString title){
 }
 
 
-TGraph* AveragePowerSpectrum::getScaled(TString name, TString title){
+TGraph* AveragePowerSpectrum::makeAvePowSpecTGraph_dB(){
+  
+  TGraph* gr = makeAvePowSpecTGraph();
+  TString name = TString::Format("%s_dB", gr->GetName());
 
-  TGraph* gr = get(name, title);
   for(Int_t freqInd=0; freqInd < numFreqs; freqInd++){
     Double_t y = gr->GetY()[freqInd];
-    y*=1e-3;
     // gr->GetY()[freqInd] = 10*TMath::Log10(y);
     gr->GetY()[freqInd] = 10*TMath::Log10(y);
-    gr->GetX()[freqInd]*= 1e3;
   }
   return gr;
 }
