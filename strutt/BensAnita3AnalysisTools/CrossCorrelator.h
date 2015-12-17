@@ -104,7 +104,7 @@ public:
   **********************************************************************************************************/
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doFFTs(AnitaPol::AnitaPol_t pol);
-  TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);
+  TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);  
 
   /**********************************************************************************************************
   All correlation functions

@@ -59,7 +59,14 @@ TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, Pow
   return new TGraph(numFreqs, getFreqArray(len, dt), powSpec);
 }
 
+
 double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, int threadInd){
+  
+  return FancyFFTs::getPowerSpectrum(len, input, dt, normFlag, NULL, threadInd);
+}
+
+
+double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, double* outputPtr, int threadInd){
 
   /* 
      PowSpecNorm::conventionFlag determines (you guessed it) the normalization of the power spectrum.
@@ -121,7 +128,14 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
   std::complex<double>* rawFftOutputPtr = (std::complex<double>*) fComplex[key];
 
   const int powSpecLen = getNumFreqs(len);
-  double* powSpec = new double[powSpecLen];
+  
+  double* powSpec = NULL;
+  if(outputPtr==NULL){
+    powSpec = new double[powSpecLen];
+  }
+  else{
+    powSpec = outputPtr;
+  }
 
   /* Pedantry with the normalization (only half the nyquist bin if there's an even number of bins) */
   bool halfPowerNquist = (len%2)==0 ? true : false;
