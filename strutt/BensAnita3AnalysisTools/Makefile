@@ -75,8 +75,8 @@ endif
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 DICT = benToolsDict
-LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h
+LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTsWisdomManager.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTsWisdomManager.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar testOutputConvention testAveragePowerSpectrum
 
 #Now the bits we're actually compiling

@@ -22,8 +22,6 @@
 // ROOT things
 #include "TGraph.h"
 #include "TH2D.h"
-#include "Math/Interpolator.h"
-#include "Math/InterpolationTypes.h"
 #include "TThread.h"
 
 // standard c++ things
