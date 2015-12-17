@@ -27,9 +27,6 @@ CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
   }
-  if(readDeltaTsFileSuccess!=0){
-    writeDeltaTsFile();
-  }
 }
 
 /*!
@@ -70,7 +67,6 @@ void CrossCorrelator::initializeVariables(){
   // std::cout << this << std::endl;
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
 
-  TString positionString;
   // std::cout << "pol\tant\trArray\tzArray\tphiArray" << std::endl;
   for(Int_t pol=0; pol < NUM_POL; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
@@ -78,19 +74,13 @@ void CrossCorrelator::initializeVariables(){
       zArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
       phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
 
-      positionString += TString::Format("%lf %lf %lf ", rArray[pol].at(ant), zArray[pol].at(ant), phiArrayDeg[pol].at(ant));
-
       Int_t surf, chan, ant2;
       geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, AnitaPol::AnitaPol_t (pol), surf, chan, ant2);
       std::cout << pol << "\t" << ant << "\t" << rArray[pol].at(ant) << "\t" << zArray[pol].at(ant) << "\t" << phiArrayDeg[pol].at(ant) << "\t" << cal->relativePhaseCenterToAmpaDelays[surf][chan] << std::endl;
     }
   }
-  positionHash = positionString.Hash();
-  readDeltaTsFileSuccess = readDeltaTsFile();
-  if(readDeltaTsFileSuccess!=0){
-    fillDeltaTLookup();
-  }
-  // printInfo();
+
+  fillDeltaTLookup();
 
   mapModeNames[kGlobal] = "Global";
   mapModeNames[kTriggered] = "Triggered";
@@ -122,7 +112,6 @@ void CrossCorrelator::initializeVariables(){
 void CrossCorrelator::printInfo(){
   std::cerr << __PRETTY_FUNCTION__ << std::endl;
   std::cerr << "\tupsample factor = " << UPSAMPLE_FACTOR << std::endl;
-  std::cerr << "\treadDeltaTsFileSuccess = " << readDeltaTsFileSuccess << std::endl;
   std::cerr << "\tdeltaT max = " << deltaTMax << std::endl;
   std::cerr << "\tdeltaT min = " << deltaTMin << std::endl;
   std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
@@ -474,7 +463,7 @@ void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t 
       donePadding.at(ant1)=1;
     }
     if(donePadding.at(ant2)==0){	
-      FancyFFTs::zeroPadFFT(ffts[pol][ant2], fftsPadded[pol][ant1], numFreqs, numFreqsPadded);
+      FancyFFTs::zeroPadFFT(ffts[pol][ant2], fftsPadded[pol][ant2], numFreqs, numFreqsPadded);
       donePadding.at(ant2)=1;	  
     }
   }
@@ -1078,7 +1067,7 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 
 	// If we are in zoomed out & plane wave mode then use the lookup table for a big speedup
 	if(zoomMode==kZoomedOut && rWave==0){
-	  offset = deltaTs[pol][phiBin][thetaBin][combo];
+          offset = deltaTs[pol][phiBin][thetaBin][combo];
 	  offset = offset < 0 ? offset + numSamples : offset;
 	  correlations += crossCorrelations[pol][combo][offset];
 	}
@@ -1258,6 +1247,7 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 
 	// If we are in zoomed out & plane wave mode then use the lookup table for a big speedup
 	if(zoomMode==kZoomedOut && rWave==0){
+	  offset = ptr->deltaTs[pol][phiBin][thetaBin][combo];
 	  offset = offset < 0 ? offset + ptr->numSamples : offset;
 	  correlations += ptr->crossCorrelations[pol][combo][offset];
 	}
@@ -1567,38 +1557,4 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
   
   return grCoherent;
   
-}
-
-
-
-
-Int_t CrossCorrelator::readDeltaTsFile(){
-  /* Returns 0 on success */
-
-  char dtsFileName[FILENAME_MAX];
-  sprintf(dtsFileName, "/tmp/crossCorrelator%u.dts", positionHash);
-  Int_t success = 0;
-  FILE* dtsFile = fopen(dtsFileName, "r");
-  if(dtsFile != NULL){
-    UInt_t numBytes = sizeof(dtIndex_t)*NUM_POL*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA*NUM_COMBOS;
-    fread(deltaTs,1,numBytes,dtsFile);
-    fclose(dtsFile);
-  }
-  else{
-    success = 1;
-  }
-  return success;
-}
-
-
-void CrossCorrelator::writeDeltaTsFile(){
-  /* Write sets of deltaTs into a file to try and speed up class initialization by reading it */
-
-  char dtsFileName[FILENAME_MAX];
-  sprintf(dtsFileName, "/tmp/crossCorrelator%u.dts", positionHash);
-  FILE* dtsFile = fopen(dtsFileName, "w");
-  UInt_t numBytes = sizeof(dtIndex_t)*NUM_POL*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA*NUM_COMBOS;
-  fwrite(deltaTs,numBytes, 1, dtsFile);
-  fflush(dtsFile);
-  fclose(dtsFile);
 }
