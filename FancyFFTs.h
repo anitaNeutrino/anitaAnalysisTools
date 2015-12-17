@@ -52,7 +52,13 @@ public:
 
   /* Real-to-complex and complex-to real functions */
   static std::complex<double>* doFFT(Int_t len, double* input, bool copyOutputToNewArray, int threadInd=0);
+  static std::complex<double>* doFFT(Int_t len, double* input, std::complex<double>* output, int threadInd=0);
+  static std::complex<double>* doFFT(Int_t len, double* input, std::complex<double>* output,
+				     bool copyOutputToNewArray, int threadInd=0);  
   static double* doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
+  static double* doInvFFT(int len, std::complex<double>* input, double* output, int threadInd=0);  
+  static double* doInvFFT(int len, std::complex<double>* input, double* output,
+			  bool copyOutputToNewArray, int threadInd=0);
 
   static double* getPowerSpectrum(int len, double* input, double dt, 
 				  PowSpecNorm::conventionFlag normFlag,
@@ -69,8 +75,9 @@ public:
   static int getNumFreqs(int len);
   static int printListOfKeys();
   static double* crossCorrelate(int len, double* v1, double* v2, int threadInd=0);
+  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2, int threadInd=0);
   static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
-				int threadInd=0);
+				double* output, int threadInd=0);
   static int extendToPowerOfTwo(int len);
   static std::complex<double>* zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded);
 

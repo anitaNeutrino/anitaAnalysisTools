@@ -34,6 +34,7 @@
  
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
+#define UPSAMPLE_FACTOR 40
 
 // Image definitions
 #define NUM_BINS_THETA 150
@@ -227,7 +228,7 @@ public:
   void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
-  void deleteAllFFTs(AnitaPol::AnitaPol_t pol);
+  // void deleteAllFFTs(AnitaPol::AnitaPol_t pol);
   void deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol);
 
 
@@ -259,11 +260,13 @@ public:
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; ///< Depends on L3 trigger for global image
   std::map<UInt_t, std::vector<Int_t> > combosToUseTriggered; ///< Depends on L3 trigger for triggered image  
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
-  Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
-  Double_t* crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS]; ///< Arrays for upsampled cross correlations
+  // Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
+  // Double_t* crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS]; ///< Arrays for upsampled cross correlations
+  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; ///< Arrays for cross correlations
+  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; ///< Arrays for upsampled cross correlations
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; ///< Evenly resampled TGraphs
-  std::complex<Double_t>* ffts[NUM_POL][NUM_SEAVEYS]; ///< FFTs of TGraphs
+  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; ///< FFTs of TGraphs
   std::complex<Double_t>* fftsPadded[NUM_POL][NUM_SEAVEYS]; ///< Padded with zeros.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
   std::vector<Double_t> rArray[NUM_POL]; ///< Vector of antenna radial positions
