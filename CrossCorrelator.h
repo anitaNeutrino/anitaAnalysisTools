@@ -49,8 +49,6 @@
 #define THETA_RANGE_ZOOM 6.4
 #define PHI_RANGE_ZOOM 6.4
 
-#define NUM_CORRS_TO_CACHE 16
-
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
 #define NUM_RING AnitaRing::kNotARing
@@ -61,9 +59,6 @@
 #define SPEED_OF_LIGHT 2.99792458e8
 
 #define ALL_PHI_TRIGS 0xffff
-
-
-
 
 /*! \class CrossCorrelator
 \brief Pass CrossCorrelator an event and get interferometric maps with a single function.
@@ -231,7 +226,7 @@ public:
   // void deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
   // void deleteAllFFTs(AnitaPol::AnitaPol_t pol);
-  void deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol);
+  // void deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol);
 
 
   /**********************************************************************************************************
@@ -247,6 +242,17 @@ public:
   /**********************************************************************************************************
   Variables
   **********************************************************************************************************/
+  typedef Char_t dtIndex_t;
+  dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
+  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; ///< Arrays for upsampled cross correlations
+  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; ///< Arrays for cross correlations
+  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*UPSAMPLE_FACTOR+1]; ///< Padded with zeros.
+  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; ///< FFTs of TGraphs
+  TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
+  TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; ///< Evenly resampled TGraphs
+  Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
+  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
+  
   UInt_t eventNumber[NUM_POL]; ///< For tracking event number
   UInt_t lastEventNormalized[NUM_POL]; ///< Prevents cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; ///< ANITA-3 => 1./2.6 ns
@@ -261,33 +267,16 @@ public:
   std::vector<Int_t> comboToAnt2s; ///< Vector mapping combination index to ant2
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; ///< Depends on L3 trigger for global image
   std::map<UInt_t, std::vector<Int_t> > combosToUseTriggered; ///< Depends on L3 trigger for triggered image  
-  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; ///< Array mapping ant1+ant2 to combo index
   // Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
   // Double_t* crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS]; ///< Arrays for upsampled cross correlations
-  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; ///< Arrays for cross correlations
-  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; ///< Arrays for upsampled cross correlations
-  TGraph* grs[NUM_POL][NUM_SEAVEYS]; ///< Raw waveforms obtained from a UsefulAnitaEvent
-  TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; ///< Evenly resampled TGraphs
-  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; ///< FFTs of TGraphs
-  std::complex<Double_t>* fftsPadded[NUM_POL][NUM_SEAVEYS]; ///< Padded with zeros.
-  Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; ///< RMS of interpolation
+
   std::vector<Double_t> rArray[NUM_POL]; ///< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg[NUM_POL]; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; ///< Vector of antenna heights
 
-
-  void updateCache(Int_t polInd, Int_t combo, Int_t offset, Int_t numSamples);
-  Int_t cacheOffsets[NUM_COMBOS];
-  Int_t cachePols[NUM_COMBOS];
-  Double_t corrCache[NUM_COMBOS*NUM_CORRS_TO_CACHE];
-
-  typedef Char_t dtIndex_t;
-  dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
-
   // pairs for making an image
   Int_t deltaTMax;
   Int_t deltaTMin;
-
 
   AnitaPol::AnitaPol_t threadPol;
   UInt_t threadL3TrigPattern;
