@@ -1424,19 +1424,26 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
     Double_t newZ = geom->zPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dz;
     Double_t newT = dt;
 
-    if(newPhi >= TMath::Pi()){
+    if(newPhi >= TMath::TwoPi()){
       newPhi -= TMath::TwoPi();
     }
-    else if(newPhi < -TMath::Pi()){
+    else if(newPhi < 0){
       newPhi += TMath::TwoPi();
     }
-    
+
     geom->rPhaseCentreFromVerticalHorn[ant][pol] = newR;
     geom->azPhaseCentreFromVerticalHorn[ant][pol] = newPhi;
     geom->zPhaseCentreFromVerticalHorn[ant][pol] = newZ;
     cal->relativePhaseCenterToAmpaDelays[surf][chan] = newT;
 
-           
+    // if(ant==47){
+    //   std::cout << "inside CC" << "\t";
+    //   std::cout << geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] << "\t"
+    // 		<< dPhiRad << "\t" << geom->azPhaseCentreFromVerticalHorn[ant][pol]
+    // 		<< "\tNOT " << geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] - dPhiRad
+    // 		<< std::endl;
+    //   std::cout << "geom = " << geom << std::endl;
+    // }
   }
   return 0;
 }
