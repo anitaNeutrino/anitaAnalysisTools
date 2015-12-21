@@ -233,8 +233,8 @@ public:
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
 					 Int_t ant1, Int_t ant2);
-  Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
-  Int_t validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
+  static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
+  static Int_t validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   
   /**********************************************************************************************************
   Variables
