@@ -235,6 +235,7 @@ public:
 					 Int_t ant1, Int_t ant2);
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   static Int_t validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
+  void insertPhotogrammetryGeometry();
   
   /**********************************************************************************************************
   Variables
