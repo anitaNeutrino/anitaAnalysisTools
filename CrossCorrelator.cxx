@@ -629,16 +629,58 @@ Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1
 
 // Moving parts...
 // tan(-thetaW) NUM_BINS_THETA
+// Part1/2 this is adding up two numbers
+//    1st bit... zArray[pol][ant1]*tanThetaW  NUM_POL*NUM_SEAVEYS*NUM_BINS_THETA
+//    2nd bit... rArray[pol][ant1]*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol][ant]) NUM_POL*NUM_SEAVEYS*NUM_BINS_PHI*NUM_PHI
 // cos(-thetaW) NUM_BINS_THETA
-// cos(phiWave * TMath::DegToRad()*phiArray[pol].at(ant) NUM_BINS_PHI*NUM_POL*NUM_ANTS
-// 
 
-// Double_t tanThetaWave[NUM_BINS_THETA];
+// So going from an array of size ...
+// [NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; sizeof(dtIndex) (char)
+// 2 * 16 * 25 * 150 * 336 = 40320000 = 4e7 * 1 byte = 47 MB.
 
-// Int_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-// 					     Double_t phiWave, Double_t thetaWave){
+// To
+// + 150
+// + 2 * 48 * 150
+// + 2 * 48 * 25*16
+// + 150
+// =  150   +   2 * 48 * 150   +   2 * 48 * 25*16  +   150 = 53100 = 5.31e5 * sizeof(dtIndex) * 
+// #define NUM_COMBOS 336
+// #define NUM_THREADS 4
+ 
+// // Typical number of samples in waveform
+// #define NUM_SAMPLES 256
+// #define UPSAMPLE_FACTOR 40
+
+// // // Image definitions
+// #define NUM_BINS_THETA 150
+// #define NUM_BINS_PHI 25
+
+
+// Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+// 						Double_t phiWave, Double_t thetaWave){
+  
+  
   
 // }
+
+
+
+
+void CrossCorrelator::insertPhotogrammetryGeometry(){
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnita3Numbers(1);
+  for(Int_t pol=0; pol < NUM_POL; pol++){
+    for(int ant=0; ant<NUM_SEAVEYS; ant++){
+      rArray[pol].at(ant) = geom->getAntR(ant, AnitaPol::AnitaPol_t(pol));
+      zArray[pol].at(ant) = geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol));
+      phiArrayDeg[pol].at(ant) = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg();
+    }
+  }
+  fillDeltaTLookup();
+  geom->useKurtAnita3Numbers(0);
+}
+
+
 
 
 Int_t CrossCorrelator::getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave, Double_t rWave){
