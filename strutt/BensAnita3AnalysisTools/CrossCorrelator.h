@@ -27,7 +27,6 @@
 // standard c++ things
 #include <iostream>
 
-
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
 #define NUM_THREADS 4
@@ -44,8 +43,15 @@
 
 #define NUM_BINS_THETA_ZOOM 63
 #define NUM_BINS_PHI_ZOOM 70
-#define THETA_RANGE_ZOOM 6.3
-#define PHI_RANGE_ZOOM 6.3
+
+#define ZOOM_BIN_SIZE_PHI 0.1
+#define ZOOM_BIN_SIZE_THETA 0.1
+
+#define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
+#define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
+
+#define NUM_BINS_PHI_ZOOM_TOTAL Int_t(PHI_RANGE*NUM_PHI*(NUM_BINS_PHI_ZOOM/PHI_RANGE_ZOOM))
+#define NUM_BINS_THETA_ZOOM_TOTAL Int_t(THETA_RANGE*(NUM_BINS_THETA_ZOOM/THETA_RANGE_ZOOM))
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -142,6 +148,8 @@ public:
   **********************************************************************************************************/
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
+  Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+				 Int_t phiIndex, Int_t thetaIndex);
   Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				   Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
@@ -272,6 +280,10 @@ public:
   std::vector<Double_t> phiArrayDeg[NUM_POL]; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; ///< Vector of antenna heights
 
+  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
+  Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
+  Double_t zoomedCosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS];
+  
   // pairs for making an image
   Int_t deltaTMax;
   Int_t deltaTMin;

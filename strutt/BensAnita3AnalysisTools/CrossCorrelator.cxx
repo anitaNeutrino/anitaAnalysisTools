@@ -8,7 +8,6 @@
 
 #include "CrossCorrelator.h"
 
-
 /************************************************************************************************************
 Constructor and destructor functions
 ************************************************************************************************************/
@@ -656,13 +655,16 @@ Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1
 // #define NUM_BINS_PHI 25
 
 
-// Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-// 						Double_t phiWave, Double_t thetaWave){
+Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+						Int_t phiIndex, Int_t thetaIndex){
   
-  
-  
-// }
-
+  Double_t tanThetaW = zoomedTanThetaWaves[thetaIndex];
+  Double_t part1 = zArray[pol].at(ant1)*tanThetaW - zoomedCosPartLookup[phiIndex][pol][ant1];
+  Double_t part2 = zArray[pol].at(ant2)*tanThetaW - zoomedCosPartLookup[phiIndex][pol][ant2];
+  // Double_t tdiff = 1e9*((cos(-thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns 
+  Double_t tdiff = 1e9*((zoomedCosThetaWaves[thetaIndex] * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns 
+  return tdiff;
+}
 
 
 
@@ -678,6 +680,7 @@ void CrossCorrelator::insertPhotogrammetryGeometry(){
   }
   fillDeltaTLookup();
   geom->useKurtAnita3Numbers(0);
+  
 }
 
 
@@ -783,6 +786,23 @@ void CrossCorrelator::fillDeltaTLookup(){
       }
     }
   }
+
+  for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
+    Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA_ZOOM_TOTAL/2)*ZOOM_BIN_SIZE_THETA;
+    Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
+    zoomedTanThetaWaves[thetaIndex] = tan(-thetaWave);
+    zoomedCosThetaWaves[thetaIndex] = cos(-thetaWave);
+  }
+
+  for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
+    Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
+    for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
+      for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+	zoomedCosPartLookup[phiIndex][pol][ant] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
+	 // = cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol][ant]);
+      }
+    }
+  }
 }
 
 
@@ -795,7 +815,6 @@ Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
   ant2InRange = ant2InRange || TMath::Abs(phiSector - (ant2%NUM_PHI))>=(NUM_PHI-DELTA_PHI_SECT);  
 
   return (ant1InRange && ant2InRange);
-  
 }
     
 void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern){
@@ -890,6 +909,11 @@ TH2D* CrossCorrelator::makeBlankZoomedImage(TString name, TString title,
 					    Double_t zoomCenterPhiDeg,
 					    Double_t zoomCenterThetaDeg){
 
+  // std::cout << zoomCenterPhiDeg << "\t" << zoomCenterThetaDeg << "\t";
+  zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
+  zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
+  // std::cout << zoomCenterPhiDeg << "\t" << zoomCenterThetaDeg << "\t" << std::endl;
+  
   Double_t phiMin = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
   Double_t phiMax = zoomCenterPhiDeg + PHI_RANGE_ZOOM/2;
   Double_t thetaMin = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
@@ -979,7 +1003,7 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg,Double_t zoomCenterThetaDeg){
 
-  Double_t imagePeak, peakPhiDeg, peakThetaDeg;    
+  Double_t imagePeak, peakPhiDeg, peakThetaDeg;
   return makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
   			 l3TrigPattern, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
@@ -1059,6 +1083,8 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
     combosToUse = combosToUseGlobal[0];
   }
   
+  Int_t phiZoomBase = hImage->GetXaxis()->GetBinLowEdge(1)*(NUM_BINS_PHI_ZOOM_TOTAL/(NUM_PHI*PHI_RANGE));
+  Int_t thetaZoomBase = (hImage->GetYaxis()->GetBinLowEdge(1) + THETA_RANGE/2)*(NUM_BINS_THETA_ZOOM_TOTAL/THETA_RANGE);
   
   for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
@@ -1086,7 +1112,10 @@ TH2D* CrossCorrelator::makeImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Doubl
 	else if(zoomMode==kZoomedIn && rWave==0){
 	  Int_t ant1 = comboToAnt1s.at(combo);
 	  Int_t ant2 = comboToAnt2s.at(combo);
-	  Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	  // Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	  Double_t deltaT = getDeltaTExpectedFast(pol, ant1, ant2,
+						  phiBin + phiZoomBase,
+						  thetaBin + thetaZoomBase);	  
 	  offset = TMath::Nint(deltaT/correlationDeltaT);
 	  offset = offset < 0 ? offset + numSamplesUpsampled : offset;
 	  correlations += crossCorrelationsUpsampled[pol][combo][offset];
@@ -1184,7 +1213,7 @@ TGraph* CrossCorrelator::makeTrigPatternGraph(TString name, UShort_t l3TrigPatte
   numPoints++;
 
   // Loop over extended range -1 to NUM_PHI+1
-  for(int phiSect=-1; phiSect<NUM_PHI+1; phiSect++){
+  for(Int_t phiSect=-1; phiSect<NUM_PHI+1; phiSect++){
 
     
     Int_t phiSectBit = phiSect;
@@ -1240,6 +1269,15 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     combosToUse = ptr->combosToUseTriggered[ptr->threadL3TrigPattern];
   }
 
+  Int_t phiZoomBase = hImage->GetXaxis()->GetBinLowEdge(1)/ZOOM_BIN_SIZE_PHI;
+  Int_t thetaZoomBase = hImage->GetYaxis()->GetBinLowEdge(1)/ZOOM_BIN_SIZE_THETA + NUM_BINS_THETA_ZOOM_TOTAL/2;
+
+  // if(zoomMode==kZoomedIn){
+  //   TThread::Lock();
+  //   std::cout << threadInd << "\t" << phiZoomBase << "\t" << thetaZoomBase << "\t" << hImage->GetXaxis()->GetBinLowEdge(1) << "\t" << hImage->GetYaxis()->GetBinLowEdge(1) << "\t" << NUM_BINS_PHI_ZOOM_TOTAL << "\t" << NUM_PHI << "\t" << PHI_RANGE << std::endl;
+  //   TThread::UnLock();
+  // }
+  
   for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
     Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
     if(mapMode==kGlobal){
@@ -1247,9 +1285,18 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     }
     
     Double_t phiWave = hImage->GetXaxis()->GetBinLowEdge(phiBin+1)*TMath::DegToRad();
+
+    Int_t zoomPhiInd = phiZoomBase + phiBin;
+    zoomPhiInd = zoomPhiInd < 0 ? zoomPhiInd + NUM_BINS_PHI_ZOOM_TOTAL : zoomPhiInd;
+    zoomPhiInd = zoomPhiInd >= NUM_BINS_PHI_ZOOM_TOTAL ? zoomPhiInd - NUM_BINS_PHI_ZOOM_TOTAL : zoomPhiInd;  
+
     for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
       Double_t thetaWave = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1)*TMath::DegToRad();
 
+      Int_t zoomThetaInd = thetaZoomBase + thetaBin;
+      zoomThetaInd = zoomThetaInd < 0 ? zoomThetaInd + NUM_BINS_THETA_ZOOM_TOTAL : zoomThetaInd;
+      zoomThetaInd = zoomThetaInd >= NUM_BINS_THETA_ZOOM_TOTAL ? zoomThetaInd - NUM_BINS_THETA_ZOOM_TOTAL : zoomThetaInd;
+      
       Double_t correlations = 0;
       for(UInt_t comboInd=0; comboInd<combosToUse.size(); comboInd++){
 	Int_t combo = combosToUse.at(comboInd);
@@ -1262,10 +1309,20 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	  correlations += ptr->crossCorrelations[pol][combo][offset];
 	}
 	// If we are in zoomed in & plane wave mode then calculate
+	// Now using Fast function, this has some intermediate caching of the deltaT calc.
 	else if(zoomMode==kZoomedIn && rWave==0){
 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
-	  Double_t deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	  // Double_t deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+
+	  
+	  // TThread::Lock();
+	  // std::cout << deltaT << "\t";
+	  Double_t deltaT = ptr->getDeltaTExpectedFast(pol, ant1, ant2,
+						       zoomPhiInd,
+						       zoomThetaInd);
+	  // std::cout << deltaT << "\t" << std::endl;
+	  // TThread::UnLock();
 	  offset = TMath::Nint(deltaT/ptr->correlationDeltaT);
 	  offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
 	  correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
@@ -1511,7 +1568,7 @@ void CrossCorrelator::correlateEventTest(Double_t phiDegSource, Double_t thetaDe
 							    phiDegSource*TMath::DegToRad(), 
 							    thetaDegSource*TMath::DegToRad(), 
 							    rSource);
-      for(int samp=0; samp<numSamples; samp++){
+      for(Int_t samp=0; samp<numSamples; samp++){
 	newTimes[samp] = nominalSamplingDeltaT*samp;
 	if(samp==dt){
 	  newVs[samp] = numSamples;
