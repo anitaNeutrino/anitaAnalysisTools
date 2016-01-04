@@ -76,7 +76,7 @@ public:
   std::vector<std::vector<Double_t> > storedPowSpecs; ///< vector
 
   
-  ClassDef(AveragePowerSpectrum, 1);
+  ClassDef(AveragePowerSpectrum, 2);
 };
 
   
