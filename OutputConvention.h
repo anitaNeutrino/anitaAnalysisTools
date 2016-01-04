@@ -28,7 +28,7 @@ public:
   ~OutputConvention();
 
   TString getOutputFileName();
-  void setSubdirectory(TString subDirName);
+  // void setSubdirectory(TString subDirName);
   
 private:
   int argc;
@@ -37,7 +37,7 @@ private:
   TString outputDir;
   TString dateTimeSuffix;
   TString outFileName;
-  TString subDir;
+  // TString subDir;
 
   
   TString getDateTimeSuffix();

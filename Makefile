@@ -60,12 +60,6 @@ endif
 
 
 
-# I use git svn and am too infrequent a commiter by nature...
-# Use this flag to prompt a local commit after every compile
-# (You probably don't actually want to commit after every compile, but the prompt is nice)
-#FORCE_GIT=1 
-
-
 
 # For the first time, I've come across something that changed across ROOT versions...
 # So now we have to hack in this compile time macro.
@@ -83,22 +77,19 @@ endif
 #ROOT stuff
 ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 DICT = benToolsDict
-LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h
+LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o AnitaAveragePowerSpectrum.o
+CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h AnitaAveragePowerSpectrum.h
 BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar testOutputConvention testAveragePowerSpectrum
 
 #Now the bits we're actually compiling
-all: $(ROOT_LIBRARY) $(BINARIES) commit
+all: $(ROOT_LIBRARY) $(BINARIES) 
 
-.PHONY: install commit clean docs
+.PHONY: install clean docs
 
 $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
 	@echo $<
 	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) -o $@
-ifdef FORCE_GIT
-	-@if test $$? == 0; then git add $<; fi
-endif
 
 docs: Doxyfile
 	doxygen Doxyfile
@@ -124,9 +115,6 @@ endif
 %.$(OBJSUF) : %.$(SRCSUF) %.h
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-ifdef FORCE_GIT	
-	@if test $$? == 0; then git add $^; fi
-endif
 %.$(OBJSUF) : %.C
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
@@ -144,12 +132,6 @@ clean:
 	@rm -f $(LIBRARY)
 	@rm -f $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY))	
 	@rm -f $(BINARIES) 
-
-commit: 
-ifdef FORCE_GIT
-	-@git add Makefile
-	-@git commit
-endif
 
 install: $(ROOT_LIBRARY)
 ifeq ($(PLATFORM),macosx)

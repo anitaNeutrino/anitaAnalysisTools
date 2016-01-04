@@ -7,7 +7,7 @@ OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
   outFileName = "";
   dateTimeSuffix = "";
   outputDir = "";
-  subDir = "";
+  // subDir = "";
 }
 
 OutputConvention::~OutputConvention(){
@@ -15,9 +15,9 @@ OutputConvention::~OutputConvention(){
 }
 
 
-void OutputConvention::setSubdirectory(TString subDirName){
-  subDir = subDirName;
-}
+// void OutputConvention::setSubdirectory(TString subDirName){
+//   subDir = subDirName;
+// }
 
 
 TString OutputConvention::getOutputFileName(){
@@ -112,25 +112,25 @@ TString OutputConvention::getOutputDir(){
     outputDir += TString::Format("%s/", outputDirPoss); // Add trailing forward slash...
   }
 
-  TString outputDirPlusSubDir = outputDir;
-  if(subDir!=""){
-    outputDirPlusSubDir += subDir + "/";
-  }
+  // TString outputDirPlusSubDir = outputDir;
+  // if(subDir!=""){
+  //   outputDirPlusSubDir += subDir + "/";
+  // }
 
-  // Try to make output dir plus subDir
-  int status = mkdir(outputDirPlusSubDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-  if(status!=0 && errno!=EEXIST){
-    // If that fails try to make output dir only
-    status = mkdir(outputDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  // // Try to make output dir plus subDir
+  // int status = mkdir(outputDirPlusSubDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  // if(status!=0 && errno!=EEXIST){
+  //   // If that fails try to make output dir only
+  //   status = mkdir(outputDir.Data() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-    if(status!=0 && errno!=EEXIST){
-      // If that fails then give up and set output dir to nothing (i.e. the pwd)
-      outputDir = "";
-    }
-  }
-  else{ // If subdir was fine then we can return it.
-    outputDir = outputDirPlusSubDir;
-  }
+  //   if(status!=0 && errno!=EEXIST){
+  //     // If that fails then give up and set output dir to nothing (i.e. the pwd)
+  //     outputDir = "";
+  //   }
+  // }
+  // else{ // If subdir was fine then we can return it.
+  //   outputDir = outputDirPlusSubDir;
+  // }
 
   return outputDir;
 }
