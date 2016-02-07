@@ -6,7 +6,7 @@
 include Makefile.arch
 
 #If you have the 64-bit version of fftw installed, try this to help CINT out.
-#CINTFLAGS=-DFFTW_64_BIT
+CINTFLAGS=-DFFTW_64_BIT
 
 #Site Specific  Flags
 SYSINCLUDES	= -I/usr/local/include
@@ -124,7 +124,7 @@ $(DICT).C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
 #		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
-		rootcint $@ -c -p $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
+		rootcint $@ -c -p $(CINTFLAGS) $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
 
 clean:
 	@rm -f *Dict*

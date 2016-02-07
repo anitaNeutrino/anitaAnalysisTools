@@ -194,13 +194,13 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<doub
   if(copyOutputToNewArray==true){
     int numFreqs = getNumFreqs(len);
     std::complex<double>* theOutput = output;
-    if(output==NULL){
+    if(theOutput==NULL){
       theOutput = new std::complex<double>[numFreqs];
     }
     
     /* Seems to work, see http://www.fftw.org/doc/Complex-numbers.html */
-    memcpy(output, fComplex[key], sizeof(fftw_complex)*numFreqs);
-    return output;
+    memcpy(theOutput, fComplex[key], sizeof(fftw_complex)*numFreqs);
+    return theOutput;
   }
   else{
     return NULL;
@@ -338,7 +338,7 @@ int FancyFFTs::printListOfKeys(){
 
 double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd){
   /* 
-     Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
+     Cross correlation is the same as bin-by-bin multiplication in the frequency domain (with a conjugation).
      Will assume lengths are the same for now.
   */
 
@@ -358,10 +358,11 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
   for(int i=0; i<numFreqs; i++){
     tempVals1[i] *= std::conj(tempVals2[i]);
   }
+
+  delete [] tempVals2;
   
   /* Product back to time domain */
   double* crossCorr = doInvFFT(len, tempVals1, true, threadInd);
-  delete [] tempVals1;
 
   /* 
      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
