@@ -903,12 +903,12 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
 
 void RootTools::saveCanvas(TCanvas* c, TString fileName){
 
-  std::cout << "Saving this canvas as an .eps, .png, and .root file..." << std::endl;
+  std::cout << "Saving this canvas as an .eps, .png, and .C file..." << std::endl;
   TString fName = fileName + ".eps";
   c->SaveAs(fName);
   fName = fileName + ".png";
   c->SaveAs(fName);
-  fName = fileName + ".root";
+  fName = fileName + ".C";
   c->SaveAs(fName);  
   std::cout << "...Complete!" << std::endl;
   c->Update();
@@ -1068,4 +1068,77 @@ TChain* RootTools::getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat)
   }
   c->SetBranchAddress("pat", &pat);
   return c;
+}
+
+
+/*!
+  \brief Use polarization and index to get the antenna name (1st phi-sector called 1, not 0).
+  \param pol is the polarization
+  \param antInd is the antenna index (counting from 0)
+*/
+
+TString RootTools::getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd){
+  // Assumes antInd starts at 0. Returns the name w/ +1
+  Int_t phi = (antInd % NUM_PHI) + 1;
+  
+  Int_t ring = antInd / NUM_PHI;
+
+  TString antName = TString::Format("%d", phi);
+  
+  antName += AnitaRing::ringAsChar(AnitaRing::AnitaRing_t(ring));
+  antName += AnitaPol::polAsChar(pol);  
+  
+  return antName;
+}
+
+
+/*!
+  \brief Gets the color a fraction through the current palette.
+  \param index is the numerator of the fraction
+  \param maxVal is the denominator of the fraction
+*/
+Int_t RootTools::getColorFracThroughPalette(Int_t index, Int_t maxVal){
+  return gStyle->GetColorPalette(index*Int_t(255./maxVal));  
+}
+
+
+/*!
+  \brief Draw histograms on the same (new) canvas with nice stats boxes
+  \param numHists is, as you might guess, the number of histograms (the lengths of the array hs[])
+  \param hs[] is the array of pointers to TH1Ds to be plotted
+  \param drawOpt is the draw option in ROOT, e.g. "e" for error bars.
+  \param statsOpt sets the stats to be displayed. I usually use "mre" for mean, RMS and entries.
+*/
+
+TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption){
+
+  gStyle->SetOptStat(statsOption);
+  TCanvas* theCan = new TCanvas();
+
+  Double_t boxSize = 0.2; // In normalized coordinates
+  const Int_t maxNumBoxes = 1./boxSize;
+  
+  Int_t divisor = (numHists/maxNumBoxes) + 1; 
+
+  // This is dumb and will get messy If I have more than 2*maxnumBoxes
+  boxSize/=divisor;
+  
+  for(Int_t histInd=0; histInd < numHists; histInd++){
+
+    TString thisDrawOpt = histInd == 0 ? drawOpt : drawOpt+"sames";
+    hs[histInd]->Draw(thisDrawOpt);
+
+    theCan->Update();
+    TPaveStats* sbox = (TPaveStats*) hs[histInd]->FindObject("stats");
+    sbox->SetTextColor(hs[histInd]->GetLineColor());
+    sbox->SetX1NDC(0.8);
+    sbox->SetY1NDC(1 - (histInd+1)*boxSize);
+    sbox->SetX2NDC(0.98);
+    sbox->SetY2NDC(0.98 - histInd*boxSize);
+  }
+
+  theCan->Update();
+  return theCan;
+  
+
 }
