@@ -34,6 +34,7 @@
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
 #define UPSAMPLE_FACTOR 40
+#define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 
 // // Image definitions
 #define NUM_BINS_THETA 150
@@ -307,6 +308,8 @@ public:
     CrossCorrelator* ptr;
   };
 
+  Bool_t kZeroChannel16BH;
+  
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
