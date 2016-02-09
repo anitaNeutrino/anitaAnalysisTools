@@ -11,8 +11,10 @@
 #define ANITAAVERAGEPOWERSPECTRUM_H
 
 #include "AveragePowerSpectrum.h"
+#include "RootTools.h"
 #include "AnitaConventions.h"
-
+#include "TMultiGraph.h"
+#include "TStyle.h"
 
 class AnitaAveragePowerSpectrum : public TNamed {
 
@@ -20,8 +22,7 @@ public:
 
   // Copied from AveragePowerSpectrum.h
   AnitaAveragePowerSpectrum();
-  AnitaAveragePowerSpectrum(TString name, TString title, Double_t dt, Int_t n,
-			    AveragePowerSpectrum::mode_t powSpecMode=AveragePowerSpectrum::kRolling);
+  AnitaAveragePowerSpectrum(TString name, TString title);
 
   ~AnitaAveragePowerSpectrum();
   
@@ -29,17 +30,15 @@ public:
   void add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph* gr);
   void reset();
 
+  // Produce summary information
+  TMultiGraph* drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring);
   
 private:
   AveragePowerSpectrum* avePowSpecs[AnitaPol::kNotAPol][NUM_SEAVEYS];  
   void initAllAvePowSpecs();
   void deleteAllAvePowSpecs();
   
-  Double_t deltaT;
-  Int_t numSamps;
-  AveragePowerSpectrum::mode_t mode;
-  
-  ClassDef(AnitaAveragePowerSpectrum, 2);
+  ClassDef(AnitaAveragePowerSpectrum, 8);
 };
 
   

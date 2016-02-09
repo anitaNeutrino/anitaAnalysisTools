@@ -5,9 +5,6 @@ AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(){
 
   fName = "AnitaAveragePowerSpectrum";
   fTitle = "Anita Average Power Spectrum";
-  mode = AveragePowerSpectrum::kRolling;
-  numSamps = 256;
-  deltaT = 1./2.6;
   
   // Default constructor, just zero internals
   for(Int_t polInd = 0; polInd < AnitaPol::kNotAPol; polInd++){
@@ -19,15 +16,11 @@ AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(){
 }
 
 
-AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(TString name, TString title, Double_t dt, Int_t n,
-						     AveragePowerSpectrum::mode_t powSpecMode){
+AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(TString name, TString title){
 
   // Record initialization options for contained AveragePowerSpectra
   fName = name;
   fTitle = title;
-  mode = powSpecMode;
-  numSamps = n;
-  deltaT = dt;
 
   // Initialize them.
   initAllAvePowSpecs();
@@ -63,11 +56,9 @@ void AnitaAveragePowerSpectrum::initAllAvePowSpecs(){
 
       TString name = fName + TString::Format("_%d_%d", polInd, ant);
 
-      TString title = fTitle;
-      title += polInd == 0 ? " HPOL " : " VPOL";
-      title += TString::Format(" antenna %d", ant);
-      
-      avePowSpecs[polInd][ant] = new AveragePowerSpectrum(name, title, deltaT, numSamps, mode);
+      TString title = RootTools::getAntName(AnitaPol::AnitaPol_t(polInd), ant);
+
+      avePowSpecs[polInd][ant] = new AveragePowerSpectrum(name, title);
     }
   }
 }
@@ -94,4 +85,42 @@ void AnitaAveragePowerSpectrum::reset(){
   // Function to delete and reinitialize all contained AveragePowerSpectra
   deleteAllAvePowSpecs();
   initAllAvePowSpecs();
+}
+
+
+TMultiGraph* AnitaAveragePowerSpectrum::drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring){
+  TMultiGraph* mg = new TMultiGraph();
+
+  TString grTitle = TString::Format("%s PSDs", fTitle.Data());
+
+  switch (ring){
+  case AnitaRing::kTopRing:
+    grTitle += " Top ring";
+    break;
+  case AnitaRing::kMiddleRing:
+    grTitle += " Middle ring";
+    break;
+  case AnitaRing::kBottomRing:
+    grTitle += " Bottom ring";
+    break;
+  case AnitaRing::kNotARing:
+    break;
+  }
+
+  grTitle += pol == AnitaPol::kHorizontal ? " HPol " : " VPol ";
+
+  grTitle += ";Frequency (MHz); PSD (mV^{2}/MHz)";
+
+  // std::cout << grTitle.Data() << std::endl;
+  mg->SetTitle(grTitle);
+  for(int phi=0; phi<NUM_PHI; phi++){
+    Int_t ant = ring*NUM_PHI + phi;
+    AveragePowerSpectrum* aps = get(pol, ant);
+    TGraph* gr = aps->makeAvePowSpecTGraph_dB();
+    gr->SetLineColor(gStyle->GetColorPalette(phi*Int_t(254./(NUM_PHI-1))));
+    gr->SetFillColorAlpha(0, 0);
+    mg->Add(gr);
+  }
+
+  return mg;
 }
