@@ -30,7 +30,6 @@ CrossCorrelator::~CrossCorrelator(){
 
 
 
-
 /*!
   \brief Workhorse function to set internal variables.
 */
@@ -47,10 +46,11 @@ void CrossCorrelator::initializeVariables(){
     eventNumber[pol] = 0;
   }
 
+  kZeroChannel16BH = false;
   numSamples = 2*NUM_SAMPLES; // Factor of two for padding 
   numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
 
-  nominalSamplingDeltaT = 1./2.6;
+  nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT;
   correlationDeltaT = nominalSamplingDeltaT/UPSAMPLE_FACTOR;
 
   deltaTMax = 0;
@@ -176,7 +176,19 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
     std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
+      
 
+      if(kZeroChannel16BH==true){      
+	//// DELIBERATE ZEROING OF 16BH. THIS IS THE CHANNEL WHERE WE DON'T HAVE THE CABLE DELAY
+	//// I WANT TO FIT THE PITCH/ROLL OFFSET WITH REASONABLE CABLE DELAYS!!!!
+	//// DOES THIS HELP THE POINTING??????
+	if(ant==47 && pol==0){
+	  for(Int_t samp=0; samp < grs[pol][ant]->GetN(); samp++){
+	    grs[pol][ant]->GetY()[samp] = 0;
+	  }
+	}
+      }
+      
       if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
 	earliestStart.at(pol) = grs[pol][ant]->GetX()[0];
       }
@@ -1554,7 +1566,9 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
   // I need the help of a machine to check I'm testing the geometry I think I'm testing.
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->useKurtAnita3Numbers(0); // i.e. definitely use the numbers I am inserting.
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  
 
 
   std::ifstream lindasNums(pathToLindasFile.Data());
