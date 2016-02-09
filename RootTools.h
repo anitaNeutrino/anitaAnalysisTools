@@ -13,6 +13,7 @@
 
 #include "TObjArray.h"
 #include "TGraph.h"
+#include "TPaveStats.h"
 #include "TTree.h"
 #include "TAxis.h"
 #include "TMath.h"
@@ -114,7 +115,10 @@ namespace RootTools{
   void saveCanvas(TCanvas* c1, TString fileName);
   void setWhiteZeroColorScale();
   void draw2D(TH2D* hist, TString opt);
-
+  Int_t getColorFracThroughPalette(Int_t index, Int_t maxVal);
+  TCanvas* drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption);
+  TString getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd);
+  
 
   /* Load ROOT data into chains quickly*/
   TChain* getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& headPtr);
