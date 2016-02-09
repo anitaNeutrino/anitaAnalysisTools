@@ -58,11 +58,11 @@ void testAveragePowerSpectrum(){
 
   const Long64_t numEntries = 1000;
   // const Int_t numSamps = 256;
-  const Int_t numSamps = 256*16;  
+  const Int_t numSamps = 256;  
   const Double_t deltaT = 1./2.6;
 
-  AveragePowerSpectrum aps("aps", "Antenna 16TH", deltaT, numSamps, AveragePowerSpectrum::kSummed);
-  AveragePowerSpectrum aps2("aps2", "Antenna 8MH", deltaT, numSamps);  
+  AveragePowerSpectrum aps("aps", "Antenna 16TH");
+  AveragePowerSpectrum aps2("aps2", "Antenna 8MH");
   
   for(Long64_t entry=0; entry<numEntries; entry++){
 
@@ -72,6 +72,7 @@ void testAveragePowerSpectrum(){
 
     TGraph* gr = realEvent->getGraph(16, AnitaPol::kHorizontal);
     TGraph* grInterp = RootTools::interpolateWithStartTime(gr, gr->GetX()[0], deltaT, numSamps);
+    // RootTools::printTGraphInfo(grInterp);
     aps.add(grInterp);
     delete gr;
     delete grInterp;
