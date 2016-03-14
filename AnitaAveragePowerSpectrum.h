@@ -19,7 +19,7 @@
 
 /**
  * @class AnitaAveragePowerSpectrum
- * @brief Essentially a wrapped around a payloads worth of AveragePowerSpectrum.
+ * @brief Essentially a wrapper around a whole payload of AveragePowerSpectrum.
  * 
  * I used to write these into TTrees, but the way the data was packed made access so slow that now I don't.
  * However, this class is still used in some spectral analysis code in some places.
