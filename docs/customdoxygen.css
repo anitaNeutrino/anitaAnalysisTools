@@ -1,7 +1,9 @@
 /* The standard CSS for doxygen 1.8.6 */
 
 body, table, div, p, dl {
-	font: 400 14px/22px Roboto,sans-serif;
+    /* font: 400 14px/22px Roboto,sans-serif; */
+    font-family: Helvetica, Arial, "Times New Roman";
+    background-color: white;
 }
 
 /* @group Heading Levels */
@@ -257,9 +259,12 @@ div.groupText {
 }
 
 body {
-	background-color: white;
+        background-color: white; /*rgba(220, 250, 255, 0.9);*/
 	color: black;
         margin: 10px 10px 10px 10px;
+	margin-left: auto;
+	margin-right: auto;
+	width: 960px;	
 }
 
 div.contents {
@@ -627,7 +632,8 @@ dl.reflist dd {
 }       
         
 .params .paramdir {
-        font-family: "courier new",courier,monospace;
+    /* font-family: "courier new",courier,monospace; */
+    font-family: Helvetica, Arial, "Times New Roman";    
         vertical-align: top;
 }
 
@@ -749,7 +755,8 @@ div.directory {
 }
 
 .icon {
-    font-family: Arial, Helvetica;
+/*    font-family: Arial, Helvetica; */
+    font-family: Helvetica, Arial, "Times New Roman";        
     font-weight: bold;
     font-size: 12px;
     height: 14px;
@@ -950,7 +957,8 @@ table.fieldtable {
 	text-decoration: none;
 	outline: none;
 	color: #283A5D;
-	font-family: 'Lucida Grande',Geneva,Helvetica,Arial,sans-serif;
+/*	font-family: 'Lucida Grande',Geneva,Helvetica,Arial,sans-serif;*/
+    font-family: Helvetica, Arial, "Times New Roman";    
 	text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.9);
 	text-decoration: none;        
 }
