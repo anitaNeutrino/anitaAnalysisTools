@@ -49,7 +49,7 @@ void CrossCorrelator::initializeVariables(){
   }
 
   kOnlyThisCombo = -1;
-  numSamples = 2*NUM_SAMPLES; // Factor of two for padding 
+  numSamples = 2*NUM_SAMPLES; // Factor of two for padding. Turns circular xcor into linear xcor.
   numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
 
   nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT;
@@ -126,10 +126,10 @@ Double_t CrossCorrelator::getBin0PhiDeg(){
   // Double_t phi0 = phiArrayDeg[0].at(0);
   Double_t phi0 = -45; //phiArrayDeg[0].at(0);  
   if(phi0 < -180){
-    phi0+=360;
+    phi0+=DEGREES_IN_CIRCLE;
   }
   else if(phi0 >= 180){
-    phi0-=360;
+    phi0-=DEGREES_IN_CIRCLE;
   }
   return phi0 - PHI_RANGE/2;
 }
@@ -357,7 +357,6 @@ void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, USh
   std::vector<Int_t> doneCombos(numCombos, 0);
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   std::vector<Int_t> combosToUse = combosToUseTriggered[key];
-  // std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];
   std::vector<Int_t> donePadding(NUM_SEAVEYS, 0);
   
   Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
@@ -401,7 +400,6 @@ void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t 
 
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   std::vector<Int_t> combosToUse = combosToUseTriggered[key];
-  // std::vector<Int_t> combosToUse = combosToUseTriggered[l3TrigPattern];  
   std::vector<Int_t> donePadding(NUM_SEAVEYS, 0);
   
   Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
@@ -457,7 +455,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
   
   std::pair<UInt_t, Int_t> key(ptr->threadL3TrigPattern, ptr->kDeltaPhiSect);
   std::vector<Int_t> combosToUse = ptr->combosToUseTriggered[key];
-  // std::vector<Int_t> combosToUse = ptr->combosToUseTriggered[ptr->threadL3TrigPattern];  
   Int_t numCombosAllThreads = combosToUse.size();
   Int_t numCorrPerThread = numCombosAllThreads/NUM_THREADS;
   Int_t numRemainder = numCombosAllThreads%NUM_THREADS;
@@ -636,35 +633,6 @@ Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t 
 }
 
 
-// Moving parts...
-// tan(-thetaW) NUM_BINS_THETA
-// Part1/2 this is adding up two numbers
-//    1st bit... zArray[pol][ant1]*tanThetaW  NUM_POL*NUM_SEAVEYS*NUM_BINS_THETA
-//    2nd bit... rArray[pol][ant1]*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol][ant]) NUM_POL*NUM_SEAVEYS*NUM_BINS_PHI*NUM_PHI
-// cos(-thetaW) NUM_BINS_THETA
-
-// So going from an array of size ...
-// [NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; sizeof(dtIndex) (char)
-// 2 * 16 * 25 * 150 * 336 = 40320000 = 4e7 * 1 byte = 47 MB.
-
-// To
-// + 150
-// + 2 * 48 * 150
-// + 2 * 48 * 25*16
-// + 150
-// =  150   +   2 * 48 * 150   +   2 * 48 * 25*16  +   150 = 53100 = 5.31e5 * sizeof(dtIndex) * 
-// #define NUM_COMBOS 336
-// #define NUM_THREADS 4
- 
-// // Typical number of samples in waveform
-// #define NUM_SAMPLES 256
-// #define UPSAMPLE_FACTOR 40
-
-// // // Image definitions
-// #define NUM_BINS_THETA 150
-// #define NUM_BINS_PHI 25
-
-
 void CrossCorrelator::insertPhotogrammetryGeometry(){
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->useKurtAnita3Numbers(1);
@@ -773,11 +741,6 @@ void CrossCorrelator::fillDeltaTLookup(){
 	Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
 
 	Double_t phiDeg = phi0 + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-
-	// if(polInd==0){
-	//   std::cerr.precision(8);
-	//   std::cerr << phi0 << "\t" << phiBin << "\t" << phiDeg << std::endl;
-	// }
 	
 	Double_t phiWave = TMath::DegToRad()*phiDeg;
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
@@ -805,46 +768,22 @@ void CrossCorrelator::fillDeltaTLookup(){
     Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA_ZOOM_TOTAL/2)*ZOOM_BIN_SIZE_THETA;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     zoomedThetaWaves[thetaIndex] = thetaWave;
-    // kDebug=true;
-    // if(kDebug){
-    //   std::cerr << thetaIndex << "\t" << thetaWave << "\t" << thetaWave*TMath::RadToDeg() << std::endl;
-    // }
     zoomedTanThetaWaves[thetaIndex] = tan(-thetaWave);
     zoomedCosThetaWaves[thetaIndex] = cos(-thetaWave);
   }
-  // throw 0;
 
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
     Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
     zoomedPhiWaveLookup[phiIndex] = phiIndex*ZOOM_BIN_SIZE_PHI;
     for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
       for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-	zoomedCosPartLookup[phiIndex][pol][ant] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
-	 // = cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol][ant]);
-	
+	zoomedCosPartLookup[phiIndex][pol][ant] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));	
       }
     }
   }
 }
 
 
-// Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
-//   // This function encodes whether a pair of antennas should be used in a particular phi sector.
-
-//   // Require that the difference in phi-sectors be <= DELTA_PHI_SECT
-//   Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
-//   Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=DELTA_PHI_SECT;
-
-//   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
-//   ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-DELTA_PHI_SECT);
-
-//   Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
-//   Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=DELTA_PHI_SECT;
-//   ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);  
-
-//   // Require that both antennas are within range of the given phi-sector.
-//   return (ant1InRange && ant2InRange);
-// }
 
 Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
   // This function encodes whether a pair of antennas should be used in a particular phi sector.
@@ -878,27 +817,6 @@ Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t 
   
   return (ant1InRange && ant2InRange && extraCondition);
 }
-
-// Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
-//   // This function encodes whether a pair of antennas should be used in a particular phi sector.
-
-//   Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
-//   Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
-
-//   // Require that the difference in phi-sectors be <= DELTA_PHI_SECT
-//   Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=DELTA_PHI_SECT;
-
-//   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
-//   ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-DELTA_PHI_SECT);
-
-//   Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=DELTA_PHI_SECT;
-//   ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);
-
-//   // Require that both antennas are within range of the given phi-sector
-//   // and that one antenna actually be in a triggered phi-sector
-//   return (ant1InRange && ant2InRange && (phiSectorOfAnt1==phiSector || phiSectorOfAnt2==phiSector));
-// }
-
 
 void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern){
   
@@ -1030,7 +948,7 @@ Double_t CrossCorrelator::getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t p
 TH2D* CrossCorrelator::makeBlankImage(TString name, TString title){
 
   Double_t phiMin = getBin0PhiDeg();
-  Double_t phiMax = phiMin + 360;
+  Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
   Double_t thetaMin = -THETA_RANGE/2;
   Double_t thetaMax = THETA_RANGE/2;
 
@@ -1455,7 +1373,7 @@ TGraph* CrossCorrelator::makeTrigPatternGraph(TString name, UShort_t l3TrigPatte
 // 	combosToUse = ptr->combosToUseGlobal[phiSector];
 //       }
 //       Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-//       phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
+//       phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
 //       Double_t phiWave = phiDeg*TMath::DegToRad();
       
 //       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
@@ -1499,7 +1417,7 @@ TGraph* CrossCorrelator::makeTrigPatternGraph(TString name, UShort_t l3TrigPatte
 // 	combosToUse = ptr->combosToUseGlobal[phiSector];
 //       }
 //       Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-//       phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
+//       phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
 //       Double_t phiWave = phiDeg*TMath::DegToRad();
       
 //       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
@@ -1729,7 +1647,7 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
 	  Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-	  phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
+	  phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
 	  Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
 	  
 	  Double_t deltaT = 0;
@@ -1741,7 +1659,7 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 						  zoomThetaInd);
 
 	      // Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-	      // phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
+	      // phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
 	      if(TMath::Abs(phiDeg - ptr->zoomedPhiWaveLookup[zoomPhiInd]) > 0.0001){
 		TThread::Lock();
 		std::cerr.precision(10);
@@ -1769,7 +1687,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 										  phiWave, -1*thetaWave);
 	    Double_t deltaT_slow3 = ptr->getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
 	    
-	    // if(TMath::Abs(deltaT_slow - deltaT) > 0.0001){
 	    if(TMath::Abs(deltaT_slow - deltaT) > 0.0001 || TMath::Abs(deltaT_slow2 - deltaT) > 0.0001
 	       || TMath::Abs(deltaT_slow3 - deltaT) > 0.0001){
 	      TThread::Lock();	      
@@ -1788,15 +1705,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	      std::cerr << "deltaT_slow2b = " << deltaT_slow2b << std::endl;
 	      std::cerr << "deltaT_slow3b = " << deltaT_slow3b << std::endl;
 	      std::cerr << std::endl;
-
-	      // std::cerr << "thetaDeg = " << thetaDeg      
-	      // 		<< "\tzoomThetaInd = " << zoomThetaInd << std::endl;
-	      // std::cerr << "phiDeg = " << phiDeg
-	      // 		<< "\tzoomPhiInd = " << zoomPhiInd << std::endl;
-	      // std::cerr << "zoomedThetaWaves[zoomThetaInd] " << ptr->zoomedThetaWaves[zoomThetaInd] << std::endl;
-	      // std::cerr << "TMath::RadToDeg()*zoomedThetaWaves[zoomThetaInd] "
-	      // 		<< TMath::RadToDeg()*ptr->zoomedThetaWaves[zoomThetaInd] << std::endl;
-	      // std::cerr << deltaT_slow2 << std::endl;
 	      TThread::UnLock();	      
 	    }
 	  }
@@ -1807,31 +1715,18 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 						  zoomThetaInd);
 	    }
 	    else{
-	      // Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
-	      // Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
 	      Double_t thetaWave = thetaDeg*TMath::DegToRad();
 	      Double_t phiWave = phiDeg*TMath::DegToRad();
 	      deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
 	    }
 	  }
-	  // offset = TMath::Nint(deltaT/ptr->correlationDeltaT);
 
 	  Double_t cInterp = ptr->getInterpolatedUpsampledCorrelationValue(pol, combo, deltaT);
 
-	  // TThread::Lock();
-	  // std::cerr << offsetLow << "\t" << offsetHigh << std::endl;
-	  // std::cerr << dt1 << "\t" << dt2 << "\t" << deltaT << std::endl;
-	  // std::cerr << c1 << "\t" << c2 << "\t" << cInterp << std::endl;
-	  // TThread::UnLock();
-
-	  // offset = offset < 0 ? offset + ptr->numSamplesUpsampled : offset;
-
-	  // correlations += ptr->crossCorrelationsUpsampled[pol][combo][offset];
 	  correlations += cInterp;
 	  comboCount++;
 	}
 	if(combosToUse.size()>0 && ptr->kOnlyThisCombo < 0){
-	  // correlations /= combosToUse.size();
 	  correlations /= comboCount;	  
 	}
 	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
@@ -1948,11 +1843,8 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
 
   // Get combinatorics
   fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPattern);
-  // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   const std::vector<Int_t>& combos = combosToUseTriggered[key];
-  // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];  
-
     
 
   // Try to center the correlation summary histogram on the l3Triggered phi-sectors  
@@ -1974,8 +1866,8 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
   name += polLetter;
   name += TString::Format("%u", eventNumber[pol]);
 
-  phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
-  phiDeg = phiDeg >= 0 ? phiDeg - 360 : phiDeg;
+  phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+  phiDeg = phiDeg >= 0 ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
   TString title = TString::Format("Correlation values at #theta=%4.2lf, #phi=%4.2lf for event %u ",
 				  thetaDeg, phiDeg, eventNumber[pol]);
 
@@ -1994,7 +1886,6 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
       lab += "B"+polLetter;
     }
     int binInd = ant + binShift;
-    // binInd = binInd < 0 ? binInd + NUM_SEAVEYS : binInd;
     binInd = binInd >= NUM_SEAVEYS ? binInd - NUM_SEAVEYS : binInd;    
     h->GetXaxis()->SetBinLabel(binInd+1, lab.Data());
     h->GetYaxis()->SetBinLabel(binInd+1, lab.Data());
@@ -2048,12 +1939,10 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
 
   // Get combinatorics
   fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPattern);
-  // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   const std::vector<Int_t>& combos = combosToUseTriggered[key];
-  // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];  
 
-  // std::cout << combos.size() << std::endl;
+
 
   // Try to center the correlation summary histogram on the l3Triggered phi-sectors  
   Int_t firstPhi = -1;
@@ -2074,8 +1963,8 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
   name += polLetter;
   name += TString::Format("%u", eventNumber[pol]);
 
-  phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
-  phiDeg = phiDeg >= 0 ? phiDeg - 360 : phiDeg;
+  phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+  phiDeg = phiDeg >= 0 ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
   TString title = TString::Format("Correlation values at #theta=%4.2lf, #phi=%4.2lf for event %u ",
 				  thetaDeg, phiDeg, eventNumber[pol]);
 
@@ -2094,7 +1983,6 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
       lab += "B"+polLetter;
     }
     int binInd = ant + binShift;
-    // binInd = binInd < 0 ? binInd + NUM_SEAVEYS : binInd;
     binInd = binInd >= NUM_SEAVEYS ? binInd - NUM_SEAVEYS : binInd;    
     h->GetXaxis()->SetBinLabel(binInd+1, lab.Data());
     h->GetYaxis()->SetBinLabel(binInd+1, lab.Data());
@@ -2112,11 +2000,6 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
     Int_t ant2 = comboToAnt2s.at(combo);
 
     Double_t dtExp = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-    // Double_t dtExp2 = getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
-
-    // if(TMath::Abs(dtExp - dtExp2) > 1e-5){
-    //   std::cerr << "!!!!!!" << std::endl;
-    // }
     
     
     Double_t tToExp = 1e9;
@@ -2146,8 +2029,6 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
     }    
 
 
-    // std::cout << ant1 << "\t" << ant2 << "\t" << dtExp << "\t" << theDtMaxima << "\t" << tToExp << "\t" << corVal << "\t" << corInd << "\t" << std::endl;
-    
     Int_t phi1 = ant1%NUM_PHI;
     Int_t phi2 = ant2%NUM_PHI;
 
@@ -2219,13 +2100,6 @@ Int_t CrossCorrelator::validateGeometry(TString pathToLindasFile, AnitaPol::Anit
     Double_t ddZ = geomZ - newZ;
     Double_t ddT = calT - newT;
            
-    // std::cerr << ant << "\t";
-    // std::cerr << ddr << "\t";
-    // std::cerr << ddPhi << "\t";
-    // std::cerr << ddZ << "\t";
-    // std::cerr << ddT << "\t";
-    // std::cerr << std::endl;
-
     sumOfErrors += TMath::Abs(ddr);
     sumOfErrors += TMath::Abs(ddPhi);
     sumOfErrors += TMath::Abs(ddZ);
@@ -2293,14 +2167,6 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
     geom->zPhaseCentreFromVerticalHorn[ant][pol] = newZ;
     cal->relativePhaseCenterToAmpaDelays[surf][chan] = newT;
 
-    // if(ant==47){
-    //   std::cout << "inside CC" << "\t";
-    //   std::cout << geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] << "\t"
-    // 		<< dPhiRad << "\t" << geom->azPhaseCentreFromVerticalHorn[ant][pol]
-    // 		<< "\tNOT " << geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] - dPhiRad
-    // 		<< std::endl;
-    //   std::cout << "geom = " << geom << std::endl;
-    // }
   }
 
   std::cerr << "Average phi-shift = " << TMath::RadToDeg()*(sumPhiRad / NUM_SEAVEYS) << std::endl;
@@ -2409,7 +2275,7 @@ TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t 
 
 Int_t CrossCorrelator::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg){
   Int_t phiSectorOfPeak = -1;
-  Double_t bestDeltaPhiOfPeakToAnt = 360;
+  Double_t bestDeltaPhiOfPeakToAnt = DEGREES_IN_CIRCLE;
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
     Double_t phiOfAnt = phiArrayDeg[pol].at(ant);
     Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, phiDeg));
@@ -2466,7 +2332,6 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
     phiSector = phiSector >= NUM_PHI ? phiSector - NUM_PHI : phiSector;
 
     for(Int_t ring=0; ring<NUM_RING; ring++){
-    // for(Int_t ring=0; ring<2; ring++){      
       Int_t ant= phiSector + ring*NUM_PHI;
 
       // Here we do the inverse FFT on the padded FFTs in memory.
@@ -2481,8 +2346,6 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 	// How far between the samples we need to interpolate.
 	Double_t ddt = deltaT - correlationDeltaT*offset1;
 	
-	// std::cerr << deltaT << "\t" << offset1 << "\t" << offset2 << std::endl;	   
-
 	for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
 	  Int_t samp1 = samp + offset1;
 	  Int_t samp2 = samp + offset2;
@@ -2491,14 +2354,8 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 	    Double_t v1 = vArray[samp1];
 	    Double_t v2 = vArray[samp2];
 
-	    // Double_t t1 = correlationDeltaT*samp1;
-
 	    Double_t vInterp = (ddt)*(v2 - v1)/correlationDeltaT + v1;
 
-	    // std::cerr << samp << "\t" << samp1 << "\t" << samp2 << std::endl;
-	    // std::cerr << t1 << "\t" << deltaT << "\t" << (deltaT - t1) << std::endl;
-	    // std::cerr << v1 << "\t" << v2 << "\t" << vInterp << std::endl;
-	    
 	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
 
 	  }
