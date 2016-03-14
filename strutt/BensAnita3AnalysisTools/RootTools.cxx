@@ -1,9 +1,15 @@
 #include "RootTools.h"
 
-/*!
-  \brief Adds up all y-axis values of input TGraph.
-  \param gr is the TGraph you want to sum the y-axis values of.
-  \returns sum is a Double_t.
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Adds up all y-axis values of input TGraph.
+ *
+ * @param gr is the TGraph you want to sum the y-axis values of.
+ * @returns sum is a Double_t.
 */
 Double_t RootTools::getSumOfYVals(TGraph* gr){
   Double_t sum = 0;
@@ -14,13 +20,18 @@ Double_t RootTools::getSumOfYVals(TGraph* gr){
 }
 
 
-/*!
-  \brief Print all the elements of a c-styles array to the screen for debugging.
-  \param n is the length of the array.
-  \param array is the first element of the array.
-  \param delimiter=", " is for decoration, ", " by default, change as you please.
-  \param start is for decoration, "{" by default, change as you please.
-  \param end is for decoration, "}\n" by default, change as you please.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Print all the elements of a c-styles array to the screen for debugging.
+ * 
+ * @param n is the length of the array.
+ * @param array is the first element of the array.
+ * @param delimiter is for decoration, ", " by default, change as you please.
+ * @param start is for decoration, "{" by default, change as you please.
+ * @param end is for decoration, "}\n" by default, change as you please.
 */
 void RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end){
   std::cout << start.Data();
@@ -32,36 +43,51 @@ void RootTools::printArray(int n, double* array, TString delimiter, TString star
 }
 
 
-/*!
-  \brief Print all the the y-axis values of a TGraph to the screen for debugging.
-  \param gr is the TGraph you want information about.
-  \param delimiter=", " is for decoration, ", " by default, change as you please.
-  \param start is for decoration, "{" by default, change as you please.
-  \param end is for decoration, "}\n" by default, change as you please.
-  \sa RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Print all the the y-axis values of a TGraph to the screen for debugging.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param delimiter is for decoration, ", " by default, change as you please.
+ * @param start is for decoration, "{" by default, change as you please.
+ * @param end is for decoration, "}\n" by default, change as you please.
+ * @sa RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
 */
 void RootTools::printYVals(TGraph* gr, TString delimiter, TString start, TString end){
   printArray(gr->GetN(), gr->GetY(), delimiter, start, end);
 }
 
 
-/*!
-  \brief Print all the the x-axis values of a TGraph to the screen for debugging.
-  \param gr is the TGraph you want information about.
-  \param delimiter=", " is for decoration, ", " by default, change as you please.
-  \param start is for decoration, "{" by default, change as you please.
-  \param end is for decoration, "}\n" by default, change as you please.
-  \sa RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Print all the the x-axis values of a TGraph to the screen for debugging.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param delimiter is for decoration, ", " by default, change as you please.
+ * @param start is for decoration, "{" by default, change as you please.
+ * @param end is for decoration, "}\n" by default, change as you please.
+ * @sa RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
 */
 void RootTools::printXVals(TGraph* gr, TString delimiter, TString start, TString end){
   printArray(gr->GetN(), gr->GetX(), delimiter, start, end);
 }
 
 
-/*!
-  \brief Makes a derivative TGraph, contains gr->GetN() - 1 points.
-  \param gr is the TGraph from which to make the derivative 
-  \returns Pointer to TGraph containing derivative of input gr.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Makes a derivative TGraph, contains gr->GetN() - 1 points.
+ *
+ * @param gr is the TGraph from which to make the derivative 
+ * @returns Pointer to TGraph containing derivative of input gr.
 */
 TGraph* RootTools::makeDerivativeTGraph(TGraph* gr){
   TGraph* grDer = new TGraph();
@@ -76,10 +102,15 @@ TGraph* RootTools::makeDerivativeTGraph(TGraph* gr){
 }
 
 
-/*!
-  \brief Unwraps a circularly correlated graph so the -ve time lies behind the +ve time.
-  \param gr is the wrapped correlation graph.
-  \returns Pointer to TGraph containing unwrapped correlation graph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Unwraps a circularly correlated graph so the -ve time lies behind the +ve time.
+ *
+ * @param gr is the wrapped correlation graph.
+ * @returns Pointer to TGraph containing unwrapped correlation graph.
 */
 TGraph* RootTools::makeUnwrappedCorrelationGraph(TGraph* gr){
   /* Unwraps a circularly correlated array so the n > 2 points get -ve values */
@@ -101,11 +132,16 @@ TGraph* RootTools::makeUnwrappedCorrelationGraph(TGraph* gr){
 }
 
 
-/*!
-  \brief Scan long TGraph and update the references to the maximum and minimum input values.
-  \param gr is the TGraph you want information about.
-  \param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
-  \param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Scan long TGraph and update the references to the maximum and minimum input values.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
+ * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
 */
 void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
 
@@ -113,13 +149,18 @@ void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
   RootTools::getMaxMin(gr, maxY, maxX, minY, minX);
 }
 
-/*!
-  \brief Scan long TGraph and update the references to the maximum and minimum input values.
-  \param gr is the TGraph you want information about.
-  \param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
-  \param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
-  \param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
-  \param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Scan long TGraph and update the references to the maximum and minimum input values.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
+ * @param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
+ * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
+ * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
 void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX, 
 			  Double_t& minY, Double_t& minX){
@@ -142,17 +183,21 @@ void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
 }
 
 
-/*!
-  \brief Scan long TGraph and update the references to the maximum and minimum input values.
-  \param gr is the TGraph you want information about.
-  \param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
-  \param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
-  \param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
-  \param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
-  \param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
-  \param upperLimit is a Double_t containing the upper value of the x-axis to search to.
-*/
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Scan long TGraph and update the references to the maximum and minimum input values.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
+ * @param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
+ * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
+ * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
+ * @param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
+ * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
+*/
 void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX, 
 				      Double_t& minY, Double_t& minX, 
 				      Double_t lowerLimit, Double_t upperLimit){
@@ -190,10 +235,14 @@ void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX
 
 
 
-/*!
-  \brief Subtract a constant value from the y-axis values at each point.
-  \param gr is the TGraph you want to manipulate.
-  \param offset is the value to subtract from each point.
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Subtract a constant value from the y-axis values at each point.
+ *
+ * @param gr is the TGraph you want to manipulate.
+ * @param offset is the value to subtract from each point.
 */
 void RootTools::subtractOffset(TGraph* gr, Double_t offset){
   for(int i=0; i<gr->GetN(); i++){
@@ -202,13 +251,17 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
 }
 
 
-/*!
-  \brief Do angle1-angle2 (in degrees) and +- 360 such that the result lies in -180 < deltaAngle < 180.
-  \param angle1 is the first angle
-  \param angle2 is the second angle
-  \returns deltaAngle is the difference in the range -180 < deltaAngle < 180
-*/
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Do angle1-angle2 (in degrees) and +- 360 such that the result lies in -180 < deltaAngle < 180.
+ *
+ * @param angle1 is the first angle
+ * @param angle2 is the second angle
+ * @returns deltaAngle is the difference in the range -180 < deltaAngle < 180
+*/
 Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
   
   Double_t deltaAngle = angle1 - angle2;
@@ -226,20 +279,31 @@ Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
 }
 
 
-/*!
-  \brief Modify gr to set mean=0 and rms=1.
-  \param gr is the TGraph you want to manipulate.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Modify gr to set mean=0 and rms=1.
+ *
+ * @param gr is the TGraph you want to manipulate.
 */
 void RootTools::normalize(TGraph* gr){
   double mean, rms;
   normalize(gr, mean, rms);
 }
 
-/*!
-  \brief Modify gr to set mean=0 and rms=1.
-  \param gr is the TGraph you want to manipulate.
-  \param mean is a reference to a Double_t, updated with the mean value of gr before modification.
-  \param rms is a reference to a Double_t, updated with the rms value of gr before modification.
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Modify gr to set mean=0 and rms=1.
+ *
+ * @param gr is the TGraph you want to manipulate.
+ * @param mean is a reference to a Double_t, updated with the mean value of gr before modification.
+ * @param rms is a reference to a Double_t, updated with the rms value of gr before modification.
 */
 void RootTools::normalize(TGraph* gr, Double_t& mean, Double_t& rms){
   RootTools::getMeanAndRms(gr, mean, rms);
@@ -252,9 +316,14 @@ void RootTools::normalize(TGraph* gr, Double_t& mean, Double_t& rms){
 }
 
 
-/*!
-  \brief Create normalized copy of gr, where mean=0 and rms=1 (input unmodified).
-  \param gr is the TGraph you want to manipulate.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Create normalized copy of gr, where mean=0 and rms=1 (input unmodified).
+ *
+ * @param gr is the TGraph you want to manipulate.
 */
 TGraph* RootTools::makeNormalized(TGraph* gr){
   /* Copies the TGraph and normalizes that */
@@ -264,11 +333,16 @@ TGraph* RootTools::makeNormalized(TGraph* gr){
 }
 
 
-/*!
-  \brief Create normalized copy of gr, where mean=0 and rms=1 (input unmodified).
-  \param gr is the TGraph you want to manipulate.
-  \param mean is a reference to a Double_t, updated with the mean value of gr.
-  \param rms is a reference to a Double_t, updated with the rms value of gr.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Create normalized copy of gr, where mean=0 and rms=1 (input unmodified).
+ *
+ * @param gr is the TGraph you want to manipulate.
+ * @param mean is a reference to a Double_t, updated with the mean value of gr.
+ * @param rms is a reference to a Double_t, updated with the rms value of gr.
 */
 TGraph* RootTools::makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms){
   /* Copies the TGraph and normalizes that */
@@ -279,11 +353,15 @@ TGraph* RootTools::makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms){
 
 
 
-/*!
-  \brief Get mean and rms of gr
-  \param gr is the TGraph you want information about.
-  \param mean is a reference to a Double_t, updated with the mean value of gr before modification.
-  \param rms is a reference to a Double_t, updated with the rms value of gr before modification.
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get mean and rms of gr
+ *
+ * @param gr is the TGraph you want information about.
+ * @param mean is a reference to a Double_t, updated with the mean value of gr before modification.
+ * @param rms is a reference to a Double_t, updated with the rms value of gr before modification.
 */
 void RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
   Double_t sum = 0;
@@ -296,12 +374,18 @@ void RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
   rms = TMath::Sqrt(square/gr->GetN() - mean*mean);
 }
 
-/*!
-  \brief Find indices where input is not a number (for debugging)
-  \param gr is the TGraph you want information about.
-  \returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number
-*/
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Find indices where input is not a number (for debugging).
+ *
+ * @param len is the length of arr.
+ * @param arr is a pointer to an array of doubles of length len.
+ * @returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number.
+*/
 Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
   Double_t max=-DBL_MAX;
   Int_t maxIndex = -1;
@@ -319,10 +403,16 @@ Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
   return maxIndex;
 }
 
-/*!
-  \brief Find indices where input is not a number (for debugging)
-  \param gr is the TGraph you want information about.
-  \returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Find indices where input is not a number (for debugging)
+ *
+ * @param gr is the TGraph you want information about.
+ * @returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number
 */
 std::vector<Int_t> RootTools::getIndicesOfNans(TGraph* gr){
   std::vector<Int_t> nanIndices;
@@ -335,9 +425,14 @@ std::vector<Int_t> RootTools::getIndicesOfNans(TGraph* gr){
 }
 
 
-/*!
-  \brief Print summary information about gr: name, title, number of points, all x and y values.
-  \param gr is the TGraph you want information about.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Print summary information about gr: name, title, number of points, all x and y values.
+ *
+ * @param gr is the TGraph you want information about.
 */
 void RootTools::printTGraphInfo(TGraph* gr){
   std::cout << "******************************************************************************" << std::endl;
@@ -366,12 +461,16 @@ void RootTools::printTGraphInfo(TGraph* gr){
 
 
 
-/*!
-  \brief Plot a time (or any TTree branch) ordered TGraph of some TTree branch.
-  \param tree is a pointer to a TTree containing the variables to be plotted.
-  \param drawText is passed to TTree->Draw() in order to plot the data points (e.g. "eventNumber:heading") for a plot of heading as a function of event number.
-  \param cutString is passed to TTree->Draw() for selection (e.g. "eventNumber > 30000000")
-  \param wrapValue e.g. with wrapValue=360, if neighbouring points go 359->1 degrees, then draw them as 359->361. i.e. remove discontinuities.
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Plot a time (or any TTree branch) ordered TGraph of some TTree branch.
+ *
+ * @param tree is a pointer to a TTree containing the variables to be plotted.
+ * @param drawText is passed to TTree->Draw() in order to plot the data points (e.g. "eventNumber:heading") for a plot of heading as a function of event number.
+ * @param cutString is passed to TTree->Draw() for selection (e.g. "eventNumber > 30000000")
+ * @param wrapValue e.g. with wrapValue=360, if neighbouring points go 359->1 degrees, then draw them as 359->361. i.e. remove discontinuities.
 */
 TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue){
   
@@ -424,13 +523,17 @@ TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutSt
 
 
 
-/*!
-  \brief Put Z-axis values of a TH2D histogram into a TH1D histogram.
-  \param h2 is a pointer to the TH2D you want to examine.
-  \param hName is a the name of the new histogram.
-  \param nBins is the number of bins for the new histogram.
-  \param xMin is the x-axis minimum for the new histogram.
-  \param xMax is the x-axis maximum for the new histogram.
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Put Z-axis values of a TH2D histogram into a TH1D histogram.
+ *
+ * @param h2 is a pointer to the TH2D you want to examine.
+ * @param hName is a the name of the new histogram.
+ * @param nBins is the number of bins for the new histogram.
+ * @param xMin is the x-axis minimum for the new histogram.
+ * @param xMax is the x-axis maximum for the new histogram.
 */
 TH1D* RootTools::plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xMin, Double_t xMax){
   TH1D* h = new TH1D(hName, hName, nBins, xMin, xMax);
@@ -444,11 +547,16 @@ TH1D* RootTools::plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xM
 }
 
 
-/*!
-  \brief Add a bunch of zeros to the end of a TGraph.
-  \param gr is the TGraph you want to pad.
-  \param newLen is the desired length of gr.
-  \param dt 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Add a bunch of zeros to the end of a TGraph.
+ *
+ * @param gr is the TGraph you want to pad.
+ * @param newLen is the desired length of gr.
+ * @param dt 
 */
 void RootTools::zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt){
   Int_t oldLen = gr->GetN();
@@ -462,11 +570,16 @@ void RootTools::zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt){
 }
 
 
-/*!
-  \brief Make interpolated TGraph using linear interpolation between points.
-  \param grIn is the TGraph you want to interpolate.
-  \param dt is the time (in x-axis units of grIn) between points in grOut.
-  \returns grOut, a new TGraph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Make interpolated TGraph using linear interpolation between points.
+ *
+ * @param grIn is the TGraph you want to interpolate.
+ * @param dt is the time (in x-axis units of grIn) between points in grOut.
+ * @returns grOut, a new TGraph.
 */
 
 TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
@@ -538,14 +651,16 @@ TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
 
 
 
-/*!
-  \brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
-  \param grIn points to the TGraph containing the waveform to interpolate
-  \param startTime is the start time for interpolation: zero pads if this is earlier than the TGraph start time.
-  \param dt is the time between samples
-  \param nSamp is the time number of samples
-*/
 
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Wrapper function for ROOT's interpolator, can zero pad the front to start from a particular time.
+ *
+ * @param grIn points to the TGraph containing the waveform to interpolate
+ * @param startTime is the start time for interpolation: zero pads if this is earlier than the TGraph start time.
+ * @param dt is the time between samples
+ * @param nSamp is the time number of samples
+*/
 TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp){  
 
   std::vector<Double_t> newTimes = std::vector<Double_t>(nSamp, 0);
@@ -586,14 +701,15 @@ TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Do
 
 
 
-
-/*!
-  \brief Draws an array of histograms with a rainbow on a single TCanvas
-  \param hs is a pointer to an array of pointers to the histograms. 
-  \param numHists is the number of histograms.
-  \param can is the TCanvas to draw on, if one is not given a new one is created.
-  \param colWeights is a pointer to a Double_t array, which will weight to colors drawn. 
-  \returns the TCanvas the histograms are drawn on.
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draws an array of histograms with a rainbow on a single TCanvas
+ *
+ * @param hs is a pointer to an array of pointers to the histograms. 
+ * @param numHists is the number of histograms.
+ * @param can is the TCanvas to draw on, if one is not given a new one is created.
+ * @param colWeights is a pointer to a Double_t array, which will weight to colors drawn. 
+ * @returns the TCanvas the histograms are drawn on.
 */
 
 TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanvas* can, Double_t* colWeights){
@@ -642,11 +758,14 @@ TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanva
 
 
 
-/*!
-  \brief Adds a set of offsets to the x-axis values of each respective TGraph
-  \param numGrs is the length of both arrays.
-  \param grs is a vector of pointers to TGraphs.
-  \param offsets a vector of Double_ts to add to each x-axis point of the respective TGraph.
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Adds a set of offsets to the x-axis values of each respective TGraph
+ *
+ * @param numGrs is the length of both arrays.
+ * @param grs is a vector of pointers to TGraphs.
+ * @param offsets a vector of Double_ts to add to each x-axis point of the respective TGraph.
   
   Assumes that both grs and offsets point to arrays of length numGrs
 */
@@ -659,11 +778,16 @@ void RootTools::offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[
 }
 
 
-/*!
-  \brief Multiples a set of factors to the y-axis values of each respective TGraph
-  \param numGrs is the length of both arrays.
-  \param grs is an array of pointers to TGraphs.
-  \param factors an array of Double_ts to add to each x-axis point of the respective TGraph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Multiples a set of factors to the y-axis values of each respective TGraph
+ *
+ * @param numGrs is the length of both arrays.
+ * @param grs is an array of pointers to TGraphs.
+ * @param factors an array of Double_ts to add to each x-axis point of the respective TGraph.
   
   Assumes that both grs and factors point to arrays of length numGrs
 */
@@ -678,13 +802,17 @@ void RootTools::multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factor
 
 
 
-/*!
-  \brief Draws an array of TGraphs with a rainbow on a single TCanvas
-  \param grs is a pointer to an array of pointers to the TGraphs. 
-  \param numGrs is the number of TGraphs.
-  \param can is the TCanvas to draw on, if one is not given a new one is created.
-  \param drawOpt is the draw option, select "p" for markers and "l" for lines.
-  \returns the TCanvas the TGraphs are drawn on.
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draws an array of TGraphs with a rainbow on a single TCanvas
+ *
+ * @param grs is a pointer to an array of pointers to the TGraphs. 
+ * @param numGrs is the number of TGraphs.
+ * @param can is the TCanvas to draw on, if one is not given a new one is created.
+ * @param drawOpt is the draw option, select "p" for markers and "l" for lines.
+ * @param colWeights is a pointer to an array of doubles to be used as weights for colors.
+ * @returns the TCanvas the TGraphs are drawn on.
 */
 TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs, 
 					       TString drawOpt, TCanvas* can, Double_t* colWeights){
@@ -748,14 +876,23 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
 
 }
 
-/*!
-  \brief Generates a TLegend from input arrays of TGraphs and titles (TStrings)
-  \param grs is a pointer to an array of pointers to the TGraphs. 
-  \param numGrs is the number of TGraphs.
-  \param titles is an array of TStrings containing the titles
-  \param opt is the legend option ("l" by default)
-  \params {minX, minY, maxX, maxY} are the Pad coordinates. 0.8, 0.8, 1, 1 by default.
-  \returns the newly generated TLegend
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Generates a TLegend from input arrays of TGraphs and titles (TStrings)
+ *
+ * @param grs is a pointer to an array of pointers to the TGraphs. 
+ * @param numGrs is the number of TGraphs.
+ * @param titles is an array of TStrings containing the titles
+ * @param opt is the legend option ("l" by default)
+ * @param minX is the Pad coordinates, 0.8 by default.
+ * @param minY is the Pad coordinates, 0.8 by default.
+ * @param maxX is the Pad coordinates, 1 by default.
+ * @param maxY is the Pad coordinates, 1 by default.
+ * @returns the newly generated TLegend
 */
 
 TLegend* RootTools::makeLegend(TGraph* grs[], Int_t numGrs, 
@@ -773,16 +910,23 @@ TLegend* RootTools::makeLegend(TGraph* grs[], Int_t numGrs,
 }
 
 
-/*!
-  \brief Generates a TLegend from input arrays of TGraphs and titles (TStrings)
-  \param grs is a pointer to an array of pointers to the TGraphs. 
-  \param numGrs is the number of TGraphs.
-  \param titles is an array of TStrings containing the titles
-  \param opt is the legend option ("l" by default)
-  \params {minX, minY, maxX, maxY} are the Pad coordinates. 0.8, 0.8, 1, 1 by default.
-  \returns the newly generated TLegend
-*/
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Generates a TLegend from input arrays of TGraphs and titles (TStrings).
+ *
+ * @param hs is a pointer to an array of pointers to the histograms (TH1Ds).
+ * @param numHists is the number of histgorams in the array hs.
+ * @param titles is an array of TStrings containing the titles
+ * @param opt is the legend option ("l" by default)
+ * @param minX is the Pad coordinates, 0.8 by default.
+ * @param minY is the Pad coordinates, 0.8 by default.
+ * @param maxX is the Pad coordinates, 1 by default.
+ * @param maxY is the Pad coordinates, 1 by default.
+ * @returns the newly generated TLegend
+*/
 TLegend* RootTools::makeLegend(TH1D* hs[], Int_t numHists, 
 			       TString titles[], TString opt, 
 			       Double_t minX, Double_t minY,
@@ -800,10 +944,13 @@ TLegend* RootTools::makeLegend(TH1D* hs[], Int_t numHists,
 
 
 
-/*!
-  \brief Sets the name of a TGraph to name and then writes it to the current file.
-  \param gr is a pointer to the TGraph you want to save.
-  \param name is the name you want to give the TGraph before saving it.
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Sets the name of a TGraph to name and then writes it to the current file.
+ *
+ * @param gr is a pointer to the TGraph you want to save.
+ * @param name is the name you want to give the TGraph before saving it.
 */
 void RootTools::writeTGraph(TGraph* gr, TString name){
   // Taking laziness to a new level... replace two lines with a one line function.
@@ -812,13 +959,18 @@ void RootTools::writeTGraph(TGraph* gr, TString name){
 }
 
 
-/*!
-  \brief Updates input based on absolute largest local maximum to local minimum difference. For pulse finding.
-  \param gr is the TGraph you want information about.
-  \param maxY is a reference to a Double_t, updated with the local maximum y-axis value of the TGraph.
-  \param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
-  \param minY is a reference to a Double_t, updated with the local minimum y-axis value of the TGraph.
-  \param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Updates input based on absolute largest local maximum to local minimum difference. For pulse finding.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param maxY is a reference to a Double_t, updated with the local maximum y-axis value of the TGraph.
+ * @param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
+ * @param minY is a reference to a Double_t, updated with the local minimum y-axis value of the TGraph.
+ * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
 
 void RootTools::getLocalMaxToMin(TGraph* gr, 
@@ -829,15 +981,20 @@ void RootTools::getLocalMaxToMin(TGraph* gr,
 }
 
 
-/*!
-  \brief Updates input based on absolute largest local maximum to local minimum difference. For pulse finding.
-  \param gr is the TGraph you want information about.
-  \param maxY is a reference to a Double_t, updated with the local maximum y-axis value of the TGraph.
-  \param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
-  \param minY is a reference to a Double_t, updated with the local minimum y-axis value of the TGraph.
-  \param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
-  \param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
-  \param upperLimit is a Double_t containing the upper value of the x-axis to search to.
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Updates input based on absolute largest local maximum to local minimum difference. For pulse finding.
+ *
+ * @param gr is the TGraph you want information about.
+ * @param maxY is a reference to a Double_t, updated with the local maximum y-axis value of the TGraph.
+ * @param maxX is a reference to a Double_t, updated with the x-axis value at the maxY of the TGraph.
+ * @param minY is a reference to a Double_t, updated with the local minimum y-axis value of the TGraph.
+ * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
+ * @param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
+ * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
 
 void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr, 
@@ -895,12 +1052,16 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
 }
 
 
-/*!
-  \brief My function to save a TCanvas for talks, and save an editable version.
-  \param c is a pointer to the TCanvas
-  \param fileName is the file name. Note that suffixes are added in the function!
-*/
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief My function to save a TCanvas for talks, and save an editable version.
+ *
+ * @param c is a pointer to the TCanvas
+ * @param fileName is the file name. Note that suffixes are added in the function!
+*/
 void RootTools::saveCanvas(TCanvas* c, TString fileName){
 
   std::cout << "Saving this canvas as an .eps, .png, and .C file..." << std::endl;
@@ -912,16 +1073,19 @@ void RootTools::saveCanvas(TCanvas* c, TString fileName){
   c->SaveAs(fName);  
   std::cout << "...Complete!" << std::endl;
   c->Update();
-
 }
 
 
-/*!
-  \brief Assumes a nice distribution with a single peak, finds the full width half max.
-  \param h is a histogram
-  \returns the full width half max
-*/
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Assumes a nice distribution with a single peak, finds the full width half max.
+ *
+ * @param h is a histogram
+ * @returns the full width half max
+*/
 Double_t RootTools::getFullWidthHalfMax(TH1D* h){
   
   Int_t maxBin = RootTools::getPeakBinOfHistogram(h);
@@ -952,10 +1116,14 @@ Double_t RootTools::getFullWidthHalfMax(TH1D* h){
 
 
 
-/*!
-  \brief Finds the bin containing the maximum value of a TH1D
-  \param h is a histogram
-  \returns the peak bin (in ROOT bin counting starts at 1)
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Finds the bin containing the maximum value of a TH1D
+ *
+ * @param h is a histogram
+ * @returns the peak bin (in ROOT bin counting starts at 1)
 */
 Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
 
@@ -974,10 +1142,47 @@ Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
 
 
 
-/*!
-  \brief Finds the bin containing the maximum value of a TH1D
-  \param h is a histogram
-  \returns the peak bin (in ROOT bin counting starts at 1)
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Finds the bin containing the maximum value of a TH2D
+ *
+ * @param hist is a histogram
+ * @param binx is a reference to the x-axis bin number (in ROOT bin counting starts at 1)
+ * @param biny is a reference to the y-axis bin number (in ROOT bin counting starts at 1)
+ * @returns the value of the histogram peak bin
+*/
+Double_t RootTools::getPeakBinOfHistogram(TH2D* hist, Int_t& binx, Int_t& biny){
+
+  Int_t nx = hist->GetNbinsX();
+  Int_t ny = hist->GetNbinsY();  
+  Double_t histPeak = -DBL_MAX;
+  for(Int_t by = 1; by<=ny; by++){
+    for(Int_t bx = 1; bx<=nx; bx++){
+      Double_t val = hist->GetBinContent(bx, by);
+      if(val > histPeak){
+	histPeak = val;
+	binx = bx;
+	biny = by;
+      }
+    }
+  }
+
+  return histPeak;
+  
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Finds the bin containing the maximum value of a TH1D
+ *
+ * @param h is a histogram
+ * @returns the peak bin (in ROOT bin counting starts at 1)
 */
 Double_t RootTools::getLowBinEdgeOfHistogramPeak(TH1D* h){
 
@@ -987,9 +1192,15 @@ Double_t RootTools::getLowBinEdgeOfHistogramPeak(TH1D* h){
 }
 
 
-/*!
-  \brief For nice plotting of 2D dists about 0, makes max = -min.
-  \param h is a 2D histogram
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief For nice plotting of 2D dists about 0, makes max = -min.
+ *
+ * @param h is a 2D histogram
 */
 void RootTools::makeZaxisScaleEqualAboutZero(TH2D* h){
 
@@ -1004,20 +1215,31 @@ void RootTools::makeZaxisScaleEqualAboutZero(TH2D* h){
   }
 }
 
-/*!
-  \brief For decoding bit masks
-  \param bitIndex is the bit to get (count from 0)
-  \param bitMask is the bitMask
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief For decoding bit masks
+ *
+ * @param bitIndex is the bit to get (count from 0)
+ * @param bitMask is the bitMask
 */
 Int_t RootTools::getBit(UInt_t bitIndex, UInt_t bitMask){
   return ((bitMask >> bitIndex) & 1);
 }
 
-/*!
-  \brief Set color scale where white is in the middle.
-  You need to draw things with RootTools::draw2DScaled(TH2D* hist, TString opt);
-*/
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Set color scale where white is in the middle.
+ *
+ * You need to draw things with RootTools::draw2D(TH2D* hist, TString opt);
+*/
 void RootTools::setWhiteZeroColorScale(){
   const int NRGBs = 3, NCont = 999;
   gStyle->SetNumberContours(NCont);
@@ -1031,6 +1253,17 @@ void RootTools::setWhiteZeroColorScale(){
 }
 
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draw 2D histogram and set bin limits to be symmetrical about zero.
+ *
+ * @param hist is the TH2D* to draw.
+ * @param opt is the draw option.
+*/
 void RootTools::draw2D(TH2D* hist, TString opt){
   hist->Draw(opt);
   Double_t max = TMath::Abs(hist->GetMaximum());
@@ -1040,12 +1273,18 @@ void RootTools::draw2D(TH2D* hist, TString opt){
   hist->SetMinimum(-limit);
 }
 
-/*!
-  \brief Get a TChain of the ANITA-3 header data.
-  \param firstRun is the first run.
-  \param lastRun is the last run.
-*/
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get a TChain of the ANITA-3 header data.
+ *
+ * @param firstRun is the first run.
+ * @param lastRun is the last run.
+ * @param headPtr a reference to a pointer to a RawAnitaHeader (yikes!).
+*/
 TChain* RootTools::getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& headPtr){
   TChain* c = new TChain("headTree");
   for(Int_t run=firstRun; run <= lastRun; run++){
@@ -1055,12 +1294,18 @@ TChain* RootTools::getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& 
   return c;
 }
 
-/*!
-  \brief Get a TChain of the ANITA-3 adu5Pat data.
-  \param firstRun is the first run.
-  \param lastRun is the last run.
-*/
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get a TChain of the ANITA-3 adu5Pat data.
+ *
+ * @param firstRun is the first run.
+ * @param lastRun is the last run.
+ * @param pat a reference to a pointer to an Adu5Pat (yikes!).
+*/
 TChain* RootTools::getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat){
   TChain* c = new TChain("adu5PatTree");
   for(Int_t run=firstRun; run <= lastRun; run++){
@@ -1071,10 +1316,16 @@ TChain* RootTools::getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat)
 }
 
 
-/*!
-  \brief Use polarization and index to get the antenna name (1st phi-sector called 1, not 0).
-  \param pol is the polarization
-  \param antInd is the antenna index (counting from 0)
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Use polarization and index to get the antenna name (1st phi-sector called 1, not 0).
+ *
+ * @param pol is the polarization
+ * @param antInd is the antenna index (counting from 0)
 */
 
 TString RootTools::getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd){
@@ -1092,24 +1343,35 @@ TString RootTools::getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd){
 }
 
 
-/*!
-  \brief Gets the color a fraction through the current palette.
-  \param index is the numerator of the fraction
-  \param maxVal is the denominator of the fraction
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Gets the color a fraction through the current palette.
+ *
+ * @param index is the numerator of the fraction
+ * @param maxVal is the denominator of the fraction
 */
 Int_t RootTools::getColorFracThroughPalette(Int_t index, Int_t maxVal){
   return gStyle->GetColorPalette(index*Int_t(255./maxVal));  
 }
 
 
-/*!
-  \brief Draw histograms on the same (new) canvas with nice stats boxes
-  \param numHists is, as you might guess, the number of histograms (the lengths of the array hs[])
-  \param hs[] is the array of pointers to TH1Ds to be plotted
-  \param drawOpt is the draw option in ROOT, e.g. "e" for error bars.
-  \param statsOpt sets the stats to be displayed. I usually use "mre" for mean, RMS and entries.
-*/
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draw histograms on the same (new) canvas with nice stats boxes
+ *
+ * @param numHists is, as you might guess, the number of histograms (the lengths of the array hs[])
+ * @param hs[] is the array of pointers to TH1Ds to be plotted
+ * @param drawOpt is the draw option in ROOT, e.g. "e" for error bars.
+ * @param statsOption sets the stats to be displayed. I usually use "mre" for mean, RMS and entries.
+*/
 TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption){
 
   gStyle->SetOptStat(statsOption);
@@ -1138,7 +1400,5 @@ TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString 
   }
 
   theCan->Update();
-  return theCan;
-  
-
+  return theCan; 
 }
