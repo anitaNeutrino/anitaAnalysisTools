@@ -1,12 +1,15 @@
 #include "AntarcticaMapPlotter.h"
 
 
-/*!
-  \brief Constructor
-  \param name is the histogram name
-  \param title is the histogram title
-  \param nBinsX is the number of bins on the x-axis
-  \param nBinsY is the number of bins on the y-axis
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Constructor
+ * @param name is the histogram name
+ * @param title is the histogram title
+ * @param nBinsX is the number of bins on the x-axis
+ * @param nBinsY is the number of bins on the y-axis
 */
 AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
   initializeInternals();
@@ -14,8 +17,15 @@ AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nB
 }
 
 
-/*!
-  \brief Destructor
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Destructor
+ * 
+ * Deletes all internal hists and TGraphs, like a good destructor should.
 */
 AntarcticaMapPlotter::~AntarcticaMapPlotter(){
   std::map<TString, TH2D*>::iterator histItr;
@@ -29,12 +39,13 @@ AntarcticaMapPlotter::~AntarcticaMapPlotter(){
 }
 
 
-/*!
-  \brief Workhorse function which initalizes internal variables
-  \param latitude is the latitude
-  \param longitude is the longitude
-  \param x is the internal histogram variable x
-  \param y is the internal histogram variable y
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Workhorse function which initalizes internal variables
+ * @param latitude is the latitude
+ * @param longitude is the longitude
+ * @param x is the internal histogram variable x
+ * @param y is the internal histogram variable y
 */
 void AntarcticaMapPlotter::initializeInternals(){
   /* The numbers in this function also come from Matt Mottram or Ryan */
@@ -42,8 +53,9 @@ void AntarcticaMapPlotter::initializeInternals(){
   // This image taken from http://earthobservatory.nasa.gov/IOTD/view.php?id=6087
   TString mapName = "antarcticaMosaic.png";
   // TString mapName = "antarcticaIceMapBW.png";
-  
 
+  
+  // From Ryan
   if(mapName=="antarcticaMosaic.png"){
     TrueScaleLat=71;
     RadiusOfEarth=6378.1e3; //Metres
@@ -54,7 +66,7 @@ void AntarcticaMapPlotter::initializeInternals(){
     xSize=725; //700; //750; //2701
     ySize=625; //2333
   }
-  else{
+  else{ // Here I try and get the parameters for the pettier image... with moderate success.
     TrueScaleLat=71;
     RadiusOfEarth=6378.1e3; //Metres
     xOffest=375;
@@ -66,6 +78,7 @@ void AntarcticaMapPlotter::initializeInternals(){
     ySize=625;
   }
 
+  // Load the png image stuff.
   const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
 
   TString mapFileName = TString::Format("%s/share/anitaMap/%s", anitaUtilInstallDir, mapName.Data());
@@ -79,16 +92,20 @@ void AntarcticaMapPlotter::initializeInternals(){
   }
 
   hCurrent = NULL;
-  grCurrent = NULL;
-  
+  grCurrent = NULL;  
 }
 
-/*!
-  \brief The magic function that maps latitude and longitude onto histogram x and y coordinates
-  \param latitude is the latitude
-  \param longitude is the longitude
-  \param x is the internal histogram variable x
-  \param y is the internal histogram variable y
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief The magic function that maps latitude and longitude onto histogram x and y coordinates
+ * @param latitude is the latitude
+ * @param longitude is the longitude
+ * @param x is the internal histogram variable x
+ * @param y is the internal histogram variable y
 */
 void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y){
   /* This function, which really does all the hard work, was made either by Matt Mottram or Ryan */
@@ -112,10 +129,18 @@ void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longi
 }
 
 
-/*!
-  \brief How to fill the histogram, converts latitude and longitude into x/y bins first.
-  \param latitude is the latitude
-  \param longitude is the longitude
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief How to fill the histogram, converts latitude and longitude into x/y bins first.
+ * @param latitude is the latitude.
+ * @param longitude is the longitude.
+ * @param weight is the weight to fill with, by default=1.
+ * @return the corresponding global bin number which has its content incremented by 1 (copied from TH2).
 */
 Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t weight){
   Double_t x, y;
@@ -124,8 +149,13 @@ Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t
 }
 
 
-/*!
-  \brief Draws the canvas, image and histogram
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draws the canvas, image and histogram
 */
 void AntarcticaMapPlotter::DrawHist(TString opt){
 
@@ -144,8 +174,14 @@ void AntarcticaMapPlotter::DrawHist(TString opt){
 }
 
 
-/*!
-  \brief Draws the canvas, image and histogram
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Draws the canvas, image and histogram
 */
 void AntarcticaMapPlotter::DrawTGraph(TString opt){
 
@@ -165,9 +201,15 @@ void AntarcticaMapPlotter::DrawTGraph(TString opt){
 
 
 
-/*!
-  \brief Sets the current histogram pointer \a hCurrent.
-  \returns 0 on failure (TH2D with name not in \a hists) and 1 on success.
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Sets the current histogram pointer* @a hCurrent.
+ * @returns 0 on failure (TH2D with name not in* @a hists) and 1 on success.
 */
 Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
   
@@ -183,12 +225,18 @@ Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
   return successState;
 }
 
-/*!
-  \brief Creates a new histogram to go in the internal map and sets it as the current histogram
-  \param name is the histogram name
-  \param title is the histogram title
-  \param nBinsX is the number of bins on the x-axis
-  \param nBinsY is the number of bins on the y-axis
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates a new histogram to go in the internal map and sets it as the current histogram
+ * @param name is the histogram name
+ * @param title is the histogram title
+ * @param nBinsX is the number of bins on the x-axis
+ * @param nBinsY is the number of bins on the y-axis
 */
 void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
 
@@ -203,15 +251,20 @@ void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBins
 }
 
 
-/*!
-  \brief Creates a new graph to go in the internal map and sets it as the current histogram
-  \param name is the histogram name
-  \param title is the histogram title
-  \param n is the number of points
-  \param latitudes is a pointer to an array of latitude values
-  \param longitudes is a pointer to an array of longitude values
-*/
-  
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates a new graph to go in the internal map and sets it as the current histogram
+ * @param name is the histogram name
+ * @param title is the histogram title
+ * @param n is the number of points
+ * @param latitudes is a pointer to an array of latitude values
+ * @param longitudes is a pointer to an array of longitude values
+*/  
 void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
 				     Double_t* latitudes, Double_t* longitudes){
 
@@ -239,9 +292,15 @@ void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
 
 
 
-/*!
-  \brief Sets the current histrogram pointer \a hCurrent.
-  \returns 0 on failure (TGraph with name not in \a grs) and 1 on success.
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Sets the current histrogram pointer* @a hCurrent.
+ * @return 0 on failure (TGraph with name not in* @a grs) and 1 on success.
 */
 Int_t AntarcticaMapPlotter::setCurrentTGraph(TString name){
   
@@ -259,17 +318,28 @@ Int_t AntarcticaMapPlotter::setCurrentTGraph(TString name){
 
 
 
-/*!
-  \brief Return pointer to current TGraph
-  \returns pointer to current TGraph
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Return pointer to current TGraph
+ * @return pointer to current TGraph
 */
 TGraph* AntarcticaMapPlotter::getCurrentTGraph(){
   return grCurrent;
 }
 
-/*!
-  \brief Return pointer to current histogram
-  \returns pointer to current histogram
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Return pointer to current histogram
+ * @return pointer to current histogram
 */
 TH2D* AntarcticaMapPlotter::getCurrentHistogram(){
   return hCurrent;
