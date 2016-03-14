@@ -70,6 +70,7 @@ namespace RootTools{
 				    Double_t lowerLimit, Double_t upperLimit);
 
   Int_t getPeakBinOfHistogram(TH1D* h);
+  Double_t getPeakBinOfHistogram(TH2D* hist, Int_t& binx, Int_t& biny);
   Double_t getLowBinEdgeOfHistogramPeak(TH1D* h);
   Double_t getFullWidthHalfMax(TH1D* h);
   Int_t getBit(UInt_t bitIndex, UInt_t bitMask);
