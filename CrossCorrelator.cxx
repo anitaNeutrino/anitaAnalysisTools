@@ -1,11 +1,3 @@
-/* -*- C++ -*-.********************************************************************************************
- Author: Ben Strutt
- Email: b.strutt.12@ucl.ac.uk
-
- Description: 
-             A Cross Correlator to interact with the ROOTified ANITA-3 data and do some interferometry. 
-******************************************************************************************************** */
-
 #include "CrossCorrelator.h"
 
 
