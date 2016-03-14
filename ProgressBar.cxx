@@ -1,12 +1,3 @@
-/* -*- C++ -*-.***************************************************************************************************
- Author: Ben Strutt
- Email: b.strutt.12@ucl.ac.uk
-
- Description: 
-             Just a bit of fun.
-*************************************************************************************************************** */
-
-
 #include "ProgressBar.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -17,11 +8,13 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-ClassImp(ProgressBar);
 
 
-/*!
-  \brief Default constructor - don't use this
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Default constructor - don't use this
 */
 ProgressBar::ProgressBar(){
   std::cerr << "Assuming 100 events in ProgressBar" << std::endl;
@@ -32,9 +25,14 @@ ProgressBar::ProgressBar(){
 }
 
 
-/*!
-  \brief Useful constructor - do use this one.
-  \param maxEntryInit is the number of events you want to loop over
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Useful constructor - do use this one.
+ * @param maxEntryInit is the number of events you want to loop over
 */
 ProgressBar::ProgressBar(Long64_t maxEntryInit){
   maxEntry = maxEntryInit;
@@ -44,8 +42,13 @@ ProgressBar::ProgressBar(Long64_t maxEntryInit){
 }
 
 
-/*!
-  \brief Increment operator, use when you have completed one iteration of the main loop
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Increment operator, use when you have completed one iteration of the main loop
 */
 void ProgressBar::operator++(int){
 
@@ -104,8 +107,13 @@ void ProgressBar::operator++(int){
 
 }
 
-/*!
-  \brief For debugging, prints state of internal variables
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief For debugging, prints state of internal variables
 */
 void ProgressBar::status(){
   std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
