@@ -83,7 +83,7 @@ public:
 
 
     /**
-   * @brief Flag to pass to cross correlator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
+   * @brief Flag to pass to CrossCorrelator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
    */  
   enum mapMode_t{
     kGlobal,
@@ -92,7 +92,7 @@ public:
   };
 
   /**
-   * @brief Flag to pass to cross correlator when making a map telling it whether to reconstruct all arrival directions or a finer binned close up of a particular region
+   * @brief Flag to pass to CrossCorrelator when making a map telling it whether to reconstruct all arrival directions or a finer binned close up of a particular region
    */  
   enum zoomMode_t{
     kZoomedOut,
@@ -100,6 +100,18 @@ public:
     kNumZoomModes
   };
 
+
+  /**
+   * @brief Container required to get threading to work inside a class, includes the thread index and the pointer to the class.
+   *
+   * All functions called by threads have to be static.
+   * So we write any functions which we want to be threaded as static member functions, which take a pointer to the class as the first argument (requires that pointer).
+   * We then use the thread index to figure out what portion of the work each thread should do.
+   */
+  struct threadArgs{
+    Long_t threadInd; //! The thread index
+    CrossCorrelator* ptr; //! Pointer to the correlator index
+  };
 
   
   CrossCorrelator();
@@ -255,18 +267,6 @@ public:
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around the phi-sectors of interest to use in reconstruction.
   
 private:
-
-  /**
-   * @brief Container required to get threading to work inside a class, includes the thread index and the pointer to the class.
-   *
-   * All functions called by threads have to be static.
-   * So we write any functions which we want to be threaded as static member functions, which take a pointer to the class as the first argument (requires that pointer).
-   * We then use the thread index to figure out what portion of the work each thread should do.
-   */
-  struct threadArgs{
-    Long_t threadInd; //! The thread index
-    CrossCorrelator* ptr; //! Pointer to the correlator index
-  };
 
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
