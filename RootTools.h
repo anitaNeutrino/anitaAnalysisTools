@@ -29,17 +29,17 @@
 #include "Math/Interpolator.h"
 #include "Math/InterpolationTypes.h"
 
-
 #include "RawAnitaHeader.h"
 #include "Adu5Pat.h"
 
-/*! \namespace RootTools
-\brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
-This lovingly curated namespace can be imported into CINT with gSystem->Load('libBensAnitaTools.so"). 
-I find myself often writing little routines to modify things like TGraphs over and over again.
-Functions that do little jobs, too simple to deserve a dedicated class of their own, will go in this namespace.
-The idea that I only spend any time coding up a particular function once. 
-Expect this namespace to be referenced a lot in my code.
+/** @namespace RootTools
+ * @brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
+ *
+ * This lovingly curated namespace can be imported into CINT with gSystem->Load('libBensAnitaTools.so"). 
+ * I find myself often writing little routines to modify things like TGraphs over and over again.
+ * Functions that do little jobs, too simple to deserve a dedicated class of their own go in this namespace.
+ * The idea that I only spend any time coding up a particular function once. 
+ * Expect this namespace to be referenced a lot in my code.
 */
 
 namespace RootTools{
