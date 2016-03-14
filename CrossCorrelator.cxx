@@ -2436,17 +2436,28 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
   Double_t phiRad = phiDeg*TMath::DegToRad();
   Double_t thetaRad = thetaDeg*TMath::DegToRad();
   Int_t numAnts = 0;
-  Int_t firstAnt = -1;
 
   Int_t centerPhiSector = getPhiSectorOfAntennaClosestToPhiDeg(pol, phiDeg);
-  
+
+  const Int_t firstAnt = centerPhiSector;
+
   std::pair<Int_t, Int_t> key(numSamplesUpsampled, 0);
-  TGraph* grCoherent = NULL;
-
-
-  // Grab the output array from FancyFFTs internal memory. Don't delete this!
+  // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
   Double_t* vArray = FancyFFTs::fReals[key];
+  
+  FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][firstAnt], false);
+  
 
+  std::vector<Double_t> tArray(numSamplesUpsampled, 0);
+  Double_t t0 = grsResampled[pol][firstAnt]->GetX()[0];
+  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+    tArray.at(samp) = t0 + samp*correlationDeltaT;
+    vArray[samp] *= interpRMS[pol][firstAnt]; // Undo the normalization.
+  }
+
+  // Factor of two here to drop the zero padding at the back of the waveform
+  // which was used during correlations.
+  TGraph* grCoherent = new TGraph(numSamplesUpsampled/2, &tArray[0], &vArray[0]);	
   
   for(Int_t deltaPhiSect=-maxDeltaPhiSect; deltaPhiSect<=maxDeltaPhiSect; deltaPhiSect++){
 
@@ -2455,51 +2466,53 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
     phiSector = phiSector >= NUM_PHI ? phiSector - NUM_PHI : phiSector;
 
     for(Int_t ring=0; ring<NUM_RING; ring++){
+    // for(Int_t ring=0; ring<2; ring++){      
       Int_t ant= phiSector + ring*NUM_PHI;
 
       // Here we do the inverse FFT on the padded FFTs in memory.
       // The output is now in the vArray
       FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][ant], false);
 
-      if(firstAnt==-1){ // Is this the first antenna we've considered?
-	std::vector<Double_t> tArray(numSamplesUpsampled, 0);
-	Double_t t0 = grsResampled[pol][ant]->GetX()[0];
-	for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
-	  tArray.at(samp) = t0 + samp*correlationDeltaT;
-	  vArray[samp] *= interpRMS[pol][ant]; // Undo the normalization.
-	}
-	firstAnt = ant;
-	grCoherent = new TGraph(numSamplesUpsampled, &tArray[0], &vArray[0]);
-      }
-      else{
+      if(firstAnt!=ant){ // Don't do the first antenna twice
 	Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
 	Int_t offset1 = floor(deltaT/correlationDeltaT);
 	Int_t offset2 = ceil(deltaT/correlationDeltaT);
-	for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+
+	// How far between the samples we need to interpolate.
+	Double_t ddt = deltaT - correlationDeltaT*offset1;
+	
+	// std::cerr << deltaT << "\t" << offset1 << "\t" << offset2 << std::endl;	   
+
+	for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
 	  Int_t samp1 = samp + offset1;
 	  Int_t samp2 = samp + offset2;
-	  if(samp1 >= 0 && samp2 < numSamplesUpsampled){
+	  if(samp1 >= 0 && samp2 < grCoherent->GetN()){
 
 	    Double_t v1 = vArray[samp1];
-	    Double_t v2 = vArray[samp2];	    
+	    Double_t v2 = vArray[samp2];
 
-	    Double_t t1 = correlationDeltaT*samp1;
+	    // Double_t t1 = correlationDeltaT*samp1;
 
-	    Double_t vInterp = (deltaT - t1)*(v2 - v1)/correlationDeltaT + v1;
-	    	      
-	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];	    	    
+	    Double_t vInterp = (ddt)*(v2 - v1)/correlationDeltaT + v1;
+
+	    // std::cerr << samp << "\t" << samp1 << "\t" << samp2 << std::endl;
+	    // std::cerr << t1 << "\t" << deltaT << "\t" << (deltaT - t1) << std::endl;
+	    // std::cerr << v1 << "\t" << v2 << "\t" << vInterp << std::endl;
+	    
+	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
+
 	  }
 	}
       }
       numAnts++;
-    }
+     }
   }
 
   // Normalize
   if(numAnts > 0){
     TString name;
     TString title;
-    for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+    for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
       grCoherent->GetY()[samp]/=numAnts;
     }
 
