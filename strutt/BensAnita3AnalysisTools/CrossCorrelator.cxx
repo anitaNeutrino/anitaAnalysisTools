@@ -668,6 +668,14 @@ void CrossCorrelator::insertPhotogrammetryGeometry(){
       phiArrayDeg[pol].at(ant) = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg();
     }
   }
+
+  AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
+  for(int surf=0; surf < NUM_SURF; surf++){
+    for(int chan=0; chan < NUM_CHAN; chan++){
+      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+    }
+  }
+  
   fillDeltaTLookup();
   geom->useKurtAnita3Numbers(0);
   
@@ -747,7 +755,7 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
 }
 
 void CrossCorrelator::fillDeltaTLookup(){
-  
+
   Double_t phi0 = getBin0PhiDeg();
   for(Int_t polInd=0; polInd<NUM_POL; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
@@ -811,47 +819,49 @@ void CrossCorrelator::fillDeltaTLookup(){
 }
 
 
-// Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
-//   // This function encodes whether a pair of antennas should be used in a particular phi sector.
-
-//   // Require that the difference in phi-sectors be <= DELTA_PHI_SECT
-//   Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
-//   Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=DELTA_PHI_SECT;
-
-//   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
-//   ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-DELTA_PHI_SECT);
-
-//   Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
-//   Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=DELTA_PHI_SECT;
-//   ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);  
-
-//   // Require that both antennas are within range of the given phi-sector.
-//   return (ant1InRange && ant2InRange);
-// }
-
 Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
   // This function encodes whether a pair of antennas should be used in a particular phi sector.
 
-  Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
-  Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
-
   // Require that the difference in phi-sectors be <= DELTA_PHI_SECT
+  Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
   Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=DELTA_PHI_SECT;
 
   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
   ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-DELTA_PHI_SECT);
 
+  Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
   Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=DELTA_PHI_SECT;
-  ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);
+  ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);  
 
-  // Require that both antennas are within range of the given phi-sector
-  // and that one antenna actually be in a triggered phi-sector
-  return (ant1InRange && ant2InRange && (phiSectorOfAnt1==phiSector || phiSectorOfAnt2==phiSector));
+  // Require that both antennas are within range of the given phi-sector.
+  return (ant1InRange && ant2InRange);
 }
+
+// Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
+//   // This function encodes whether a pair of antennas should be used in a particular phi sector.
+
+//   Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
+//   Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
+
+//   // Require that the difference in phi-sectors be <= DELTA_PHI_SECT
+//   Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=DELTA_PHI_SECT;
+
+//   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
+//   ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-DELTA_PHI_SECT);
+
+//   Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=DELTA_PHI_SECT;
+//   ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-DELTA_PHI_SECT);
+
+//   // Require that both antennas are within range of the given phi-sector
+//   // and that one antenna actually be in a triggered phi-sector
+//   return (ant1InRange && ant2InRange && (phiSectorOfAnt1==phiSector || phiSectorOfAnt2==phiSector));
+// }
 
 
 void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern){
   
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
+
   if(mapMode==kTriggered){
     std::map<UInt_t,std::vector<Int_t> >::iterator it = combosToUseTriggered.find(l3TrigPattern);
     if(it==combosToUseTriggered.end()){
@@ -1475,7 +1485,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 						  zoomPhiInd,
 						  zoomThetaInd);
 
-
 	      // Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
 	      // phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
 	      if(TMath::Abs(phiDeg - ptr->zoomedPhiWaveLookup[zoomPhiInd]) > 0.0001){
@@ -1501,19 +1510,19 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	    Double_t phiWave = phiDeg*TMath::DegToRad();
 
 	    Double_t deltaT_slow = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-	    Double_t deltaT_slow2 = ptr->usefulPats[threadInd]->getDeltaTExpected(ant2, ant1, phiWave, -1*thetaWave);
+	    Double_t deltaT_slow2 = ptr->usefulPats[threadInd]->getDeltaTExpected(ant2, ant1,
+										  phiWave, -1*thetaWave);
 	    Double_t deltaT_slow3 = ptr->getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
 	    
 	    // if(TMath::Abs(deltaT_slow - deltaT) > 0.0001){
 	    if(TMath::Abs(deltaT_slow - deltaT) > 0.0001 || TMath::Abs(deltaT_slow2 - deltaT) > 0.0001
 	       || TMath::Abs(deltaT_slow3 - deltaT) > 0.0001){
 	      TThread::Lock();	      
-	      // std::cerr << threadInd << "\t" << ant1 << "\t" << ant2 << "\t"
-	      // 		<< phiWave << "\t" << thetaWave << "\t" << deltaT << "\t" 
-	      // 		<< deltaT_slow << "\t" << deltaT_slow2 << "\t" << deltaT_slow3 << std::endl;
-	      
-	      Double_t deltaT_slow2b = ptr->usefulPats[threadInd]->getDeltaTExpected(ant2, ant1, phiWave, -1*thetaWave, 1);
-	      Double_t deltaT_slow3b = ptr->getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
+	      Double_t deltaT_slow2b = ptr->usefulPats[threadInd]->getDeltaTExpected(ant2, ant1,
+										     phiWave,
+										     -1*thetaWave, 1);
+	      Double_t deltaT_slow3b = ptr->getDeltaTExpectedPat(ant2, ant1,
+								 phiWave, -1*thetaWave);
 
 	      std::cerr << threadInd << "\t" << ant1 << "\t" << ant2 << "\t"
 			<< phiWave << "\t" << thetaWave << std::endl;
@@ -1770,7 +1779,7 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);
 
-    Double_t dt = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);      
+    Double_t dt = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
     Double_t cInterp = getInterpolatedCorrelationValue(pol, combo, dt);
 
     Int_t phi1 = ant1%NUM_PHI;
@@ -1794,6 +1803,139 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
   
   return h;  
 }
+
+
+TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
+						  Double_t phiDeg, Double_t thetaDeg, Double_t corThresh)
+{
+  /* 
+     This one should compare the time of the maximum vs. the time expected at at phiDeg/thetaDeg 
+     Finds the difference between the nearest local maximum in correlation vs. the expected time offset given by the arrival direction thetaDeg, phiDeg.
+  */
+  
+
+  // Get combinatorics
+  fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPattern);
+  // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];
+  const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];  
+
+  // std::cout << combos.size() << std::endl;
+
+  // Try to center the correlation summary histogram on the l3Triggered phi-sectors  
+  Int_t firstPhi = -1;
+  for(Int_t phi=0; phi<NUM_PHI; phi++){
+    Int_t trig = RootTools::getBit(phi, l3TrigPattern);
+    if(trig > 0){
+      firstPhi = phi;
+      break;
+    }
+  }
+  Int_t binShift = (NUM_PHI/2 - firstPhi)*NUM_RING;
+  binShift = binShift < 0 ? binShift + NUM_SEAVEYS : binShift;
+
+
+  // Book histogram and set x, y axis labels to antenna names
+  TString name = "hCorrelationSummary";
+  TString polLetter = pol == AnitaPol::kHorizontal ? "H" : "V";  
+  name += polLetter;
+  name += TString::Format("%u", eventNumber[pol]);
+
+  phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
+  phiDeg = phiDeg >= 0 ? phiDeg - 360 : phiDeg;
+  TString title = TString::Format("Correlation values at #theta=%4.2lf, #phi=%4.2lf for event %u ",
+				  thetaDeg, phiDeg, eventNumber[pol]);
+
+  title += pol==AnitaPol::kHorizontal ? "HPOL" : "VPOL";
+  title += "; ; ; Correlation coefficient";
+  TH2D* h = new TH2D(name, title, NUM_SEAVEYS, 0, NUM_SEAVEYS, NUM_SEAVEYS, 0, NUM_SEAVEYS);
+  for(int ant=0; ant<NUM_SEAVEYS; ant++){
+    TString lab = TString::Format("%d", 1 + (ant/NUM_RING));
+    if(ant%NUM_RING==0){
+      lab += "T"+polLetter;
+    }
+    else if((ant%NUM_RING)==1){
+      lab += "M"+polLetter;
+    }
+    else{
+      lab += "B"+polLetter;
+    }
+    int binInd = ant + binShift;
+    // binInd = binInd < 0 ? binInd + NUM_SEAVEYS : binInd;
+    binInd = binInd >= NUM_SEAVEYS ? binInd - NUM_SEAVEYS : binInd;    
+    h->GetXaxis()->SetBinLabel(binInd+1, lab.Data());
+    h->GetYaxis()->SetBinLabel(binInd+1, lab.Data());
+  }
+
+  // Convert location to radians
+  Double_t thetaWave = thetaDeg*TMath::DegToRad();
+  Double_t phiWave = phiDeg*TMath::DegToRad();
+
+  // Loop through antenna pairs, get deltaT and correlations and fill
+  for(UInt_t comboInd=0; comboInd < combos.size(); comboInd++){
+    const Int_t combo = combos.at(comboInd);      
+
+    Int_t ant1 = comboToAnt1s.at(combo);
+    Int_t ant2 = comboToAnt2s.at(combo);
+
+    Double_t dtExp = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+    Double_t dtExp2 = getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
+
+    if(TMath::Abs(dtExp - dtExp2) > 1e-5){
+      std::cerr << "!!!!!!" << std::endl;
+    }
+    
+    
+    Double_t tToExp = 1e9;
+    Double_t corVal = 0;
+    Int_t corInd = 0;
+    Double_t theDtMaxima;
+    for(int samp=0; samp < numSamplesUpsampled; samp++){
+      Int_t samp0 = samp - 1;
+      Int_t samp1 = samp;
+      Int_t samp2 = samp + 1;
+
+      samp0 = samp0 < 0 ? samp0 + numSamplesUpsampled : samp0;
+      samp2 = samp2 >= numSamplesUpsampled ? samp2 - numSamplesUpsampled : samp2;
+      
+      if(crossCorrelationsUpsampled[pol][combo][samp0] < crossCorrelationsUpsampled[pol][combo][samp1]
+	 && crossCorrelationsUpsampled[pol][combo][samp2] < crossCorrelationsUpsampled[pol][combo][samp1]){
+
+	Double_t dtMaxima = samp1 < numSamplesUpsampled/2 ? samp1*correlationDeltaT : (samp1-numSamplesUpsampled)*correlationDeltaT;
+
+	if(TMath::Abs(dtMaxima - dtExp) < tToExp && corVal > corThresh){
+	  tToExp = dtMaxima - dtExp;
+	  corVal = crossCorrelationsUpsampled[pol][combo][samp1];
+	  corInd = samp1;
+	  theDtMaxima = dtMaxima;
+	}
+      }
+    }    
+
+
+    // std::cout << ant1 << "\t" << ant2 << "\t" << dtExp << "\t" << theDtMaxima << "\t" << tToExp << "\t" << corVal << "\t" << corInd << "\t" << std::endl;
+    
+    Int_t phi1 = ant1%NUM_PHI;
+    Int_t phi2 = ant2%NUM_PHI;
+
+    Int_t ring1 = ant1/NUM_PHI;
+    Int_t ring2 = ant2/NUM_PHI;
+
+    Int_t theBinX = phi1*NUM_RING + ring1 + 1;
+    Int_t theBinY = phi2*NUM_RING + ring2 + 1;
+
+    theBinX += binShift;
+    theBinY += binShift;
+
+    theBinX = theBinX >= NUM_SEAVEYS ? theBinX - NUM_SEAVEYS : theBinX;
+    theBinY = theBinY >= NUM_SEAVEYS ? theBinY - NUM_SEAVEYS : theBinY;      
+      
+    h->SetBinContent(theBinX, theBinY, tToExp);
+  }
+  
+  return h;  
+}
+
+
 
 
 /*!

@@ -262,6 +262,8 @@ public:
   Functions for debugging or testing
   **********************************************************************************************************/
   TH2D* makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern, Double_t phiDeg, Double_t thetaDeg);
+  TH2D* makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
+				   Double_t phiDeg, Double_t thetaDeg, Double_t corThresh=-1);
   void correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource);
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
@@ -276,7 +278,8 @@ public:
   /**********************************************************************************************************
   Variables
   **********************************************************************************************************/
-  typedef Char_t dtIndex_t;
+  // typedef Char_t dtIndex_t;
+  typedef Double_t dtIndex_t;  
   dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; ///< Arrays for upsampled cross correlations
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; ///< Arrays for cross correlations
