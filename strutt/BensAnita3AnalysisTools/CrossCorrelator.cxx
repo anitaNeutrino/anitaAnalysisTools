@@ -1448,14 +1448,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	
 	// TThread::UnLock();	
       }
-
-      if(ptr->kUseAbbyCombinatorics > 0){
-	combosToUse = std::vector<Int_t>(NUM_COMBOS, 0);
-	for(int comboInd=0; comboInd < NUM_COMBOS; comboInd++){
-	  combosToUse.at(comboInd) = comboInd;
-	}
-      }
-
       
       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
 	Int_t zoomThetaInd = thetaZoomBase + thetaBin;
@@ -1469,19 +1461,11 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	  }
 
 	  // Int_t offset = 0;
-
 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
 	  Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
 	  phiDeg = phiDeg < 0 ? phiDeg + 360 : phiDeg;
-	  Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);	  
-	  if(ptr->kUseAbbyCombinatorics > 0){
-	    Int_t ok = ptr->getAbbyCominatoricLogic(ant1, ant2, phiDeg, thetaDeg);
-	    if(!ok){
-	      continue;
-	    }
-	  }
-
+	  Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
 	  
 	  Double_t deltaT = 0;
 	  if(ptr->kDebug){
@@ -1726,24 +1710,9 @@ TH2D* CrossCorrelator::makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol,
   // Get combinatorics
   fillCombosToUseIfNeeded(CrossCorrelator::kTriggered, l3TrigPattern);
   // const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];
-  std::vector<Int_t> combos = combosToUseTriggered[l3TrigPattern];  
-  if(kUseAbbyCombinatorics > 0){
-    combos = std::vector<Int_t>(0, 0);
-    for(int combo=0; combo < NUM_COMBOS; combo++){
-      
-      Int_t ant1 = comboToAnt1s.at(combo);
-      Int_t ant2 = comboToAnt2s.at(combo);
+  const std::vector<Int_t>& combos = combosToUseTriggered[l3TrigPattern];  
 
-      Int_t ok = getAbbyCominatoricLogic(ant1, ant2, phiDeg, thetaDeg);
-
-      if(ok){
-	combos.push_back(combo);
-      }      
-    }
-  }
-
-  
-  
+    
 
   // Try to center the correlation summary histogram on the l3Triggered phi-sectors  
   Int_t firstPhi = -1;
