@@ -190,6 +190,7 @@ public:
   // Create blank histogram with proper axis ranges and axis titles
 
   Double_t getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);  
 
   void createImageNameAndTitle(TString& name, TString& title, mapMode_t mapMode, zoomMode_t zoomMode,
 			       Double_t rWave, AnitaPol::AnitaPol_t pol);
