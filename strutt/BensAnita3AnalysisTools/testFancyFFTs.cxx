@@ -64,8 +64,8 @@ int main(int argc, char *argv[]){
   std::cout << "Before doing anything: ";
   FancyFFTs::printListOfKeys();
 
-  double* ps1 = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, PowSpecNorm::kSum);
-  double* ps2 = FancyFFTs::getPowerSpectrum(n, sineWave2, dt, PowSpecNorm::kSum);
+  double* ps1 = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, FancyFFTs::kSum);
+  double* ps2 = FancyFFTs::getPowerSpectrum(n, sineWave2, dt, FancyFFTs::kSum);
 
   std::cout << "After makeing two power spectrums of length " << n<< ": ";
   FancyFFTs::printListOfKeys();  
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]){
 
 
 
-  double* ps1_ave = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, PowSpecNorm::kAverage);
+  double* ps1_ave = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, FancyFFTs::kAverage);
   double powFreq_ave = sum(FancyFFTs::getNumFreqs(n), ps1_ave);
   std::cout << "powFreq_ave = " << powFreq_ave << std::endl;
   std::cout << "powFreq_ave/powTime_ave = " << powFreq_ave/(powTime/n) << std::endl;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
   delete [] ps1_ave;
 
 
-  double* ps1_timeIntegral = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, PowSpecNorm::kTimeIntegral);
+  double* ps1_timeIntegral = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, FancyFFTs::kTimeIntegral);
   double powFreq_timeIntegral = sum(FancyFFTs::getNumFreqs(n), ps1_timeIntegral);  
   std::cout << "powFreq_timeIntegral = " << powFreq_timeIntegral << std::endl;
   std::cout << "powFreq_timeIntegral/powTime_ave = " << powFreq_timeIntegral/(dt*powTime) << std::endl;

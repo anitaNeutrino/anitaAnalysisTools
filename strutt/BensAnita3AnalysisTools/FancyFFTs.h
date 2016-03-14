@@ -3,7 +3,7 @@
  Email: b.strutt.12@ucl.ac.uk
 
  Description: 
-             C++ ROOT friendly class to do FFTs faster than Ryan. 
+             C++ ROOT friendly namespace to do FFTs faster than Ryan. 
 	     Will probably be pretty bare bones intially.
 	     I only really want this for doing Cross Correlations.
 *************************************************************************************************************** */
@@ -38,8 +38,19 @@ typedef struct {char a[16];} __float128; /* 16 chars have the same size as one _
 
 
 
+using std::complex;
 
-namespace PowSpecNorm {
+/** @namespace FancyFFTs
+ * @brief My implementation of a wrapper for FFTW for use with ROOT thing.
+ *
+ * Most functionality has been merged into FFTtools, except some of the threading options.
+ * Hopefully that will get done at some point in the future and this namespace can be done away with.
+ */
+namespace FancyFFTs {
+
+  /**
+   * @brief Flag to pass to FancyFFT functions specifying normalization of power spectra.
+   */  
   enum conventionFlag {
     kSum = 0,
     kAverage = 1,
@@ -47,70 +58,46 @@ namespace PowSpecNorm {
     kPowSpecDensity = 3,
     kPowSpecDensity_dBm = 4
   };
-}
 
-class FancyFFTs{
-
-  // This class needs to a friend to CrossCorrelator so it can assign
-  // multiple plans of the same length, one for each thread
-  // and I've chosen to make the assign plan thing private.
-  friend class CrossCorrelator;
-  
-public:
-  FancyFFTs(); /* Not used */
-  ~FancyFFTs(); /* Not used */
-
-
-  /* Real-to-complex and complex-to real functions */
-  static std::complex<double>* doFFT(Int_t len, double* input, bool copyOutputToNewArray, int threadInd=0);
-  static std::complex<double>* doFFT(Int_t len, double* input, std::complex<double>* output, int threadInd=0);
-  static std::complex<double>* doFFT(Int_t len, double* input, std::complex<double>* output,
-				     bool copyOutputToNewArray, int threadInd=0);  
-  static double* doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
-  static double* doInvFFT(int len, std::complex<double>* input, double* output, int threadInd=0);  
-  static double* doInvFFT(int len, std::complex<double>* input, double* output,
+  complex<double>* doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd);
+  complex<double>* doFFT(int len, double* input, complex<double>* output, int threadInd);
+  complex<double>* doFFT(int len, double* input, complex<double>* output,
+				     bool copyOutputToNewArray, int threadInd);  
+  double* doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
+  double* doInvFFT(int len, complex<double>* input, double* output, int threadInd=0);  
+  double* doInvFFT(int len, complex<double>* input, double* output,
 			  bool copyOutputToNewArray, int threadInd=0);
 
-  static double* getPowerSpectrum(int len, double* input, double dt, 
-				  PowSpecNorm::conventionFlag normFlag,
+  double* getPowerSpectrum(int len, double* input, double dt, 
+				  conventionFlag normFlag,
 				  int threadInd=0);
 
-  static double* getPowerSpectrum(int len, double* input, double dt, 
-				  PowSpecNorm::conventionFlag normFlag,
+  double* getPowerSpectrum(int len, double* input, double dt, 
+				  conventionFlag normFlag,
 				  double* outputPtr, int threadInd=0);
 
-  static TGraph* getPowerSpectrumTGraph(int len, double* input, double dt, 
-					PowSpecNorm::conventionFlag normFlag,
+  TGraph* getPowerSpectrumTGraph(int len, double* input, double dt, 
+					conventionFlag normFlag,
 					bool dBScale, int threadInd=0);
-  static double* getFreqArray(int len, double dt);
-  static int getNumFreqs(int len);
-  static int printListOfKeys();
-  static double* crossCorrelate(int len, double* v1, double* v2, int threadInd=0);
-  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2, int threadInd=0);
-  static double* crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
+  double* getFreqArray(int len, double dt);
+  int getNumFreqs(int len);
+  int printListOfKeys();
+  double* crossCorrelate(int len, double* v1, double* v2, int threadInd=0);
+  double* crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2, int threadInd=0);
+  double* crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2,
 				double* output, int threadInd=0);
-  static int extendToPowerOfTwo(int len);
-  static std::complex<double>* zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded);
-  static std::complex<double>* zeroPadFFT(std::complex<double>* fft, std::complex<double>* output,
+  int extendToPowerOfTwo(int len);
+  complex<double>* zeroPadFFT(complex<double>* fft, int numFreqs, int numFreqsPadded);
+  complex<double>* zeroPadFFT(complex<double>* fft, complex<double>* output,
 					  int numFreqs, int numFreqsPadded);  
 
 
-private:
-
  /* Takes care of checking whether a plan exists or not */
-  static bool makeNewPlanIfNeeded(int len,int threadInd=0);
+  bool makeNewPlanIfNeeded(int len,int threadInd=0);
 
-    /*
-     std::maps which hold all the fftw goodies.
-     The length is the key so we have an easy way to check if a plan already exists.
-     The values are the input/ouput arrays and the plans, real-to-complex and complex-to-real.
-  */
+  double* getRealArray(std::pair<Int_t, Int_t> key);
+  
 
-  static std::map<std::pair<int, int>, fftw_plan> fRealToComplex;
-  static std::map<std::pair<int, int>, fftw_plan> fComplexToReal;
-  static std::map<std::pair<int, int>, double*> fReals;
-  // static std::map<std::pair<int, int>, fftw_complex*> fComplex;
-  static std::map<std::pair<int, int>, std::complex<double>*> fComplex;
 };
 
 

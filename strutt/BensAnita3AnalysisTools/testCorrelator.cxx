@@ -25,7 +25,6 @@
 void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
-void hackyNormalizationTest();
 void testCoherentlySummedWaveform();
 // void testFileWriting();
 
@@ -35,7 +34,6 @@ int main(){
   //  testNewCombinatorics();
   // testImageFullStyle();
   testCoherentlySummedWaveform();  
-  // hackyNormalizationTest();
   //  testFileWriting();
 
   return 0;
@@ -206,20 +204,6 @@ void testNewCombinatorics(){
 
   UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
   cc->correlateEvent(realEvent);
-  Int_t nc = -1;
-  for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
-    for(UInt_t ant2Ind=0; ant2Ind < cc->ant2s[ant1].size(); ant2Ind++){
-      Int_t ant2 = cc->ant2s[ant1].at(ant2Ind);
-      //    for(int& ant2 : cc->ant2s[ant1]){
-      std::cout << ant1 << " " << ant2 << " "
-		<< cc->comboIndices[ant1][ant2] << "  " 
-		<< cc->comboIndices[ant2][ant1] << std::endl;
-      if(cc->comboIndices[ant1][ant2]>nc){
-	nc = cc->comboIndices[ant1][ant2];
-      }
-    }
-  }
-  std::cout << nc << " combos" << std::endl; 
 
   TFile* outFile = new TFile("/tmp/testNewCombinatorics.root","recreate");
   Double_t imagePeak = -1;
@@ -310,59 +294,6 @@ void testImageFullStyle(){
 
 }
 
-
-
-void hackyNormalizationTest(){
-  /*
-    Check FFT normalization
-   */
-
-  char eventFileName[1024];
-
-  Int_t run = 11672;
-  sprintf(eventFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/eventFile%d.root", run, run);
-  TFile* eventFile = TFile::Open(eventFileName);
-  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
-
-  char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "~/UCL/ANITA/antarctica2014/PrioritizerdCalib/localData/run%d/headFile%d.root", run, run);
-  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
-
-  RawAnitaEvent* event = NULL;
-  eventTree->SetBranchAddress("event", &event);
-  RawAnitaHeader* header = NULL;
-  headTree->SetBranchAddress("header", &header);
-
-  CrossCorrelator* cc = new CrossCorrelator();
-
-  Long64_t numEntries = 108;
-  for(Long64_t entry=107; entry<numEntries; entry++){
-
-    headTree->GetEntry(entry);
-    eventTree->GetEntry(entry);
-
-    UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault, header));
-    TGraph* gr1 = realEvent->getGraph(15, AnitaPol::kVertical);
-    TGraph* gr2 = realEvent->getGraph(15, AnitaPol::kVertical);
-
-    TGraph* gr1Int = cc->interpolateWithStartTime(gr1, gr1->GetX()[0]);
-    TGraph* gr2Int = cc->interpolateWithStartTime(gr2, gr2->GetX()[0]);
-    RootTools::normalize(gr1Int);
-    RootTools::normalize(gr2Int);
-
-    // cc->correlateEvent(realEvent);
-    Double_t* corrs = cc->crossCorrelateFourier(gr1Int, gr2Int);
-    std::cout << "Normalization factor is " << corrs[0] << std::endl;
-    
-    delete corrs;
-
-    delete realEvent;
-  }
-
-  delete cc;
-
-}
 
 
 void writeCorrelationGraphs(CrossCorrelator* cc){
