@@ -272,12 +272,6 @@ public:
   void insertPhotogrammetryGeometry();
 
 
-  // Hacks in From AVG's MyCorrelator
-  Int_t getAbbyCominatoricLogic(Int_t ant1, Int_t ant2, Double_t abbyPhi_deg, Double_t abbyTheta_deg);
-
-  Int_t allowedPhisPairOfAntennas(Double_t &lowerAngle, Double_t &higherAngle, Double_t &centerTheta1,
-				  Double_t &centerTheta2, Double_t &centerPhi1, Double_t &centerPhi2,
-				  Int_t ant1, Int_t ant2);
   
   /**********************************************************************************************************
   Variables
