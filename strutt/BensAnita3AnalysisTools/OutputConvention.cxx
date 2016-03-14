@@ -31,10 +31,12 @@ TString OutputConvention::getOutputFileName(){
     outFileName += TString::Format("%sPlots", argv[0]);
 
     // Excutable args
-    for(int argInd=1; argInd < argc; argInd++){
-      outFileName += TString::Format("_%s", argv[argInd]);
+    if(argc > 1){
+      for(int argInd=1; argInd < argc; argInd++){
+	outFileName += TString::Format("_%s", argv[argInd]);
+      }
     }
-
+    
     // Date and time of running executable 
     outFileName += getDateTimeSuffix();
 
