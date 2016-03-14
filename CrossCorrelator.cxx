@@ -983,17 +983,18 @@ void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3Trig
 Image generation functions.
 **********************************************************************************************************/
 
-Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
+Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol,
+								   Int_t combo, Double_t deltaT){
 
   Int_t offsetLow = floor(deltaT/correlationDeltaT);
   Int_t offsetHigh = ceil(deltaT/correlationDeltaT);
 
   Double_t dt1 = offsetLow*correlationDeltaT;
   // Double_t dt2 = offsetHigh*ptr->correlationDeltaT;
-	  
+         
   offsetLow = offsetLow < 0 ? offsetLow + numSamplesUpsampled : offsetLow;
-  offsetHigh = offsetHigh < 0 ? offsetHigh + numSamplesUpsampled : offsetHigh;	  
-	  
+  offsetHigh = offsetHigh < 0 ? offsetHigh + numSamplesUpsampled : offsetHigh;   
+         
   Double_t c1 = crossCorrelationsUpsampled[pol][combo][offsetLow];
   Double_t c2 = crossCorrelationsUpsampled[pol][combo][offsetHigh];
 
@@ -1002,6 +1003,7 @@ Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::Ani
   return cInterp;
   
 }
+
 
 Double_t CrossCorrelator::getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
@@ -2110,11 +2112,11 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
     Int_t ant2 = comboToAnt2s.at(combo);
 
     Double_t dtExp = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-    Double_t dtExp2 = getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
+    // Double_t dtExp2 = getDeltaTExpectedPat(ant2, ant1, phiWave, -1*thetaWave);
 
-    if(TMath::Abs(dtExp - dtExp2) > 1e-5){
-      std::cerr << "!!!!!!" << std::endl;
-    }
+    // if(TMath::Abs(dtExp - dtExp2) > 1e-5){
+    //   std::cerr << "!!!!!!" << std::endl;
+    // }
     
     
     Double_t tToExp = 1e9;
@@ -2403,47 +2405,93 @@ TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t 
 }
 
 
-TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg, UInt_t l3Trigger){
-  // Sums all l3 triggered phi-sector waveforms together to make the coherently summed waveform
+
+
+Int_t CrossCorrelator::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg){
+  Int_t phiSectorOfPeak = -1;
+  Double_t bestDeltaPhiOfPeakToAnt = 360;
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    Double_t phiOfAnt = phiArrayDeg[pol].at(ant);
+    Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, phiDeg));
+    if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
+      bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
+      phiSectorOfPeak = (ant % NUM_PHI);
+    }
+  }
+  return phiSectorOfPeak;
+}
+
+
+
+/*!
+  \brief Creates the coherently summed waveform from the zero padded FFTs held in memory
+  \param pol is the polarization
+  \param phiDeg is the incoming phi direction in degrees
+  \param thetaDeg is the incoming theta direction in degrees
+  \param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction
+*/
+TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
+						      Double_t thetaDeg, Int_t maxDeltaPhiSect){
 
   Double_t phiRad = phiDeg*TMath::DegToRad();
   Double_t thetaRad = thetaDeg*TMath::DegToRad();
   Int_t numAnts = 0;
   Int_t firstAnt = -1;
 
+  Int_t centerPhiSector = getPhiSectorOfAntennaClosestToPhiDeg(pol, phiDeg);
+  
   std::pair<Int_t, Int_t> key(numSamplesUpsampled, 0);
   TGraph* grCoherent = NULL;
-  Double_t* vArray = FancyFFTs::fReals[key];
-  
-  for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
-    Int_t doPhiSector = RootTools::getBit(phiSector, l3Trigger);
-    if(doPhiSector > 0){
-      for(Int_t ring=0; ring<NUM_RING; ring++){
-	Int_t ant= phiSector + ring*NUM_PHI;
-	FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][ant], false);
 
-	if(firstAnt==-1){
-	  std::vector<Double_t> tArray(numSamplesUpsampled, 0);
-	  Double_t t0 = grsResampled[pol][ant]->GetX()[0];
-	  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
-	    tArray.at(samp) = t0 + samp*correlationDeltaT;
-	    vArray[samp] *= interpRMS[pol][ant];
-	  }
-	  firstAnt = ant;
-	  grCoherent = new TGraph(numSamplesUpsampled, &tArray[0], &vArray[0]);
+
+  // Grab the output array from FancyFFTs internal memory. Don't delete this!
+  Double_t* vArray = FancyFFTs::fReals[key];
+
+  
+  for(Int_t deltaPhiSect=-maxDeltaPhiSect; deltaPhiSect<=maxDeltaPhiSect; deltaPhiSect++){
+
+    Int_t phiSector = deltaPhiSect + centerPhiSector;
+    phiSector = phiSector < 0 ? phiSector + NUM_PHI : phiSector;
+    phiSector = phiSector >= NUM_PHI ? phiSector - NUM_PHI : phiSector;
+
+    for(Int_t ring=0; ring<NUM_RING; ring++){
+      Int_t ant= phiSector + ring*NUM_PHI;
+
+      // Here we do the inverse FFT on the padded FFTs in memory.
+      // The output is now in the vArray
+      FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][ant], false);
+
+      if(firstAnt==-1){ // Is this the first antenna we've considered?
+	std::vector<Double_t> tArray(numSamplesUpsampled, 0);
+	Double_t t0 = grsResampled[pol][ant]->GetX()[0];
+	for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+	  tArray.at(samp) = t0 + samp*correlationDeltaT;
+	  vArray[samp] *= interpRMS[pol][ant]; // Undo the normalization.
 	}
-	else{
-	  Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
-	  Int_t offset = TMath::Nint(deltaT/correlationDeltaT);
-	  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
-	    Int_t samp2 = samp + offset;
-	    if(samp2 >= 0 && samp2 < numSamplesUpsampled){
-	      grCoherent->GetY()[samp] += vArray[samp2]*interpRMS[pol][ant];
-	    }
-	  }
-	}
-	numAnts++;
+	firstAnt = ant;
+	grCoherent = new TGraph(numSamplesUpsampled, &tArray[0], &vArray[0]);
       }
+      else{
+	Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
+	Int_t offset1 = floor(deltaT/correlationDeltaT);
+	Int_t offset2 = ceil(deltaT/correlationDeltaT);
+	for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
+	  Int_t samp1 = samp + offset1;
+	  Int_t samp2 = samp + offset2;
+	  if(samp1 >= 0 && samp2 < numSamplesUpsampled){
+
+	    Double_t v1 = vArray[samp1];
+	    Double_t v2 = vArray[samp2];	    
+
+	    Double_t t1 = correlationDeltaT*samp1;
+
+	    Double_t vInterp = (deltaT - t1)*(v2 - v1)/correlationDeltaT + v1;
+	    	      
+	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];	    	    
+	  }
+	}
+      }
+      numAnts++;
     }
   }
 
@@ -2464,10 +2512,10 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
       title = "VPOL ";      
     }
 
-    title += TString::Format("Coherently Summed Waveform for arrival direction elevation %lf (Deg) and azimuth %lf (Deg); Time (ns); Voltage (mV)", thetaDeg, phiDeg);
+    title += TString::Format("Coherently Summed Waveform for arrival direction elevation %4.2lf (Deg) and azimuth %4.2lf (Deg); Time (ns); Voltage (mV)", thetaDeg, phiDeg);
 
     grCoherent->SetName(name);
-    grCoherent->SetTitle(title);    
+    grCoherent->SetTitle(title);
   }
   
   return grCoherent;
