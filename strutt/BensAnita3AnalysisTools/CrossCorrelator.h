@@ -29,8 +29,15 @@
 // standard c++ things
 #include <iostream>
 
+
+// Number of phi-sectors to cross correlate between
+#define DELTA_PHI_SECT 2
+// #define DELTA_PHI_SECT 1
+
+
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
+// #define NUM_COMBOS 192
 #define NUM_THREADS 4
 
 // Typical number of samples in waveform
@@ -71,9 +78,6 @@
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
 #define NUM_RING AnitaRing::kNotARing
-
-// Number of phi-sectors to cross correlate between
-#define DELTA_PHI_SECT 2
 
 #define SPEED_OF_LIGHT 2.99792458e8
 
@@ -165,7 +169,7 @@ public:
 			     Double_t phiWave, Double_t thetaWave);
   Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				 Int_t phiIndex, Int_t thetaIndex);
-  Double_t getDeltaTExpectedPat(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Int_t print=0);
+  Double_t getDeltaTExpectedPat(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave);
   Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				   Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
@@ -184,6 +188,9 @@ public:
   **********************************************************************************************************/
 
   // Create blank histogram with proper axis ranges and axis titles
+
+  Double_t getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+
   void createImageNameAndTitle(TString& name, TString& title, mapMode_t mapMode, zoomMode_t zoomMode,
 			       Double_t rWave, AnitaPol::AnitaPol_t pol);
   
@@ -238,6 +245,8 @@ public:
 
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t peakPhiDeg, Double_t peakThetaDeg, UInt_t l3Trigger);
 
+
+
   
   /**********************************************************************************************************
   Functions to delete pointers to internal variables
@@ -252,6 +261,7 @@ public:
   /**********************************************************************************************************
   Functions for debugging or testing
   **********************************************************************************************************/
+  TH2D* makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern, Double_t phiDeg, Double_t thetaDeg);
   void correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource);
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
@@ -260,6 +270,14 @@ public:
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   static Int_t validateGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
+
+
+  // Hacks in From AVG's MyCorrelator
+  Int_t getAbbyCominatoricLogic(Int_t ant1, Int_t ant2, Double_t abbyPhi_deg, Double_t abbyTheta_deg);
+
+  Int_t allowedPhisPairOfAntennas(Double_t &lowerAngle, Double_t &higherAngle, Double_t &centerTheta1,
+				  Double_t &centerTheta2, Double_t &centerPhi1, Double_t &centerPhi2,
+				  Int_t ant1, Int_t ant2);
   
   /**********************************************************************************************************
   Variables
@@ -326,8 +344,9 @@ public:
     CrossCorrelator* ptr;
   };
 
-  Bool_t kZeroChannel16BH;
   Bool_t kDebug;
+  Int_t kOnlyThisCombo;
+  Int_t kUseAbbyCombinatorics; // currently slow
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
