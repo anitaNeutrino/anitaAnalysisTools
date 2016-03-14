@@ -15,7 +15,11 @@
 #include "TStopwatch.h"
 #include <iostream>
 
-class ProgressBar : public TObject{
+
+/** @class ProgressBar
+ * @brief Prints a progress bar and timer to stderr
+*/
+class ProgressBar{
 
 public:
   ProgressBar();
@@ -25,12 +29,10 @@ public:
   void status();
 
 private:
-  Long64_t maxEntry; ///< Number of events you will loop over
-  Long64_t counter; ///< Number of loops completed
-  UInt_t percentage; ///< Percentage to print to the screen
-  TStopwatch watch; ///< ROOT's stopwatch class, used to time the progress since object construction
-
-  ClassDef(ProgressBar, 0);
+  Long64_t maxEntry; //!< Number of events you will loop over
+  Long64_t counter; //!< Number of loops completed
+  UInt_t percentage; //!< Percentage to print to the screen
+  TStopwatch watch; //!< ROOT's stopwatch class, used to time the progress since object construction
 
 };
 
