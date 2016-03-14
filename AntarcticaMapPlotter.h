@@ -1,16 +1,14 @@
-/* -*- C++ -*-.***************************************************************************************************
+/* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
  Description: 
-             Antarctica plotting canvas class
-*************************************************************************************************************** */
-
+             Antarctica canvas for plotting locations on the continent class
+************************************************************************************************************/
 
 
 #ifndef ANTARCTICAMAPPLOTTER_H
 #define ANTARCTICAMAPPLOTTER_H
-
 
 #include "TCanvas.h"
 #include "TH2D.h"
@@ -21,7 +19,6 @@
 
 #include <iostream>
 #include <map>
-
 
 /**
  * @class AntarcticaMapPlotter
@@ -57,7 +54,7 @@ private:
 
   // Image scaling factors
   Double_t TrueScaleLat; //!< ????
-  Double_t CentralMeridian; //!< ????
+  // Double_t CentralMeridian; //!< ????
   Double_t RadiusOfEarth; //!< ????
   Double_t xOffest; //!< ????
   Double_t yOffset; //!< ????

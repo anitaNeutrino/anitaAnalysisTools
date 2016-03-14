@@ -128,8 +128,9 @@ void testCoherentlySummedWaveform(){
   hZoomedImages.push_back(cc->makeZoomedImage(pol, imagePeakZoom, peakPhiDegZoom, peakThetaDegZoom,
 					      l3TrigPattern, peakPhiDeg, peakThetaDeg));
 
+  Double_t snr = 0;
   TGraph* grCoherent = cc->makeCoherentlySummedWaveform(pol, peakPhiDegZoom, peakThetaDegZoom,
-  							l3TrigPattern);
+  							l3TrigPattern, snr);
 
   if(grCoherent){
     grCoherent->Write();

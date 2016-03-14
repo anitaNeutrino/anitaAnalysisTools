@@ -1024,7 +1024,7 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
       }
     }
   }
-
+  
   Double_t maxOffset = -DBL_MAX;
   Int_t maxSampInd = -1;
   for(UInt_t sampInd = 0; sampInd < extremaSamps.size()-1; sampInd++){
@@ -1050,8 +1050,6 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
     minX = gr->GetX()[extremaSamps.at(maxSampInd)];
   }
 }
-
-
 
 
 
