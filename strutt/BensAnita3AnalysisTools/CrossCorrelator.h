@@ -176,7 +176,7 @@ public:
   /**********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
   **********************************************************************************************************/
-  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector);
+  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
@@ -304,7 +304,9 @@ public:
   std::vector<Int_t> comboToAnt1s; ///< Vector mapping combination index to ant1
   std::vector<Int_t> comboToAnt2s; ///< Vector mapping combination index to ant2
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; ///< Depends on L3 trigger for global image
-  std::map<UInt_t, std::vector<Int_t> > combosToUseTriggered; ///< Depends on L3 trigger for triggered image  
+
+  // std::map<UInt_t, std::vector<Int_t> > combosToUseTriggered; ///< Depends on L3 trigger for triggered image
+  std::map<std::pair<UInt_t, Int_t>, std::vector<Int_t> > combosToUseTriggered; ///< Depends on L3 trigger for triggered image    
   // Double_t* crossCorrelations[NUM_POL][NUM_COMBOS]; ///< Arrays for cross correlations
   // Double_t* crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS]; ///< Arrays for upsampled cross correlations
 
@@ -344,6 +346,8 @@ public:
 
   Bool_t kDebug;
   Int_t kOnlyThisCombo;
+  Int_t kDeltaPhiSect;
+  
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
