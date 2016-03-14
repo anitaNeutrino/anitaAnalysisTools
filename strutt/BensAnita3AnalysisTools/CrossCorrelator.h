@@ -76,7 +76,6 @@
  * 
  * Does all the heavy lifting: gets waveforms from a UsefulAnitaEvent, cross correlates them, and produces interferometric maps. 
 */
-
 class CrossCorrelator{
 
 public:

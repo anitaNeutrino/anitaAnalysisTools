@@ -1,5 +1,5 @@
 // -*- C++ -*-.
-/*****************************************************************************************************************
+/**************************************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
@@ -10,7 +10,7 @@
              The first slightly clever thing is that it sorts the data so it is x-axis (time) ordered.
              The second slightly clever thing is that it can then interpolate the data to values between entries.
              This interpolation is equivalent to TGraph::Eval.
-*************************************************************************************************************** */
+**************************************************************************************************************/
 
 #ifndef FANCYTTREEINTERPOLATOR_H
 #define FANCYTTREEINTERPOLATOR_H
@@ -28,10 +28,17 @@
 #include <exception>
 #include <stdexcept>
 
-class FancyTTreeInterpolator: public TObject{
+
+/**
+ * @class FancyTTreeInterpolator
+ * @brief A class to interpolate sparse, but continuous data in a TTree. 
+ * 
+ * This was developed with adu5Pat variables like heading in mind.
+ * Not really necessary once full flight data is recovered.
+*/
+class FancyTTreeInterpolator{
 
 public:
-  FancyTTreeInterpolator();
   FancyTTreeInterpolator(TTree* t, TString xAxisText);
   ~FancyTTreeInterpolator();
 
@@ -46,17 +53,13 @@ public:
   TGraph* makeSortedTGraph(TString yAxisText, Double_t wrapValue);
   TGraph* makeSortedTGraph(TString yAxisText, TString cutString, Double_t wrapValue);
 
-  TTree* fTree;
-  TString fXAxisText;
-  std::map<TString,TGraph*> fStringToGraph;
-  std::map<TString, Double_t> fStringToWrapValue;
-  Double_t fXmin;
-  Double_t fXmax;
-
+  TTree* fTree; //!< TTree with which the intepolater was initialized.
+  TString fXAxisText; //!< Branch name with which the intepolater was initialized.
+  std::map<TString,TGraph*> fStringToGraph; //!< Internally stored TGraphs, accessed by TTree branch name.
+  std::map<TString, Double_t> fStringToWrapValue; //!< Internally stored wrapValues, accessed by TTree branch name.
+  Double_t fXmin; //!< Stored x-axis lower limit.
+  Double_t fXmax; //!< Stored x-axis lower limit.
   
-  ClassDef(FancyTTreeInterpolator, 1);
 };
-
-
 
 #endif //FANCYTTREESORTERANDINTERPOLATOR_H
