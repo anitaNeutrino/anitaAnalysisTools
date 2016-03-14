@@ -1,10 +1,10 @@
-/* -*- C++ -*-.***************************************************************************************************
+/* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
  Description: 
              A Cross Correlator to interact with the ROOTified ANITA-3 data and do some interferometry. 
-*************************************************************************************************************** */
+***********************************************************************************************************/
 
 #ifndef CROSSCORRELATOR_H
 #define CROSSCORRELATOR_H
@@ -94,9 +94,9 @@ class CrossCorrelator{
 
 public:
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   typdef enums: flags for making maps
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   enum mapMode_t{
     kGlobal,
     kTriggered,
@@ -112,24 +112,24 @@ public:
   TString zoomModeNames[kNumZoomModes];
 
   
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Constructor and destructor functions
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   CrossCorrelator();
   ~CrossCorrelator();
   void initializeVariables();  
   void printInfo();
   
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Waveform manipulation functions
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doFFTs(AnitaPol::AnitaPol_t pol);
   TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime);  
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   All correlation functions
-  **********************************************************************************************************/
+  *********************************************************************************************************/
 
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
@@ -162,9 +162,9 @@ public:
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);  
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Calculate deltaT between two antennas (for a plane wave unless function name says otherwise)
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
   Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
@@ -173,9 +173,9 @@ public:
   Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				   Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Precalculate DeltaTs during initialization where appropriate
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
@@ -183,9 +183,9 @@ public:
   // void fillDeltaTLookupZoomed(Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, UShort_t l3TrigPattern);
   Double_t getBin0PhiDeg();
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Image generation functions.
-  **********************************************************************************************************/
+  *********************************************************************************************************/
 
   // Create blank histogram with proper axis ranges and axis titles
 
@@ -244,14 +244,17 @@ public:
 
   TGraph* makeTrigPatternGraph(TString name, UShort_t l3TrigPattern, Color_t col, Int_t fillStyle);
 
-  TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t peakPhiDeg, Double_t peakThetaDeg, UInt_t l3Trigger);
+
+  Int_t getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg);
+  TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
+				       Double_t thetaDeg, Int_t maxDeltaPhiSect);
 
 
 
   
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Functions to delete pointers to internal variables
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   // void deleteCrossCorrelations(AnitaPol::AnitaPol_t pol);
   // void deleteUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol);
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
@@ -259,9 +262,9 @@ public:
   // void deleteAllPaddedFFTs(AnitaPol::AnitaPol_t pol);
 
 
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Functions for debugging or testing
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   TH2D* makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern, Double_t phiDeg, Double_t thetaDeg);
   TH2D* makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
 				   Double_t phiDeg, Double_t thetaDeg, Double_t corThresh=-1);
@@ -276,9 +279,9 @@ public:
 
 
   
-  /**********************************************************************************************************
+  /*********************************************************************************************************
   Variables
-  **********************************************************************************************************/
+  *********************************************************************************************************/
   // typedef Char_t dtIndex_t;
   typedef Double_t dtIndex_t;  
   dtIndex_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; ///< Lookup of deltaTs between antenna pairs for making an image.
