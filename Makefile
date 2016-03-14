@@ -91,8 +91,8 @@ $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY)
 	@echo $<
 	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) -o $@
 
-docs: Doxyfile
-	doxygen Doxyfile
+docs: docs/Doxyfile
+	doxygen docs/Doxyfile
 
 #The library
 $(ROOT_LIBRARY) : $(LIB_OBJS) 
