@@ -59,10 +59,10 @@ namespace FancyFFTs {
     kPowSpecDensity_dBm = 4
   };
 
-  complex<double>* doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd);
-  complex<double>* doFFT(int len, double* input, complex<double>* output, int threadInd);
+  complex<double>* doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd=0);
+  complex<double>* doFFT(int len, double* input, complex<double>* output, int threadInd=0);
   complex<double>* doFFT(int len, double* input, complex<double>* output,
-				     bool copyOutputToNewArray, int threadInd);  
+				     bool copyOutputToNewArray, int threadInd=0);  
   double* doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
   double* doInvFFT(int len, complex<double>* input, double* output, int threadInd=0);  
   double* doInvFFT(int len, complex<double>* input, double* output,

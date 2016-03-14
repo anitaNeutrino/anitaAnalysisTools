@@ -108,8 +108,8 @@ public:
    * We then use the thread index to figure out what portion of the work each thread should do.
    */
   struct threadArgs{
-    Long_t threadInd; //! The thread index
-    CrossCorrelator* ptr; //! Pointer to the correlator index
+    Long_t threadInd; //!< The thread index
+    CrossCorrelator* ptr; //!< Pointer to the CrossCorrelator
   };
 
   

@@ -16,6 +16,14 @@
 #include "TMultiGraph.h"
 #include "TStyle.h"
 
+
+/**
+ * @class AnitaAveragePowerSpectrum
+ * @brief Essentially a wrapped around a payloads worth of AveragePowerSpectrum.
+ * 
+ * I used to write these into TTrees, but the way the data was packed made access so slow that now I don't.
+ * However, this class is still used in some spectral analysis code in some places.
+*/
 class AnitaAveragePowerSpectrum : public TNamed {
 
 public:
@@ -23,7 +31,6 @@ public:
   // Copied from AveragePowerSpectrum.h
   AnitaAveragePowerSpectrum();
   AnitaAveragePowerSpectrum(TString name, TString title);
-
   ~AnitaAveragePowerSpectrum();
   
   AveragePowerSpectrum* get(AnitaPol::AnitaPol_t pol, Int_t ant);
@@ -34,11 +41,11 @@ public:
   TMultiGraph* drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring);
   
 private:
-  AveragePowerSpectrum* avePowSpecs[AnitaPol::kNotAPol][NUM_SEAVEYS];  
+  AveragePowerSpectrum* avePowSpecs[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< A payload's worth of AveragePowerSpectrum
   void initAllAvePowSpecs();
   void deleteAllAvePowSpecs();
   
-  ClassDef(AnitaAveragePowerSpectrum, 8);
+  ClassDef(AnitaAveragePowerSpectrum, 9);
 };
 
   
