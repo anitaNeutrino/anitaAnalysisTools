@@ -36,7 +36,6 @@ CrossCorrelator::~CrossCorrelator(){
  */
 void CrossCorrelator::initializeVariables(){
 
-  kDebug = false;
   kDeltaPhiSect = 2;
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -110,7 +109,7 @@ void CrossCorrelator::printInfo(){
   std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
   std::cerr << "\tBin size phi (deg) = " << Double_t(PHI_RANGE)/NUM_BINS_PHI << std::endl;
   std::cerr << "\tdeltaTs array size = "
-	    << sizeof(dtIndex_t)*NUM_POL*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA
+	    << sizeof(Double_t)*NUM_POL*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA
 	    << " bytes" << std::endl;
 }
 
@@ -2209,7 +2208,7 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 
   std::pair<Int_t, Int_t> key(numSamplesUpsampled, 0);
   // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
-  Double_t* vArray = FancyFFTs::fReals[key];
+  Double_t* vArray = FancyFFTs::getRealArray(key);
   
   FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][firstAnt], false);
   

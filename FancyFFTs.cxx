@@ -1,43 +1,29 @@
-/* -*- C++ -*-.***************************************************************************************************
- Author: Ben Strutt
- Email: b.strutt.12@ucl.ac.uk
-
- Description: 
-             C++ ROOT friendly class to do FFTs faster than Ryan, but is mostly a shameless copy.
-	     Will probably be pretty bare bones intially.
-	     I only really want this for doing Cross Correlations.
-*************************************************************************************************************** */
-
 #include "FancyFFTs.h"
 
-/* Define static members */
-/* https://stackoverflow.com/questions/18433752/c-access-private-static-member-from-public-static-method */
-std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fRealToComplex;
-std::map<std::pair<int, int>, fftw_plan> FancyFFTs::fComplexToReal;
-std::map<std::pair<int, int>, double*> FancyFFTs::fReals;
-std::map<std::pair<int, int>, std::complex<double>*> FancyFFTs::fComplex;
-
-FancyFFTs::FancyFFTs(){
-  std::cout << "FancyFFTs::FancyFFTs()" << std::endl;
-}
-
-FancyFFTs::~FancyFFTs(){
-  std::cout << "FancyFFTs::~FancyFFTs()" << std::endl;
-}
+std::map<std::pair<int, int>, fftw_plan> fRealToComplex;
+std::map<std::pair<int, int>, fftw_plan> fComplexToReal;
+std::map<std::pair<int, int>, double*> fReals;
+std::map<std::pair<int, int>, complex<double>*> fComplex;
 
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates new fftw plan to handle 1D transforms of length len if they haven't been allocated already.
+ *
+ * @param len is the length of the input.
+ * @param threadInd is the index of the thread that needs an fftw plan.
+*/
 bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
-  /* 
-     Function which checks whether we've encountered a request to do an FFT of this length before.
-     If we haven't then we need a new plan!
-  */
 
   std::pair<int, int> key(len, threadInd);
   std::map<std::pair<int, int>,fftw_plan>::iterator it = fRealToComplex.find(key);
   if(it==fRealToComplex.end()){
     // std::cout << len << "\t" << threadInd << std::endl;
     fReals[key] = (double*) fftw_malloc(sizeof(double)*len);
-    fComplex[key] = (std::complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
+    fComplex[key] = (complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
     fRealToComplex[key] = fftw_plan_dft_r2c_1d(len,fReals[key],(fftw_complex*)fComplex[key],FFTW_MEASURE);
     fComplexToReal[key] = fftw_plan_dft_c2r_1d(len,(fftw_complex*)fComplex[key],fReals[key],FFTW_MEASURE);
     return true;
@@ -47,7 +33,23 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
   }
 }
 
-TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, bool dBScale, int threadInd){
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates a power spectrum TGraph from an array of doubles.
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param dt is the time step between samples.
+ * @param normFlag is a flag specifying how to normalize the output TGraph.
+ * @param dBScale specifies whether to return the TGraph in dB or linear scale.
+ * @param threadInd specifies the thread index of the fftw plans to use.
+ * @returns the power spectrum TGraph.
+*/
+TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, FancyFFTs::conventionFlag normFlag, bool dBScale, int threadInd){
   double* powSpec = getPowerSpectrum(len, input, dt, normFlag, threadInd);
   int numFreqs = getNumFreqs(len);
   if(dBScale==true){
@@ -59,16 +61,44 @@ TGraph* FancyFFTs::getPowerSpectrumTGraph(int len, double* input, double dt, Pow
 }
 
 
-double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, int threadInd){
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates the power spectrum in an array of doubles of length (len/2 + 1).
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param dt is the time step between samples.
+ * @param normFlag is a flag specifying how to normalize the output TGraph.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to the array containing the power spectrum.
+*/
+double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, FancyFFTs::conventionFlag normFlag, int threadInd){
   
   return FancyFFTs::getPowerSpectrum(len, input, dt, normFlag, NULL, threadInd);
 }
 
 
-double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag, double* outputPtr, int threadInd){
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates the power spectrum in an array of doubles of length (len/2 + 1).
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param dt is the time step between samples.
+ * @param normFlag is a flag specifying how to normalize the output TGraph.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @param outputPtr can be used to direct FancyFFTs to copy the output into pre-allocatred memory.
+ * @returns a pointer to the array containing the power spectrum.
+*/
+double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, FancyFFTs::conventionFlag normFlag, double* outputPtr, int threadInd){
 
   /* 
-     PowSpecNorm::conventionFlag determines (you guessed it) the normalization of the power spectrum.
+     FancyFFTs::conventionFlag determines (you guessed it) the normalization of the power spectrum.
      For a thorough explanation see Ryan's presentation:
      http://www.hep.ucl.ac.uk/~rjn/saltStuff/fftNormalisation.pdf
   */
@@ -76,12 +106,12 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
   const double ohms = 50; // Assuming 50 Ohm termination
   double conventionNorm = 1;
   switch (normFlag){
-  case PowSpecNorm::kSum:
+  case kSum:
     /* Sum of output powSpec == sum over V[i]*V[i] for each V[i] in input */
     conventionNorm = 1./len;
     break;
 
-  case PowSpecNorm::kAverage:
+  case kAverage:
     /* 
        Sum of output powSpec == sum over V[i]*V[i]/len for each V[i] in input
        Tells you power per unit sample? ANITAns probably don't want this one.
@@ -89,7 +119,7 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
     conventionNorm = 1./(len*len);
     break;
 
-  case PowSpecNorm::kTimeIntegral:
+  case kTimeIntegral:
     /*
       Sum of output powSpec == sum over dt*V[i]*V[i] for each V[i] in input 
       Tell you total time integrated power. 
@@ -98,7 +128,7 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
     break;
 
 
-  case PowSpecNorm::kPowSpecDensity:
+  case kPowSpecDensity:
     /* 
        Sum of df*psd[i] for each psd[i] in output == sum over dt*V[i]*V[i]/df for each V[i] in input
                                                   == sum over N*dt*dt*V[i]*V[i] for each V[i] in input
@@ -110,7 +140,7 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
     break;
 
 
-  case PowSpecNorm::kPowSpecDensity_dBm:
+  case kPowSpecDensity_dBm:
     /* 
        Sum of df*psd[i] for each psd[i] in output == sum over dt*V[i]*V[i]/df/ohms for each V[i] in input
                                                   == sum over N*dt*dt*V[i]*V[i]/ohms for each V[i] in input
@@ -123,7 +153,7 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
     
   default:
     /* You shouldn't get here and now I'm going to tell you that. */
-    std::cerr << "Invalid PowSpecNorm::conventionFlag in FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNorm::conventionFlag normFlag) " << std::endl;
+    std::cerr << "Invalid FancyFFTs::conventionFlag in FancyFFTs::getPowerSpectrum(int len, double* input, double dt, FancyFFTs::conventionFlag normFlag) " << std::endl;
   }
   
   
@@ -137,7 +167,7 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
   std::pair<int, int> key(len, threadInd);
   
   /* Get the fftw_malloc'd array that the plan uses */
-  std::complex<double>* rawFftOutputPtr = (std::complex<double>*) fComplex[key];
+  complex<double>* rawFftOutputPtr = (complex<double>*) fComplex[key];
 
   const int powSpecLen = getNumFreqs(len);
   
@@ -169,18 +199,52 @@ double* FancyFFTs::getPowerSpectrum(int len, double* input, double dt, PowSpecNo
 
 
 
-std::complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd){
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does a forward fast fourier transform on a real input array.
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param copyOutputToNewArray leave output in internal memory (false) or allocate new memory and copy (true).
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of complex<double>s containing the fft.
+ */    
+complex<double>* FancyFFTs::doFFT(int len, double* input, bool copyOutputToNewArray, int threadInd){
   return doFFT(len, input, NULL, copyOutputToNewArray, threadInd);
 }
 
-std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<double>* output, int threadInd){
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does a forward fast fourier transform on a real input array.
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param output is a pointer to an array of complex<double> to copy the output to.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of complex<double>s containing the fft.
+*/
+complex<double>* FancyFFTs::doFFT(int len, double* input, complex<double>* output, int threadInd){
   return doFFT(len, input, output, true, threadInd);
 }
 
 
-std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<double>* output, bool copyOutputToNewArray, int threadInd){
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does a forward fast fourier transform on a real input array.
+ *
+ * @param len is the length of the input.
+ * @param input is a pointer to an array of doubles of length len.
+ * @param output is a pointer to an array of complex<double> to copy the output to.
+ * @param copyOutputToNewArray leave output in internal memory (false) or allocate new memory and copy (true).
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of complex<double>s containing the fft.
+*/
+complex<double>* FancyFFTs::doFFT(int len, double* input, complex<double>* output, bool copyOutputToNewArray, int threadInd){
   /* 
-     Using std::complex<double> instead of the typdef fftw_complex double[2] 
+     Using complex<double> instead of the typdef fftw_complex double[2] 
      because CINT has a better time with it, even though it's (apparently) exactly the same.
   */
 
@@ -193,9 +257,9 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<doub
 
   if(copyOutputToNewArray==true){
     int numFreqs = getNumFreqs(len);
-    std::complex<double>* theOutput = output;
+    complex<double>* theOutput = output;
     if(theOutput==NULL){
-      theOutput = new std::complex<double>[numFreqs];
+      theOutput = new complex<double>[numFreqs];
     }
     
     /* Seems to work, see http://www.fftw.org/doc/Complex-numbers.html */
@@ -207,15 +271,58 @@ std::complex<double>* FancyFFTs::doFFT(int len, double* input, std::complex<doub
   }
 }
 
-double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, bool copyOutputToNewArray, int threadInd){
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does an inverse fast fourier transform on an array of complex<double>s.
+ *
+ * @param len is the length of the real output array.
+ * @param input is a pointer to an array of complex<double>s of length (len/2 +1).
+ * @param copyOutputToNewArray leave output in internal memory (false) or allocate new memory and copy (true).
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the (real) inverse FFT.
+*/
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd){
   return doInvFFT(len, input, NULL, copyOutputToNewArray, threadInd);
 }
 
-double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output, int threadInd){
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does an inverse fast fourier transform on an array of complex<double>s.
+ *
+ * @param len is the length of the real output array.
+ * @param input is a pointer to an array of complex<double>s of length (len/2 +1).
+ * @param output is a pointer to an array of doubles to copy the output to.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the (real) inverse FFT.
+*/
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, int threadInd){
   return doInvFFT(len, input, output, true, threadInd);
 }
 
-double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output, bool copyOutputToNewArray, int threadInd){
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Does an inverse fast fourier transform on an array of complex<double>s.
+ *
+ * @param len is the length of the real output array.
+ * @param input is a pointer to an array of complex<double>s of length (len/2 +1).
+ * @param output is a pointer to an array of doubles to copy the output to.
+ * @param copyOutputToNewArray leave output in internal memory (false) or allocate new memory and copy (true).
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the (real) inverse FFT.
+*/
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, bool copyOutputToNewArray, int threadInd){
   
   /* 
      Normalization of 1/N done in this function. 
@@ -227,7 +334,7 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output
   makeNewPlanIfNeeded(len, threadInd);
   int numFreqs = getNumFreqs(len);
 
-  std::complex<double>* tempVals = (std::complex<double>*) fComplex[key];
+  complex<double>* tempVals = (complex<double>*) fComplex[key];
   
   // In the case that we cleverly left the fft in the internal array skip the copy
   if(tempVals!=input){ 
@@ -258,13 +365,34 @@ double* FancyFFTs::doInvFFT(int len, std::complex<double>* input, double* output
 }
 
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Find the next highest power of two.
+ *
+ * @param len is the number to find the next highest power of two.
+ * @returns the next highest power of two.
+*/
 int FancyFFTs::extendToPowerOfTwo(int len){
   return pow(2, TMath::CeilNint(TMath::Log2(len)));
 }
 
 
-/* Once and only once... */
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the array of frequencies to go with FFT output, determined by the tranform length and dt.
+ *
+ * @param len is the length of the real fft input.
+ * @param dt is the time between real input samples.
+ * @returns a pointer to an array of doubles containing the frequencies.
+*/
 double* FancyFFTs::getFreqArray(int len, double dt){
+  /* Once and only once... */  
   int numFreq = getNumFreqs(len);
   double df = 1./(dt*len);
   double* freqArray = new double[numFreq];
@@ -274,19 +402,63 @@ double* FancyFFTs::getFreqArray(int len, double dt){
   return freqArray;
 }
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the number of frequencies from the number of samples.
+ *
+ * @param len is the length of the real fft input.
+ * @returns the number of frequencies.
+*/
 int FancyFFTs::getNumFreqs(int len){
   return (len/2 + 1);
 }
 
-std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, int numFreqs, int numFreqsPadded){
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Zero padds FFTts, 
+ *
+ * @param fft is the unpadded fft.
+ * @param numFreqs is the length of the fft.
+ * @param numFreqsPadded is the desired length of the fft.
+ * @returns the a pointer to an array of complex<doubles> containing the padded fft.
+ *
+ * This is for doing interpolation in the time domain.
+ * Zero padding in the time/frequency domain is equivelent to interpolation in the time/frequency domain.
+*/
+complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, int numFreqs, int numFreqsPadded){
   return zeroPadFFT(fft, NULL, numFreqs, numFreqsPadded);
 }
 
-std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, std::complex<double>* output, int numFreqs, int numFreqsPadded){
 
-  std::complex<double>* fftPadded = NULL;
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Zero padds FFTts, 
+ *
+ * @param fft is the unpadded fft.
+ * @param numFreqs is the length of the fft.
+ * @param output is where the padded fft should be copied to.
+ * @param numFreqsPadded is the desired length of the fft.
+ * @returns the a pointer to an array of complex<doubles> containing the padded fft.
+ *
+ * This is for doing interpolation in the time domain.
+ * Zero padding in the time/frequency domain is equivelent to interpolation in the time/frequency domain.
+*/
+complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* output, int numFreqs, int numFreqsPadded){
+
+  complex<double>* fftPadded = NULL;
   if(output==NULL){
-    fftPadded = new std::complex<double>[numFreqsPadded];
+    fftPadded = new complex<double>[numFreqsPadded];
   }
   else{
     fftPadded = output;
@@ -308,8 +480,12 @@ std::complex<double>* FancyFFTs::zeroPadFFT(std::complex<double>* fft, std::comp
 
 
 
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Prints the list of keys of plans to stdout.
+ */
 int FancyFFTs::printListOfKeys(){
-  /* Returns number of plans, prints the lengths of the plans to screen.*/
 
   std::vector<std::pair<int, int> > keys;
 
@@ -336,6 +512,19 @@ int FancyFFTs::printListOfKeys(){
 }
 
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Cross correlates the two input arrays.
+ * 
+ * @param len is the length of both arrays, v1 and 2.
+ * @param v1 is the first input array.
+ * @param v2 is the second input array.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the cross correlations.
+ */
 double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd){
   /* 
      Cross correlation is the same as bin-by-bin multiplication in the frequency domain (with a conjugation).
@@ -343,7 +532,7 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
   */
 
   /* Store output of FFT2 in tempVals */
-  std::complex<double>* tempVals2 = doFFT(len, v2, true, threadInd);
+  complex<double>* tempVals2 = doFFT(len, v2, true, threadInd);
 
   /* Leave output of FFT1 in internal arrays to avoid an unnecessary copy */
   doFFT(len, v1, false, threadInd);
@@ -351,7 +540,7 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
   std::pair<int, int> key(len, threadInd);
   
   /* Get pointer to internal array */
-  std::complex<double>* tempVals1 = (std::complex<double>*) fComplex[key];
+  complex<double>* tempVals1 = (complex<double>*) fComplex[key];
 
   /* Take the product */
   int numFreqs = getNumFreqs(len);
@@ -376,14 +565,41 @@ double* FancyFFTs::crossCorrelate(int len, double* v1, double* v2, int threadInd
 }
 
 
-double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2, int threadInd){
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Cross correlates the two input arrays.
+ * 
+ * @param len is the length of both arrays, v1 and 2.
+ * @param fft1 is the fft of the first input array.
+ * @param fft2 is the fft of the second input array.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the cross correlations.
+ */
+double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2, int threadInd){
   return crossCorrelate(len, fft1, fft2, NULL, threadInd);
 }
 
-double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::complex<double>* fft2,
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Cross correlates the two input arrays.
+ * 
+ * @param len is the length of the time domain input (not the length of the ffts).
+ * @param fft1 is the fft of the first input array.
+ * @param fft2 is the fft of the second input array.
+ * @param output is a pointer to copy the outputted cross correlations to.
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the cross correlations.
+ */
+double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2,
 				  double* output, int threadInd){
   /* 
-     Cross correlation is the same as bin-by-bin multiplication in the frequency domain.
+     Cross correlation is the same as bin-by-bin multiplication (and some conjugation) in the frequency domain.
      Will assume lengths are the same for now.
   */
 
@@ -395,7 +611,7 @@ double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::comp
   std::pair<int, int> key(len, threadInd);
   
   /* Grab array associated with plan from internal memory */
-  std::complex<double>* tempVals = (std::complex<double>*) fComplex[key];
+  complex<double>* tempVals = (complex<double>*) fComplex[key];
 
   // TThread::Lock();
   // std::cout << "threadInd = " << threadInd << "\tfComplex[key] = " << tempVals << std::endl << std::endl;
@@ -431,4 +647,16 @@ double* FancyFFTs::crossCorrelate(int len, std::complex<double>* fft1, std::comp
   }
 
   return crossCorr;
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the real array of the internal fftw memory. Do not delete this!
+ * 
+ * @param key is an std::pair of the real array length and the thread index of the plan.
+ * @returns a pointer to fftw's internal real array. DO NOT DELETE THIS!
+ */
+double* FancyFFTs::getRealArray(std::pair<Int_t, Int_t> key){
+  return fReals[key];
 }
