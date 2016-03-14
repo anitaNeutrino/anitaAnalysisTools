@@ -2130,3 +2130,4 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
   return grCoherent;
   
 }
+
