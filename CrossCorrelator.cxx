@@ -1042,10 +1042,10 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
 				       Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
-  // return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-  // 			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
-  return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-  		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
+  			   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
+  // return makeImage(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
+  // 		   kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
 }
 
