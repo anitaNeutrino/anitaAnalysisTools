@@ -849,21 +849,35 @@ void CrossCorrelator::fillDeltaTLookup(){
 Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
   // This function encodes whether a pair of antennas should be used in a particular phi sector.
 
-  // Require that the difference in phi-sectors be <= deltaPhiSect
+  // Vomit inducing hack here...
+  // I want to be able to choose whether or not require one of the phi-sectors to be the phi-sector
+  // of interest or just to have both in range of deltaPhiSect
+  // I'm going to use the sign of deltaPhiSect to do this since it's not easy to
+  // extend std::pair to std::tuple without using modern c++ features.
+  // You can choose to hate ROOT versions < 6, people who use ROOT versions < 6, me, or all of the above.
+  // Nicely, this condition is degenrate in the case of deltaPhiSect = 0.
+  Int_t absDeltaPhiSect = TMath::Abs(deltaPhiSect);
+  
+  // Require that the difference in phi-sectors be <= absDeltaPhiSect
   Int_t phiSectorOfAnt1 = ant1%NUM_PHI;
-  Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=deltaPhiSect;
+  Bool_t ant1InRange = TMath::Abs(phiSector - (phiSectorOfAnt1))<=absDeltaPhiSect;
 
   // Takes account of wrapping around payload (e.g. antennas in phi-sectors 1 and 16 are neighbours)
-  ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-deltaPhiSect);
+  ant1InRange = ant1InRange || TMath::Abs(phiSector - (phiSectorOfAnt1))>=(NUM_PHI-absDeltaPhiSect);
 
   Int_t phiSectorOfAnt2 = ant2%NUM_PHI;
-  Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=deltaPhiSect;
-  ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-deltaPhiSect);  
+  Bool_t ant2InRange = TMath::Abs(phiSector - (phiSectorOfAnt2))<=absDeltaPhiSect;
+  ant2InRange = ant2InRange || TMath::Abs(phiSector - (phiSectorOfAnt2))>=(NUM_PHI-absDeltaPhiSect);  
 
-  // Require that both antennas are within range of the given phi-sector.
-  return (ant1InRange && ant2InRange);
+
+  // See rather large rant above.
+  Bool_t extraCondition = true;
+  if(deltaPhiSect < 0){
+    extraCondition = (phiSectorOfAnt1==phiSector || phiSectorOfAnt2==phiSector);
+  }
+  
+  return (ant1InRange && ant2InRange && extraCondition);
 }
-
 
 // Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector){
 //   // This function encodes whether a pair of antennas should be used in a particular phi sector.
@@ -2054,7 +2068,7 @@ TH2D* CrossCorrelator::makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, USho
 
   // Book histogram and set x, y axis labels to antenna names
   TString name = "hCorrelationSummary";
-  TString polLetter = pol == AnitaPol::kHorizontal ? "H" : "V";  
+  TString polLetter = pol == AnitaPol::kHorizontal ? "H" : "V"; 
   name += polLetter;
   name += TString::Format("%u", eventNumber[pol]);
 
