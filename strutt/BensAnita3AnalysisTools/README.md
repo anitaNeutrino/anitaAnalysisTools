@@ -5,7 +5,7 @@ If you have doxygen installed then type
 
 to create a lovely html rendered version of this README at docs/html/index.html.
 
-Alternatively go to http://www.hep.ucl.ac.uk/~strutt/analysisTools, to see an online version of the documentation.
+Alternatively go to http://www.hep.ucl.ac.uk/~strutt/BensAnita3AnalysisTools to see an online version of the documentation.
 
 If neither of those takes your fancy then read on below, ignoring the doxygen tags.
 
@@ -20,15 +20,15 @@ Have fun!
 This is the software library I'm using for my analysis.
 The idea is to keep any executables doing analysis simple, just a main function that loops over TTrees containing the ANITA-3 data.
 The output of each of those executables should be a few summary histograms or a sparsely leaved TTree.
-The hard work (turning raw voltage/time data points into interesting results) will be done in these libraries.
+The hard work (turning raw voltage/time data points into interesting numbers) will be done in these libraries.
 
 \section prereq Pre-requisites
 
 \subsection prepre1 1.) ROOT
 Available from <a href="https://root.cern.ch/">The ROOT website</a>, if you don't have this, get it pronto.
-My analysis code was generated with v5.34.
+Compatible with v5.34 and versions greater than 6.
 
-\subsection prepre2 2.) Some of the ANITA offline software libraries
+\subsection prepre2 2.) Some of the ANITA offline software libraries (and their pre-requisites)
 You will need <a href="http://www.hep.ucl.ac.uk/uhen/anita/eventReader/">EventReaderRoot</a> and <a href="http://www.hep.ucl.ac.uk/uhen/anita/libRootFftwWrapper/">libRootFftwWrapper</a>.
 
 These are, respectively, the fundamental ROOT friendly classes to interact with the ROOT-ified ANITA data, and a set of useful wrapper functions for the brilliant fftw3 library.
