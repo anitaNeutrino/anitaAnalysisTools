@@ -13,6 +13,8 @@
 #include "UsefulAnitaEvent.h"
 #include "AnitaEventCalibrator.h"
 #include "AnitaGeomTool.h"
+#include "UsefulAdu5Pat.h"
+
 // #include "FFTtools.h"
 #include "FancyFFTs.h"
 
@@ -37,23 +39,34 @@
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 
 // Image definitions
-#define NUM_BINS_THETA 150
-#define NUM_BINS_PHI 25
+#define NUM_BINS_THETA 300
+// #define NUM_BINS_PHI 45
+#define NUM_BINS_PHI 45
+// #define NUM_BINS_THETA 150
+// #define NUM_BINS_PHI 25
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
 // #define NUM_BINS_THETA_ZOOM 63
-#define NUM_BINS_THETA_ZOOM 70
-#define NUM_BINS_PHI_ZOOM 70
+// #define NUM_BINS_THETA_ZOOM 70
+// #define NUM_BINS_PHI_ZOOM 70
+#define NUM_BINS_THETA_ZOOM 140
+#define NUM_BINS_PHI_ZOOM 140
+// #define NUM_BINS_THETA_ZOOM 70
+// #define NUM_BINS_PHI_ZOOM 70
 
-#define ZOOM_BIN_SIZE_PHI 0.1
-#define ZOOM_BIN_SIZE_THETA 0.1
+#define ZOOM_BIN_SIZE_PHI 0.05
+#define ZOOM_BIN_SIZE_THETA 0.05
+// #define ZOOM_BIN_SIZE_PHI 0.1
+// #define ZOOM_BIN_SIZE_THETA 0.1
 
 #define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
 #define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
 
-#define NUM_BINS_PHI_ZOOM_TOTAL 3600
-#define NUM_BINS_THETA_ZOOM_TOTAL 1500 
+// #define NUM_BINS_PHI_ZOOM_TOTAL 3600
+// #define NUM_BINS_THETA_ZOOM_TOTAL 1500 
+#define NUM_BINS_PHI_ZOOM_TOTAL 7200
+#define NUM_BINS_THETA_ZOOM_TOTAL 3000 
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -152,6 +165,7 @@ public:
 			     Double_t phiWave, Double_t thetaWave);
   Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				 Int_t phiIndex, Int_t thetaIndex);
+  Double_t getDeltaTExpectedPat(Int_t ant1, Int_t ant2,Double_t phiWave, Double_t thetaWave, Int_t print=0);
   Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 				   Double_t phiWave, Double_t thetaWave, Double_t rWave);
 
@@ -286,7 +300,7 @@ public:
   Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];  
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
   Double_t zoomedCosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS];
-  
+  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL];
   // pairs for making an image
   Int_t deltaTMax;
   Int_t deltaTMin;
@@ -304,6 +318,8 @@ public:
   std::vector<TThread*> mapThreads;
   std::vector<TThread*> corrThreads;
   std::vector<TThread*> upsampledCorrThreads;
+
+  std::vector<UsefulAdu5Pat*> usefulPats;
 
   struct threadArgs{
     Long_t threadInd;
