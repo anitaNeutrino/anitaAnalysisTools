@@ -78,6 +78,7 @@
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
 #define NUM_RING AnitaRing::kNotARing
+#define DEGREES_IN_CIRCLE 360
 
 #define SPEED_OF_LIGHT 2.99792458e8
 
