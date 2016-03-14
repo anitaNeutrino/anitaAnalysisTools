@@ -30,19 +30,20 @@
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
 #define NUM_THREADS 4
- 
+
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
 #define UPSAMPLE_FACTOR 40
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 
-// // Image definitions
+// Image definitions
 #define NUM_BINS_THETA 150
 #define NUM_BINS_PHI 25
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
-#define NUM_BINS_THETA_ZOOM 63
+// #define NUM_BINS_THETA_ZOOM 63
+#define NUM_BINS_THETA_ZOOM 70
 #define NUM_BINS_PHI_ZOOM 70
 
 #define ZOOM_BIN_SIZE_PHI 0.1
@@ -51,8 +52,8 @@
 #define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
 #define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
 
-#define NUM_BINS_PHI_ZOOM_TOTAL Int_t(PHI_RANGE*NUM_PHI*(NUM_BINS_PHI_ZOOM/PHI_RANGE_ZOOM))
-#define NUM_BINS_THETA_ZOOM_TOTAL Int_t(THETA_RANGE*(NUM_BINS_THETA_ZOOM/THETA_RANGE_ZOOM))
+#define NUM_BINS_PHI_ZOOM_TOTAL 3600
+#define NUM_BINS_THETA_ZOOM_TOTAL 1500 
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -281,7 +282,8 @@ public:
   std::vector<Double_t> phiArrayDeg[NUM_POL]; ///< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; ///< Vector of antenna heights
 
-  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
+  Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
+  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];  
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];
   Double_t zoomedCosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS];
   
@@ -309,7 +311,7 @@ public:
   };
 
   Bool_t kZeroChannel16BH;
-  
+  Bool_t kDebug;
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
