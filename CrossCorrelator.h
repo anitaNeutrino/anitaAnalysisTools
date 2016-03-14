@@ -340,7 +340,6 @@ public:
 
   Bool_t kDebug;
   Int_t kOnlyThisCombo;
-  Int_t kUseAbbyCombinatorics; // currently slow
 private:
   // Messing with this will muck up the threading so it gets to not be inspected by outsiders.
   std::vector<threadArgs> threadArgsVec;  
