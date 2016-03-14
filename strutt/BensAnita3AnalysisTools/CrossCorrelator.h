@@ -183,7 +183,7 @@ public:
   TGraph* makeTrigPatternGraph(TString name, UShort_t l3TrigPattern, Color_t col, Int_t fillStyle);
   Int_t getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg);
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
-				       Double_t thetaDeg, Int_t maxDeltaPhiSect);
+				       Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);

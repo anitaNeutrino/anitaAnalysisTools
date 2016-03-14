@@ -11,7 +11,5 @@
 #pragma link C++ class ProgressBar+;
 #pragma link C++ class AveragePowerSpectrum+;
 #pragma link C++ class AnitaAveragePowerSpectrum+;
-// #pragma link C++ enum mode_t;
-
 #endif
 

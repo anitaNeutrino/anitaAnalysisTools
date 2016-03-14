@@ -28,6 +28,11 @@
 // NUM_SAMPLES is included from CrossCorrelator.h
 #define NUM_FREQS ((NUM_SAMPLES/2)+1)
 
+
+/**
+ * @class AveragePowerSpectrum
+ * @brief Takes in waveforms and averages averages their power spectra
+*/
 class AveragePowerSpectrum : public TNamed {
 
 public:
@@ -37,16 +42,12 @@ public:
   ~AveragePowerSpectrum();
 
   size_t add(TGraph* gr);
-
-
   
-  TGraph* makeAvePowSpecTGraph(); ///< Creates and returns a TGraph of the average power spectrum.
-  TGraph* makeAvePowSpecTGraph_dB(); ///< Creates and returns a TGraph of the average power spectrum with dB scale and bins in MHz bins.
-
-
+  TGraph* makeAvePowSpecTGraph();
+  TGraph* makeAvePowSpecTGraph_dB();
   
-  void deleteRayleighDistributions(); ///< Deletes the Rayleigh Histograms
-  void rebinAllRayleighHistograms(Int_t rebinFactor); ///< Loops over them all and rebins
+  void deleteRayleighDistributions();
+  void rebinAllRayleighHistograms(Int_t rebinFactor);
 
   
   void fitRayleighHistogramOverRange(Int_t freqInd, Double_t xLowVal, Double_t xHighVal,
@@ -72,6 +73,8 @@ public:
   TH2D* makeRayleigh2DHistogram();
   
 
+  void getEventRayleighAmplitudes(TGraph* gr);
+  
   static TF1* makeRayleighFunction(TString name, Double_t xMin, Double_t xMax);
   static TString getRayleighFunctionText();
   TF1* constructFitFromAmplitude(Int_t freqInd, Double_t amplitude);
@@ -79,43 +82,42 @@ public:
   TF1* constructFitFromRayleighAmplitudeRisingEdge(Int_t freqInd);
   TF1* constructFitFromRayleighAmplitudeRisingEdgeAndHalfFalling(Int_t freqInd);  
 
-  Double_t deltaFMHz;  
-  Double_t summedPowSpec[NUM_FREQS]; ///< How we store the average power spectrum in the summed case
-  TH1D* hRayleighs[NUM_FREQS]; ///< Histograms for Rayleigh distributions
-  TF1* hRayleighFits[NUM_FREQS]; ///< Fits to Rayleigh distributions histograms
-  std::vector<Double_t> psdOutliers[NUM_FREQS];///< Storage for outlier values, if get too many then add them to rayeligh histogram
-  // UInt_t maxNumOutliers; ///< Critical number of outliers before adding them, set in constructor.
-  Int_t count;
-
+  Double_t deltaFMHz; //!< Difference between frequency bins in the power spectrums.
+  Double_t summedPowSpec[NUM_FREQS]; //!< Sum of all power spectrum.
+  TH1D* hRayleighs[NUM_FREQS]; //!< Histograms for Rayleigh distributions.
+  Int_t count; //!< Number of waveforms that have been added to the AveragePowerSpectrum.
   
-  Double_t rayleighFitChiSquares[NUM_FREQS];
-  Double_t rayleighFitChiSquaresRisingEdge[NUM_FREQS];
-  Double_t rayleighFitChiSquaresRisingEdgeAndHalfFalling[NUM_FREQS];
+  Double_t rayleighFitChiSquares[NUM_FREQS]; //!< Chi squares of the Rayleigh fits.
+  Double_t rayleighFitChiSquaresRisingEdge[NUM_FREQS]; //!< Chi squares of the fit to the rising egde of the Rayleigh distributions.
+  Double_t rayleighFitChiSquaresRisingEdgeAndHalfFalling[NUM_FREQS]; //!< Chi squares of the fit to the leading and half the falling edge of the Rayleigh distributions.
 
-  Double_t rayleighAmplitudes[NUM_FREQS];
-  Double_t rayleighAmplitudesRisingEdge[NUM_FREQS];
-  Double_t rayleighAmplitudesRisingEdgeAndHalfFalling[NUM_FREQS];
+  Double_t rayleighAmplitudes[NUM_FREQS]; //!< Fitted Rayleigh amplitudes
+  Double_t rayleighAmplitudesRisingEdge[NUM_FREQS]; //!< Amplitudes from fits to the leading edge of the Rayleigh distributions.
+  Double_t rayleighAmplitudesRisingEdgeAndHalfFalling[NUM_FREQS]; //!< Amplitudes from fits to the leading and half the falling edge of the Rayleigh distributions.
 
-  Int_t rayleighNdf[NUM_FREQS];
-  Int_t rayleighNdfRisingEdge[NUM_FREQS];
-  Int_t rayleighNdfRisingEdgeAndHalfFalling[NUM_FREQS];
+  Int_t rayleighNdf[NUM_FREQS]; //!< NDFs from Rayleigh fits
+  Int_t rayleighNdfRisingEdge[NUM_FREQS]; //!< NDFs from fits to the leading edge of the Rayleigh distributions.
+  Int_t rayleighNdfRisingEdgeAndHalfFalling[NUM_FREQS]; //!< NDFs from fits to the leading and half the falling edge of the Rayleigh distributions.
 
-  Double_t rayleighFitChiSquaresFullRange[NUM_FREQS];
-  Double_t rayleighFitChiSquaresRisingEdgeFullRange[NUM_FREQS];
-  Double_t rayleighFitChiSquaresRisingEdgeAndHalfFallingFullRange[NUM_FREQS];
+  Double_t rayleighFitChiSquaresFullRange[NUM_FREQS]; //!< Chi squares of the Rayleigh fits extended over the full range.
+  Double_t rayleighFitChiSquaresRisingEdgeFullRange[NUM_FREQS]; //!< Chi squares of the fit to the rising egde of the Rayleigh distributions extended over the full range.
+  Double_t rayleighFitChiSquaresRisingEdgeAndHalfFallingFullRange[NUM_FREQS]; //!< Amplitudes from fits to the leading and half the falling edge of the Rayleigh distributions extended over the full range.
 
-  Int_t rayleighNdfFullRange[NUM_FREQS];
-  Int_t rayleighNdfRisingEdgeFullRange[NUM_FREQS];
-  Int_t rayleighNdfRisingEdgeAndHalfFallingFullRange[NUM_FREQS];
+  Int_t rayleighNdfFullRange[NUM_FREQS]; //!< NDFs from Rayleigh fits extended over the full range.
+  Int_t rayleighNdfRisingEdgeFullRange[NUM_FREQS]; //!< NDFs from fits to the leading edge of the Rayleigh distributions extended over the full range.
+  Int_t rayleighNdfRisingEdgeAndHalfFallingFullRange[NUM_FREQS]; //!< NDFs from fits to the leading and half the falling edge of the Rayleigh distributions extended over the full range.
 
-  Double_t xHigh[NUM_FREQS];
-  Double_t xHighRisingEdge[NUM_FREQS];
-  Double_t xHighRisingEdgeAndHalfFalling[NUM_FREQS];
+  Double_t xHigh[NUM_FREQS]; //!< High end of fitted range of Rayleigh histograms.
+  Double_t xHighRisingEdge[NUM_FREQS]; //!< High end of fitted range of Rayleigh histograms up to peak bin.
+  Double_t xHighRisingEdgeAndHalfFalling[NUM_FREQS]; //!< High end of fitted range of Rayleigh histograms up to half the maximum value past the peak bin.
 
-  Double_t outliers[NUM_FREQS][MAX_NUM_OUTLIERS];
-  Int_t numOutliers[NUM_FREQS];  
-  
-  ClassDef(AveragePowerSpectrum, 9);
+  Double_t outliers[NUM_FREQS][MAX_NUM_OUTLIERS]; //!< Used to store values that are much greater than the current Rayliegh histogram content.
+  Int_t numOutliers[NUM_FREQS]; //!< Count of number of outliers in outliers array.
+
+  Double_t eventRayleighAmplitudes[NUM_FREQS]; //!< Rayleigh amplitudes for the last added event.
+  Double_t eventPowSpec[NUM_FREQS]; //!< Power spectra for the last added event.
+
+  ClassDef(AveragePowerSpectrum, 10); //!< ROOT's magic I/O macro
 };
 
   

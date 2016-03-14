@@ -69,7 +69,7 @@ endif
 
 
 # For those who like really bloody pedantic compiler warnings... like me
-HARDCORE_MODE=1
+#HARDCORE_MODE=1
 ifdef HARDCORE_MODE
 CXXFLAGS += -Wall -Wextra -Wshadow -Werror #-Wpedantic
 endif

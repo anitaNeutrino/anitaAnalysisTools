@@ -4,7 +4,6 @@
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Constructor
- *
  */
 CrossCorrelator::CrossCorrelator(){
   initializeVariables();
@@ -18,7 +17,6 @@ CrossCorrelator::CrossCorrelator(){
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Destructor
- *
  */
 CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -32,7 +30,6 @@ CrossCorrelator::~CrossCorrelator(){
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Workhorse function to set internal variables.
- *
  */
 void CrossCorrelator::initializeVariables(){
 
@@ -204,10 +201,17 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
 /**
  * @brief Takes FFTs of the normalized, evenly resampled waveforms and puts them in memory
  * @param pol is which polarization to process
+ *
+ * Now also creates the zero padded FFTs used for upsampled cross-correlations.
  */
 void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
+
+  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);    
+    FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
+    FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numFreqs, numFreqsPadded);    
   }
 }
 
@@ -401,30 +405,6 @@ void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t 
   threadL3TrigPattern = l3TrigPattern;
   threadPol = pol;
 
-  std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
-  std::vector<Int_t> combosToUse = combosToUseTriggered[key];
-  std::vector<Int_t> donePadding(NUM_SEAVEYS, 0);
-  
-  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
-
-  Int_t numComboInd = combosToUse.size();
-  for(Int_t comboInd=0; comboInd < numComboInd; comboInd++){
-    Int_t combo=combosToUse.at(comboInd);
-
-    Int_t ant1 = comboToAnt1s.at(combo);
-    Int_t ant2 = comboToAnt2s.at(combo);
-
-    if(donePadding.at(ant1)==0){
-      FancyFFTs::zeroPadFFT(ffts[pol][ant1], fftsPadded[pol][ant1], numFreqs, numFreqsPadded);
-      donePadding.at(ant1)=1;
-    }
-    if(donePadding.at(ant2)==0){	
-      FancyFFTs::zeroPadFFT(ffts[pol][ant2], fftsPadded[pol][ant2], numFreqs, numFreqsPadded);
-      donePadding.at(ant2)=1;	  
-    }
-  }
-
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     TString name = TString::Format("threadUpsampledCorr%ld", threadInd);
     upsampledCorrThreads.push_back(new TThread(name.Data(),
@@ -594,10 +574,10 @@ Double_t CrossCorrelator::getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, 
  */
 inline Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave){
   
-  Double_t tanThetaW = tan(-thetaWave);
+  Double_t tanThetaW = tan(thetaWave);
   Double_t part1 = zArray[pol].at(ant1)*tanThetaW - rArray[pol].at(ant1)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant1));
   Double_t part2 = zArray[pol].at(ant2)*tanThetaW - rArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant2));
-  Double_t tdiff = 1e9*((cos(-thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
+  Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
   tdiff += getOffAxisDelay(pol, ant1, ant2, phiWave);
   
@@ -626,7 +606,7 @@ Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t 
   Double_t tanThetaW = zoomedTanThetaWaves[thetaIndex];  
   Double_t part1 = zArray[pol].at(ant1)*tanThetaW - zoomedCosPartLookup[phiIndex][pol][ant1];
   Double_t part2 = zArray[pol].at(ant2)*tanThetaW - zoomedCosPartLookup[phiIndex][pol][ant2];
-  // Double_t tdiff = 1e9*((cos(-thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns 
+  // Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns 
   Double_t tdiff = 1e9*((zoomedCosThetaWaves[thetaIndex] * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
   tdiff += getOffAxisDelay(pol, ant1, ant2, zoomedPhiWaveLookup[phiIndex]);
@@ -795,8 +775,8 @@ void CrossCorrelator::fillDeltaTLookup(){
     Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
-    tanThetaWaves[thetaIndex] = tan(-thetaWave);
-    cosThetaWaves[thetaIndex] = cos(-thetaWave);
+    tanThetaWaves[thetaIndex] = tan(thetaWave);
+    cosThetaWaves[thetaIndex] = cos(thetaWave);
   }
   const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
@@ -815,8 +795,8 @@ void CrossCorrelator::fillDeltaTLookup(){
     Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA_ZOOM_TOTAL/2)*ZOOM_BIN_SIZE_THETA;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     zoomedThetaWaves[thetaIndex] = thetaWave;
-    zoomedTanThetaWaves[thetaIndex] = tan(-thetaWave);
-    zoomedCosThetaWaves[thetaIndex] = cos(-thetaWave);
+    zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
+    zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
   }
 
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
@@ -2193,10 +2173,12 @@ Int_t CrossCorrelator::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t
  * @param pol is the polarization
  * @param phiDeg is the incoming phi direction (Degrees) relative to the ADU5 aft-fore.
  * @param thetaDeg is the incoming theta direction (Degrees).
- * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction
+ * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction.
+ * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.  
 */
 TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
-						      Double_t thetaDeg, Int_t maxDeltaPhiSect){
+						      Double_t thetaDeg, Int_t maxDeltaPhiSect,
+						      Double_t& snr){
 
   Double_t phiRad = phiDeg*TMath::DegToRad();
   Double_t thetaRad = thetaDeg*TMath::DegToRad();
@@ -2220,6 +2202,9 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
     vArray[samp] *= interpRMS[pol][firstAnt]; // Undo the normalization.
   }
 
+  // sum of rms of first few ns of each waveform
+  Double_t rms = 0;
+  
   // Factor of two here to drop the zero padding at the back of the waveform
   // which was used during correlations.
   TGraph* grCoherent = new TGraph(numSamplesUpsampled/2, &tArray[0], &vArray[0]);	
@@ -2256,12 +2241,19 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 	    Double_t vInterp = (ddt)*(v2 - v1)/correlationDeltaT + v1;
 
 	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
-
 	  }
 	}
       }
+
+      // Here we look at the RMS of the first few ns of the uninterpolated waveforms
+      const Double_t timeToEvalRms = 10; // ns
+      for(Int_t samp3=0; samp3 < grs[pol][ant]->GetN(); samp3++){
+	if(grs[pol][ant]->GetX()[samp3] - grs[pol][ant]->GetX()[0] < timeToEvalRms){
+	  rms += grs[pol][ant]->GetY()[samp3]*grs[pol][ant]->GetY()[samp3];
+	}
+      }
       numAnts++;
-     }
+    }
   }
 
   // Normalize
@@ -2285,8 +2277,16 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 
     grCoherent->SetName(name);
     grCoherent->SetTitle(title);
-  }
-  
-  return grCoherent;
-  
+    
+    rms/=numAnts;
+    rms = TMath::Sqrt(rms);
+
+    Double_t maxY = 0;
+    Double_t maxX = 0;
+    Double_t minY = 0;
+    Double_t minX = 0;
+    RootTools::getLocalMaxToMin(grCoherent, maxY, maxX, minY, minX);
+    snr = (maxY - minY)/(2*rms);   
+  }  
+  return grCoherent;  
 }
