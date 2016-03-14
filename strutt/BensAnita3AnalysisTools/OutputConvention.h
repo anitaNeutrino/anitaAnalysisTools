@@ -20,27 +20,30 @@
 #include <sys/stat.h>
 #include <iostream>
 
+
+/**
+ * @class OutputConvention
+ * @brief A class to systematically name files produced by my analysis programs.
+ * 
+ * Uses the program name, arguments, date, and time.
+*/
 class OutputConvention{
 
 public:
-
+  
   OutputConvention(int argcIn, char* argvIn[]);
-  ~OutputConvention();
 
   TString getOutputFileName();
-  // void setSubdirectory(TString subDirName);
   
 private:
-  int argc;
-  char** argv;
-  TDatime dateTime;
-  TString outputDir;
-  TString dateTimeSuffix;
-  TString outFileName;
-  // TString subDir;
-
+  int argc; //!< The argc from the main program
+  char** argv; //!< The argv from the main program
+  TDatime dateTime; //!< The dateTime type containing the date/time.
+  TString outputDir; //!< TString contining the output directory.
+  TString dateTimeSuffix; //!< TString contining the fileName suffix extracted from the date/time.
+  TString outFileName; ///!< The output total file output name.
   
-  TString getDateTimeSuffix();
+  TString getDateTimeSuffix(); 
   TString getOutputDir();
   
   

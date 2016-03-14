@@ -1,5 +1,16 @@
 #include "OutputConvention.h"
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Constructor
+ *
+ * @param argcIn should be the main executable's argc value.
+ * @param argvIn should be the main executable's argv value.
+ */
 OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
   dateTime = TDatime();
   argc = argcIn;
@@ -10,16 +21,16 @@ OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
   // subDir = "";
 }
 
-OutputConvention::~OutputConvention(){
-  
-}
 
 
-// void OutputConvention::setSubdirectory(TString subDirName){
-//   subDir = subDirName;
-// }
 
 
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the name of the output file from the program name (and system time).
+ *
+ * @return the output file name
+ */
 TString OutputConvention::getOutputFileName(){
 
   if(outFileName==""){
@@ -50,6 +61,16 @@ TString OutputConvention::getOutputFileName(){
   
 }
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the file suffix from the system time.
+ *
+ * @return the suffix for the file name, based on the date and time.
+ */
 TString OutputConvention::getDateTimeSuffix(){
   if(dateTimeSuffix==""){
     // dateTimeSuffix = TString::Format("_%d-%d-%d_%d-%d-%d",
@@ -106,6 +127,15 @@ TString OutputConvention::getDateTimeSuffix(){
 }
 
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Looks for an environment variable called OUTPUT_DIR and if it exists, sets it as the output dir.
+ *
+ * @return The output dir.
+ */
 TString OutputConvention::getOutputDir(){
   
   outputDir = "";
