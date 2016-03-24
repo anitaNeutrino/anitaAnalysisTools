@@ -64,6 +64,7 @@ void CrossCorrelator::initializeVariables(){
       phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
     }
   }
+  aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg(); //phiArrayDeg[0].at(0);    
 
   fillDeltaTLookup();
 
@@ -121,7 +122,7 @@ void CrossCorrelator::printInfo(){
  */
 Double_t CrossCorrelator::getBin0PhiDeg(){
   // Double_t phi0 = phiArrayDeg[0].at(0);
-  Double_t phi0 = -45; //phiArrayDeg[0].at(0);  
+  Double_t phi0 = -aftForeOffset;
   if(phi0 < -180){
     phi0+=DEGREES_IN_CIRCLE;
   }

@@ -321,7 +321,7 @@ public:
   Double_t zoomPhiMin; //!< For the current map
   Double_t zoomThetaMin; //!< For the current map
 
-  
+  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
 private:
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
