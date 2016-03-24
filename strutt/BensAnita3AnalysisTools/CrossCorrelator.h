@@ -1,4 +1,3 @@
-
 /* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
@@ -119,72 +118,97 @@ public:
   
   CrossCorrelator();
   ~CrossCorrelator();
+
+
   void initializeVariables();  
   void printInfo();
+
+
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doFFTs(AnitaPol::AnitaPol_t pol);
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
-				  Double_t& time, Double_t& value);
-  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-				  Double_t& time, Double_t& value);
-  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
-					   Double_t& time, Double_t& value);
-  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-					   Double_t& time, Double_t& value);
+  void reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHeader* header);
+
+
+
+  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,Double_t& time, Double_t& value);
+  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
+  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t& time, Double_t& value);
+  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
+
+
+
+
+
+  
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
   void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern);
 
+
+
+
+
+  
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
-  Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-					Int_t phiIndex, Int_t thetaIndex);
-  Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-					  Double_t phiWave, Double_t thetaWave, Double_t rWave);
+  // Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+  // 					Int_t phiIndex, Int_t thetaIndex);
   Double_t getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave);
+
+
 
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
+
+
   void fillDeltaTLookup();
   Double_t getBin0PhiDeg();
 
-  Double_t getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+
+
+
+
+
+
+
+  void getPeakInfoTriggered(AnitaPol::AnitaPol_t pol, Double_t& value,
+			    Double_t& phiDeg, Double_t& thetaDeg);
+  void getPeakInfoZoom(AnitaPol::AnitaPol_t pol, Double_t& value,
+		       Double_t& phiDeg, Double_t& thetaDeg);
+  
+
+  
   Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);  
 
-  void createImageNameAndTitle(TString& name, TString& title, mapMode_t mapMode, zoomMode_t zoomMode,
-			       Double_t rWave, AnitaPol::AnitaPol_t pol);
-  TH2D* makeBlankImage(TString name, TString title);
-  TH2D* makeBlankZoomedImage(TString name, TString title,
-			     Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
-  TH2D* makeImageThreaded(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak, 
-			  Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern,
-			  mapMode_t mapMode, zoomMode_t zoomMode,
-			  Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+  TH2D* getMap(AnitaPol::AnitaPol_t pol);
+  TH2D* getZoomMap(AnitaPol::AnitaPol_t pol);
+  
+
+  void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
+		   Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+		   Short_t l3TrigPattern, mapMode_t mapMode);
+  void reconstructZoom(AnitaPol::AnitaPol_t pol,
+		       Double_t& imagePeak, Double_t& peakPhiDeg,
+		       Double_t& peakThetaDeg,UShort_t l3TrigPattern,
+		       mapMode_t mapMode, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+  
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol);
 
   TH2D* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-			   Double_t& peakThetaDeg, UShort_t l3TrigPattern);
-  TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave);
-  TH2D* makeGlobalSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave,
-				 Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern);
-  TH2D* makeTriggeredSphericalImage(AnitaPol::AnitaPol_t pol, Double_t rWave, Double_t& imagePeak,
-				    Double_t& peakPhiDeg, Double_t& peakThetaDeg, UShort_t l3TrigPattern);
+  			   Double_t& peakThetaDeg, UShort_t l3TrigPattern);
+
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
-			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
+  			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-			Double_t& peakThetaDeg, UShort_t l3TrigPattern, Double_t zoomCenterPhiDeg,
-			Double_t zoomCenterThetaDeg);
+  			Double_t& peakThetaDeg, UShort_t l3TrigPattern, Double_t zoomCenterPhiDeg,
+  			Double_t zoomCenterThetaDeg);
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-			Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
-  TH2D* prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t rWave, UShort_t l3TrigPattern,
-			      mapMode_t mapMode, zoomMode_t zoomMode, Double_t zoomCenterPhiDeg,
-			      Double_t zoomCenterThetaDeg);
-  TGraph* makeTrigPatternGraph(TString name, UShort_t l3TrigPattern, Color_t col, Int_t fillStyle);
+  			Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
+
   Int_t getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg);
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
 				       Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);
@@ -195,11 +219,10 @@ public:
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
+  static void* makeSomeOfZoomImageThreaded(void* voidPtrArgs);
+  
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
-  TH2D* makeCorrelationSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern, Double_t phiDeg, Double_t thetaDeg);
-  TH2D* makeDeltaTSummaryHistogram(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
-				   Double_t phiDeg, Double_t thetaDeg, Double_t corThresh=-1);
-  void correlateEventTest(Double_t phiDegSource, Double_t thetaDegSource, Double_t rSource);
+
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
@@ -210,18 +233,17 @@ public:
   TString mapModeNames[kNumMapModes];//!< Maps text to the mapMode_t enum, used for histogram names/titles.
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
   
-  // Double_t deltaTs[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< deltaTs between antennas as a function of arrival direction (for the coarse image).
   Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
+
+  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
+  Double_t coarseMap[NUM_POL][NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
   
   Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
-  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
-  Double_t coarseMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
-  Double_t interpPreFactorsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
-  Int_t offsetLowsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
+
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
-  Double_t fineMap[NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
+  Double_t fineMap[NUM_POL][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
   
   std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*UPSAMPLE_FACTOR+1]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; //!< FFTs of evenly resampled waveforms.
@@ -248,41 +270,49 @@ public:
   std::vector<Double_t> phiArrayDeg[NUM_POL]; //!< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; //!< Vector of antenna heights
 
-  Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of theta for zoomed image.
-  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of tan(theta) for zoomed image.
-  Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of cos(theta) for zoomed image.
-  Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached values of part of the deltaT calculation for zoomed image.
-  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached values of phi for zoomed image.
 
-  Double_t thetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of theta for image.
-  Double_t tanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL];   //!< Cached values of tan(theta) for image.
-  Double_t cosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of cos(theta) for image.
-  Double_t cosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS]; //!< Cached values of part of the deltaT calculation for image.
-  Double_t phiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL];  //!< Cached values of phi for image.
-  Double_t offAxisDelays[NUM_POL][NUM_BINS_PHI_ZOOM_TOTAL][NUM_COMBOS]; //!< Off-axis delays for fine binned images.
+  Double_t imagePeakTriggered[NUM_POL];
+  Double_t peakPhiDegTriggered[NUM_POL];
+  Double_t peakThetaDegTriggered[NUM_POL];    
+  Double_t imagePeakZoom[NUM_POL];
+  Double_t peakPhiDegZoom[NUM_POL];
+  Double_t peakThetaDegZoom[NUM_POL];      
+
+  
+  Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
+  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
+  Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
+  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.  
+  Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
+  Double_t offAxisDelays[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
+  
+  Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
+  Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
   
   AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
   UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
-  TH2D* threadImage; //!< histogram to use in thread functions.
   mapMode_t threadMapMode; //!< mapMode_t to use in thread functions.
   zoomMode_t threadZoomMode; //!< zoomMode_t to use in thread functions.
-  Double_t threadRWave; //!< rWave to use in thread functions.
   Double_t threadImagePeak[NUM_THREADS]; //!< Store image peaks found by different threads.
   Double_t threadPeakPhiDeg[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
   Double_t threadPeakThetaDeg[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
   std::vector<Int_t> threadCombosToUse; //!< combo indices for use in thread functions.
   
-  std::vector<TThread*> mapThreads; //!< Vector of TThreads for doing interferometric map making.
-  std::vector<TThread*> corrThreads; //!< Vector of TThreads for doing cross correlations.
-  std::vector<TThread*> upsampledCorrThreads; //!< Vector of TThreads for doing upsampled cross correlations.
+  std::vector<TThread*> mapThreads; //!< TThreads for doing interferometric map making.
+  std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.
+  std::vector<TThread*> upsampledCorrThreads; //!< TThreads for doing upsampled cross correlations.
    
   Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
-  Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around the phi-sectors of interest to use in reconstruction.
+  Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
 
   Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
   Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
+
+  Double_t zoomPhiMin; //<! For the current map
+  Double_t zoomThetaMin; //<! For the current map
+
   
 private:
   

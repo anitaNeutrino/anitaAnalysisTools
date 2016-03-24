@@ -79,7 +79,7 @@ ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
 DICT = benToolsDict
 LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o AnitaAveragePowerSpectrum.o
 CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h AnitaAveragePowerSpectrum.h
-BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs testDeltaTsSpherical testProgressBar testOutputConvention testAveragePowerSpectrum
+BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs  testProgressBar testOutputConvention testAveragePowerSpectrum
 
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) $(BINARIES) 
