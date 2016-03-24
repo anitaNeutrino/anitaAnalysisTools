@@ -1535,8 +1535,18 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Double_t rWave = ptr->threadRWave;
   TH2D* hImage = ptr->threadImage;
 
-  Int_t numPhiBinsThread = hImage->GetNbinsX()/NUM_THREADS;
-  Int_t startPhiBin = threadInd*numPhiBinsThread;
+  // Int_t numThetaBinsPerThread = hImage->GetNbinsY()/NUM_THREADS;
+  // const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
+  // const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
+  // const Int_t startPhiBin = 0;
+  // const Int_t endPhiBin = hImage->GetNbinsX();
+
+  Int_t numPhiBinsPerThread = hImage->GetNbinsX()/NUM_THREADS;
+  const Int_t startThetaBin = 0;
+  const Int_t endThetaBin = hImage->GetNbinsY();
+  const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
+  const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
+  
 
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
@@ -1546,8 +1556,8 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   if(zoomMode==kZoomedOut && rWave==0){    
 
     // zero internal map
-    for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
-      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	ptr->coarseMap[thetaBin][phiBin] = 0;
       }
     }
@@ -1558,8 +1568,12 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	continue;
       }
 
-      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){            
-	for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+      // for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){            
+      // 	for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+      // for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){	
+      // 	for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
+      for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	  
 	  // Int_t phiSector = phiBin/NUM_BINS_PHI;
 	  // if(mapMode==kGlobal){
 	  //   combosToUse = &ptr->combosToUseGlobal[phiSector];
@@ -1587,8 +1601,12 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     }
 
 
-    for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
-      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){      
+    // for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    //   for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+    // for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){		
+    //   for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
+    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          
 	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
 	  ptr->coarseMap[thetaBin][phiBin] /= combosToUse->size();
 	}
@@ -1608,51 +1626,119 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     
     Int_t phiZoomBase = TMath::Nint((hImage->GetXaxis()->GetBinLowEdge(1) - ptr->minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
     Int_t thetaZoomBase = TMath::Nint((hImage->GetYaxis()->GetBinLowEdge(1) - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
-    for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){    
-      for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+
+    // for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){		
+    //   for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){	  	    
+    // for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+    //   for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          	
 	ptr->fineMap[thetaBin][phiBin]=0;
       }
     }
+
+    // const Int_t offset = ptr->numSamplesUpsampled/2;
+    // for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+    //   Int_t combo = combosToUse->at(comboInd);
+    //   if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+    // 	continue;
+    //   }
+    //   Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    //   Int_t ant2 = ptr->comboToAnt2s.at(combo);
+      
+    //   for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){		
+    // 	Int_t zoomThetaInd = thetaZoomBase + thetaBin;
+
+    // 	Double_t partA = ptr->zArray[pol].at(ant1)*ptr->zoomedTanThetaWaves[zoomThetaInd];
+    // 	Double_t partB = ptr->zArray[pol].at(ant2)*ptr->zoomedTanThetaWaves[zoomThetaInd];
+    // 	Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+	
+    // 	for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
+    // 	  Int_t zoomPhiInd = phiZoomBase + phiBin;
+    // 	  Double_t part1 = partA - ptr->zoomedCosPartLookup[pol][ant1][zoomPhiInd];
+    // 	  Double_t part2 = partB - ptr->zoomedCosPartLookup[pol][ant2][zoomPhiInd];
+    // 	  ptr->interpPreFactorsZoom[combo][thetaBin][phiBin] = dtFactor*(part2 - part1);
+    // 	  ptr->offsetLowsZoom[combo][thetaBin][phiBin] = floor(ptr->interpPreFactorsZoom[combo][thetaBin][phiBin]/ptr->correlationDeltaT);
+    // 	  // Double_t dt1 = offsetLow*ptr->correlationDeltaT;
+    // 	  ptr->interpPreFactorsZoom[combo][thetaBin][phiBin] -= ptr->offsetLowsZoom[combo][thetaBin][phiBin]*ptr->correlationDeltaT;
+    // 	  ptr->interpPreFactorsZoom[combo][thetaBin][phiBin] /= ptr->correlationDeltaT;
+	  
+    // 	  ptr->offsetLowsZoom[combo][thetaBin][phiBin] += offset;
+    // 	}
+    //   }
+    // }
+
+    // for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+    //   Int_t combo = combosToUse->at(comboInd);
+    //   if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+    // 	continue;
+    //   }
+    //   for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){		
+    // 	for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){	  	    
+
+    // 	  Int_t offsetLow = ptr->offsetLowsZoom[combo][thetaBin][phiBin];
+    // 	  Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
+    // 	  Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
+
+    // 	  // Double_t cInterp = (deltaT - dt1)*(c2 - c1)/(ptr->correlationDeltaT) + c1;
+    // 	  Double_t cInterp = ptr->interpPreFactorsZoom[combo][thetaBin][phiBin]*(c2 - c1) + c1;
+
+    // 	  ptr->fineMap[thetaBin][phiBin] += cInterp;
+    // 	}
+    //   }
+    // }
 
     const Int_t offset = ptr->numSamplesUpsampled/2;
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
       Int_t combo = combosToUse->at(comboInd);
       if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
-	continue;
+    	continue;
       }
       Int_t ant1 = ptr->comboToAnt1s.at(combo);
       Int_t ant2 = ptr->comboToAnt2s.at(combo);
       
-      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
-	Int_t zoomThetaInd = thetaZoomBase + thetaBin;
+      for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	// for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){
+	// for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+    	Int_t zoomThetaInd = thetaZoomBase + thetaBin;
 
-	Double_t partA = ptr->zArray[pol].at(ant1)*ptr->zoomedTanThetaWaves[zoomThetaInd];
-	Double_t partB = ptr->zArray[pol].at(ant2)*ptr->zoomedTanThetaWaves[zoomThetaInd];
-	Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+    	Double_t partA = ptr->zArray[pol].at(ant1)*ptr->zoomedTanThetaWaves[zoomThetaInd];
+    	Double_t partB = ptr->zArray[pol].at(ant2)*ptr->zoomedTanThetaWaves[zoomThetaInd];
+    	Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
 	
-	for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
-
-	  Int_t zoomPhiInd = phiZoomBase + phiBin;
-
-	  Double_t part1 = partA - ptr->zoomedCosPartLookup[pol][ant1][zoomPhiInd];
-	  Double_t part2 = partB - ptr->zoomedCosPartLookup[pol][ant2][zoomPhiInd];
-	  Double_t deltaT = dtFactor*(part2 - part1);
+    	// for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    	// for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){
+	for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          	
 	  
-	  Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
-	  Double_t dt1 = offsetLow*ptr->correlationDeltaT;
-	  offsetLow += offset;
-  	  Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
-	  Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 
-	  Double_t cInterp = (deltaT - dt1)*(c2 - c1)/(ptr->correlationDeltaT) + c1;
 
-	  ptr->fineMap[thetaBin][phiBin] += cInterp;	  
-	}
+    	  Int_t zoomPhiInd = phiZoomBase + phiBin;
+    	  Double_t part1 = partA - ptr->zoomedCosPartLookup[pol][ant1][zoomPhiInd];
+    	  Double_t part2 = partB - ptr->zoomedCosPartLookup[pol][ant2][zoomPhiInd];
+    	  Double_t deltaT = dtFactor*(part2 - part1);
+
+    	  Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
+    	  // Double_t dt1 = offsetLow*ptr->correlationDeltaT;
+    	  deltaT -= offsetLow*ptr->correlationDeltaT;
+    	  deltaT /= ptr->correlationDeltaT;
+    	  offsetLow += offset;
+    	  Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
+    	  Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
+
+    	  // Double_t cInterp = (deltaT - dt1)*(c2 - c1)/(ptr->correlationDeltaT) + c1;
+    	  Double_t cInterp = deltaT*(c2 - c1) + c1;
+
+    	  ptr->fineMap[thetaBin][phiBin] += cInterp;
+    	}
       }
-    }
+    }    
 
-    for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){    
-      for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    // for(Int_t thetaBin = startThetaBin; thetaBin < startThetaBin+numThetaBinsPerThread; thetaBin++){		
+    //   for(Int_t phiBin = 0; phiBin < hImage->GetNbinsX(); phiBin++){	  	    
+    // for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){    
+    //   for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          		
 	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
 	  ptr->fineMap[thetaBin][phiBin] /= combosToUse->size();
 	}
@@ -1663,7 +1749,8 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	  peakThetaBin = thetaBin;
 	}
 
-	hImage->SetBinContent(phiBin + 1, thetaBin + 1, ptr->fineMap[thetaBin][phiBin]);
+	// hImage->SetBinContent(phiBin + 1, thetaBin + 1, ptr->fineMap[thetaBin][phiBin]);
+	// hImage->SetBinContent(phiBin + 1, thetaBin + 1, threadInd+1);	
       }
     }
   }
@@ -1671,43 +1758,43 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	
   // If we are in zoomed out & spherical wave mode then calculate
   else{
-    for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
-      Int_t phiSector = phiBin/NUM_BINS_PHI;
-      if(mapMode==kGlobal){
-	combosToUse = &ptr->combosToUseGlobal[phiSector];
-      }
+    // for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+    //   Int_t phiSector = phiBin/NUM_BINS_PHI;
+    //   if(mapMode==kGlobal){
+    // 	combosToUse = &ptr->combosToUseGlobal[phiSector];
+    //   }
     
-      Double_t phiWave = hImage->GetXaxis()->GetBinLowEdge(phiBin+1)*TMath::DegToRad();
+    //   Double_t phiWave = hImage->GetXaxis()->GetBinLowEdge(phiBin+1)*TMath::DegToRad();
 
-      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
-	Double_t thetaWave = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1)*TMath::DegToRad();
+    //   for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+    // 	Double_t thetaWave = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1)*TMath::DegToRad();
 
-	Double_t correlations = 0;
-	for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-	  Int_t combo = combosToUse->at(comboInd);
-	  if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
-	    continue;
-	  }
+    // 	Double_t correlations = 0;
+    // 	for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+    // 	  Int_t combo = combosToUse->at(comboInd);
+    // 	  if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+    // 	    continue;
+    // 	  }
 	  
-	  Int_t offset = 0;
+    // 	  Int_t offset = 0;
     
-	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
-	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
-	  offset = ptr->getDeltaTExpectedSpherical(pol, ant1, ant2, phiWave, thetaWave, rWave);
-	  offset = offset < 0 ? offset + ptr->numSamples : offset;
-	  correlations += ptr->crossCorrelations[pol][combo][offset];
-	}
-	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	  correlations /= combosToUse->size();
-	}
-	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
-	if(correlations > ptr->threadImagePeak[threadInd]){
-	  ptr->threadImagePeak[threadInd] = correlations;
-	  peakPhiBin = phiBin;
-	  peakThetaBin = thetaBin;
-	}	
-      }
-    }
+    // 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    // 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    // 	  offset = ptr->getDeltaTExpectedSpherical(pol, ant1, ant2, phiWave, thetaWave, rWave);
+    // 	  offset = offset < 0 ? offset + ptr->numSamples : offset;
+    // 	  correlations += ptr->crossCorrelations[pol][combo][offset];
+    // 	}
+    // 	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
+    // 	  correlations /= combosToUse->size();
+    // 	}
+    // 	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
+    // 	if(correlations > ptr->threadImagePeak[threadInd]){
+    // 	  ptr->threadImagePeak[threadInd] = correlations;
+    // 	  peakPhiBin = phiBin;
+    // 	  peakThetaBin = thetaBin;
+    // 	}	
+    //   }
+    // }
   }
 
   ptr->threadPeakPhiDeg[threadInd] = hImage->GetXaxis()->GetBinLowEdge(peakPhiBin+1);
