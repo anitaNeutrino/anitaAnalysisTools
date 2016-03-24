@@ -1176,6 +1176,7 @@ TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& im
 
   reconstruct(pol, imagePeak, peakPhiDeg, peakThetaDeg,
 	      l3TrigPattern, CrossCorrelator::kTriggered);
+  // std::cout << __PRETTY_FUNCTION__ << "\t" << l3TrigPattern << std::endl;
   return getMap(pol);
 }
 
@@ -1288,8 +1289,8 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3Trig
  */
 void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 				  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-				  Short_t l3TrigPattern, mapMode_t mapMode){
-
+				  UShort_t l3TrigPattern, mapMode_t mapMode){
+  
   threadPol = pol;
   threadMapMode = mapMode;
   threadL3TrigPattern = l3TrigPattern;
@@ -1297,6 +1298,10 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
   fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   threadCombosToUse = combosToUseTriggered[key];
+
+
+  // std::cout << __PRETTY_FUNCTION__ << "\t" << l3TrigPattern << "\t"
+  // 	    << threadCombosToUse.size() << std::endl;
 
   
   // LAUNCH THREADS HERE
@@ -1369,6 +1374,10 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
   std::vector<Int_t>* combosToUse = &ptr->threadCombosToUse;
+
+  // TThread::Lock();
+  // std::cout << threadInd << "\t" << combosToUse->size() << std::endl;
+  // TThread::UnLock();
   
   // zero internal map
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
@@ -1382,7 +1391,7 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
       continue;
     }
-
+    
     for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	Int_t offsetLow = ptr->offsetLows[pol][combo][thetaBin][phiBin];
