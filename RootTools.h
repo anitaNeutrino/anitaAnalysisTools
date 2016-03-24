@@ -74,7 +74,8 @@ namespace RootTools{
   Double_t getLowBinEdgeOfHistogramPeak(TH1D* h);
   Double_t getFullWidthHalfMax(TH1D* h);
   Int_t getBit(UInt_t bitIndex, UInt_t bitMask);
-
+  Int_t getNumBitsSet(Int_t numBitsToCheck, UInt_t bitMask);
+  
   /* Do geometric things */
   Double_t getDeltaAngleDeg(Double_t angle1, Double_t angle2);
   

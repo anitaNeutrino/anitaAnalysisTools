@@ -811,30 +811,32 @@ void CrossCorrelator::fillDeltaTLookup(){
   Double_t phi0 = getBin0PhiDeg();
   for(Int_t polInd=0; polInd<NUM_POL; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-      for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-  	Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
+    for(Int_t combo=0; combo<numCombos; combo++){
+      Int_t ant1 = comboToAnt1s.at(combo);
+      Int_t ant2 = comboToAnt2s.at(combo);
+    
+      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
+	Double_t thetaWave = TMath::DegToRad()*thetaDeg;
+	for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
+	  for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
+	    Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
 
-  	Double_t phiDeg = phi0 + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
+	    Double_t phiDeg = phi0 + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
 	
-  	Double_t phiWave = TMath::DegToRad()*phiDeg;
-  	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-  	  Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
-  	  Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-  	  for(Int_t combo=0; combo<numCombos; combo++){
-  	    Int_t ant1 = comboToAnt1s.at(combo);
-  	    Int_t ant2 = comboToAnt2s.at(combo);
+	    Double_t phiWave = TMath::DegToRad()*phiDeg;
+	  
   	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
   	    // Int_t offset = TMath::Nint(deltaT/nominalSamplingDeltaT);
   	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
   	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
 	    Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
-	    offsetLows[pol][combo][thetaBin][phiBin] = offsetLow;
+	    offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
 	    Double_t dt1 = offsetLow*nominalSamplingDeltaT;
-	    interpPreFactors[pol][combo][thetaBin][phiBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+	    interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
 
 	    // Here we account for the fact that we are now time ordering the correlations
-	    offsetLows[pol][combo][thetaBin][phiBin]+=numSamples/2;
+	    offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
 	  }
   	}
       }
@@ -1069,7 +1071,7 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol){
 
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI*NUM_PHI; phiBin++){
-      hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][thetaBin][phiBin]);
+      hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
     }
   }
   
@@ -1136,7 +1138,11 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& image
   // 			   kGlobal, kZoomedOut);
 
   // std::cerr << "Global image is currently not functional: returning triggered image." << std::endl;
-  return makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, 0xffff);
+
+  reconstruct(pol, imagePeak, peakPhiDeg, peakThetaDeg,
+	      0, CrossCorrelator::kGlobal);
+  return getMap(pol);
+  // return makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, 0xffff);
 }
 
 
@@ -1359,7 +1365,9 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Long_t threadInd = args->threadInd;
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
-
+  mapMode_t mapMode = ptr->threadMapMode;
+  std::vector<Int_t>* combosToUse = &ptr->threadCombosToUse;
+  
   // const Int_t numThetaBinsPerThread = hImage->GetNbinsY()/NUM_THREADS;
   // const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
   // const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
@@ -1376,43 +1384,68 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
-  std::vector<Int_t>* combosToUse = &ptr->threadCombosToUse;
 
   // TThread::Lock();
   // std::cout << threadInd << "\t" << combosToUse->size() << std::endl;
   // TThread::UnLock();
   
   // zero internal map
-  for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      ptr->coarseMap[pol][thetaBin][phiBin] = 0;
-    }
-  }
-
-  for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-    Int_t combo = combosToUse->at(comboInd);
-    if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
-      continue;
-    }
-    
+  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
     for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-	Int_t offsetLow = ptr->offsetLows[pol][combo][thetaBin][phiBin];
-	Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
-	Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	Double_t cInterp = ptr->interpPreFactors[pol][combo][thetaBin][phiBin]*(c2 - c1) + c1;
-	ptr->coarseMap[pol][thetaBin][phiBin] += cInterp;
-      }
+      ptr->coarseMap[pol][phiBin][thetaBin] = 0;
     }
   }
 
-  for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	ptr->coarseMap[pol][thetaBin][phiBin] /= combosToUse->size();
+  if(mapMode==kTriggered){
+    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+      Int_t combo = combosToUse->at(comboInd);
+      if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+	continue;
       }
-      if(ptr->coarseMap[pol][thetaBin][phiBin] > ptr->threadImagePeak[threadInd]){
-	ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][thetaBin][phiBin];
+    
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
+	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
+	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
+	}
+      }
+    }
+  }
+  else{
+    Int_t phiSector = -1;
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+      Int_t thisPhiSector = phiBin/NUM_BINS_PHI;
+      if(phiSector!=thisPhiSector){
+	phiSector = thisPhiSector;
+	combosToUse = &ptr->combosToUseGlobal[phiSector];
+      }
+      for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+	Int_t combo = combosToUse->at(comboInd);
+	if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+	  continue;
+	}    
+	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
+	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
+	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
+	}
+      }
+    }    
+  }
+
+  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+      
+      if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
+	ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
+      }
+      if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
+	ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
 	peakPhiBin = phiBin;
 	peakThetaBin = thetaBin;
       }
@@ -1885,7 +1918,8 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 					    Double_t& snr,
 					    Int_t nSamp){
 
-
+  // std::cout << phiDeg << "\t" << thetaDeg << std::endl;
+  
   Double_t theDeltaT = nSamp == numSamples ? nominalSamplingDeltaT : correlationDeltaT;
   
   Double_t phiRad = phiDeg*TMath::DegToRad();
@@ -1919,8 +1953,8 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   
   // Factor of two here to drop the zero padding at the back of the waveform
   // which was used during correlations.
-  TGraph* grCoherent = new TGraph(nSamp/2, &tArray[0], &vArray[0]);	
-  
+  TGraph* grCoherent = new TGraph(nSamp/2, &tArray[0], &vArray[0]);
+
   for(Int_t deltaPhiSect=-maxDeltaPhiSect; deltaPhiSect<=maxDeltaPhiSect; deltaPhiSect++){
 
     Int_t phiSector = deltaPhiSect + centerPhiSector;
@@ -1940,22 +1974,27 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
       }
 	
       if(firstAnt!=ant){ // Don't do the first antenna twice
+
+	// std::cout << pol << "\t" << firstAnt << "\t" << ant << "\t" << phiRad << "\t" << thetaRad << "\t" << std::endl;
 	Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
+	
 	Int_t offset1 = floor(deltaT/theDeltaT);
 	Int_t offset2 = ceil(deltaT/theDeltaT);
 
+	// std::cout << deltaT << "\t" << offset1 << "\t" << offset2 << std::endl;
+
 	// How far between the samples we need to interpolate.
-	Double_t ddt = deltaT - theDeltaT*offset1;
+	Double_t tOverDeltaT = (deltaT - theDeltaT*offset1)/theDeltaT;
 	
 	for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
 	  Int_t samp1 = samp + offset1;
 	  Int_t samp2 = samp + offset2;
-	  if(samp1 >= 0 && samp2 < grCoherent->GetN()){
+	  if(samp1 >= 0 && samp1 < grCoherent->GetN() && samp2 >= 0 && samp2 < grCoherent->GetN()){
 
 	    Double_t v1 = vArray[samp1];
 	    Double_t v2 = vArray[samp2];
 
-	    Double_t vInterp = (ddt)*(v2 - v1)/theDeltaT + v1;
+	    Double_t vInterp = tOverDeltaT*(v2 - v1) + v1;
 
 	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
 	  }
