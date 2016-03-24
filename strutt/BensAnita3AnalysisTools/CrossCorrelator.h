@@ -59,8 +59,10 @@
 #define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
 #define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
 
-#define NUM_BINS_PHI_ZOOM_TOTAL 7200
-#define NUM_BINS_THETA_ZOOM_TOTAL 3000 
+// #define NUM_BINS_PHI_ZOOM_TOTAL 7200
+// #define NUM_BINS_THETA_ZOOM_TOTAL 3000
+#define NUM_BINS_PHI_ZOOM_TOTAL 7309
+#define NUM_BINS_THETA_ZOOM_TOTAL 3109
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -215,10 +217,17 @@ public:
   Double_t deltaTs[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< deltaTs between antennas as a function of arrival direction (for the coarse image).
   Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
+
+  // Double_t interpPreFactorsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
+  // Int_t offsetLowsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL][NUM_BINS_PHI_ZOOM_TOTAL]; //!< The interpolation factor for neighbouring samples  
+
+
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
   Double_t coarseMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
+  Double_t fineMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the finely binned map
 
+  
   std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*UPSAMPLE_FACTOR+1]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
@@ -276,6 +285,9 @@ public:
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around the phi-sectors of interest to use in reconstruction.
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
+
+  Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
+  Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
   
 private:
   
