@@ -13,7 +13,7 @@
 #include "TDatime.h"
 #include "TString.h"
 #include "TFile.h"
-
+#include "TChain.h"
 
 #include <stdlib.h>
 #include <errno.h>
@@ -34,6 +34,8 @@ public:
   OutputConvention(int argcIn, char* argvIn[]);
 
   TString getOutputFileName();
+
+  static TFile* getFile(TString fileNameWithWildcards);
   
 private:
   int argc; //!< The argc from the main program
