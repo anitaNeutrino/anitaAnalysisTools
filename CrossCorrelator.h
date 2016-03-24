@@ -69,6 +69,10 @@
 #define NUM_RING AnitaRing::kNotARing
 #define DEGREES_IN_CIRCLE 360
 
+#define MAX_NUM_PEAKS 2
+#define PEAK_PHI_DEG_RANGE 10
+#define PEAK_THETA_DEG_RANGE 10
+
 #define SPEED_OF_LIGHT 2.99792458e8
 #define SPEED_OF_LIGHT_NS 0.299792458
 
@@ -95,13 +99,12 @@ public:
 
   /**
    * @brief Flag to pass to CrossCorrelator when making a map telling it whether to reconstruct all arrival directions or a finer binned close up of a particular region
-   */  
+   */
   enum zoomMode_t{
     kZoomedOut,
     kZoomedIn,
     kNumZoomModes
   };
-
 
   /**
    * @brief Container required to get threading to work inside a class, includes the thread index and the pointer to the class.
@@ -115,21 +118,19 @@ public:
     CrossCorrelator* ptr; //!< Pointer to the CrossCorrelator
   };
 
-  
   CrossCorrelator();
   ~CrossCorrelator();
 
-
-  void initializeVariables();  
+  void initializeVariables();
   void printInfo();
-
 
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void doFFTs(AnitaPol::AnitaPol_t pol);
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHeader* header);
-
+  void reconstructEvent(UsefulAnitaEvent* usefulEvent);
+  void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
+		      Double_t* phiDegs, Double_t* thetaDegs);
 
 
   void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,Double_t& time, Double_t& value);
@@ -138,14 +139,9 @@ public:
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
 
 
-
-
-
   
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
-  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern);
-
-
+  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
 
 
 
@@ -159,7 +155,7 @@ public:
 
 
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
-  void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
+  void fillCombosToUse();
   void do5PhiSectorCombinatorics();
 
 
@@ -173,28 +169,27 @@ public:
 
 
 
-  void getPeakInfoGlobal(AnitaPol::AnitaPol_t pol, Double_t& value,
+  void getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t& value,
 			 Double_t& phiDeg, Double_t& thetaDeg);
-  void getPeakInfoTriggered(AnitaPol::AnitaPol_t pol, Double_t& value,
-			    Double_t& phiDeg, Double_t& thetaDeg);
-  void getPeakInfoZoom(AnitaPol::AnitaPol_t pol, Double_t& value,
-		       Double_t& phiDeg, Double_t& thetaDeg);
-  
+  void getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t& value,
+		       Double_t& phiDeg, Double_t& thetaDeg);  
+
 
   
-  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);  
+  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
-  TH2D* getMap(AnitaPol::AnitaPol_t pol);
+  TH2D* getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
+	       Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+	       UShort_t l3TrigPattern=ALL_PHI_TRIGS);
+    
+
   TH2D* getZoomMap(AnitaPol::AnitaPol_t pol);
   
-
   void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-		   Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-		   UShort_t l3TrigPattern, mapMode_t mapMode);
+		   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   void reconstructZoom(AnitaPol::AnitaPol_t pol,
 		       Double_t& imagePeak, Double_t& peakPhiDeg,
-		       Double_t& peakThetaDeg,UShort_t l3TrigPattern,
-		       mapMode_t mapMode, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
   
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
   			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
@@ -241,7 +236,6 @@ public:
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
 
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
-  // Double_t coarseMap[NUM_POL][NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
   Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map  
   
   Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
@@ -256,7 +250,7 @@ public:
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
-  
+
   UInt_t eventNumber[NUM_POL]; //!< For tracking event number
   UInt_t lastEventNormalized[NUM_POL]; //!< Prevents cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
@@ -269,22 +263,19 @@ public:
   std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
 
-  std::map<std::pair<UInt_t, Int_t>, std::vector<Int_t> > combosToUseTriggered; //!< Depends on L3 trigger for triggered image    
+  std::map<std::pair<UInt_t, Int_t>, std::vector<Int_t> > combosToUseTriggered; //!< Depends on L3 trigger for triggered image
 
   std::vector<Double_t> rArray[NUM_POL]; //!< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg[NUM_POL]; //!< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[NUM_POL]; //!< Vector of antenna heights
 
+  Double_t coarseMapPeakValues[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
+  Double_t coarseMapPeakPhiDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t coarseMapPeakThetaDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
-  Double_t imagePeakGlobal[NUM_POL]; //!< Stores the peak of the interally stored map
-  Double_t peakPhiDegGlobal[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t peakThetaDegGlobal[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored map
-  Double_t imagePeakTriggered[NUM_POL]; //!< Stores the peak of the interally stored map
-  Double_t peakPhiDegTriggered[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t peakThetaDegTriggered[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored map
-  Double_t imagePeakZoom[NUM_POL]; //!< Stores the peak of the interally stored zoom map
-  Double_t peakPhiDegZoom[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored zoom map
-  Double_t peakThetaDegZoom[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored zoom map
+  Double_t fineMapPeakValues[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
+  Double_t fineMapPeakPhiDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t fineMapPeakThetaDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
   
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
@@ -299,12 +290,10 @@ public:
   
   AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
   UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
-  mapMode_t threadMapMode; //!< mapMode_t to use in thread functions.
-  zoomMode_t threadZoomMode; //!< zoomMode_t to use in thread functions.
+  Int_t threadPhiSector; //!< phi-sector to use in thread functions.  
   Double_t threadImagePeak[NUM_THREADS]; //!< Store image peaks found by different threads.
   Double_t threadPeakPhiDeg[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
   Double_t threadPeakThetaDeg[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
-  std::vector<Int_t> threadCombosToUse; //!< combo indices for use in thread functions.
   
   std::vector<TThread*> mapThreads; //!< TThreads for doing interferometric map making.
   std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.

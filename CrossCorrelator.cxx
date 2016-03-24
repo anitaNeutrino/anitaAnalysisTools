@@ -74,10 +74,6 @@ void CrossCorrelator::initializeVariables(){
   zoomModeNames[kZoomedIn] = "Zoom";
 
   threadPol = AnitaPol::kHorizontal;
-  threadMapMode = kTriggered;
-  threadZoomMode = kZoomedOut;
-  threadL3TrigPattern = 0;
-
   
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
     CrossCorrelator::threadArgs threadArgVals;
@@ -220,6 +216,71 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Goes through the coarseMap and finds the top N values.
+ *
+ * @param pol is the polarization of interest.
+ * @param numPeaks is the number of peaks you wish to find, and the assumed size arrays pointed to by the following 3 variables.
+ * @param peakValues is a pointer to the first element of an array of length numPeaks and will be filled with the values of the coarse map at the peaks.
+ * @param phiDegs is a pointer to the first element of an array of length numPeaks and will be filled with the values of phi (degrees relative to ADU5-aft-fore) at the peaks.
+ * @param thetaDegs is a pointer to the first element of an array of length numPeaks and will be filled with the values of theta (degrees relative to ADU5-aft-fore) at the peaks.
+ *
+ * Assumes the event has been correlated and reconstructed.
+ * These peaks must be separated by the PEAK_PHI_DEG_RANGE in phi (Degrees) and PEAK_THETA_DEG_RANGE in theta (Degrees)
+ */
+void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
+				     Double_t* phiDegs, Double_t* thetaDegs){
+
+  // set the input peak params
+  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
+    peakValues[peakInd] = -DBL_MAX;
+    phiDegs[peakInd] = -DBL_MAX;
+    thetaDegs[peakInd] = -DBL_MAX;
+  }
+
+  Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
+  for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
+    for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+      allowedBins[phiBin][thetaBin] = 1; // everything is allowed
+    }
+  }
+
+  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
+    for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
+      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	if(coarseMap[pol][phiBin][thetaBin] > peakValues[peakInd]){
+	  if(allowedBins[phiBin][thetaBin] > 0){
+	    peakValues[peakInd] = coarseMap[pol][phiBin][thetaBin];
+	    phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
+	    thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+	  }
+	}
+      }
+    }
+
+    // std::cerr << pol << "\t" << peakInd << "\t" << peakValues[peakInd] << "\t"
+    // 	      << phiDegs[peakInd] << "\t" << thetaDegs[peakInd] << std::endl;
+    
+    for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
+      Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+
+      if(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg) < PEAK_PHI_DEG_RANGE){
+
+	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	  Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+
+	  if(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg) < PEAK_THETA_DEG_RANGE){
+	    // Now this region in phi/theta is disallowed when looking for peaks
+	    allowedBins[phiBin][thetaBin] = 0; 
+	  }
+	}
+      }
+    }
+  }
+}
+
+
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -227,26 +288,26 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
  * @brief Reconstruct event
  *
  * @param usefulEvent is the event to process.
- * @param header is the RawAnitaHeader of the event to process
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  * The results can then be conveniently accessed from getPeakInfoTriggered, getPeakInfoZoom
  */
-void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHeader* header){
+void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent){
 
-  for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){  
+  for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
     correlateEvent(usefulEvent, pol);
+    reconstruct(pol, coarseMapPeakValues[pol][0],
+		coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
 
-    reconstruct(pol, imagePeakGlobal[pol], peakPhiDegGlobal[pol], peakThetaDegGlobal[pol],
-    		0, CrossCorrelator::kGlobal);
-    
-    reconstruct(pol, imagePeakTriggered[pol], peakPhiDegTriggered[pol], peakThetaDegTriggered[pol],
-		header->getL3TrigPattern(pol), CrossCorrelator::kTriggered);
+    findPeakValues(pol, MAX_NUM_PEAKS, coarseMapPeakValues[pol],
+    		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
 
-    reconstructZoom(pol, imagePeakZoom[pol], peakPhiDegZoom[pol], peakThetaDegZoom[pol],
-		    0, CrossCorrelator::kTriggered,
-		    peakPhiDegTriggered[pol], peakThetaDegTriggered[pol]);		    
+    for(Int_t peakInd=MAX_NUM_PEAKS-1; peakInd >= 0; peakInd--){ 
+      reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
+    		      fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
+    		      coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd]);
+    }
   }
 }
 
@@ -258,18 +319,21 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHe
 
 //---------------------------------------------------------------------------------------------------------
 /**
- * @brief Gets the results from the coarse reconstruction with the L3 triggered phi-sector combinatorics
+ * @brief Gets the results from the coarse reconstruction
  *
  * @param pol is the polarization of interest
+ * @param peakIndex runs from 0 to MAX_NUM_PEAKS and indexes the peak (0 is the largest).
  * @param value is the bin content of the image peak.
  * @param phiDeg is the phi coordinate in degrees.
  * @param thetaDeg is the theta coordinate in degrees.
  */
-void CrossCorrelator::getPeakInfoGlobal(AnitaPol::AnitaPol_t pol, Double_t& value,
-					Double_t& phiDeg, Double_t& thetaDeg){
-  value = imagePeakGlobal[pol];
-  phiDeg = peakPhiDegGlobal[pol];
-  thetaDeg = peakThetaDegGlobal[pol];
+
+void CrossCorrelator::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
+					Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
+
+  value = coarseMapPeakValues[pol][peakIndex];
+  phiDeg = coarseMapPeakPhiDegs[pol][peakIndex];
+  thetaDeg = coarseMapPeakThetaDegs[pol][peakIndex];
 }
 
 
@@ -278,39 +342,24 @@ void CrossCorrelator::getPeakInfoGlobal(AnitaPol::AnitaPol_t pol, Double_t& valu
 
 //---------------------------------------------------------------------------------------------------------
 /**
- * @brief Gets the results from the coarse reconstruction with the L3 triggered phi-sector combinatorics
+ * @brief Gets the results from the fine reconstruction
  *
  * @param pol is the polarization of interest
+ * @param peakIndex runs from 0 to MAX_NUM_PEAKS and indexes the peak (0 is the largest).
  * @param value is the bin content of the image peak.
  * @param phiDeg is the phi coordinate in degrees.
  * @param thetaDeg is the theta coordinate in degrees.
  */
-void CrossCorrelator::getPeakInfoTriggered(AnitaPol::AnitaPol_t pol, Double_t& value,
-					   Double_t& phiDeg, Double_t& thetaDeg){
-  value = imagePeakTriggered[pol];
-  phiDeg = peakPhiDegTriggered[pol];
-  thetaDeg = peakThetaDegTriggered[pol];
+
+void CrossCorrelator::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
+				      Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
+
+  value = fineMapPeakValues[pol][peakIndex];
+  phiDeg = fineMapPeakPhiDegs[pol][peakIndex];
+  thetaDeg = fineMapPeakThetaDegs[pol][peakIndex];
 }
 
 
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Gets the results from the fine reconstruction around the peak of the coarse reconstruction.
- *
- * @param pol is the polarization of interest
- * @param value is the bin content of the image peak.
- * @param phiDeg is the phi coordinate in degrees.
- * @param thetaDeg is the theta coordinate in degrees.
- */
-void CrossCorrelator::getPeakInfoZoom(AnitaPol::AnitaPol_t pol, Double_t& value,
-				      Double_t& phiDeg, Double_t& thetaDeg){
-  value = imagePeakZoom[pol];
-  phiDeg = peakPhiDegZoom[pol];
-  thetaDeg = peakThetaDegZoom[pol];
-}
 
 
 
@@ -357,6 +406,9 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   // Now cross correlate those already FFT'd waveforms
   doAllCrossCorrelationsThreaded(pol);
 
+  // reconstruct
+  reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
+  
   // Safety check to make sure we don't do any hard work twice.
   eventNumber[pol] = usefulEvent->eventNumber;
 }
@@ -414,10 +466,10 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
   Long_t threadInd = args->threadInd;
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
+  Int_t phiSector = ptr->threadPhiSector;
   
-  std::pair<UInt_t, Int_t> key(ptr->threadL3TrigPattern, ptr->kDeltaPhiSect);
-  std::vector<Int_t> combosToUse = ptr->combosToUseTriggered[key];
-  Int_t numCombosAllThreads = combosToUse.size();
+  const std::vector<Int_t>* combosToUse = &ptr->combosToUseGlobal[phiSector];
+  Int_t numCombosAllThreads = combosToUse->size();
   Int_t numCorrPerThread = numCombosAllThreads/NUM_THREADS;
   Int_t numRemainder = numCombosAllThreads%NUM_THREADS;
 
@@ -426,7 +478,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
   Double_t stash[NUM_SAMPLES*UPSAMPLE_FACTOR*2];
 
   for(int comboInd=startComboInd; comboInd<startComboInd+numCorrPerThread; comboInd++){
-    Int_t combo = combosToUse.at(comboInd);
+    Int_t combo = combosToUse->at(comboInd);
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
     
@@ -455,7 +507,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
   if(threadInd < numRemainder){
     Int_t numDoneInAllThreads = NUM_THREADS*numCorrPerThread;
     Int_t comboInd = numDoneInAllThreads + threadInd;
-    Int_t combo = combosToUse.at(comboInd);
+    Int_t combo = combosToUse->at(comboInd);
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
@@ -542,11 +594,11 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
  * @brief Static member function which generates the finely binned set of cross correlations from the FFTs held in memory.
  *
  * @param pol tells CrossCorrelator to only do this polarization.
- * @param l3TrigPattern is used to figure out which finely binned cross correlations are required.
+ * @param phiSector is used to figure out which finely binned cross correlations are required.
  */
-void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern){
+void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector){
 
-  threadL3TrigPattern = l3TrigPattern;
+  threadPhiSector = phiSector;
   threadPol = pol;
 
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
@@ -822,6 +874,8 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
     std::cerr << "\tSeriously bad things are probably about to happen." << std::endl;
     std::cerr << "\tCheck the combinatorics!" << std::endl;
   }
+
+  fillCombosToUse();
 }
 
 
@@ -835,24 +889,34 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
 void CrossCorrelator::fillDeltaTLookup(){
 
   Double_t phi0 = getBin0PhiDeg();
+  const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
+  for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
+    Double_t phiDeg = phi0 + phiIndex*phiBinSize;
+    Double_t phiWave = TMath::DegToRad()*phiDeg;
+    phiWaveLookup[phiIndex] = phiWave;
+  }
+
+  const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
+  for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
+    Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
+    Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
+    thetaWaves[thetaIndex] = thetaWave;
+  }
+  
   for(Int_t polInd=0; polInd<NUM_POL; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(Int_t combo=0; combo<numCombos; combo++){
       Int_t ant1 = comboToAnt1s.at(combo);
       Int_t ant2 = comboToAnt2s.at(combo);
     
-      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	Double_t thetaDeg = THETA_RANGE*((Double_t)thetaBin/NUM_BINS_THETA - 0.5);
-	Double_t thetaWave = TMath::DegToRad()*thetaDeg;
-	for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-	  for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-	    Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
+      for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
+	for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
+	  Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
+	  Double_t phiWave = phiWaveLookup[phiBin];
 
-	    Double_t phiDeg = phi0 + phiBin*Double_t(PHI_RANGE)/NUM_BINS_PHI;
-	
-	    Double_t phiWave = TMath::DegToRad()*phiDeg;
-	  
-  	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	    Double_t thetaWave = thetaWaves[thetaBin];
+	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
   	    // Int_t offset = TMath::Nint(deltaT/nominalSamplingDeltaT);
   	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
   	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
@@ -869,25 +933,10 @@ void CrossCorrelator::fillDeltaTLookup(){
     }
   }
   
-  const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
-  for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
-    Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
-    Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
-    thetaWaves[thetaIndex] = thetaWave;
-
-  }
-  const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
-  for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
-    Double_t phiDeg = phi0 + phiIndex*phiBinSize;
-    Double_t phiWave = TMath::DegToRad()*phiDeg;
-    phiWaveLookup[phiIndex] = phiWave;
-  }
-
   minThetaDegZoom = -78.5;
   minPhiDegZoom = -59.25;
 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
-    // Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA_ZOOM_TOTAL/2)*ZOOM_BIN_SIZE_THETA;
     Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     zoomedThetaWaves[thetaIndex] = thetaWave;
@@ -980,47 +1029,17 @@ Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t 
 
 //---------------------------------------------------------------------------------------------------------
 /**
- * @brief Creates a vector of antenna combo indices and puts them in combosToUseGlobal or combosToUseTriggered.
- *
- * @param mapMode is the type of reconstruction being used.
- * @param l3TrigPattern is the l3TrigPattern(H) being used in the reconstruction.
+ * @brief Creates vectors of antenna combo indices and puts them in the combosToUseGlobal map
  */
-void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern){
+void CrossCorrelator::fillCombosToUse(){
   
-  std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
-  
-  if(mapMode==kTriggered){
-    std::map<std::pair<UInt_t, Int_t>,std::vector<Int_t> >::iterator it = combosToUseTriggered.find(key);    
-    if(it==combosToUseTriggered.end()){
-      combosToUseTriggered[key] = std::vector<Int_t>();
-      for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-	UInt_t doPhiSector = ((l3TrigPattern >> phiSector) & 1);
-	if(doPhiSector){
-	  for(Int_t combo=0; combo<numCombos; combo++){
-	    Int_t ant1 = comboToAnt1s.at(combo);
-	    Int_t ant2 = comboToAnt2s.at(combo);
-
-	    if(useCombo(ant1, ant2, phiSector, kDeltaPhiSect)){
-	      if(std::find(combosToUseTriggered[key].begin(),
-			   combosToUseTriggered[key].end(),
-			   combo) == combosToUseTriggered[key].end()){
-		combosToUseTriggered[key].push_back(combo);
-	      }
-	    }
-	  }
-	}
-      }
-    }
-  }
-  else if(mapMode==kGlobal){
-    for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-      if(combosToUseGlobal[phiSector].size() == 0){
-	for(Int_t combo=0; combo<numCombos; combo++){
-	  Int_t ant1 = comboToAnt1s.at(combo);
-	  Int_t ant2 = comboToAnt2s.at(combo);
-	  if(useCombo(ant1, ant2, phiSector, kDeltaPhiSect)){
-	    combosToUseGlobal[phiSector].push_back(combo);
-	  }
+  for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
+    if(combosToUseGlobal[phiSector].size() == 0){
+      for(Int_t combo=0; combo<numCombos; combo++){
+	Int_t ant1 = comboToAnt1s.at(combo);
+	Int_t ant2 = comboToAnt2s.at(combo);
+	if(useCombo(ant1, ant2, phiSector, kDeltaPhiSect)){
+	  combosToUseGlobal[phiSector].push_back(combo);
 	}
       }
     }
@@ -1072,9 +1091,15 @@ Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::Ani
  * @brief Gets an actual histogram of the zoomed in map.
  *
  * @param pol is the polarization
+ * @param peakValue is the bin content of the image peak.
+ * @param peakPhiDeg is the phi coordinate in degrees.
+ * @param peakThetaDeg is the theta coordinate in degrees.
+ * @param l3TrigPattern is a bit mask of the phi-sectors to use in reconstruct, default value is ALL_PHI_TRIGS (=0xffff).
  * @returns the TH2D histogram
  */
-TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol){
+TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
+			      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+			      UShort_t l3TrigPattern){
 
   TString name = "h";
   name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
@@ -1095,9 +1120,23 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol){
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
-  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI*NUM_PHI; phiBin++){
-      hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+  peakValue = -DBL_MAX;
+  peakPhiDeg = -DBL_MAX;
+  peakThetaDeg = -DBL_MAX;
+
+  for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
+    Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
+    if(doPhiSector){
+      for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
+	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
+	    peakValue = coarseMap[pol][phiBin][thetaBin];
+	    peakPhiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
+	    peakThetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
+	  }
+	}
+      }
     }
   }
   
@@ -1162,12 +1201,9 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& image
 
   // return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
   // 			   kGlobal, kZoomedOut);
-
+  
   // std::cerr << "Global image is currently not functional: returning triggered image." << std::endl;
-
-  reconstruct(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-	      0, CrossCorrelator::kGlobal);
-  return getMap(pol);
+  return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg);
   // return makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, 0xffff);
 }
 
@@ -1208,10 +1244,8 @@ TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& im
   // return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
   // 			   l3TrigPattern, kTriggered, kZoomedOut);
 
-  reconstruct(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-	      l3TrigPattern, CrossCorrelator::kTriggered);
   // std::cout << __PRETTY_FUNCTION__ << "\t" << l3TrigPattern << std::endl;
-  return getMap(pol);
+  return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern);
 }
 
 
@@ -1238,7 +1272,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol,
   // 			       kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
   reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  0, CrossCorrelator::kTriggered,
 		  zoomCenterPhiDeg, zoomCenterThetaDeg);  
   return getZoomMap(pol);
 
@@ -1267,7 +1300,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& image
   // return makeZoomImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
   // 			       kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
   reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  l3TrigPattern, CrossCorrelator::kTriggered,
 		  zoomCenterPhiDeg, zoomCenterThetaDeg);  
   return getZoomMap(pol);
   
@@ -1294,7 +1326,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3Trig
   // return makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
   // 			 l3TrigPattern, zoomCenterPhiDeg, zoomCenterThetaDeg);
   reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  l3TrigPattern, CrossCorrelator::kTriggered,
 		  zoomCenterPhiDeg, zoomCenterThetaDeg);  
   return getZoomMap(pol);
 }
@@ -1316,28 +1347,14 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3Trig
  * @param imagePeak is the maximum value.
  * @param peakPhiDeg is azimuth of the maximum value (Degrees) relative to the ADU5 aft-fore.
  * @param peakThetaDeg is the elevation of the maximum value (Degrees).
- * @param l3TrigPattern is the L3 trig pattern, determines what antenna pairs to use in the recontruction.
- * @param mapMode is the type of reconstruction being used.
  *
  * This function is also responsible for merging the peak finding results of each of the threads.
  */
 void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-				  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-				  UShort_t l3TrigPattern, mapMode_t mapMode){
+				  Double_t& peakPhiDeg, Double_t& peakThetaDeg){
   
   threadPol = pol;
-  threadMapMode = mapMode;
-  threadL3TrigPattern = l3TrigPattern;
 
-  fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
-  std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
-  threadCombosToUse = combosToUseTriggered[key];
-
-
-  // std::cout << __PRETTY_FUNCTION__ << "\t" << l3TrigPattern << "\t"
-  // 	    << threadCombosToUse.size() << std::endl;
-
-  
   // LAUNCH THREADS HERE
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
     TString name = TString::Format("threadMap%ld", threadInd);
@@ -1359,7 +1376,7 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
     delete mapThreads.at(threadInd);
   }
   mapThreads.clear();
-  
+
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
@@ -1369,6 +1386,8 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
       peakThetaDeg = threadPeakThetaDeg[threadInd];
     }
   }
+  
+  
 }
 
 
@@ -1391,8 +1410,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Long_t threadInd = args->threadInd;
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
-  mapMode_t mapMode = ptr->threadMapMode;
-  std::vector<Int_t>* combosToUse = &ptr->threadCombosToUse;
   
   // const Int_t numThetaBinsPerThread = hImage->GetNbinsY()/NUM_THREADS;
   // const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
@@ -1406,15 +1423,10 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
   const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
   
-
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
 
-  // TThread::Lock();
-  // std::cout << threadInd << "\t" << combosToUse->size() << std::endl;
-  // TThread::UnLock();
-  
   // zero internal map
   for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
     for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
@@ -1422,47 +1434,31 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     }
   }
 
-  if(mapMode==kTriggered){
+  Int_t phiSector = -1;
+  std::vector<Int_t>* combosToUse = NULL;  
+  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+    Int_t thisPhiSector = phiBin/NUM_BINS_PHI;
+    if(phiSector!=thisPhiSector){
+      phiSector = thisPhiSector;
+      combosToUse = &ptr->combosToUseGlobal[phiSector];
+      // TThread::Lock();
+      // std::cerr << threadInd << "\t" << phiSector << "\t" << phiBin << std::endl;
+      // TThread::UnLock();            
+    }
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
       Int_t combo = combosToUse->at(comboInd);
       if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
 	continue;
       }
-    
-      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
-	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
-	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
-	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
-	}
+      for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
+	Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
+	Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
       }
     }
-  }
-  else{
-    Int_t phiSector = -1;
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      Int_t thisPhiSector = phiBin/NUM_BINS_PHI;
-      if(phiSector!=thisPhiSector){
-	phiSector = thisPhiSector;
-	combosToUse = &ptr->combosToUseGlobal[phiSector];
-      }
-      for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-	Int_t combo = combosToUse->at(comboInd);
-	if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
-	  continue;
-	}    
-	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
-	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
-	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
-	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
-	}
-      }
-    }    
-  }
+  }    
 
   for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
     for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
@@ -1497,8 +1493,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
  * @param imagePeak is the maximum value.
  * @param peakPhiDeg is azimuth of the maximum value (Degrees) relative to the ADU5 aft-fore.
  * @param peakThetaDeg is the elevation of the maximum value (Degrees).
- * @param l3TrigPattern is the L3 trig pattern, determines what antenna pairs to use in the recontruction.
- * @param mapMode is the type of reconstruction being used.
  * @param zoomCenterPhiDeg should be the phi (deg) of the coarse map to reconstruct around.
  * @param zoomCenterThetaDeg should be the theta (deg) of the coarse map to reconstruct around.
  *
@@ -1506,33 +1500,17 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
  */
 void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-				      UShort_t l3TrigPattern, mapMode_t mapMode,
 				      Double_t zoomCenterPhiDeg,
 				      Double_t zoomCenterThetaDeg){
 
-  if(l3TrigPattern==0){
-    Int_t phiSectorOfPeak = -1;
-    Double_t bestDeltaPhiOfPeakToAnt = DEGREES_IN_CIRCLE;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      Double_t phiOfAnt = phiArrayDeg[pol].at(ant);
-      Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, zoomCenterPhiDeg));
-      if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
-	bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
-	phiSectorOfPeak = (ant % NUM_PHI);
-      }
-    }
-    l3TrigPattern = (1 << phiSectorOfPeak);
-  }
-
   threadPol = pol;
-  threadMapMode = mapMode;
-  threadL3TrigPattern = l3TrigPattern;
+  Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
+  deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
-  fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
-  std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
-  threadCombosToUse = combosToUseTriggered[key];
-  
-  doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
+  Int_t phiSector = floor(deltaPhiDegPhi0)/PHI_RANGE;
+  doUpsampledCrossCorrelationsThreaded(pol, phiSector); // sets threadPhiSector
+
+  // std::cout << deltaPhiDegPhi0 << "\t" << zoomCenterPhiDeg << "\t" << phiSector << std::endl;
 
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
@@ -1609,7 +1587,9 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
-  std::vector<Int_t>* combosToUse = &ptr->threadCombosToUse;
+
+  Int_t phiSector = ptr->threadPhiSector;
+  std::vector<Int_t>* combosToUse = &ptr->combosToUseGlobal[phiSector];
     
   Int_t phiZoomBase = TMath::Nint((ptr->zoomPhiMin - ptr->minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
   Int_t thetaZoomBase = TMath::Nint((ptr->zoomThetaMin - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
