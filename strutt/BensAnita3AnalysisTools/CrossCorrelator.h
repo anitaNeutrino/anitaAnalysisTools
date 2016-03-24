@@ -1,3 +1,4 @@
+
 /* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
@@ -134,20 +135,20 @@ public:
 
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
-  inline Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+  Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 					Int_t phiIndex, Int_t thetaIndex);
-  inline Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+  Int_t getDeltaTExpectedSpherical(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 					  Double_t phiWave, Double_t thetaWave, Double_t rWave);
-  inline Double_t getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave);
+  Double_t getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave);
 
-  inline Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
+  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
   void fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3TrigPattern);
   void do5PhiSectorCombinatorics();
   void fillDeltaTLookup();
   Double_t getBin0PhiDeg();
 
-  inline Double_t getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
-  inline Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);  
+  Double_t getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);  
 
   void createImageNameAndTitle(TString& name, TString& title, mapMode_t mapMode, zoomMode_t zoomMode,
 			       Double_t rWave, AnitaPol::AnitaPol_t pol);
@@ -184,6 +185,10 @@ public:
   Int_t getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg);
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
 				       Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);
+  TGraph* makeUpsampledCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
+						Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);  
+  TGraph* makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg,
+			     Int_t maxDeltaPhiSect, Double_t& snr, Int_t nSamp);
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
@@ -245,7 +250,7 @@ public:
   Double_t cosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of cos(theta) for image.
   Double_t cosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS]; //!< Cached values of part of the deltaT calculation for image.
   Double_t phiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL];  //!< Cached values of phi for image.
-
+  Double_t offAxisDelays[NUM_POL][NUM_BINS_PHI_ZOOM_TOTAL][NUM_COMBOS]; //!< Off-axis delays for fine binned images.
   
   AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
   UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
@@ -264,9 +269,10 @@ public:
    
   Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around the phi-sectors of interest to use in reconstruction.
+  Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
+  Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
   
 private:
-
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
 };
