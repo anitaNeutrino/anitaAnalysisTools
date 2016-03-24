@@ -44,16 +44,15 @@
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 
 // Image definitions
-// #define NUM_BINS_THETA 300
-// #define NUM_BINS_PHI 45
 #define NUM_BINS_THETA 100
 #define NUM_BINS_PHI 15
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
-
-#define NUM_BINS_THETA_ZOOM 140
-#define NUM_BINS_PHI_ZOOM 140
+#define NUM_BINS_THETA_ZOOM 100
+#define NUM_BINS_PHI_ZOOM 100
+// #define NUM_BINS_THETA_ZOOM 60
+// #define NUM_BINS_PHI_ZOOM 60
 #define ZOOM_BIN_SIZE_PHI 0.05
 #define ZOOM_BIN_SIZE_THETA 0.05
 #define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
@@ -61,8 +60,10 @@
 
 // #define NUM_BINS_PHI_ZOOM_TOTAL 7200
 // #define NUM_BINS_THETA_ZOOM_TOTAL 3000
-#define NUM_BINS_PHI_ZOOM_TOTAL 7309
-#define NUM_BINS_THETA_ZOOM_TOTAL 3109
+#define NUM_BINS_PHI_ZOOM_TOTAL 7269
+#define NUM_BINS_THETA_ZOOM_TOTAL 3069
+// #define NUM_BINS_PHI_ZOOM_TOTAL 7229
+// #define NUM_BINS_THETA_ZOOM_TOTAL 3029
 
 // Anita Geometry definitions, shouldn't really be here
 #define NUM_POL AnitaPol::kNotAPol
@@ -83,7 +84,6 @@
 class CrossCorrelator{
 
 public:
-
 
     /**
    * @brief Flag to pass to CrossCorrelator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
@@ -206,29 +206,18 @@ public:
 					 Int_t ant1, Int_t ant2);
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
-
-
-  
-
   
   TString mapModeNames[kNumMapModes];//!< Maps text to the mapMode_t enum, used for histogram names/titles.
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
   
-  // Double_t deltaTs[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA][NUM_COMBOS]; //!< deltaTs between antennas as a function of arrival direction (for the coarse image).
-  Double_t deltaTs[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< deltaTs between antennas as a function of arrival direction (for the coarse image).
+  // Double_t deltaTs[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< deltaTs between antennas as a function of arrival direction (for the coarse image).
   Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
-
-
-
-  // Double_t interpPreFactorsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
-  // Int_t offsetLowsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL][NUM_BINS_PHI_ZOOM_TOTAL]; //!< The interpolation factor for neighbouring samples  
-
+  
   Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
   Double_t coarseMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
-
   Double_t interpPreFactorsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLowsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
