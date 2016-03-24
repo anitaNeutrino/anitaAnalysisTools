@@ -236,6 +236,9 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHe
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){  
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
     correlateEvent(usefulEvent, pol);
+
+    reconstruct(pol, imagePeakGlobal[pol], peakPhiDegGlobal[pol], peakThetaDegGlobal[pol],
+    		0, CrossCorrelator::kGlobal);
     
     reconstruct(pol, imagePeakTriggered[pol], peakPhiDegTriggered[pol], peakThetaDegTriggered[pol],
 		header->getL3TrigPattern(pol), CrossCorrelator::kTriggered);
@@ -244,6 +247,28 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHe
 		    0, CrossCorrelator::kTriggered,
 		    peakPhiDegTriggered[pol], peakThetaDegTriggered[pol]);		    
   }
+}
+
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Gets the results from the coarse reconstruction with the L3 triggered phi-sector combinatorics
+ *
+ * @param pol is the polarization of interest
+ * @param value is the bin content of the image peak.
+ * @param phiDeg is the phi coordinate in degrees.
+ * @param thetaDeg is the theta coordinate in degrees.
+ */
+void CrossCorrelator::getPeakInfoGlobal(AnitaPol::AnitaPol_t pol, Double_t& value,
+					Double_t& phiDeg, Double_t& thetaDeg){
+  value = imagePeakGlobal[pol];
+  phiDeg = peakPhiDegGlobal[pol];
+  thetaDeg = peakThetaDegGlobal[pol];
 }
 
 
@@ -974,7 +999,7 @@ void CrossCorrelator::fillCombosToUseIfNeeded(mapMode_t mapMode, UShort_t l3Trig
 	    Int_t ant1 = comboToAnt1s.at(combo);
 	    Int_t ant2 = comboToAnt2s.at(combo);
 
-	    if(useCombo(ant1, ant2, phiSector, kDeltaPhiSect)){	      
+	    if(useCombo(ant1, ant2, phiSector, kDeltaPhiSect)){
 	      if(std::find(combosToUseTriggered[key].begin(),
 			   combosToUseTriggered[key].end(),
 			   combo) == combosToUseTriggered[key].end()){

@@ -173,6 +173,8 @@ public:
 
 
 
+  void getPeakInfoGlobal(AnitaPol::AnitaPol_t pol, Double_t& value,
+			 Double_t& phiDeg, Double_t& thetaDeg);
   void getPeakInfoTriggered(AnitaPol::AnitaPol_t pol, Double_t& value,
 			    Double_t& phiDeg, Double_t& thetaDeg);
   void getPeakInfoZoom(AnitaPol::AnitaPol_t pol, Double_t& value,
@@ -274,6 +276,9 @@ public:
   std::vector<Double_t> zArray[NUM_POL]; //!< Vector of antenna heights
 
 
+  Double_t imagePeakGlobal[NUM_POL]; //!< Stores the peak of the interally stored map
+  Double_t peakPhiDegGlobal[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t peakThetaDegGlobal[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored map
   Double_t imagePeakTriggered[NUM_POL]; //!< Stores the peak of the interally stored map
   Double_t peakPhiDegTriggered[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored map
   Double_t peakThetaDegTriggered[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored map
