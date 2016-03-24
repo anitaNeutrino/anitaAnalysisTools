@@ -68,6 +68,18 @@ void CrossCorrelator::initializeVariables(){
 
   fillDeltaTLookup();
 
+  for(Int_t pol=0; pol < NUM_POL; pol++){
+    for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){    
+      coarseMapPeakValues[pol][peakInd] = -999; 
+      coarseMapPeakPhiDegs[pol][peakInd] = -999; 
+      coarseMapPeakThetaDegs[pol][peakInd] = -999;
+
+      fineMapPeakValues[pol][peakInd] = -999;
+      fineMapPeakPhiDegs[pol][peakInd] = -999;
+      fineMapPeakThetaDegs[pol][peakInd] = -999;
+    }
+  }
+  
   mapModeNames[kGlobal] = "Global";
   mapModeNames[kTriggered] = "Triggered";
   zoomModeNames[kZoomedOut] = "";
@@ -232,11 +244,22 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 				     Double_t* phiDegs, Double_t* thetaDegs){
 
-  // set the input peak params
-  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
-    peakValues[peakInd] = -DBL_MAX;
-    phiDegs[peakInd] = -DBL_MAX;
-    thetaDegs[peakInd] = -DBL_MAX;
+
+  // You can have numPeaks less than or requal MAX_NUM_PEAKS, but not greater than.
+  if(numPeaks > MAX_NUM_PEAKS){    
+    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
+	      << ". numPeaks = " << numPeaks << ", CrossCorrelator compiled with MAX_NUM_PEAKS  = "
+	      << MAX_NUM_PEAKS << ", setting numPeaks = " << MAX_NUM_PEAKS << std::endl;
+    numPeaks = MAX_NUM_PEAKS;
+  }
+  
+  // Set not crazy, but still debug visible values for peak values/location
+  // Believe -DBL_MAX was causing me some while loop issues in RootTools::getDeltaAngleDeg(...)
+  // which has an unrestricted while loop inside.
+  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){    
+    peakValues[peakInd] = -999;
+    phiDegs[peakInd] = -999;
+    thetaDegs[peakInd] = -999;
   }
 
   Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
@@ -261,18 +284,19 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
 
     // std::cerr << pol << "\t" << peakInd << "\t" << peakValues[peakInd] << "\t"
     // 	      << phiDegs[peakInd] << "\t" << thetaDegs[peakInd] << std::endl;
-    
-    for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-      Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+    if(peakValues[peakInd]){
+      for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
+	Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
 
-      if(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg) < PEAK_PHI_DEG_RANGE){
+	if(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg) < PEAK_PHI_DEG_RANGE){
 
-	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+	    Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
 
-	  if(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg) < PEAK_THETA_DEG_RANGE){
-	    // Now this region in phi/theta is disallowed when looking for peaks
-	    allowedBins[phiBin][thetaBin] = 0; 
+	    if(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg) < PEAK_THETA_DEG_RANGE){
+	      // Now this region in phi/theta is disallowed when looking for peaks
+	      allowedBins[phiBin][thetaBin] = 0; 
+	    }
 	  }
 	}
       }
@@ -287,26 +311,37 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
 /**
  * @brief Reconstruct event
  *
- * @param usefulEvent is the event to process.
+ * @param usefulEvent is the event to process
+ * @param numFinePeaks is the number of fine peaks to reconstruct (should be >= numCoarsePeaks but < MAX_NUM_PEAKS)
+ * @param numCoarsePeaks is the number of coarse peaks to reconstruct (should < MAX_NUM_PEAKS)
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
- * The results can then be conveniently accessed from getPeakInfoTriggered, getPeakInfoZoom
  */
-void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent){
+void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
-    correlateEvent(usefulEvent, pol);
-    reconstruct(pol, coarseMapPeakValues[pol][0],
-		coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
 
-    findPeakValues(pol, MAX_NUM_PEAKS, coarseMapPeakValues[pol],
+    // now calls reconstruct inside correlate event
+    correlateEvent(usefulEvent, pol);
+
+    findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
 
-    for(Int_t peakInd=MAX_NUM_PEAKS-1; peakInd >= 0; peakInd--){ 
-      reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
-    		      fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
-    		      coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd]);
+    if(numFinePeaks > 0 && numFinePeaks <= numCoarsePeaks){
+      for(Int_t peakInd=numFinePeaks-1; peakInd >= 0; peakInd--){
+
+	// std::cerr << peakInd << "\t" << numFinePeaks << "\t" << numCoarsePeaks << "\t"
+	// 	  << coarseMapPeakPhiDegs[pol][peakInd] << "\t" << coarseMapPeakThetaDegs[pol][peakInd]
+	// 	  << std::endl;	
+
+	reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
+			fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
+			coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd]);
+
+	// std::cerr << fineMapPeakValues[pol][peakInd] << "\t" << fineMapPeakPhiDegs[pol][peakInd] << "\t"
+	// 	  << fineMapPeakThetaDegs[pol][peakInd] << std::endl << std::endl;
+      }
     }
   }
 }
@@ -331,9 +366,19 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent){
 void CrossCorrelator::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
 					Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
 
-  value = coarseMapPeakValues[pol][peakIndex];
-  phiDeg = coarseMapPeakPhiDegs[pol][peakIndex];
-  thetaDeg = coarseMapPeakThetaDegs[pol][peakIndex];
+  if(peakIndex < MAX_NUM_PEAKS){
+    value = coarseMapPeakValues[pol][peakIndex];
+    phiDeg = coarseMapPeakPhiDegs[pol][peakIndex];
+    thetaDeg = coarseMapPeakThetaDegs[pol][peakIndex];
+  }
+  else{
+    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << "."
+ 	      << "Requested peak info with index too large. peakIndex = "
+	      << peakIndex << ", MAX_NUM_PEAKS = " << MAX_NUM_PEAKS << "." << std::endl;    
+    value = -999;
+    phiDeg = -999;
+    thetaDeg = -999;
+  }
 }
 
 
@@ -354,9 +399,19 @@ void CrossCorrelator::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakInde
 void CrossCorrelator::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
 				      Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
 
-  value = fineMapPeakValues[pol][peakIndex];
-  phiDeg = fineMapPeakPhiDegs[pol][peakIndex];
-  thetaDeg = fineMapPeakThetaDegs[pol][peakIndex];
+  if(peakIndex < MAX_NUM_PEAKS){
+    value = fineMapPeakValues[pol][peakIndex];
+    phiDeg = fineMapPeakPhiDegs[pol][peakIndex];
+    thetaDeg = fineMapPeakThetaDegs[pol][peakIndex];
+  }
+  else{
+    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << "."
+ 	      << "Requested peak info with index too large. peakIndex = "
+	      << peakIndex << ", MAX_NUM_PEAKS = " << MAX_NUM_PEAKS << "." << std::endl;
+    value = -999;
+    phiDeg = -999;
+    thetaDeg = -999;
+  }
 }
 
 
@@ -1503,6 +1558,16 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
 				      Double_t zoomCenterPhiDeg,
 				      Double_t zoomCenterThetaDeg){
 
+  // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
+  if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
+     zoomCenterPhiDeg >= 500 || zoomCenterThetaDeg >= 500){    
+
+    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << ". zoomCenterPhiDeg = "
+	      << zoomCenterPhiDeg << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
+	      << " these values look suspicious so I'm skipping this reconstruction." << std::endl;
+    return;
+  }
+  
   threadPol = pol;
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;

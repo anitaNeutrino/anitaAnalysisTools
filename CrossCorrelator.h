@@ -128,7 +128,7 @@ public:
   void doFFTs(AnitaPol::AnitaPol_t pol);
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void reconstructEvent(UsefulAnitaEvent* usefulEvent);
+  void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
 
@@ -304,15 +304,16 @@ public:
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
 
-  Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
-  Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
-
-  Double_t zoomPhiMin; //!< For the current map
-  Double_t zoomThetaMin; //!< For the current map
-
-  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
 private:
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
+
+  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
+  Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
+  Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
+  Double_t zoomPhiMin; //!< For the current map
+  Double_t zoomThetaMin; //!< For the current map
+
+  
 };
 #endif
