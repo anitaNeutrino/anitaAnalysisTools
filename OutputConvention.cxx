@@ -146,3 +146,47 @@ TString OutputConvention::getOutputDir(){
 
   return outputDir;
 }
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Opens a TFile matching a fileName with wildcards. If multiple matches gets the "greatest" TString, which hopefully corresponds to the file with the latest date suffix.
+ *
+ * @param fileNameWithWildcards is the name of the file (with wildcards) that you wish to open.
+ * @return NULL if no matches, the opened file if there is a match.
+ * 
+ * Sorts all matching files into increasing order of fileName.
+ * If the files have my standard date suffix attached to them, then this should correspond to the most recent file.
+ */
+TFile* OutputConvention::getFile(TString fileNameWithWildcards){
+  // This might be my favourite little bit of stand alone code.
+  
+  TFile* theFile = NULL;
+
+  TChain* tempChain = new TChain("tempChain");
+  tempChain->Add(fileNameWithWildcards);
+  
+  TObjArray* fileList = tempChain->GetListOfFiles();
+
+  const int numFiles = fileList->GetEntries();
+  if(numFiles > 0){
+    // std::cerr << "numFiles = " << numFiles << std::endl;
+    std::vector<TString> fileNames(numFiles, "");;  
+
+    for(int fileInd=0; fileInd < numFiles; fileInd++){
+      fileNames.at(fileInd) = TString::Format("%s", fileList->At(fileInd)->GetTitle());
+    }
+    std::sort(fileNames.begin(), fileNames.end(), std::greater<TString>());
+    for(int fileInd=0; fileInd < numFiles; fileInd++){
+      // std::cerr << fileInd << "\t" << fileNames.at(fileInd) << std::endl;
+    }
+    theFile = TFile::Open(fileNames.at(0));    
+  }
+  delete tempChain;
+
+  return theFile;
+
+}
+
