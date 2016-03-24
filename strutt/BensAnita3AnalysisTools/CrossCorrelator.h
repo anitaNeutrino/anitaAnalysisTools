@@ -219,15 +219,19 @@ public:
   Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
 
+
+
   // Double_t interpPreFactorsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   // Int_t offsetLowsUpsampled[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL][NUM_BINS_PHI_ZOOM_TOTAL]; //!< The interpolation factor for neighbouring samples  
 
 
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
   Double_t coarseMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the coarsely binned map
-  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
-  Double_t fineMap[NUM_BINS_THETA][NUM_BINS_PHI*NUM_PHI]; //!< Internal storage for the finely binned map
 
+  Double_t interpPreFactorsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
+  Int_t offsetLowsZoom[NUM_COMBOS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< The interpolation factor for neighbouring samples
+  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
+  Double_t fineMap[NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
   
   std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*UPSAMPLE_FACTOR+1]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; //!< FFTs of evenly resampled waveforms.
