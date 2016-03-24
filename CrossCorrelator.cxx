@@ -379,6 +379,8 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
   Int_t startCombo = threadInd*numCorrPerThread;
 
+  Double_t stash[NUM_SAMPLES*2];
+  
   for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
@@ -387,6 +389,21 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 			      ptr->ffts[pol][ant1],
 			      ptr->crossCorrelations[pol][combo],
 			      threadInd);
+
+    // experiment, copy negative times to behind positive times...
+    for(Int_t samp=0; samp < ptr->numSamples; samp++){
+      stash[samp] = ptr->crossCorrelations[pol][combo][samp];
+    }
+    const int offset = ptr->numSamples/2;
+
+    // copies first half of original array (times >= 0) into second half of internal storage
+    for(Int_t samp=0; samp < ptr->numSamples/2; samp++){
+      ptr->crossCorrelations[pol][combo][samp+offset] = stash[samp];
+    }
+    // copies second half of original array (times < 0) into first half of internal storage
+    for(Int_t samp=ptr->numSamples/2; samp < ptr->numSamples; samp++){
+      ptr->crossCorrelations[pol][combo][samp-offset] = stash[samp];
+    }
   }  
   return 0;
 }
@@ -780,8 +797,16 @@ void CrossCorrelator::fillDeltaTLookup(){
   	    Int_t ant2 = comboToAnt2s.at(combo);
   	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
   	    // Int_t offset = TMath::Nint(deltaT/nominalSamplingDeltaT);
-  	    deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
-  	  }
+  	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
+  	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
+	    Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
+	    offsetLows[pol][combo][thetaBin][phiBin] = offsetLow;
+	    Double_t dt1 = offsetLow*nominalSamplingDeltaT;
+	    interpPreFactors[pol][combo][thetaBin][phiBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+
+	    // Here we account for the fact that we are now time ordering the correlations
+	    offsetLows[pol][combo][thetaBin][phiBin]+=numSamples/2;
+	  }
   	}
       }
     }
@@ -978,7 +1003,7 @@ Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::Ani
  * @param deltaT is the time to interpolate the correlation values at.
  * @returns the interpolated correlation value.
  */
-Double_t CrossCorrelator::getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
+inline Double_t CrossCorrelator::getInterpolatedCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
   Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
   Int_t offsetHigh = ceil(deltaT/nominalSamplingDeltaT);
@@ -1481,28 +1506,57 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   Int_t thetaZoomBase = TMath::Nint(hImage->GetYaxis()->GetBinLowEdge(1)/ZOOM_BIN_SIZE_THETA + NUM_BINS_THETA_ZOOM_TOTAL/2);
   
   if(zoomMode==kZoomedOut && rWave==0){    
+
+    // zero internal map
     for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
-      Int_t phiSector = zoomMode==kZoomedIn ? 0 : phiBin/NUM_BINS_PHI;
-      if(mapMode==kGlobal){
-	combosToUse = &ptr->combosToUseGlobal[phiSector];
+      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
+	ptr->coarseMap[thetaBin][phiBin] = 0;
       }
+    }
+
+    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+      Int_t combo = combosToUse->at(comboInd);
+      if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+	continue;
+      }
+
+      for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){            
+	for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
+	  // Int_t phiSector = phiBin/NUM_BINS_PHI;
+	  // if(mapMode==kGlobal){
+	  //   combosToUse = &ptr->combosToUseGlobal[phiSector];
+	  // }
+	  // Double_t deltaT = ptr->deltaTs[pol][phiBin][thetaBin][combo];
+	  // Double_t deltaT = ptr->deltaTs[pol][combo][thetaBin][phiBin];	  
+	  // Int_t offsetLow  = floor(deltaT/ptr->nominalSamplingDeltaT);
+	  // Double_t dt1 = offsetLow*ptr->nominalSamplingDeltaT;
+	  // offsetLow += offset;
+	  // Int_t offsetHigh = offsetLow+1;
+
+	  Int_t offsetLow = ptr->offsetLows[pol][combo][thetaBin][phiBin];	  
+	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
+	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
+
+	  // Double_t cInterp = (deltaT - dt1)*(c2 - c1)/(ptr->nominalSamplingDeltaT) + c1;
+
+	  Double_t cInterp = ptr->interpPreFactors[pol][combo][thetaBin][phiBin]*(c2 - c1) + c1;
+	  
+	  // Double_t cInterp = ptr->getInterpolatedCorrelationValue(pol, combo, deltaT);
+	  ptr->coarseMap[thetaBin][phiBin] += cInterp;
+	  // ptr->coarseMap[thetaBin][phiBin] += ptr->crossCorrelations[pol][combo][offsetLow];	  
+	}
+      }
+    }
+
+
+    for(Int_t phiBin = startPhiBin; phiBin < startPhiBin+numPhiBinsThread; phiBin++){
       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){      
-	Double_t correlations = 0;
-	for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-	  Int_t combo = combosToUse->at(comboInd);
-	  if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
-	    continue;
-	  }
-	  Double_t deltaT = ptr->deltaTs[pol][phiBin][thetaBin][combo];
-	  Double_t cInterp = ptr->getInterpolatedCorrelationValue(pol, combo, deltaT);	  
-	  correlations += cInterp;
-	}
 	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	  correlations /= combosToUse->size();
+	  ptr->coarseMap[thetaBin][phiBin] /= combosToUse->size();
 	}
-	hImage->SetBinContent(phiBin + 1, thetaBin + 1, correlations);
-	if(correlations > ptr->threadImagePeak[threadInd]){
-	  ptr->threadImagePeak[threadInd] = correlations;
+	hImage->SetBinContent(phiBin+1, thetaBin+1, ptr->coarseMap[thetaBin][phiBin]);
+	if(ptr->coarseMap[thetaBin][phiBin] > ptr->threadImagePeak[threadInd]){
+	  ptr->threadImagePeak[threadInd] = ptr->coarseMap[thetaBin][phiBin];
 	  peakPhiBin = phiBin;
 	  peakThetaBin = thetaBin;
 	}
