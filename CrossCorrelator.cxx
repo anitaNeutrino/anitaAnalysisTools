@@ -45,7 +45,9 @@ void CrossCorrelator::initializeVariables(){
     eventNumber[pol] = 0;
   }
 
+  maxDPhiDeg = 0;
   kOnlyThisCombo = -1;
+  kUseOffAxisDelay = 1;
   numSamples = 2*NUM_SAMPLES; // Factor of two for padding. Turns circular xcor into linear xcor.
   numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
 
@@ -527,32 +529,46 @@ void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t p
  * @param phiWave is the phi direction of the incoming wave in radians (relative to the ADU5)
  * @returns the off-axis delay in ns
  */
-Double_t CrossCorrelator::getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+inline Double_t CrossCorrelator::getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 					  Double_t phiWave){
   // From Linda's fits
   // -8.41435e-06 (quadratic term)
   // 1.15582e-08 (quartic term)
-  
+
   Double_t phiWaveDeg = phiWave*TMath::RadToDeg();
   Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant1), phiWaveDeg);
-  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiWaveDeg);  
+  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiWaveDeg);
 
-  const Double_t maxDeltaPhiDeg = 45;
-  // if(TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg || TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg){
-  //   return 0;
-  // }
-     
-  deltaPhiDeg1 = TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg1;
-  deltaPhiDeg2 = TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg2;
-  // std::cout << deltaPhiDeg1 << "\t" << deltaPhiDeg2 << std::endl;
+  // const Double_t maxDeltaPhiDeg = 45;
+  // // if(TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg || TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg){
+  // //   return 0;
+  // // }
+  // deltaPhiDeg1 = TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg1;
+  // deltaPhiDeg2 = TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg2;
+  // // std::cout << deltaPhiDeg1 << "\t" << deltaPhiDeg2 << std::endl;
+
+  // const Double_t quadraticTerm = -8.41435e-06;
+  // const Double_t quarticTerm = 1.15582e-08;
+
+  // Double_t delay1 = quadraticTerm*pow(deltaPhiDeg1,2) + quarticTerm*pow(deltaPhiDeg1, 4);
+  // Double_t delay2 = quadraticTerm*pow(deltaPhiDeg2,2) + quarticTerm*pow(deltaPhiDeg2, 4);
+
   
-  const Double_t quadraticTerm = -8.41435e-06;
-  const Double_t quarticTerm = 1.15582e-08;
+  const int nPowsOf2 = 6;
+  Double_t params[nPowsOf2] = {-1.68751e-05,
+			       2.77815e-08,
+			       -8.29351e-12,
+			       1.15064e-15,
+			       -7.71170e-20,
+			       1.99661e-24};
+  
+  Double_t delay1 = 0;
+  Double_t delay2 = 0;
 
-  Double_t delay1 = quadraticTerm*pow(deltaPhiDeg1,2) + quarticTerm*pow(deltaPhiDeg1, 4);
-  Double_t delay2 = quadraticTerm*pow(deltaPhiDeg2,2) + quarticTerm*pow(deltaPhiDeg2, 4);
-
-  // std::cout << delay1 << "\t" << delay2 << std::endl << std::endl;
+  for(Int_t powInd=0; powInd < nPowsOf2; powInd++){
+    delay1 += params[powInd]*pow(deltaPhiDeg1, 2*powInd);
+    delay2 += params[powInd]*pow(deltaPhiDeg2, 2*powInd);    
+  }
   
   return delay2 - delay1;
 }
@@ -579,7 +595,7 @@ inline Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int
   Double_t part2 = zArray[pol].at(ant2)*tanThetaW - rArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant2));
   Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
-  tdiff += getOffAxisDelay(pol, ant1, ant2, phiWave);
+  // tdiff += getOffAxisDelay(pol, ant1, ant2, phiWave);
   
   return tdiff;
 }
@@ -600,8 +616,8 @@ inline Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int
  *
  * This function attempts to be faster by using cached sin/cos/tan values for each bin calculated in initializeVairables.
  */
-Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-						Int_t phiIndex, Int_t thetaIndex){
+inline Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+						       Int_t phiIndex, Int_t thetaIndex){
   
   Double_t tanThetaW = zoomedTanThetaWaves[thetaIndex];  
   Double_t part1 = zArray[pol].at(ant1)*tanThetaW - zoomedCosPartLookup[phiIndex][pol][ant1];
@@ -609,7 +625,8 @@ Double_t CrossCorrelator::getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t 
   // Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns 
   Double_t tdiff = 1e9*((zoomedCosThetaWaves[thetaIndex] * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
-  tdiff += getOffAxisDelay(pol, ant1, ant2, zoomedPhiWaveLookup[phiIndex]);
+  // tdiff += getOffAxisDelay(pol, ant1, ant2, zoomedPhiWaveLookup[phiIndex]);
+  // tdiff += offAxisDelays[pol][phiIndex][combo];
   
   return tdiff;
 }
@@ -782,8 +799,10 @@ void CrossCorrelator::fillDeltaTLookup(){
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
     Double_t phiDeg = phi0 + phiIndex*phiBinSize;
     Double_t phiWave = TMath::DegToRad()*phiDeg;
+
     phiWaveLookup[phiIndex] = phiWave;
     for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
+
       for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 	cosPartLookup[phiIndex][pol][ant] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
       }
@@ -802,7 +821,16 @@ void CrossCorrelator::fillDeltaTLookup(){
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
     Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
     zoomedPhiWaveLookup[phiIndex] = phiIndex*ZOOM_BIN_SIZE_PHI;
+
     for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
+      for(Int_t combo=0; combo < NUM_COMBOS; combo++){
+	Int_t ant1 = comboToAnt1s.at(combo);
+	Int_t ant2 = comboToAnt2s.at(combo);
+
+	Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
+	offAxisDelays[pol][phiIndex][combo] = offAxisDelay;
+      }
+            
       for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 	zoomedCosPartLookup[phiIndex][pol][ant] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
       }
@@ -822,7 +850,7 @@ void CrossCorrelator::fillDeltaTLookup(){
  *
  * This function gets used when comparing different reconstruction strategies by member variable kDeltaPhiSect.
  */
-Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
+inline Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
 
   // I want to be able to choose whether or not require one of the antennas to be the phi-sector
   // of interest or just to have both in range of deltaPhiSect.
@@ -1330,7 +1358,6 @@ TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t 
     }
   }
 
-
   threadImage = hImage;
   threadPol = pol;
   threadMapMode = mapMode;
@@ -1341,7 +1368,6 @@ TH2D* CrossCorrelator::prepareForImageMaking(AnitaPol::AnitaPol_t pol, Double_t 
   fillCombosToUseIfNeeded(mapMode, l3TrigPattern);
   std::pair<UInt_t, Int_t> key(l3TrigPattern, kDeltaPhiSect);
   threadCombosToUse = combosToUseTriggered[key];
-
   
   if(zoomMode == kZoomedIn){
     doUpsampledCrossCorrelationsThreaded(pol, l3TrigPattern);
@@ -1461,28 +1487,13 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	combosToUse = &ptr->combosToUseGlobal[phiSector];
       }
       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){      
-	// Int_t offset = 1;	
-	// offset = ptr->deltaTs[pol][phiBin][thetaBin][combo];
-	// offset = offset < 0 ? offset + ptr->numSamples : offset;
-	// correlations += ptr->crossCorrelations[pol][combo][offset];
-	    
 	Double_t correlations = 0;
 	for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
 	  Int_t combo = combosToUse->at(comboInd);
 	  if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
 	    continue;
 	  }
-
-	  // Int_t ant1 = ptr->comboToAnt1s.at(combo);
-	  // Int_t ant2 = ptr->comboToAnt2s.at(combo);
-	  // Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-	  // phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
-	  // Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
-	  // Double_t thetaWave = thetaDeg*TMath::DegToRad();
-	  // Double_t phiWave = phiDeg*TMath::DegToRad();
-	  // Double_t deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
 	  Double_t deltaT = ptr->deltaTs[pol][phiBin][thetaBin][combo];
-	  // Double_t cInterp = ptr->getInterpolatedUpsampledCorrelationValue(pol, combo, deltaT);
 	  Double_t cInterp = ptr->getInterpolatedCorrelationValue(pol, combo, deltaT);	  
 	  correlations += cInterp;
 	}
@@ -1509,15 +1520,32 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
       Int_t zoomPhiInd = phiZoomBase + phiBin;
       zoomPhiInd = zoomPhiInd < 0 ? zoomPhiInd + NUM_BINS_PHI_ZOOM_TOTAL : zoomPhiInd;
       zoomPhiInd = zoomPhiInd >= NUM_BINS_PHI_ZOOM_TOTAL ? zoomPhiInd - NUM_BINS_PHI_ZOOM_TOTAL : zoomPhiInd;
-
       Int_t phiSector = zoomPhiInd/(NUM_BINS_PHI_ZOOM_TOTAL/NUM_PHI);
       if(mapMode==kGlobal){
 	combosToUse = &ptr->combosToUseGlobal[phiSector];
       }
+
+      Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
+      phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+      
+      for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+	Int_t combo = combosToUse->at(comboInd);
+	Int_t ant1 = ptr->comboToAnt1s.at(combo);
+	Int_t ant2 = ptr->comboToAnt2s.at(combo);
+	Double_t dPhi1 = TMath::Abs(RootTools::getDeltaAngleDeg(ptr->phiArrayDeg[pol].at(ant1),
+								phiDeg));
+	Double_t dPhi2 = TMath::Abs(RootTools::getDeltaAngleDeg(ptr->phiArrayDeg[pol].at(ant2),
+								phiDeg));
+	Double_t dPhi = dPhi1 > dPhi2 ? dPhi1 : dPhi2;
+	TThread::Lock();
+	if(dPhi > ptr->maxDPhiDeg){
+	  ptr->maxDPhiDeg = dPhi;
+	}
+	TThread::UnLock();
+      }
       
       for(Int_t thetaBin = 0; thetaBin < hImage->GetNbinsY(); thetaBin++){
 	Int_t zoomThetaInd = thetaZoomBase + thetaBin;
-      
 	Double_t correlations = 0;
 	for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
 	  Int_t combo = combosToUse->at(comboInd);
@@ -1528,23 +1556,25 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	  // Int_t offset = 0;
 	  Int_t ant1 = ptr->comboToAnt1s.at(combo);
 	  Int_t ant2 = ptr->comboToAnt2s.at(combo);
-	  Double_t phiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-	  phiDeg = phiDeg < 0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
 	  Double_t thetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
 	  
 	  Double_t deltaT = 0;
 	  if(zoomThetaInd >= 0 && zoomThetaInd < NUM_BINS_THETA_ZOOM_TOTAL){
-	    deltaT = ptr->getDeltaTExpectedFast(pol, ant1, ant2,
-						zoomPhiInd,
-						zoomThetaInd);
+ 	    deltaT = ptr->getDeltaTExpectedFast(pol, ant1, ant2,
+	    					zoomPhiInd,
+	    					zoomThetaInd);
 	  }
 	  else{
 	    Double_t thetaWave = thetaDeg*TMath::DegToRad();
 	    Double_t phiWave = phiDeg*TMath::DegToRad();
 	    deltaT = ptr->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
 	  }
-	  Double_t cInterp = ptr->getInterpolatedUpsampledCorrelationValue(pol, combo, deltaT);
 
+	  if(ptr->kUseOffAxisDelay>0){
+	    deltaT += ptr->offAxisDelays[pol][zoomPhiInd][combo];
+	  }
+	    
+	  Double_t cInterp = ptr->getInterpolatedUpsampledCorrelationValue(pol, combo, deltaT);
 	  correlations += cInterp;
 	}
 	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
@@ -2175,11 +2205,57 @@ Int_t CrossCorrelator::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t
  * @param thetaDeg is the incoming theta direction (Degrees).
  * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction.
  * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.  
+ * @return the upsampled coherently summed waveform made from the zero padded ffts.
+*/
+TGraph* CrossCorrelator::makeUpsampledCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
+							       Double_t thetaDeg, Int_t maxDeltaPhiSect,
+							       Double_t& snr){
+  return makeCoherentWorker(pol, phiDeg, thetaDeg, maxDeltaPhiSect, snr, numSamplesUpsampled);
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates the coherently summed waveform from the FFTs held in memory
+ * @param pol is the polarization
+ * @param phiDeg is the incoming phi direction (Degrees) relative to the ADU5 aft-fore.
+ * @param thetaDeg is the incoming theta direction (Degrees).
+ * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction.
+ * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.  
+ * @return the coherently summed waveform made from the (non-padded) ffts.
 */
 TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
 						      Double_t thetaDeg, Int_t maxDeltaPhiSect,
 						      Double_t& snr){
+  return makeCoherentWorker(pol, phiDeg, thetaDeg, maxDeltaPhiSect, snr, numSamples);
+}
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Worker function to create the coherently summed waveform from either the regular ffts or the padded ffts.
+ * @param pol is the polarization
+ * @param phiDeg is the incoming phi direction (Degrees) relative to the ADU5 aft-fore.
+ * @param thetaDeg is the incoming theta direction (Degrees).
+ * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction.
+ * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.  
+ * @param nSamp is the number of samples in the time domain of the ffts (numSamples or numSamplesUpsampled)
+ * @return the coherently summed waveform.
+*/
+TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
+					    Double_t thetaDeg, Int_t maxDeltaPhiSect,
+					    Double_t& snr,
+					    Int_t nSamp){
+
+
+  Double_t theDeltaT = nSamp == numSamples ? nominalSamplingDeltaT : correlationDeltaT;
+  
   Double_t phiRad = phiDeg*TMath::DegToRad();
   Double_t thetaRad = thetaDeg*TMath::DegToRad();
   Int_t numAnts = 0;
@@ -2188,17 +2264,21 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 
   const Int_t firstAnt = centerPhiSector;
 
-  std::pair<Int_t, Int_t> key(numSamplesUpsampled, 0);
+  std::pair<Int_t, Int_t> key(nSamp, 0);
   // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
   Double_t* vArray = FancyFFTs::getRealArray(key);
-  
-  FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][firstAnt], false);
-  
 
-  std::vector<Double_t> tArray(numSamplesUpsampled, 0);
+  if(nSamp==numSamples){
+    FancyFFTs::doInvFFT(nSamp, ffts[pol][firstAnt], false);
+  }
+  else{
+    FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);    
+  }
+
+  std::vector<Double_t> tArray(nSamp, 0);
   Double_t t0 = grsResampled[pol][firstAnt]->GetX()[0];
-  for(Int_t samp=0; samp<numSamplesUpsampled; samp++){
-    tArray.at(samp) = t0 + samp*correlationDeltaT;
+  for(Int_t samp=0; samp<nSamp; samp++){
+    tArray.at(samp) = t0 + samp*theDeltaT;
     vArray[samp] *= interpRMS[pol][firstAnt]; // Undo the normalization.
   }
 
@@ -2207,7 +2287,7 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
   
   // Factor of two here to drop the zero padding at the back of the waveform
   // which was used during correlations.
-  TGraph* grCoherent = new TGraph(numSamplesUpsampled/2, &tArray[0], &vArray[0]);	
+  TGraph* grCoherent = new TGraph(nSamp/2, &tArray[0], &vArray[0]);	
   
   for(Int_t deltaPhiSect=-maxDeltaPhiSect; deltaPhiSect<=maxDeltaPhiSect; deltaPhiSect++){
 
@@ -2220,15 +2300,20 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 
       // Here we do the inverse FFT on the padded FFTs in memory.
       // The output is now in the vArray
-      FancyFFTs::doInvFFT(numSamplesUpsampled, fftsPadded[pol][ant], false);
-
+      if(nSamp==numSamples){
+	FancyFFTs::doInvFFT(nSamp, ffts[pol][ant], false);
+      }
+      else{
+	FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);      
+      }
+	
       if(firstAnt!=ant){ // Don't do the first antenna twice
 	Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
-	Int_t offset1 = floor(deltaT/correlationDeltaT);
-	Int_t offset2 = ceil(deltaT/correlationDeltaT);
+	Int_t offset1 = floor(deltaT/theDeltaT);
+	Int_t offset2 = ceil(deltaT/theDeltaT);
 
 	// How far between the samples we need to interpolate.
-	Double_t ddt = deltaT - correlationDeltaT*offset1;
+	Double_t ddt = deltaT - theDeltaT*offset1;
 	
 	for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
 	  Int_t samp1 = samp + offset1;
@@ -2238,7 +2323,7 @@ TGraph* CrossCorrelator::makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, 
 	    Double_t v1 = vArray[samp1];
 	    Double_t v2 = vArray[samp2];
 
-	    Double_t vInterp = (ddt)*(v2 - v1)/correlationDeltaT + v1;
+	    Double_t vInterp = (ddt)*(v2 - v1)/theDeltaT + v1;
 
 	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
 	  }
