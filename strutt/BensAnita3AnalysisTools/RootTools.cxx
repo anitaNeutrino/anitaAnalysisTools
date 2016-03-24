@@ -1234,6 +1234,27 @@ Int_t RootTools::getBit(UInt_t bitIndex, UInt_t bitMask){
 
 //---------------------------------------------------------------------------------------------------------
 /**
+ * @brief For counting how many bits are set to one in a bitmask.
+ *
+ * @param numBitsToCheck is the number of little endian bits to check.
+ * @param bitMask is the object to check the bits of.
+*/
+Int_t RootTools::getNumBitsSet(Int_t numBitsToCheck, UInt_t bitMask){
+  Int_t numBitsHigh = 0;
+  for(Int_t bitInd=0; bitInd < numBitsToCheck; bitInd++){
+    if(getBit(bitInd, bitMask) > 0){
+      numBitsHigh++;
+    }    
+  }
+  return numBitsHigh;
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
  * @brief Set color scale where white is in the middle.
  *
  * You need to draw things with RootTools::draw2D(TH2D* hist, TString opt);
