@@ -70,6 +70,7 @@
 #define DEGREES_IN_CIRCLE 360
 
 #define SPEED_OF_LIGHT 2.99792458e8
+#define SPEED_OF_LIGHT_NS 0.299792458
 
 #define ALL_PHI_TRIGS 0xffff
 
@@ -256,7 +257,7 @@ public:
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of theta for zoomed image.
   Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of tan(theta) for zoomed image.
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of cos(theta) for zoomed image.
-  Double_t zoomedCosPartLookup[NUM_BINS_PHI_ZOOM_TOTAL][NUM_POL][NUM_SEAVEYS]; //!< Cached values of part of the deltaT calculation for zoomed image.
+  Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached values of part of the deltaT calculation for zoomed image.
   Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached values of phi for zoomed image.
 
   Double_t thetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached values of theta for image.
