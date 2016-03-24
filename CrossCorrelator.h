@@ -188,7 +188,7 @@ public:
 
   void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 		   Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-		   Short_t l3TrigPattern, mapMode_t mapMode);
+		   UShort_t l3TrigPattern, mapMode_t mapMode);
   void reconstructZoom(AnitaPol::AnitaPol_t pol,
 		       Double_t& imagePeak, Double_t& peakPhiDeg,
 		       Double_t& peakThetaDeg,UShort_t l3TrigPattern,
