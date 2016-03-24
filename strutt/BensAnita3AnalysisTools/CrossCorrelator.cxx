@@ -229,7 +229,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
  * @param header is the RawAnitaHeader of the event to process
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
- * The results can then be conveniently accessed from getPeakInfoTriggered, getPeakInfoZoom/
+ * The results can then be conveniently accessed from getPeakInfoTriggered, getPeakInfoZoom
  */
 void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHeader* header){
 
@@ -254,6 +254,7 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, RawAnitaHe
 /**
  * @brief Gets the results from the coarse reconstruction with the L3 triggered phi-sector combinatorics
  *
+ * @param pol is the polarization of interest
  * @param value is the bin content of the image peak.
  * @param phiDeg is the phi coordinate in degrees.
  * @param thetaDeg is the theta coordinate in degrees.
@@ -273,6 +274,7 @@ void CrossCorrelator::getPeakInfoTriggered(AnitaPol::AnitaPol_t pol, Double_t& v
 /**
  * @brief Gets the results from the fine reconstruction around the peak of the coarse reconstruction.
  *
+ * @param pol is the polarization of interest
  * @param value is the bin content of the image peak.
  * @param phiDeg is the phi coordinate in degrees.
  * @param thetaDeg is the theta coordinate in degrees.
@@ -1348,6 +1350,7 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
  * @param voidPtrArgs contains a pointer to a CrossCorrelator::threadArgs struct
  *
  * This function contains the meat and bones of this class.
+ * I've really tried to optimize this for speed, which means it's not very readable, sorry.
  */
 
 void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
@@ -1422,6 +1425,26 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   return NULL;
 }
 
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Wrapper function which launches the threaded functions, which fill the zoomed  maps.
+ *
+ * @param pol is the polarization.
+ * @param imagePeak is the maximum value.
+ * @param peakPhiDeg is azimuth of the maximum value (Degrees) relative to the ADU5 aft-fore.
+ * @param peakThetaDeg is the elevation of the maximum value (Degrees).
+ * @param l3TrigPattern is the L3 trig pattern, determines what antenna pairs to use in the recontruction.
+ * @param mapMode is the type of reconstruction being used.
+ * @param zoomCenterPhiDeg should be the phi (deg) of the coarse map to reconstruct around.
+ * @param zoomCenterThetaDeg should be the theta (deg) of the coarse map to reconstruct around.
+ *
+ * This function is also responsible for merging the peak finding results of each of the threads.
+ */
 void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 				      UShort_t l3TrigPattern, mapMode_t mapMode,
@@ -1493,6 +1516,17 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
 
 
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Static member function which fills the interferometric maps.
+ *
+ * @param voidPtrArgs contains a pointer to a CrossCorrelator::threadArgs struct
+ *
+ * This function contains the meat and bones of this class.
+ * I've really tried to optimize this for speed, which means it's not very readable, sorry.
+ */
 void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   // Disgusting hacks to get ROOT threading to compile inside a class.
   

@@ -271,12 +271,12 @@ public:
   std::vector<Double_t> zArray[NUM_POL]; //!< Vector of antenna heights
 
 
-  Double_t imagePeakTriggered[NUM_POL];
-  Double_t peakPhiDegTriggered[NUM_POL];
-  Double_t peakThetaDegTriggered[NUM_POL];    
-  Double_t imagePeakZoom[NUM_POL];
-  Double_t peakPhiDegZoom[NUM_POL];
-  Double_t peakThetaDegZoom[NUM_POL];      
+  Double_t imagePeakTriggered[NUM_POL]; //!< Stores the peak of the interally stored map
+  Double_t peakPhiDegTriggered[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t peakThetaDegTriggered[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored map
+  Double_t imagePeakZoom[NUM_POL]; //!< Stores the peak of the interally stored zoom map
+  Double_t peakPhiDegZoom[NUM_POL]; //!< Stores the peak phi (degrees) of the interally stored zoom map
+  Double_t peakThetaDegZoom[NUM_POL]; //!< Stores the peak theta (degrees) of the interally stored zoom map
 
   
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
@@ -310,8 +310,8 @@ public:
   Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
   Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
 
-  Double_t zoomPhiMin; //<! For the current map
-  Double_t zoomThetaMin; //<! For the current map
+  Double_t zoomPhiMin; //!< For the current map
+  Double_t zoomThetaMin; //!< For the current map
 
   
 private:
