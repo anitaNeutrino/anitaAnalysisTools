@@ -130,6 +130,8 @@ public:
 
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void simple260MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant);
+  void simple370MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant);
+  void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
   
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
   void doFFTs(AnitaPol::AnitaPol_t pol);
@@ -312,7 +314,7 @@ public:
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
-  Int_t kDoSimpleSatelliteFiltering; //!< Does a simple 52MHz wide notch at 260 if flag is greater than 0
+  Int_t kDoSimpleSatelliteFiltering; //!< Does a simple 52MHz wide notch at 260 if flag is greater than 0.
 
 private:
   
