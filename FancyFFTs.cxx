@@ -472,7 +472,7 @@ complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* ou
 
   // Here I scale the padded FFT so that it is as if I fourier transformed a longer waveform.
   // (There is a scale factor of length picked up from a forward FFT.)
-  Double_t scale = numSamplesPadded/numSamples;
+  Double_t scale = numSamplesUpsampled/numSamples;
 
   for(int freqInd=0; freqInd<numFreqs; freqInd++){
     fftPadded[freqInd].real(fft[freqInd].real()*scale);

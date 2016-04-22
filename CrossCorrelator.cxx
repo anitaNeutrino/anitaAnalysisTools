@@ -34,6 +34,8 @@ CrossCorrelator::~CrossCorrelator(){
 void CrossCorrelator::initializeVariables(){
 
   kDeltaPhiSect = 2;
+  kDoSimpleSatelliteFiltering = 0;
+  
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
@@ -293,10 +295,40 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
+
+    if(kDoSimpleSatelliteFiltering > 0){
+      simple260MHzSatelliteNotch(pol, ant);
+    }
     FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
 }
 
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * Applies a 52MHz wide notch centered at 260 MHz to filter the most problematic satellite frequency
+ * 
+ * @param pol is the polarization of interest
+ * @param ant is the antenna to filter
+ */
+void CrossCorrelator::simple260MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant){
+
+  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  const Double_t deltaF_MHz = 1e3/(numSamples*nominalSamplingDeltaT);
+
+  const Double_t notchLowEdgeMHz = 260 - 26;
+  const Double_t notchHighEdgeMHz = 260 + 26;
+
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    if(deltaF_MHz*freqInd > notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+      ffts[pol][ant][freqInd].real(0);
+      ffts[pol][ant][freqInd].imag(0);
+    }
+  }
+}
 
 
 
