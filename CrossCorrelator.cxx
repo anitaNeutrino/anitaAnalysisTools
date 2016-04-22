@@ -298,6 +298,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
     if(kDoSimpleSatelliteFiltering > 0){
       simple260MHzSatelliteNotch(pol, ant);
+      simple370MHzSatelliteNotch(pol, ant);      
     }
     FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
@@ -309,7 +310,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 //---------------------------------------------------------------------------------------------------------
 /** 
- * Applies a 52MHz wide notch centered at 260 MHz to filter the most problematic satellite frequency
+ * @brief Applies a 52MHz wide notch centered at 260 MHz to filter the most problematic satellite frequency
  * 
  * @param pol is the polarization of interest
  * @param ant is the antenna to filter
@@ -323,12 +324,85 @@ void CrossCorrelator::simple260MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t
   const Double_t notchHighEdgeMHz = 260 + 26;
 
   for(int freqInd=0; freqInd < numFreqs; freqInd++){
-    if(deltaF_MHz*freqInd > notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+    // Double_t re = ffts[pol][ant][freqInd].real();
+    // Double_t im = ffts[pol][ant][freqInd].imag();
+    // Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
+    // sumOfVSquared += factor*(re*re + im*im);
+    
+    if(deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+      // std::cout << pol << "\t" << ant << "\t" << deltaF_MHz << "\t" << deltaF_MHz*freqInd << "\t" << notchLowEdgeMHz << "\t" << notchHighEdgeMHz << "\t" << std::endl;
       ffts[pol][ant][freqInd].real(0);
       ffts[pol][ant][freqInd].imag(0);
     }
   }
+  renormalizeFourierDomain(pol, ant);  
 }
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Applies a 40MHz wide notch centered at 370 MHz to filter another satellite frequency
+ * 
+ * @param pol is the polarization of interest
+ * @param ant is the antenna to filter
+ */
+void CrossCorrelator::simple370MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant){
+
+  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  const Double_t deltaF_MHz = 1e3/(numSamples*nominalSamplingDeltaT);
+
+  const Double_t notchLowEdgeMHz = 370 - 20;
+  const Double_t notchHighEdgeMHz = 370 + 20;
+
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    if(deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
+      // std::cout << pol << "\t" << ant << "\t" << deltaF_MHz << "\t" << deltaF_MHz*freqInd << "\t" << notchLowEdgeMHz << "\t" << notchHighEdgeMHz << "\t" << std::endl;
+      ffts[pol][ant][freqInd].real(0);
+      ffts[pol][ant][freqInd].imag(0);
+    }    
+  }
+  renormalizeFourierDomain(pol, ant);
+}
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Scales the fft such that the inverse fft would have mean=0 and rms=1. For use after notching.
+ * 
+ * @param pol is the polarization of interest
+ * @param ant is the antenna to filter
+ */
+void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
+
+  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  Double_t sumOfVSquared = 0;
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = ffts[pol][ant][freqInd].real();
+    Double_t im = ffts[pol][ant][freqInd].imag();
+    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
+    sumOfVSquared += factor*(re*re + im*im);    
+  }
+
+  Double_t timeDomainVSquared = sumOfVSquared/(numSamples*numSamples/2);
+  Double_t norm = TMath::Sqrt(timeDomainVSquared);
+
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = ffts[pol][ant][freqInd].real();
+    Double_t im = ffts[pol][ant][freqInd].imag();
+
+    ffts[pol][ant][freqInd].real(re/norm);
+    ffts[pol][ant][freqInd].imag(im/norm);
+  }
+}
+
+
 
 
 
