@@ -29,9 +29,10 @@ OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
 /**
  * @brief Get the name of the output file from the program name (and system time).
  *
+ * @param ext is an optional parameter file extension you want (e.g. .txt, .root, .csv), if none is given then .root is used.
  * @return the output file name
  */
-TString OutputConvention::getOutputFileName(){
+TString OutputConvention::getOutputFileName(TString ext){
 
   if(outFileName==""){
 
@@ -51,8 +52,16 @@ TString OutputConvention::getOutputFileName(){
     // Date and time of running executable 
     outFileName += getDateTimeSuffix();
 
-    // ROOT suffix
-    outFileName += ".root";
+    if(ext==""){
+      // ROOT suffix      
+      outFileName += ".root";
+    }
+    else{
+      if(strncmp(ext.Data(), ".", 1)!=0){
+	ext = TString::Format(".%s", ext.Data());
+      }
+      outFileName += ext;
+    }
   }
 
   
@@ -60,7 +69,6 @@ TString OutputConvention::getOutputFileName(){
 
   
 }
-
 
 
 

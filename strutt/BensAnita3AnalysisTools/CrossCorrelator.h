@@ -152,15 +152,14 @@ public:
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
   void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
 
-
-
   
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
   // Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
   // 					Int_t phiIndex, Int_t thetaIndex);
-  Double_t getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave);
 
+  Double_t relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiDeg);
+  Double_t singleAntennaOffAxisDelay(Double_t deltaPhiDeg);
 
 
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
@@ -273,8 +272,6 @@ public:
   std::vector<Int_t> comboToAnt1s; //!< Vector mapping combo index to ant1.
   std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
-
-  std::map<std::pair<UInt_t, Int_t>, std::vector<Int_t> > combosToUseTriggered; //!< Depends on L3 trigger for triggered image
 
   std::vector<Double_t> rArray[NUM_POL]; //!< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg[NUM_POL]; //!< Vector of antenna azimuth positions

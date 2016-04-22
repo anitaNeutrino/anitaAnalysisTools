@@ -34,7 +34,7 @@ public:
   
   OutputConvention(int argcIn, char* argvIn[]);
 
-  TString getOutputFileName();
+  TString getOutputFileName(TString ext="");
 
   static TFile* getFile(TString fileNameWithWildcards);
   
