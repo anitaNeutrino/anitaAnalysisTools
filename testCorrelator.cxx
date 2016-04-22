@@ -27,6 +27,7 @@ void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
 void testCoherentlySummedWaveform();
 void testNormalization();
+void testHackyFilter();
 // void testFileWriting();
 
 int main(){
@@ -35,7 +36,8 @@ int main(){
   //  testNewCombinatorics();
   // testImageFullStyle();
   // testCoherentlySummedWaveform();
-  testNormalization();
+  // testNormalization();
+  testHackyFilter();
   //  testFileWriting();
 
   return 0;
@@ -184,6 +186,100 @@ void testNormalization(){
     }
   }
 
+  
+  outFile->Write();
+  outFile->Close();  
+}
+
+
+
+
+void testHackyFilter(){
+  char eventFileName[1024];
+
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  CalibratedAnitaEvent* event = NULL;  
+  eventTree->SetBranchAddress("event", &event);
+
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+
+  TFile* outFile = new TFile("/tmp/testHackyFilter.root","recreate");
+
+  CrossCorrelator* cc = new CrossCorrelator();
+  cc->kDoSimpleSatelliteFiltering = 1;
+
+  headTree->BuildIndex("eventNumber");
+  eventTree->BuildIndex("eventNumber");
+  
+  const Long64_t eventNumber = 60832108;
+  headTree->GetEntryWithIndex(eventNumber);
+  eventTree->GetEntryWithIndex(eventNumber);
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
+  
+  // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+  UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
+  cc->correlateEvent(realEvent);
+
+  if(cc->grsResampled[0][1]){
+    delete cc->grsResampled[0][1];
+    cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
+  }
+
+  Double_t mean = 0;
+  Double_t rms = 0;
+  Int_t n = cc->grsResampled[0][1]->GetN();
+  for(int samp=0; samp < n; samp++){
+    Double_t y = cc->grsResampled[0][1]->GetY()[samp];
+    mean += y;
+    rms += y*y;
+  }
+
+  mean /= n;
+  rms  = rms / n - mean*mean;
+  std::cout << "mean, rms, n: " << mean << "\t" << rms << "\t" << n << std::endl;
+
+  cc->doFFTs(AnitaPol::kHorizontal);
+  cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
+  cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
+
+  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
+      cc->simple260MHzSatelliteNotch(pol, ant);
+    }
+  }
+  const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+  std::vector<Double_t> powSpec(numFreqs, 0);
+  std::vector<Double_t> freqsMHz(numFreqs, 0);  
+  
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    freqsMHz.at(freqInd) = freqInd*1e3/(cc->nominalSamplingDeltaT*cc->numSamples);
+    powSpec.at(freqInd) = std::norm(cc->ffts[0][0][freqInd]);
+
+    if(powSpec.at(freqInd) >= 1e-10){
+      powSpec.at(freqInd) = 10*TMath::Log10(powSpec.at(freqInd));
+    }
+    else{
+      powSpec.at(freqInd) = -10;
+    }
+    std::cout << powSpec.at(freqInd) << "\t"  << cc->ffts[0][0][freqInd] << std::endl;
+  }
+
+  TGraph* grPowSpec = new TGraph(numFreqs, &freqsMHz[0], &powSpec[0]);
+  grPowSpec->SetName("grPowSpecTest");
+  grPowSpec->Write();
   
   outFile->Write();
   outFile->Close();  
