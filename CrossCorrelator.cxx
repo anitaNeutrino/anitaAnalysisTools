@@ -48,7 +48,7 @@ void CrossCorrelator::initializeVariables(){
   maxDPhiDeg = 0;
   kOnlyThisCombo = -1;
   kUseOffAxisDelay = 1;
-  numSamples = 2*NUM_SAMPLES; // Factor of two for padding. Turns circular xcor into linear xcor.
+  numSamples = PAD_FACTOR*NUM_SAMPLES; // Factor of two for padding. Turns circular xcor into linear xcor.
   numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
 
   nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT;
@@ -107,7 +107,6 @@ void CrossCorrelator::initializeVariables(){
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Prints some summary information about the CrossCorrelator to stdout.
- *
  */
 void CrossCorrelator::printInfo(){
   std::cerr << __PRETTY_FUNCTION__ << std::endl;
@@ -129,17 +128,86 @@ void CrossCorrelator::printInfo(){
  * @returns position of antenna 0 in ADU5Pat coordinates, offset by half a phi-sector.
  */
 Double_t CrossCorrelator::getBin0PhiDeg(){
-  // Double_t phi0 = phiArrayDeg[0].at(0);
+
   Double_t phi0 = -aftForeOffset;
-  if(phi0 < -180){
+  if(phi0 < -DEGREES_IN_CIRCLE/2){
     phi0+=DEGREES_IN_CIRCLE;
   }
-  else if(phi0 >= 180){
+  else if(phi0 >= DEGREES_IN_CIRCLE/2){
     phi0-=DEGREES_IN_CIRCLE;
   }
   return phi0 - PHI_RANGE/2;
 }
 
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Creates an interpolated TGraph with zero mean.
+ * 
+ * @param grIn is a TGraph containing the waveform to interpolate / pad
+ * @param startTime is the time to begin the interpolation
+ * @param dt is the step size to interpolate with
+ * @param nSamp is the number of samples to pad to.
+ * 
+ * @return a new TGraph containing the zero meaned, interpolated TGraph.
+ */
+TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime,
+							     Double_t dt, Int_t nSamp){
+
+  // I want to interpolate the waveform such that the mean of the post interpolation waveform is zero...
+
+  std::vector<Double_t> newTimes = std::vector<Double_t>(nSamp, 0); // for the interp volts
+  std::vector<Double_t> newVolts = std::vector<Double_t>(nSamp, 0); // for the interp times
+  std::vector<Int_t> isPadding = std::vector<Int_t>(nSamp, 1); // whether or not the value is padding
+  Double_t thisStartTime = grIn->GetX()[0];
+  Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
+
+  // // Quantizes the start and end times so data points lie at integer multiples of nominal sampling
+  // // perhaps not really necessary if all waveforms have the same start time...
+  // startTime = dt*TMath::Nint(startTime/dt + 0.5);
+  // lastTime = dt*TMath::Nint(lastTime/dt - 0.5);
+
+   //ROOT interpolator object constructor takes std::vector objects
+  std::vector<Double_t> tVec(grIn->GetX(), grIn->GetX() + grIn->GetN());
+  std::vector<Double_t> vVec(grIn->GetY(), grIn->GetY() + grIn->GetN());
+  
+  // This is ROOT's interpolator object
+  ROOT::Math::Interpolator chanInterp(tVec,vVec,ROOT::Math::Interpolation::kAKIMA);
+  
+  // Put new data into arrays
+  Double_t sum = 0;
+  Double_t time = startTime;
+  Int_t meanCount = 0;
+  for(Int_t samp = 0; samp < nSamp; samp++){
+    newTimes.at(samp) = time;
+    if(time >= thisStartTime && time <= lastTime){
+      Double_t V = chanInterp.Eval(time);
+      newVolts.at(samp) = V;
+      sum += V;
+      isPadding.at(samp) = 0;
+      meanCount++;
+    }
+    else{
+      newVolts.at(samp) = 0;
+    }
+    time += dt;
+  }
+
+  // so now we have the new arrays, time to normalize these bad boys
+  Double_t mean = sum/meanCount; // the mean of the non-padded values  
+  for(Int_t samp=0; samp < nSamp; samp++){
+    if(isPadding.at(samp)==0){
+      newVolts.at(samp) -= mean;
+    }
+  }
+  
+  return new TGraph(nSamp, &newTimes[0], &newVolts[0]);
+
+}
 
 
 
@@ -156,28 +224,37 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
   // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
   deleteAllWaveforms(pol);
 
-  // Find the start time of all waveforms 
+
   std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
-      
+
+    // Find the start time of all waveforms 
     if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
       earliestStart.at(pol) = grs[pol][ant]->GetX()[0];
     }
   }
-
-  // Interpolate with earliest start time 
+  
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    grsResampled[pol][ant] = RootTools::interpolateWithStartTime(grs[pol][ant], earliestStart.at(pol),
+    grsResampled[pol][ant] = interpolateWithStartTimeAndZeroMean(grs[pol][ant], earliestStart.at(pol),
 								 nominalSamplingDeltaT, numSamples);
-    Double_t mean; // don't care enough about this to store it anywhere.
-    RootTools::normalize(grsResampled[pol][ant], mean, interpRMS[pol][ant]);
+    
+    Double_t sumOfVSquared = 0;
+    for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
+      Double_t V = grsResampled[pol][ant]->GetY()[samp];
+      sumOfVSquared += V*V;
+    }
+    interpRMS[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamples);
+    interpRMS2[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamplesUpsampled);
+    for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
+      grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
+    }
   }
-
+  
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 
     TString name, title;
-    TString name2, title2;      
+    TString name2, title2;
     if(pol==AnitaPol::kHorizontal){
       name = TString::Format("gr%dH_%u", ant, usefulEvent->eventNumber);
       name2 = TString::Format("grInterp%dH_%u", ant, usefulEvent->eventNumber);
@@ -191,7 +268,6 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
       title = TString::Format("Antenna %d VPOL eventNumber %u", ant, usefulEvent->eventNumber);
       title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
 			       ant, usefulEvent->eventNumber);
-
     }
     title += "; Time (ns); Voltage (mV)";
     grs[pol][ant]->SetName(name);
@@ -215,12 +291,9 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
  */
 void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
-  Int_t numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  Int_t numFreqsPadded = FancyFFTs::getNumFreqs(numSamplesUpsampled);
-
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
-    FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numFreqs, numFreqsPadded);    
+    FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
 }
 
@@ -530,7 +603,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 
   Int_t startComboInd = threadInd*numCorrPerThread;
 
-  Double_t stash[NUM_SAMPLES*UPSAMPLE_FACTOR*2];
+  Double_t stash[NUM_SAMPLES*UPSAMPLE_FACTOR*PAD_FACTOR];
 
   for(int comboInd=startComboInd; comboInd<startComboInd+numCorrPerThread; comboInd++){
     Int_t combo = combosToUse->at(comboInd);
@@ -611,7 +684,7 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   Int_t numCorrPerThread = NUM_COMBOS/NUM_THREADS;
   Int_t startCombo = threadInd*numCorrPerThread;
 
-  Double_t stash[NUM_SAMPLES*2];
+  Double_t stash[NUM_SAMPLES*PAD_FACTOR];
   
   for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);

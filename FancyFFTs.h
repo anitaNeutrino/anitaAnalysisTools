@@ -87,9 +87,9 @@ namespace FancyFFTs {
   double* crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2,
 				double* output, int threadInd=0);
   int extendToPowerOfTwo(int len);
-  complex<double>* zeroPadFFT(complex<double>* fft, int numFreqs, int numFreqsPadded);
+  complex<double>* zeroPadFFT(complex<double>* fft, int numSamples, int numSamplesUpsampled);
   complex<double>* zeroPadFFT(complex<double>* fft, complex<double>* output,
-					  int numFreqs, int numFreqsPadded);  
+			      int numSamples, int numSamplesUpsampled);  
 
 
  /* Takes care of checking whether a plan exists or not */

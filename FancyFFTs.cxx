@@ -426,15 +426,15 @@ int FancyFFTs::getNumFreqs(int len){
  * @brief Zero padds FFTts, 
  *
  * @param fft is the unpadded fft.
- * @param numFreqs is the length of the fft.
- * @param numFreqsPadded is the desired length of the fft.
+ * @param numSamples is the length of the time domain of the fft (i.e. NOT the number of frequency bins)
+ * @param numSamplesUpsampled is the length of the time domain of the padded fft (i.e. NOT the number of frequency bins)
  * @returns the a pointer to an array of complex<doubles> containing the padded fft.
  *
  * This is for doing interpolation in the time domain.
  * Zero padding in the time/frequency domain is equivelent to interpolation in the time/frequency domain.
 */
-complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, int numFreqs, int numFreqsPadded){
-  return zeroPadFFT(fft, NULL, numFreqs, numFreqsPadded);
+complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, int numSamples, int numSamplesUpsampled){
+  return zeroPadFFT(fft, NULL, numSamples, numSamplesUpsampled);
 }
 
 
@@ -446,16 +446,19 @@ complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, int numFreqs, int n
  * @brief Zero padds FFTts, 
  *
  * @param fft is the unpadded fft.
- * @param numFreqs is the length of the fft.
+ * @param numSamples is the length of the time domain of the fft (i.e. NOT the number of frequency bins)
+ * @param numSamplesUpsampled is the length of the time domain of the padded fft (i.e. NOT the number of frequency bins)
  * @param output is where the padded fft should be copied to.
- * @param numFreqsPadded is the desired length of the fft.
  * @returns the a pointer to an array of complex<doubles> containing the padded fft.
  *
  * This is for doing interpolation in the time domain.
  * Zero padding in the time/frequency domain is equivelent to interpolation in the time/frequency domain.
 */
-complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* output, int numFreqs, int numFreqsPadded){
+complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* output, int numSamples, int numSamplesUpsampled){
 
+  const int numFreqs = getNumFreqs(numSamples);  
+  const int numFreqsPadded = getNumFreqs(numSamplesUpsampled);
+  
   complex<double>* fftPadded = NULL;
   if(output==NULL){
     fftPadded = new complex<double>[numFreqsPadded];
@@ -464,9 +467,13 @@ complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* ou
     fftPadded = output;
   }
 
+  // this is the mistake!!!!
+  // Double_t scale = numFreqsPadded/numFreqs;
+
   // Here I scale the padded FFT so that it is as if I fourier transformed a longer waveform.
   // (There is a scale factor of length picked up from a forward FFT.)
-  Double_t scale = numFreqsPadded/numFreqs;
+  Double_t scale = numSamplesPadded/numSamples;
+
   for(int freqInd=0; freqInd<numFreqs; freqInd++){
     fftPadded[freqInd].real(fft[freqInd].real()*scale);
     fftPadded[freqInd].imag(fft[freqInd].imag()*scale);
@@ -474,6 +481,12 @@ complex<double>* FancyFFTs::zeroPadFFT(complex<double>* fft, complex<double>* ou
   for(int freqInd=numFreqs; freqInd<numFreqsPadded; freqInd++){
     fftPadded[freqInd] = 0;
   }
+
+  // this factor undoes the effect of the the nyquist frequency containing half the power relative
+  // to the other bins (due to them containing the negative frequency components)
+  const Double_t sqrtHalf = TMath::Sqrt(0.5);
+  fftPadded[numFreqs-1].real(sqrtHalf*fftPadded[numFreqs-1].real());
+  fftPadded[numFreqs-1].imag(sqrtHalf*fftPadded[numFreqs-1].imag());  
   
   return fftPadded;
 }

@@ -41,6 +41,8 @@
 #define NUM_SAMPLES 256
 #define UPSAMPLE_FACTOR 40
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
+#define PAD_FACTOR 2
+#define GETNUMFREQS(n)((n)/2+1)
 
 // Image definitions
 #define NUM_BINS_THETA 100
@@ -77,6 +79,8 @@
 #define SPEED_OF_LIGHT_NS 0.299792458
 
 #define ALL_PHI_TRIGS 0xffff
+
+
 
 /**
  * @class CrossCorrelator
@@ -125,6 +129,7 @@ public:
   void printInfo();
 
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
   void doFFTs(AnitaPol::AnitaPol_t pol);
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
@@ -235,20 +240,22 @@ public:
   // Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
 
-  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2]; //!< Cross correlations.
-  Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map  
+  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
+  Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
   
   Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
 
-  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*2*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
+  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   Double_t fineMap[NUM_POL][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
   
-  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*UPSAMPLE_FACTOR+1]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
-  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES+1]; //!< FFTs of evenly resampled waveforms.
+  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GETNUMFREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
+
+  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GETNUMFREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
+  Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.  
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
   UInt_t eventNumber[NUM_POL]; //!< For tracking event number
