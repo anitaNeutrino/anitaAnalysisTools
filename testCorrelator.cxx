@@ -28,6 +28,7 @@ void writeCorrelationGraphs(CrossCorrelator* cc);
 void testCoherentlySummedWaveform();
 void testNormalization();
 void testHackyFilter();
+void testOffAxisDelay();
 // void testFileWriting();
 
 int main(){
@@ -37,24 +38,121 @@ int main(){
   // testImageFullStyle();
   // testCoherentlySummedWaveform();
   // testNormalization();
-  testHackyFilter();
+  // testHackyFilter();
+  testOffAxisDelay();
   //  testFileWriting();
 
   return 0;
 
 }
 
-// void testFileWriting(){
+void testOffAxisDelay(){
 
-//   CrossCorrelator* c = new CrossCorrelator();
-//   c->writeDeltaTsFile();
+  CrossCorrelator* cc = new CrossCorrelator();
+  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 
-//   c->readDeltaTsFile();
-//   for(int combo=0; combo<NUM_COMBOS; combo++){
-//     std::cout << (int)c->deltaTs[combo][0][0] << ", ";
-//   }
-//   std::cout << std::endl;
-// }
+
+  char eventFileName[1024];  
+
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  CalibratedAnitaEvent* event = NULL;  
+  eventTree->SetBranchAddress("event", &event);
+
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+  
+  
+  headTree->BuildIndex("eventNumber");
+  eventTree->BuildIndex("eventNumber");
+  
+  const Long64_t eventNumber = 60832108;
+  headTree->GetEntryWithIndex(eventNumber);
+  eventTree->GetEntryWithIndex(eventNumber);
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
+
+  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);  
+  cc->kUseOffAxisDelay = 1;
+  cc->reconstructEvent(usefulEvent, 2, 2);
+
+
+  TFile* outFile = new TFile("/tmp/testOffAxisDelay.root","recreate");    
+
+  Double_t peakValue, imagePeak, peakPhiDeg, peakThetaDeg;
+  TH2D* hCoarse = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
+  // hCoarse->Write();
+  
+
+  for(int i=0; i < 2; i++){
+    std::cout << i << "\t" << cc->coarseMapPeakValues[pol][i] << "\t"
+	      << cc->coarseMapPeakPhiDegs[pol][i] << "\t" 
+	      << cc->coarseMapPeakThetaDegs[pol][i] << std::endl;
+  }
+  
+  cc->kUseOffAxisDelay = 1;  
+  TH2D* hWithOffAxisDelay = cc->makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
+						   cc->coarseMapPeakPhiDegs[pol][0],
+						   cc->coarseMapPeakThetaDegs[pol][0]);
+  hWithOffAxisDelay->SetName("hWithOffAxisDelay");
+  hWithOffAxisDelay->SetTitle("With Off-Axis Delay");
+  
+  cc->kUseOffAxisDelay = 0; 
+  TH2D* hWithOutOffAxisDelay = cc->makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
+						   cc->coarseMapPeakPhiDegs[pol][0],
+						   cc->coarseMapPeakThetaDegs[pol][0]);
+
+  hWithOutOffAxisDelay->SetName("hWithOutOffAxisDelay");
+  hWithOutOffAxisDelay->SetTitle("Without Off-Axis Delay");  
+
+
+
+  Int_t ant1 = 1;
+
+  for(int antInd=0; antInd < 2; antInd++){
+    Int_t ant2 = 2 + antInd;
+    const double dPhi = RootTools::getDeltaAngleDeg(cc->phiArrayDeg[pol].at(ant2),
+						    cc->phiArrayDeg[pol].at(ant1));
+    const double mp = cc->phiArrayDeg[pol].at(ant1) + 0.5*dPhi;
+
+    std::cout << cc->phiArrayDeg[pol].at(ant1) << "\t" << mp
+	      << "\t" << cc->phiArrayDeg[pol].at(ant2) << "\t" << dPhi << std::endl;
+    
+    TGraph* grOffAxisDelay = new TGraph();
+    for(Double_t phiFromMidPoint = -90; phiFromMidPoint <= 90; phiFromMidPoint += 1){
+      Double_t delay = cc->relativeOffAxisDelay(pol, ant1, ant2, phiFromMidPoint+mp);
+      grOffAxisDelay->SetPoint(grOffAxisDelay->GetN(), phiFromMidPoint, delay);
+    }
+
+    TString name = TString::Format("grOffAxisDelay_%d_%d_%d", pol, ant1, ant2);
+    grOffAxisDelay->SetName(name);
+    TString title = TString::Format("Antennas %d and %d", ant1, ant2);
+    grOffAxisDelay->SetTitle(title);
+    grOffAxisDelay->Write();
+
+    delete grOffAxisDelay;
+  }
+
+
+
+  
+  
+  delete cc;
+  
+  outFile->Write();
+  outFile->Close();  
+}
+
+
 
 
 void testNormalization(){

@@ -261,20 +261,35 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
  * @param angle1 is the first angle
  * @param angle2 is the second angle
  * @returns deltaAngle is the difference in the range -180 < deltaAngle < 180
+ *
+ * If it looks like there's an insane angle being passed in will return -9999.
 */
 Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
   
   Double_t deltaAngle = angle1 - angle2;
-  while(TMath::Abs(deltaAngle) > 180){
-    if(deltaAngle > 180){
+  Int_t loopCount = 0;
+  const Int_t maxLoopCount = 5;
+  if(deltaAngle > 180){
+    while(deltaAngle >= 180){      
       deltaAngle -= 360;
-    }
-    else{
-      if(deltaAngle <= -180){
-	deltaAngle += 360;
+      loopCount++;
+      if(loopCount >= maxLoopCount){
+	deltaAngle = -9999;
+	break;
       }
     }
   }
+  else{
+    while(deltaAngle < -180){
+      deltaAngle += 360;
+      loopCount++;
+      if(loopCount >= maxLoopCount){
+	deltaAngle = -9999;
+	break;
+      }
+    }
+  }
+  
   return deltaAngle;
 }
 
