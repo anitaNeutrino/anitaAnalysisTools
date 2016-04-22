@@ -26,11 +26,12 @@
  *
  * Much of the hard geometry stuff was done by Ryan and I've copied it from some EventCorrelator macros.
 */
-class AntarcticaMapPlotter{
+class AntarcticaMapPlotter : public TNamed{
 
 public:
 
-  AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
+  AntarcticaMapPlotter();
+  AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY);  
   ~AntarcticaMapPlotter();
 
   void addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
@@ -73,7 +74,8 @@ private:
 
   std::map<TString, TH2D*> hists; //!< Stored histograms by name
   std::map<TString, TGraph*> grs; //!< Stored graphs by name
-  
+
+  ClassDef(AntarcticaMapPlotter,2);
 };
 
 
