@@ -1,5 +1,14 @@
 #include "AntarcticaMapPlotter.h"
 
+ClassImp(AntarcticaMapPlotter);
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Constructor
+*/
+AntarcticaMapPlotter::AntarcticaMapPlotter(){
+  initializeInternals();
+}
 
 
 
@@ -13,11 +22,10 @@
 */
 AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
   initializeInternals();
-  addHistogram(name, title, nBinsX, nBinsY);
+  fName = name;
+  fTitle = title;
+  addHistogram("h" + name, title, nBinsX, nBinsY);
 }
-
-
-
 
 
 
