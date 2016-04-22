@@ -72,13 +72,13 @@ void CrossCorrelator::initializeVariables(){
 
   for(Int_t pol=0; pol < NUM_POL; pol++){
     for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){    
-      coarseMapPeakValues[pol][peakInd] = -999; 
-      coarseMapPeakPhiDegs[pol][peakInd] = -999; 
-      coarseMapPeakThetaDegs[pol][peakInd] = -999;
+      coarseMapPeakValues[pol][peakInd] = -9999; 
+      coarseMapPeakPhiDegs[pol][peakInd] = -9999; 
+      coarseMapPeakThetaDegs[pol][peakInd] = -9999;
 
-      fineMapPeakValues[pol][peakInd] = -999;
-      fineMapPeakPhiDegs[pol][peakInd] = -999;
-      fineMapPeakThetaDegs[pol][peakInd] = -999;
+      fineMapPeakValues[pol][peakInd] = -9999;
+      fineMapPeakPhiDegs[pol][peakInd] = -9999;
+      fineMapPeakThetaDegs[pol][peakInd] = -9999;
     }
   }
   
@@ -645,7 +645,7 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   
   // Safety check to make sure we don't do any hard work twice.
   eventNumber[pol] = usefulEvent->eventNumber;
-}
+ }
 
 
 
@@ -948,57 +948,86 @@ void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t p
 
 
 //---------------------------------------------------------------------------------------------------------
-/**
- * @brief Get the off axis delay between a pair of antennas for an incoming plane wave
+/** 
+ * @brief Get the off-axis delay for an off boresight angle.
+ * 
+ * @param deltaPhiDeg is the angle (Degrees) of the plane wave relative to an antenna boresight.
+ * @return the delay relative to boresight in nano-seconds.
  *
- * @param pol is the polarization of the antennas
- * @param ant1 is the first antenna 
- * @param ant2 is the second antenna 
- * @param phiWave is the phi direction of the incoming wave in radians (relative to the ADU5)
- * @returns the off-axis delay in ns
  */
-Double_t CrossCorrelator::getOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-					  Double_t phiWave){
-  // From Linda's fits
-  // -8.41435e-06 (quadratic term)
-  // 1.15582e-08 (quartic term)
+Double_t CrossCorrelator::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) {  
 
-  Double_t phiWaveDeg = phiWave*TMath::RadToDeg();
-  Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant1), phiWaveDeg);
-  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiWaveDeg);
 
-  // const Double_t maxDeltaPhiDeg = 45;
-  // // if(TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg || TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg){
-  // //   return 0;
-  // // }
-  // deltaPhiDeg1 = TMath::Abs(deltaPhiDeg1) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg1;
-  // deltaPhiDeg2 = TMath::Abs(deltaPhiDeg2) > maxDeltaPhiDeg ? maxDeltaPhiDeg : deltaPhiDeg2;
-  // // std::cout << deltaPhiDeg1 << "\t" << deltaPhiDeg2 << std::endl;
+  // These are the numbers from Linda's fits...
+  //  FCN=2014.5 FROM HESSE     STATUS=NOT POSDEF     40 CALLS         407 TOTAL
+  //  EDM=5.13972e-17    STRATEGY= 1      ERR MATRIX NOT POS-DEF
+  //  EXT PARAMETER                APPROXIMATE        STEP         FIRST   
+  //  NO.   NAME      VALUE            ERROR          SIZE      DERIVATIVE 
+  //  1  p0           0.00000e+00     fixed    
+  //  2  p1           0.00000e+00     fixed    
+  //  3  p2          -1.68751e-05   1.90656e-07   4.07901e-10   1.39356e-03
+  //  4  p3           0.00000e+00     fixed    
+  //  5  p4           2.77815e-08   9.38089e-11   7.26358e-14   2.34774e+01
+  //  6  p5           0.00000e+00     fixed    
+  //  7  p6          -8.29351e-12   1.78286e-14   7.64605e-18  -1.72486e+05
+  //  8  p7           0.00000e+00     fixed    
+  //  9  p8           1.15064e-15   1.78092e-18   6.93019e-22  -1.31237e+09
+  //  10  p9           0.00000e+00     fixed    
+  //  11  p10         -7.71170e-20   1.63489e-22   6.05470e-26   4.32831e+13
+  //  12  p11          0.00000e+00     fixed    
+  //  13  p12          1.99661e-24   9.79818e-27   1.84698e-29  -6.15528e+16
 
-  // const Double_t quadraticTerm = -8.41435e-06;
-  // const Double_t quarticTerm = 1.15582e-08;
+  // ... in a const array
+  const Int_t numPowers = 13;
+  const Double_t params[numPowers] = {0.00000e+00, 0.00000e+00, -1.68751e-05, 0.00000e+00,
+				      2.77815e-08,  0.00000e+00, -8.29351e-12,  0.00000e+00,
+				      1.15064e-15,  0.00000e+00, -7.71170e-20,  0.00000e+00,
+				      1.99661e-24};
 
-  // Double_t delay1 = quadraticTerm*pow(deltaPhiDeg1,2) + quarticTerm*pow(deltaPhiDeg1, 4);
-  // Double_t delay2 = quadraticTerm*pow(deltaPhiDeg2,2) + quarticTerm*pow(deltaPhiDeg2, 4);
-
-  
-  const int nPowsOf2 = 6;
-  Double_t params[nPowsOf2] = {-1.68751e-05,
-			       2.77815e-08,
-			       -8.29351e-12,
-			       1.15064e-15,
-			       -7.71170e-20,
-			       1.99661e-24};
-  
-  Double_t delay1 = 0;
-  Double_t delay2 = 0;
-
-  for(Int_t powInd=0; powInd < nPowsOf2; powInd++){
-    delay1 += params[powInd]*pow(deltaPhiDeg1, 2*powInd);
-    delay2 += params[powInd]*pow(deltaPhiDeg2, 2*powInd);    
+  // Sum up the powers in off boresight angle.
+  Double_t offBoresightDelay = 0;
+  for(int power=0; power < numPowers; power++){
+    offBoresightDelay += params[power]*TMath::Power(deltaPhiDeg, power);
   }
   
-  return delay2 - delay1;
+  return offBoresightDelay;  
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Get the relative off-axis delay between an antenna pair.
+ * 
+ * @param pol is the polarization of the plane wave.
+ * @param ant1 is the first antenna.
+ * @param ant2 is the second antenna.
+ * @param phiDeg is the angle of the planewave in Degrees relative to ADU5-aft-fore.
+ * @return the difference between the off-axis delays of the two antennas.
+ */
+Double_t CrossCorrelator::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
+					       Double_t phiDeg) {
+
+  Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant1), phiDeg);
+  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiDeg);  
+
+  // std::cout << phiDeg << "\t" << deltaPhiDeg1 << "\t" << deltaPhiDeg2 << std::endl;
+  
+  // Double_t leftPhi=x[0]+11.25;
+  // Double_t rightPhi=x[0]-11.25;
+  
+  //leftPhi*=-1;
+  //  rightPhi*=-1;
+  // Double_t leftDelay=singleDelayFuncMod(&leftPhi,par);
+  // Double_t rightDelay=singleDelayFuncMod(&rightPhi,par);
+
+  Double_t delay1 = singleAntennaOffAxisDelay(deltaPhiDeg1);
+  Double_t delay2 = singleAntennaOffAxisDelay(deltaPhiDeg2);
+
+  // return (leftDelay-rightDelay);  
+  return (delay1-delay2);
 }
 
 
@@ -1023,8 +1052,6 @@ Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1
   Double_t part2 = zArray[pol].at(ant2)*tanThetaW - rArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant2));
   Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
-  // tdiff += getOffAxisDelay(pol, ant1, ant2, phiWave);
-  
   return tdiff;
 }
 
@@ -1204,10 +1231,11 @@ void CrossCorrelator::fillDeltaTLookup(){
       for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
 	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
 	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
-	Double_t phiWave = phiDeg*TMath::DegToRad();
 	zoomedPhiWaveLookup[phiIndex] = phiIndex*ZOOM_BIN_SIZE_PHI;
       
-	Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
+	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
+	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
+	Double_t offAxisDelay = relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
 	offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
 	
 	part21sZoom[pol][combo][phiIndex] = zoomedCosPartLookup[pol][ant2][phiIndex] - zoomedCosPartLookup[pol][ant1][phiIndex];
@@ -1354,9 +1382,12 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
-  peakValue = -DBL_MAX;
-  peakPhiDeg = -DBL_MAX;
-  peakThetaDeg = -DBL_MAX;
+  // peakValue = -DBL_MAX;
+  // peakPhiDeg = -DBL_MAX;
+  // peakThetaDeg = -DBL_MAX;
+  peakValue = -2;
+  peakPhiDeg = -9999;
+  peakThetaDeg = -9999;
 
   for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
     Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
@@ -1675,9 +1706,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     if(phiSector!=thisPhiSector){
       phiSector = thisPhiSector;
       combosToUse = &ptr->combosToUseGlobal[phiSector];
-      // TThread::Lock();
-      // std::cerr << threadInd << "\t" << phiSector << "\t" << phiBin << std::endl;
-      // TThread::UnLock();            
     }
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
       Int_t combo = combosToUse->at(comboInd);
@@ -1739,11 +1767,14 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
   if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
-     zoomCenterPhiDeg >= 500 || zoomCenterThetaDeg >= 500){    
+     zoomCenterPhiDeg >= 500 || zoomCenterThetaDeg >= 500){
 
     std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << ". zoomCenterPhiDeg = "
 	      << zoomCenterPhiDeg << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
 	      << " these values look suspicious so I'm skipping this reconstruction." << std::endl;
+    imagePeak = -9999;
+    peakPhiDeg = -9999;
+    peakThetaDeg = -9999;
     return;
   }
   
@@ -1827,11 +1858,17 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   const Int_t endThetaBin = NUM_BINS_THETA_ZOOM;
   const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
   const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
+
+  // TThread::Lock();
+  // std::cerr << threadInd << "\t" << startPhiBin << "\t" << endPhiBin << std::endl;
+  // TThread::UnLock();
   
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
 
+  Int_t kUseOffAxisDelay = ptr->kUseOffAxisDelay;
+  
   Int_t phiSector = ptr->threadPhiSector;
   std::vector<Int_t>* combosToUse = &ptr->combosToUseGlobal[phiSector];
     
@@ -1857,6 +1894,11 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
 	Double_t deltaT = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
+
+	if(kUseOffAxisDelay != 0){
+	  deltaT += kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd];
+	}
+	
 	// (int) x - (x < (int) x)
 	// Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
 	// Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
@@ -1878,7 +1920,7 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   }    
 
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          		
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
 	ptr->fineMap[pol][thetaBin][phiBin] /= combosToUse->size();
       }
@@ -1940,7 +1982,7 @@ void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
  * 
  * @param pathToLindasFile is the relative path to Linda's file.
  * @param pol is the polarization of the channels under test.
- * @returns 0 if everything went without a problem, 1 if the text file could not be opened.
+ * @returns 0 if everything went without a problem, 1 if there was a problem.
 */
 Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol){
   
@@ -1983,6 +2025,14 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
     geom->zPhaseCentreFromVerticalHorn[ant][pol] = newZ;
     cal->relativePhaseCenterToAmpaDelays[surf][chan] = newT;
 
+    // std::cout << ant << "\t" << dr << "\t" << dz << "\t" << dPhiRad << "\t" << dt << std::endl;
+    
+  }
+  if(ant != NUM_SEAVEYS - 1){
+    // then you didn't make it to the end of the file!
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " in " << __FILE__ << std::endl;
+    std::cerr << "It looks like you didn't read to the end of Linda's geometry file!" << std::endl;
+    return 1;
   }
 
   return 0;
