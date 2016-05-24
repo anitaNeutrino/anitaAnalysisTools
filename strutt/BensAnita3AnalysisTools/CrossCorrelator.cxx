@@ -360,8 +360,8 @@ void CrossCorrelator::simple370MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t
   const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
   const Double_t deltaF_MHz = 1e3/(numSamples*nominalSamplingDeltaT);
 
-  const Double_t notchLowEdgeMHz = 370 - 20;
-  const Double_t notchHighEdgeMHz = 370 + 20;
+  const Double_t notchLowEdgeMHz = 370 - 26;
+  const Double_t notchHighEdgeMHz = 370 + 26;
 
   for(int freqInd=0; freqInd < numFreqs; freqInd++){
     if(deltaF_MHz*freqInd >= notchLowEdgeMHz && deltaF_MHz*freqInd < notchHighEdgeMHz){
