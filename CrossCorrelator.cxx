@@ -298,7 +298,8 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
     if(kDoSimpleSatelliteFiltering > 0){
       simple260MHzSatelliteNotch(pol, ant);
-      simple370MHzSatelliteNotch(pol, ant);      
+      simple370MHzSatelliteNotch(pol, ant);
+      renormalizeFourierDomain(pol, ant);
     }
     FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
@@ -335,7 +336,6 @@ void CrossCorrelator::simple260MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t
       ffts[pol][ant][freqInd].imag(0);
     }
   }
-  renormalizeFourierDomain(pol, ant);  
 }
 
 
@@ -364,7 +364,6 @@ void CrossCorrelator::simple370MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t
       ffts[pol][ant][freqInd].imag(0);
     }    
   }
-  renormalizeFourierDomain(pol, ant);
 }
 
 
