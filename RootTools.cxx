@@ -21,6 +21,26 @@ Double_t RootTools::getSumOfYVals(TGraph* gr){
 
 
 
+/** 
+ * @brief I use this function to define my min bias sample
+ * 
+ * Used in several places, and I've changed it at least once, so it gets its own function.
+ * Since the PPS2 was only switched on around MCM for ANITA-3 I'm not going to use it
+ *
+ * @param header is the RawAnitaHeader of the event in question.
+ * 
+ * @return 
+ */
+Int_t RootTools::isMinBiasSampleEvent(const RawAnitaHeader* header){
+  // Not using PPS2 for ANITA-3 since it was only switched on around McM
+  // so for the purposes of defining a thermal sample, it's essentially useless
+
+  // PPS2 is the header->getTriggerBitG12(), which I'm not using
+  Int_t isMinBias = header->getTriggerBitADU5() || header->getTriggerBitSoftExt();
+
+  return isMinBias;
+}
+
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -1436,3 +1456,5 @@ TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString 
   theCan->Update();
   return theCan; 
 }
+
+ 

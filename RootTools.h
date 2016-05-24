@@ -126,6 +126,8 @@ namespace RootTools{
   TChain* getHeadChain(Int_t firstRun, Int_t lastRun, RawAnitaHeader*& headPtr);
   TChain* getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat);  
 
+
+  Int_t isMinBiasSampleEvent(const RawAnitaHeader* header);
 }
 
 #endif
