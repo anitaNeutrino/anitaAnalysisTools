@@ -1458,3 +1458,20 @@ TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString 
 }
 
  
+
+
+
+/** 
+ * @brief Generic function to set the bin labels from the low edge values.
+ * 
+ * @param ax is the histogram axis
+ * @param format is the format specifier for TString/sprintf, should match histogram type, e.g. %2.0lf if hist is TH1D
+ */
+void RootTools::setBinLabelsFromLowEdge(TAxis* ax, const char* format){
+  
+  Int_t n = ax->GetNbins();
+  for(int bin=1; bin <= n; bin++){
+    ax->SetBinLabel(bin, TString::Format(format, ax->GetBinLowEdge(bin)));
+  }
+  ax->SetLabelOffset(0.01);
+}

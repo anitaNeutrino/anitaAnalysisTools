@@ -91,6 +91,7 @@ namespace RootTools{
 
   /* Prettify */
   void makeZaxisScaleEqualAboutZero(TH2D* h);
+  void setBinLabelsFromLowEdge(TAxis* ax, const char* format);
   
   /* Make new output based on input */
   TGraph* makeNormalized(TGraph* gr); ///< Creates new TGraph (leaving original unchanged) with mean = 0 & RMS = 1
