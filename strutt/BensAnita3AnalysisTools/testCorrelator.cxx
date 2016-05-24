@@ -385,6 +385,237 @@ void testHackyFilter(){
 
 
 
+
+void testNormalization(){
+  char eventFileName[1024];
+
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  CalibratedAnitaEvent* event = NULL;  
+  eventTree->SetBranchAddress("event", &event);
+
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+
+  TFile* outFile = new TFile("/tmp/testNormalization.root","recreate");
+
+  CrossCorrelator* cc = new CrossCorrelator();
+
+  headTree->BuildIndex("eventNumber");
+  eventTree->BuildIndex("eventNumber");
+  
+  const Long64_t eventNumber = 60832108;
+  headTree->GetEntryWithIndex(eventNumber);
+  eventTree->GetEntryWithIndex(eventNumber);
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
+  
+  // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+  UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
+  cc->correlateEvent(realEvent);
+
+  if(cc->grsResampled[0][1]){
+    delete cc->grsResampled[0][1];
+    cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
+  }
+
+  cc->doFFTs(AnitaPol::kHorizontal);
+  cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
+  cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
+
+  TGraph* grCrossCorr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
+  grCrossCorr->Write();
+
+  TGraph* grCrossCorr2 = cc->getUpsampledCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
+  grCrossCorr2->Write();
+  
+  Double_t mean=0, rms=1;
+  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      RootTools::getMeanAndRms(cc->grsResampled[pol][ant], mean, rms);
+      // std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << std::endl;
+      std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << "\t";
+      std::cout << pow(cc->interpRMS[pol][ant], 2) << "\t" << pow(cc->interpRMS2[pol][ant], 2) << "\t"
+		<< pow(cc->interpRMS[pol][ant],2)/pow(cc->interpRMS2[pol][ant],2) << "\t"
+		<< std::endl;
+    }
+  }
+
+  Double_t* volts = FancyFFTs::doInvFFT(cc->numSamples, cc->ffts[0][0], true);
+  Double_t* voltsUpsampled = FancyFFTs::doInvFFT(cc->numSamplesUpsampled, cc->fftsPadded[0][0], true);
+
+  std::vector<Double_t> times(cc->numSamples, 0);
+  for(int samp=0; samp < cc->numSamples; samp++){
+    times.at(samp) = cc->nominalSamplingDeltaT*samp;
+  }
+  
+  std::vector<Double_t> timesUpsampled(cc->numSamplesUpsampled, 0);
+  for(int samp=0; samp < cc->numSamplesUpsampled; samp++){
+    timesUpsampled.at(samp) = cc->correlationDeltaT*samp;    
+  }
+
+  TGraph* grVolts = new TGraph(cc->numSamples, &times[0], volts);  
+  TGraph* grVoltsUpsampled = new TGraph(cc->numSamplesUpsampled, &timesUpsampled[0], voltsUpsampled);
+
+  {
+    Double_t mean, rms;
+    RootTools::getMeanAndRms(grVolts, mean, rms);
+    std::cout << "grVolts\t" << mean << "\t" << rms << std::endl;
+    RootTools::getMeanAndRms(grVoltsUpsampled, mean, rms);    
+    std::cout << "grVoltsUpsampled\t" << mean << "\t" << rms << std::endl;    
+  }
+
+  grVolts->SetName("grVolts");
+  grVoltsUpsampled->SetName("grVoltsUpsampled");
+
+  grVolts->Write();
+  grVoltsUpsampled->Write();
+
+  delete [] volts;
+  delete [] voltsUpsampled;  
+  
+  const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+  const int numFreqsPadded = FancyFFTs::getNumFreqs(cc->numSamplesUpsampled);
+
+  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      Double_t sumSquaredPadded = 0;
+      for(int freqInd=0; freqInd < numFreqsPadded; freqInd++){
+	if(freqInd == numFreqsPadded - 1){
+	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;
+	}
+	// if(freqInd == numFreqs - 1){
+	//   sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;	  
+	// }	
+	else{
+	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd]);
+	}
+      }
+      std::cout << pol << "\t" << ant << "\t" << sumSquaredPadded << "\t" << cc->numSamplesUpsampled << "\t" << sumSquaredPadded/cc->numSamplesUpsampled << std::endl;
+
+      Double_t sumSquared = 0;
+      for(int freqInd=0; freqInd < numFreqs; freqInd++){
+	if(freqInd == numFreqs - 1){
+	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd])/2;
+	}
+	else{
+	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd]);
+	}
+      }
+      std::cout << pol << "\t" << ant << "\t" << sumSquared << "\t" << cc->numSamples << "\t" << sumSquared/cc->numSamples << std::endl;
+    }
+  }
+
+  
+  outFile->Write();
+  outFile->Close();  
+}
+
+
+
+
+void testHackyFilter(){
+  char eventFileName[1024];
+
+  Int_t run = 352;
+  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+
+  TFile* eventFile = TFile::Open(eventFileName);
+  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+
+  char rawHeaderFileName[1024];
+  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+
+  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+
+  CalibratedAnitaEvent* event = NULL;  
+  eventTree->SetBranchAddress("event", &event);
+
+  RawAnitaHeader* header = NULL;
+  headTree->SetBranchAddress("header", &header);
+
+  TFile* outFile = new TFile("/tmp/testHackyFilter.root","recreate");
+
+  CrossCorrelator* cc = new CrossCorrelator();
+  cc->kDoSimpleSatelliteFiltering = 1;
+
+  headTree->BuildIndex("eventNumber");
+  eventTree->BuildIndex("eventNumber");
+  
+  const Long64_t eventNumber = 60832108;
+  headTree->GetEntryWithIndex(eventNumber);
+  eventTree->GetEntryWithIndex(eventNumber);
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
+  
+  // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+  UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
+  cc->correlateEvent(realEvent);
+
+  if(cc->grsResampled[0][1]){
+    delete cc->grsResampled[0][1];
+    cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
+  }
+
+  Double_t mean = 0;
+  Double_t rms = 0;
+  Int_t n = cc->grsResampled[0][1]->GetN();
+  for(int samp=0; samp < n; samp++){
+    Double_t y = cc->grsResampled[0][1]->GetY()[samp];
+    mean += y;
+    rms += y*y;
+  }
+
+  mean /= n;
+  rms  = rms / n - mean*mean;
+  std::cout << "mean, rms, n: " << mean << "\t" << rms << "\t" << n << std::endl;
+
+  cc->doFFTs(AnitaPol::kHorizontal);
+  cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
+  cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
+
+  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
+      cc->simple260MHzSatelliteNotch(pol, ant);
+    }
+  }
+  const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+  std::vector<Double_t> powSpec(numFreqs, 0);
+  std::vector<Double_t> freqsMHz(numFreqs, 0);  
+  
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    freqsMHz.at(freqInd) = freqInd*1e3/(cc->nominalSamplingDeltaT*cc->numSamples);
+    powSpec.at(freqInd) = std::norm(cc->ffts[0][0][freqInd]);
+
+    if(powSpec.at(freqInd) >= 1e-10){
+      powSpec.at(freqInd) = 10*TMath::Log10(powSpec.at(freqInd));
+    }
+    else{
+      powSpec.at(freqInd) = -10;
+    }
+    std::cout << powSpec.at(freqInd) << "\t"  << cc->ffts[0][0][freqInd] << std::endl;
+  }
+
+  TGraph* grPowSpec = new TGraph(numFreqs, &freqsMHz[0], &powSpec[0]);
+  grPowSpec->SetName("grPowSpecTest");
+  grPowSpec->Write();
+  
+  outFile->Write();
+  outFile->Close();  
+}
+
+
+
 void testCoherentlySummedWaveform(){
   /*
     This function tests the full +-2 phi-sector reconstruction.
