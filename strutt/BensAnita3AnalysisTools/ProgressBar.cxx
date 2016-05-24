@@ -10,6 +10,8 @@
 
 
 
+Int_t ProgressBar::progState = 0;
+
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -22,6 +24,7 @@ ProgressBar::ProgressBar(){
   counter = 0;
   percentage = 0;
   watch.Start(kTRUE);
+  setHandler = 0;  
 }
 
 
@@ -39,6 +42,7 @@ ProgressBar::ProgressBar(Long64_t maxEntryInit){
   counter = 0;
   percentage = 0;
   watch.Start(kTRUE);
+  setHandler = 0;
 }
 
 
@@ -112,9 +116,52 @@ void ProgressBar::operator++(int){
 
 
 //---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief New primary function to move through main for loop in analysis program
+ *
+ * This now looks for SIGINT signals and alters the main loop variable, entry = numEntries.
+ * 
+ * @param entry is a reference to the loop varible, assumed to start at 0.
+ * @param numEntries is the maximum entry, assumed that the loop condition is entry < numEntries
+ */
+void ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
+
+  if(setHandler==0){
+    signal (SIGINT, ProgressBar::mainLoopSigintHandle);
+    setHandler = 1;
+  }
+
+  if(setHandler==1 && progState!=0){
+    std::cerr << "Program with ProgressBar received SIGINT, will try and exit main loop gracefully. " << std::endl;
+    entry=numEntries;
+  }
+  
+  (*this)++;
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
 /**
  * @brief For debugging, prints state of internal variables
 */
 void ProgressBar::status(){
   std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
+}
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Custom handler, sets variable when signal is received.
+ * 
+ * @param param is the signal, I presume
+ */
+void ProgressBar::mainLoopSigintHandle(int param){
+  progState = param;
 }
