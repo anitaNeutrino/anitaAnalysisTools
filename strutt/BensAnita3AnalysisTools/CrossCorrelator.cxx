@@ -468,7 +468,7 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
 
     // std::cerr << pol << "\t" << peakInd << "\t" << peakValues[peakInd] << "\t"
     // 	      << phiDegs[peakInd] << "\t" << thetaDegs[peakInd] << std::endl;
-    if(peakValues[peakInd]){
+    if(peakValues[peakInd] >= 0){
       for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
 	Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
 
@@ -644,12 +644,14 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   // Now cross correlate those already FFT'd waveforms
   if(eventNumber[pol]!=usefulEvent->eventNumber){
     // Generate set of ffts for cross correlation (each waveform only needs to be done once)
-    doFFTs(pol);    
+    doFFTs(pol);
   
     doAllCrossCorrelationsThreaded(pol);
 
     // reconstruct
     reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
+
+    // fprintf(stderr, "%lf\t%lf\t%lf\n", coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
   
     // Safety check to make sure we don't do any hard work twice.
     eventNumber[pol] = usefulEvent->eventNumber;
@@ -1447,8 +1449,8 @@ TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol){
   title += " Map";
   
   TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI_ZOOM, zoomPhiMin, zoomPhiMin + PHI_RANGE_ZOOM,
-			  NUM_BINS_THETA_ZOOM, zoomThetaMin, zoomThetaMin + THETA_RANGE_ZOOM);
+			  NUM_BINS_PHI_ZOOM, zoomPhiMin[pol], zoomPhiMin[pol] + PHI_RANGE_ZOOM,
+			  NUM_BINS_THETA_ZOOM, zoomThetaMin[pol], zoomThetaMin[pol] + THETA_RANGE_ZOOM);
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
@@ -1798,7 +1800,9 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
-  Int_t phiSector = floor(deltaPhiDegPhi0)/PHI_RANGE;
+  // Int_t phiSector = floor(deltaPhiDegPhi0)/PHI_RANGE;
+  Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);  
+  // std::cout << "is it the phi-sector? " << phiSector << std::endl;
   doUpsampledCrossCorrelationsThreaded(pol, phiSector); // sets threadPhiSector
 
   // std::cout << deltaPhiDegPhi0 << "\t" << zoomCenterPhiDeg << "\t" << phiSector << std::endl;
@@ -1806,8 +1810,8 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
   
-  zoomPhiMin = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
-  zoomThetaMin = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
+  zoomPhiMin[pol] = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
+  zoomThetaMin[pol] = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
   
   // LAUNCH THREADS HERE
   for(long threadInd=0; threadInd<NUM_THREADS; threadInd++){
@@ -1834,10 +1838,10 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
-    if(threadImagePeak[threadInd] > imagePeak){
-      imagePeak = threadImagePeak[threadInd];
-      peakPhiDeg = threadPeakPhiDeg[threadInd];
-      peakThetaDeg = threadPeakThetaDeg[threadInd];
+    if(threadImagePeakZoom[threadInd] > imagePeak){
+      imagePeak = threadImagePeakZoom[threadInd];
+      peakPhiDeg = threadPeakPhiDegZoom[threadInd];
+      peakThetaDeg = threadPeakThetaDegZoom[threadInd];
     }
   }
 }
@@ -1879,7 +1883,7 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   // std::cerr << threadInd << "\t" << startPhiBin << "\t" << endPhiBin << std::endl;
   // TThread::UnLock();
   
-  ptr->threadImagePeak[threadInd] = -DBL_MAX;
+  ptr->threadImagePeakZoom[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
 
@@ -1888,8 +1892,8 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   Int_t phiSector = ptr->threadPhiSector;
   std::vector<Int_t>* combosToUse = &ptr->combosToUseGlobal[phiSector];
     
-  Int_t phiZoomBase = TMath::Nint((ptr->zoomPhiMin - ptr->minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
-  Int_t thetaZoomBase = TMath::Nint((ptr->zoomThetaMin - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
+  Int_t phiZoomBase = TMath::Nint((ptr->zoomPhiMin[pol] - ptr->minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
+  Int_t thetaZoomBase = TMath::Nint((ptr->zoomThetaMin[pol] - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
 
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          	
@@ -1941,8 +1945,8 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 	ptr->fineMap[pol][thetaBin][phiBin] /= combosToUse->size();
       }
 
-      if(ptr->fineMap[pol][thetaBin][phiBin] > ptr->threadImagePeak[threadInd]){
-	ptr->threadImagePeak[threadInd] = ptr->fineMap[pol][thetaBin][phiBin];
+      if(ptr->fineMap[pol][thetaBin][phiBin] > ptr->threadImagePeakZoom[threadInd]){
+	ptr->threadImagePeakZoom[threadInd] = ptr->fineMap[pol][thetaBin][phiBin];
 	peakPhiBin = phiBin;
 	peakThetaBin = thetaBin;
       }
@@ -1951,8 +1955,8 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 
   // ptr->threadPeakPhiDeg[threadInd] = hImage->GetXaxis()->GetBinLowEdge(peakPhiBin+1);
   // ptr->threadPeakThetaDeg[threadInd] = hImage->GetYaxis()->GetBinLowEdge(peakThetaBin+1);
-  ptr->threadPeakPhiDeg[threadInd] = ptr->zoomPhiMin + peakPhiBin*ZOOM_BIN_SIZE_PHI;
-  ptr->threadPeakThetaDeg[threadInd] = ptr->zoomThetaMin + peakThetaBin*ZOOM_BIN_SIZE_THETA;
+  ptr->threadPeakPhiDegZoom[threadInd] = ptr->zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI;
+  ptr->threadPeakThetaDegZoom[threadInd] = ptr->zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;
 
   return 0;
   

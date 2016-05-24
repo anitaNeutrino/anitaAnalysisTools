@@ -305,6 +305,10 @@ public:
   Double_t threadImagePeak[NUM_THREADS]; //!< Store image peaks found by different threads.
   Double_t threadPeakPhiDeg[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
   Double_t threadPeakThetaDeg[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
+
+  Double_t threadImagePeakZoom[NUM_THREADS]; //!< Store image peaks found by different threads.
+  Double_t threadPeakPhiDegZoom[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
+  Double_t threadPeakThetaDegZoom[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
   
   std::vector<TThread*> mapThreads; //!< TThreads for doing interferometric map making.
   std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.
@@ -321,10 +325,10 @@ private:
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
 
   Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
-  Double_t minThetaDegZoom; //!< Emperically determined minimum possible zoomed theta (Degrees)
-  Double_t minPhiDegZoom; //!< Emperically determined minimum possible zoomed phi (Degrees)
-  Double_t zoomPhiMin; //!< For the current map
-  Double_t zoomThetaMin; //!< For the current map
+  Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
+  Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
+  Double_t zoomPhiMin[NUM_POL]; //!< For the current map
+  Double_t zoomThetaMin[NUM_POL]; //!< For the current map
 
   
 };
