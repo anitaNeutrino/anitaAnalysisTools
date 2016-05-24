@@ -125,7 +125,7 @@ $(DICT).C : $(CLASS_HEADERS)
 		@echo "<**And here's the dictionary...**>" $<
 		@rm -f *Dict*
 #		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
-		rootcint $@ -c -p $(CINTFLAGS) $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
+		rootcint $@ -c -p $(CINTFLAGS) -I./ $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
 
 clean:
 	@rm -f *Dict*
