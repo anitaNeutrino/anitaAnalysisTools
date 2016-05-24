@@ -24,8 +24,12 @@ AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nB
   initializeInternals();
   fName = name;
   fTitle = title;
-  addHistogram("h" + name, title, nBinsX, nBinsY);
+  addProfile(name + "_prof", title, nBinsX, nBinsY);
 }
+
+
+
+
 
 
 
@@ -59,8 +63,8 @@ void AntarcticaMapPlotter::initializeInternals(){
   /* The numbers in this function also come from Matt Mottram or Ryan */
   
   // This image taken from http://earthobservatory.nasa.gov/IOTD/view.php?id=6087
-  TString mapName = "antarcticaMosaic.png";
-  // TString mapName = "antarcticaIceMapBW.png";
+  // TString mapName = "antarcticaMosaic.png";
+  TString mapName = "antarcticaIceMapBW.png";
 
   
   // From Ryan
@@ -251,7 +255,36 @@ void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBins
   if(setCurrentHistogram(name)==0){
     TH2D* theHist = new TH2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
     hists[name] = theHist;
+    std::cerr << theHist << "\t" << theHist->GetName() << std::endl;
     hCurrent = theHist;
+  }
+  else{
+    std::cerr << "Warning in " << __FILE__ << "! Histogram with name " << name.Data() << ", already exists!" << std::endl;
+  }
+}
+
+
+
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Creates a new TProfile2D to go in the internal map and sets it as the current histogram
+ * @param name is the histogram name
+ * @param title is the histogram title
+ * @param nBinsX is the number of bins on the x-axis
+ * @param nBinsY is the number of bins on the y-axis
+*/
+void AntarcticaMapPlotter::addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
+
+  if(setCurrentHistogram(name)==0){
+    TProfile2D* theProf = new TProfile2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
+    hists[name] = theProf;
+    hCurrent = theProf;
   }
   else{
     std::cerr << "Warning in " << __FILE__ << "! Histogram with name " << name.Data() << ", already exists!" << std::endl;

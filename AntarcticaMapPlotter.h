@@ -12,6 +12,7 @@
 
 #include "TCanvas.h"
 #include "TH2D.h"
+#include "TProfile2D.h"
 #include "TMath.h"
 #include "TROOT.h"
 #include "TImage.h"
@@ -35,6 +36,7 @@ public:
   ~AntarcticaMapPlotter();
 
   void addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
+  void addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY);  
   void addTGraph(TString name, TString title, Int_t n=0, Double_t* latitude=NULL, Double_t* longitude=NULL);
 
   Int_t setCurrentHistogram(TString name);  
