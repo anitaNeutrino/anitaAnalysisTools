@@ -1193,8 +1193,10 @@ void CrossCorrelator::fillDeltaTLookup(){
     }
   }
   
-  minThetaDegZoom = -78.5;
-  minPhiDegZoom = -59.25;
+  // minThetaDegZoom = -78.5;
+  // minPhiDegZoom = -59.25;
+  minThetaDegZoom = -THETA_RANGE/2 - THETA_RANGE_ZOOM/2;
+  minPhiDegZoom = getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
     Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
@@ -2345,3 +2347,4 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   }  
   return grCoherent;  
 }
+
