@@ -2189,7 +2189,7 @@ Int_t CrossCorrelator::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t
  * @param phiDeg is the incoming phi direction (Degrees) relative to the ADU5 aft-fore.
  * @param thetaDeg is the incoming theta direction (Degrees).
  * @param maxDeltaPhiSect is the number of phi-sectors to contribute either side of the incoming phi-direction.
- * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.  
+ * @param snr is an estimate of the signal-to-noise ratio of the coherently summed waveform, using the local max-to-min of the coherent waveform and the rms of the first few ns of the contributing uninterpolated waveforms.
  * @return the upsampled coherently summed waveform made from the zero padded ffts.
 */
 TGraph* CrossCorrelator::makeUpsampledCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
@@ -2270,6 +2270,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
   // sum of rms of first few ns of each waveform
   Double_t rms = 0;
+  Int_t numSampRms =0;
   
   // Factor of two here to drop the zero padding at the back of the waveform
   // which was used during correlations.
@@ -2290,7 +2291,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 	FancyFFTs::doInvFFT(nSamp, ffts[pol][ant], false);
       }
       else{
-	FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);      
+	FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);
       }
 	
       if(firstAnt!=ant){ // Don't do the first antenna twice
@@ -2322,10 +2323,11 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
       }
 
       // Here we look at the RMS of the first few ns of the uninterpolated waveforms
-      const Double_t timeToEvalRms = 10; // ns
+      const Double_t timeToEvalRms = 10; // ns 
       for(Int_t samp3=0; samp3 < grs[pol][ant]->GetN(); samp3++){
 	if(grs[pol][ant]->GetX()[samp3] - grs[pol][ant]->GetX()[0] < timeToEvalRms){
 	  rms += grs[pol][ant]->GetY()[samp3]*grs[pol][ant]->GetY()[samp3];
+	  numSampRms++;
 	}
       }
       numAnts++;
@@ -2354,7 +2356,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
     grCoherent->SetName(name);
     grCoherent->SetTitle(title);
     
-    rms/=numAnts;
+    rms/=numSampRms;
     rms = TMath::Sqrt(rms);
 
     Double_t maxY = 0;
