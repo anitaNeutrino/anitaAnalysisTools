@@ -14,7 +14,7 @@
 #include "TObject.h"
 #include "TStopwatch.h"
 #include <iostream>
-
+#include <signal.h>
 
 /** @class ProgressBar
  * @brief Prints a progress bar and timer to stderr
@@ -28,12 +28,17 @@ public:
   void operator++(int);
   void status();
 
+  void inc(Long64_t& entry, Long64_t numEntries);
+
+  static void mainLoopSigintHandle(int param);
+  static int progState;
+  
 private:
   Long64_t maxEntry; //!< Number of events you will loop over
   Long64_t counter; //!< Number of loops completed
   UInt_t percentage; //!< Percentage to print to the screen
   TStopwatch watch; //!< ROOT's stopwatch class, used to time the progress since object construction
-
+  Int_t setHandler; //!< Have we set the interupt signal handler?
 };
 
 

@@ -265,6 +265,7 @@ public:
 
   UInt_t eventNumber[NUM_POL]; //!< For tracking event number
   UInt_t lastEventNormalized[NUM_POL]; //!< Prevents cross-correlation of the same event twice
+  UInt_t lastEventUpsampleCorrelated[NUM_POL][NUM_COMBOS]; //!< Prevents upsampled cross-correlation of the same event twice  
   Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
   Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
   Int_t numSamples; //!< Number of samples in waveform after padding.
