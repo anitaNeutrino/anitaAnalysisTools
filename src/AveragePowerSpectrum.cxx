@@ -63,7 +63,7 @@ AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
     // querying the ROOT major version number. At the moment it asks whether the
     // ROOT major version number is >= 6, hence the name.
     // It works for me, for now.
-#ifdef IS_ROOT_6
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
     hTemp->SetCanExtend(TH1::kAllAxes);
 #else
     hTemp->SetBit(TH1::kCanRebin);

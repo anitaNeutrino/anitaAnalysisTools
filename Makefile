@@ -5,6 +5,13 @@
 ##############################################################################
 include Makefile.arch
 
+
+### Package subdirectories
+LIBDIR=lib
+BUILDDIR=build
+INCLUDEDIR=include
+BINDIR=bin
+
 #If you have the 64-bit version of fftw installed, try this to help CINT out.
 CINTFLAGS=-DFFTW_64_BIT
 
@@ -76,11 +83,11 @@ CXXFLAGS += -Wall -Wextra -Wshadow -Werror #-Wpedantic
 endif
 
 #ROOT stuff
-ROOT_LIBRARY = libBensAnitaTools.${DLLSUF}
+ROOT_LIBRARY = ${LIBDIR}/libAnitaAnalysisTools.${DLLSUF}
 DICT = benToolsDict
-LIB_OBJS = $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o AnitaAveragePowerSpectrum.o
-CLASS_HEADERS = CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h AnitaAveragePowerSpectrum.h
-BINARIES = testCorrelator testFancyTTreeInterpolator testFancyFFTs  testProgressBar testOutputConvention testAveragePowerSpectrum
+LIB_OBJS = $(addprefix $(BUILDDIR)/,  $(DICT).o CrossCorrelator.o FancyTTreeInterpolator.o RootTools.o FancyFFTs.o ProgressBar.o OutputConvention.o AveragePowerSpectrum.o AntarcticaMapPlotter.o AnitaAveragePowerSpectrum.o )
+CLASS_HEADERS =  $(addprefix $(INCLUDEDIR)/, CrossCorrelator.h FancyTTreeInterpolator.h FancyFFTs.h RootTools.h ProgressBar.h OutputConvention.h AveragePowerSpectrum.h AntarcticaMapPlotter.h AnitaAveragePowerSpectrum.h )
+BINARIES = $(addprefix $(BINDIR)/, testCorrelator testFancyTTreeInterpolator testFancyFFTs  testProgressBar testOutputConvention testAveragePowerSpectrum )
 
 #Now the bits we're actually compiling
 all: $(ROOT_LIBRARY) $(BINARIES) 
@@ -94,6 +101,18 @@ $(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY)
 
 docs: docs/Doxyfile
 	doxygen docs/Doxyfile
+
+
+$(LIB_OBJS): | $(BUILDDIR) 
+
+$(BINDIR): 
+	mkdir -p $(BINDIR)
+
+$(BUILDDIR): 
+	mkdir -p $(BUILDDIR)
+
+$(LIBDIR): 
+	mkdir -p $(LIBDIR) | $(LIBDIR)
 
 #The library
 $(ROOT_LIBRARY) : $(LIB_OBJS) 
@@ -112,20 +131,24 @@ endif
 else
 	$(LD) $(SOFLAGS) $(LDFLAGS) $(LIB_OBJS) -o $@
 endif
+	@if [ $(shell root-config --version | cut -c1) -ge 6 ]; then \
+	cp $(BUILDDIR)/*.pcm $(LIBDIR); \
+	fi; # Additional install command for ROOTv6
 
-%.$(OBJSUF) : %.$(SRCSUF) %.h
+$(BUILDDIR)/%.$(OBJSUF) : src/%.$(SRCSUF) $(CLASS_HEADERS) Makefile | $(BUILDDIR) 
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-%.$(OBJSUF) : %.C
+$(BUILDDIR)/%.$(OBJSUF) : $(BUILDDIR)/%.C
 	@echo "<**Compiling**> "$<
 	$(CXX) $(CXXFLAGS) $ -c $< -o  $@
 
 
-$(DICT).C : $(CLASS_HEADERS)
-		@echo "<**And here's the dictionary...**>" $<
-		@rm -f *Dict*
-#		rootcint $@ -c -p $(CXXFLAGS) $(CLASS_HEADERS) LinkDef.h
-		rootcint $@ -c -p $(CINTFLAGS) -I./ $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
+#eventDict.C: $(CLASS_HEADERS)
+$(BUILDDIR)/$(DICT).C: $(CLASS_HEADERS)
+	@echo "Generating dictionary ..."
+	@ rm -f *Dict* 
+	rootcint $@ -c -p $(CINTFLAGS) -I./ $(INC_ANITA_UTIL) $(CLASS_HEADERS) LinkDef.h
+
 
 clean:
 	@rm -f *Dict*
@@ -138,8 +161,6 @@ install: $(ROOT_LIBRARY)
 ifeq ($(PLATFORM),macosx)
 #	install -c -m 755 $(ROOT_LIBRARY) $(subst .$(DLLSUF),.so,$(ROOT_LIBRARY)) $(ANITA_UTIL_LIB_DIR)
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
-	-@install -c -m 755 $(DICT)_rdict.pcm $(ANITA_UTIL_LIB_DIR)
-
 else
 	install -c -m 755 $(ROOT_LIBRARY) $(ANITA_UTIL_LIB_DIR)
 endif
@@ -149,3 +170,8 @@ endif
 
 	install -d $(ANITA_UTIL_INSTALL_DIR)/share/anitaMap
 	for file in anitaMap/*.png; do install -c -m 644 "$${file}" $(ANITA_UTIL_INSTALL_DIR)/share/anitaMap; done
+
+
+	@if [ $(shell root-config --version | cut -c1) -ge 6 ]; then \
+	install -c -m 755 $(BUILDDIR)/$(DICT)_rdict.pcm $(ANITA_UTIL_LIB_DIR) ;\
+	fi # Additional install command for ROOTv6
