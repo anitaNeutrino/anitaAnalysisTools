@@ -51,7 +51,7 @@ FFTFLAG =
 endif
 
 #Generic and Site Specific Flags
-CXXFLAGS     = -g -O2 -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11
+CXXFLAGS     = -g -O2 -fPIC $(ROOTCFLAGS) -Iinclude $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL)  #-std=c++11
 # CXXFLAGS     = -g -fPIC $(ROOTCFLAGS) $(FFTFLAG) $(SYSINCLUDES) $(INC_ANITA_UTIL) #-std=c++11 
 LDFLAGS      = -g $(ROOTLDFLAGS) 
 
@@ -94,7 +94,7 @@ all: $(ROOT_LIBRARY) $(BINARIES)
 
 .PHONY: install clean docs
 
-$(BINARIES): %: %.$(SRCSUF) $(ROOT_LIBRARY) 
+$(BINARIES): %: test/%.$(SRCSUF) $(ROOT_LIBRARY) 
 	@echo "<**Compiling**> "
 	@echo $<
 	$(LD) $(CXXFLAGS) $(LDFLAGS) $(LIBS) $< $(ROOT_LIBRARY) -o $@
@@ -112,10 +112,10 @@ $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
 
 $(LIBDIR): 
-	mkdir -p $(LIBDIR) | $(LIBDIR)
+	mkdir -p $(LIBDIR) 
 
 #The library
-$(ROOT_LIBRARY) : $(LIB_OBJS) 
+$(ROOT_LIBRARY) : $(LIB_OBJS)  | $(LIBDIR)
 	@echo "Linking $@ ..."
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .
