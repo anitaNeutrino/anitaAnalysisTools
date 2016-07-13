@@ -15,8 +15,11 @@
 
 #include <assert.h>
 
+
 #include "FancyFFTs.h"
 #include "RootTools.h"
+
+#include <fftw3.h>
 
 double sum(int n, double* x){
   double sum = 0;

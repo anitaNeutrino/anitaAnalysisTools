@@ -1,4 +1,5 @@
 #include "FancyFFTs.h"
+#include <fftw3.h>
 
 std::map<std::pair<int, int>, fftw_plan> fRealToComplex;
 std::map<std::pair<int, int>, fftw_plan> fComplexToReal;
