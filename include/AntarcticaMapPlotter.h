@@ -40,7 +40,7 @@ public:
   void addTGraph(TString name, TString title, Int_t n=0, Double_t* latitude=NULL, Double_t* longitude=NULL);
 
   Int_t setCurrentHistogram(TString name);  
-  void DrawHist(TString opt);
+  TCanvas* DrawHist(TString opt);
   TH2D* getCurrentHistogram();
 
 
@@ -67,8 +67,8 @@ private:
 
   // PNG of antarctica
   TImage *img; //!< The png image of Antarctica.
-
-  void getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y);
+ 
+ void getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y);
   void initializeInternals();
 
   TH2D* hCurrent; //!< Current histogram

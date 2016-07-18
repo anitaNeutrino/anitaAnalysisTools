@@ -40,7 +40,14 @@ TString OutputConvention::getOutputFileName(TString ext){
     outFileName = getOutputDir();
 
     // Excutable name
-    outFileName += TString::Format("%sPlots", argv[0]);
+    TString theArgv0 = TString::Format("%s", argv[0]);
+    TObjArray* tkns = theArgv0.Tokenize("/");
+    if(tkns->GetSize() > 0){
+      TObjString* lastPartOfName = (TObjString*) tkns->At(tkns->GetLast());
+      theArgv0 = lastPartOfName->GetString();
+    }
+    
+    outFileName += theArgv0;
 
     // Excutable args
     if(argc > 1){

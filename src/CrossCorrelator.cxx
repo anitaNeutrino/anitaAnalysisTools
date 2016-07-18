@@ -645,7 +645,8 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   if(eventNumber[pol]!=usefulEvent->eventNumber){
     // Generate set of ffts for cross correlation (each waveform only needs to be done once)
     doFFTs(pol);
-  
+
+    
     doAllCrossCorrelationsThreaded(pol);
 
     // reconstruct
@@ -691,8 +692,7 @@ void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
     delete corrThreads.at(threadInd);
   }
 
-  corrThreads.clear();
-  
+  corrThreads.clear();  
 }
 
 

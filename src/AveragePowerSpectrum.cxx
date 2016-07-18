@@ -59,10 +59,7 @@ AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
     hTemp->SetDirectory(0);
     hTemp->Sumw2();
 
-    // This prepocessor variable is defined in the Makefile and is (I hope)
-    // querying the ROOT major version number. At the moment it asks whether the
-    // ROOT major version number is >= 6, hence the name.
-    // It works for me, for now.
+    // from RVersion.h
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
     hTemp->SetCanExtend(TH1::kAllAxes);
 #else
