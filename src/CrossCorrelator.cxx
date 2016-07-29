@@ -1407,12 +1407,14 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
   peakPhiDeg = -9999;
   peakThetaDeg = -9999;
 
-  for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
-    Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
-    if(doPhiSector){
-      for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
-	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){      
+    Int_t invertedThetaBin = NUM_BINS_THETA - thetaBin - 1;
+    for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
+      Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
+      if(doPhiSector){
+	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
+	  // hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][invertedThetaBin]);
 	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
 	    peakValue = coarseMap[pol][phiBin][thetaBin];
 	    peakPhiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
