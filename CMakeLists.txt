@@ -100,6 +100,7 @@ message("DICTNAME is set to ${DICTNAME}" )
 message("PROJECT_BINARY_DIR is set to ${PROJECT_BINARY_DIR}")
 
 add_subdirectory(test)
+add_definitions(${ROOT_CXX_FLAGS} -DFFTW_64_BIT)
 
 
 install (FILES ${HEADER_FILES} DESTINATION ${UTIL_INC_DIR})
