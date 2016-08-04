@@ -1063,7 +1063,8 @@ Double_t CrossCorrelator::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t a
  */
 Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave){
   
-  Double_t tanThetaW = tan(thetaWave);
+  // Double_t tanThetaW = tan(thetaWave);
+  Double_t tanThetaW = tan(-1*thetaWave);    
   Double_t part1 = zArray[pol].at(ant1)*tanThetaW - rArray[pol].at(ant1)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant1));
   Double_t part2 = zArray[pol].at(ant2)*tanThetaW - rArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant2));
   Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
@@ -1217,7 +1218,7 @@ void CrossCorrelator::fillDeltaTLookup(){
 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
     Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
-    Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
+    Double_t thetaWave = -1*thetaWaveDeg*TMath::DegToRad();
     zoomedThetaWaves[thetaIndex] = thetaWave;
     zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
     zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
@@ -1391,8 +1392,10 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
   
   Double_t phiMin = getBin0PhiDeg();
   Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
+  // Double_t thetaMin = -THETA_RANGE/2 + double(THETA_RANGE)/NUM_BINS_THETA;
+  // Double_t thetaMax = THETA_RANGE/2 + double(THETA_RANGE)/NUM_BINS_THETA;
   Double_t thetaMin = -THETA_RANGE/2;
-  Double_t thetaMax = THETA_RANGE/2;
+  Double_t thetaMax = THETA_RANGE/2;  
 
   TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
@@ -1408,13 +1411,13 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
   peakThetaDeg = -9999;
 
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){      
-    Int_t invertedThetaBin = NUM_BINS_THETA - thetaBin - 1;
+    // Int_t invertedThetaBin = NUM_BINS_THETA - thetaBin - 1;
     for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
       Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
       if(doPhiSector){
 	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
-	  // hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
-	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][invertedThetaBin]);
+	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+	  // hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][invertedThetaBin]);
 	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
 	    peakValue = coarseMap[pol][phiBin][thetaBin];
 	    peakPhiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
@@ -1449,16 +1452,24 @@ TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol){
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
   title += " Zoomed In";
   title += " Map";
-  
+
+  // Here I'm hacking my socks off to make the map elevation = -1*theta,
+  // where theta is the internal class representation of the vertical angle
   TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI_ZOOM, zoomPhiMin[pol], zoomPhiMin[pol] + PHI_RANGE_ZOOM,
 			  NUM_BINS_THETA_ZOOM, zoomThetaMin[pol], zoomThetaMin[pol] + THETA_RANGE_ZOOM);
+			  // NUM_BINS_THETA_ZOOM,
+			  // -1*(zoomThetaMin[pol] + THETA_RANGE_ZOOM) + ZOOM_BIN_SIZE_THETA,
+			  // -1*zoomThetaMin[pol] + ZOOM_BIN_SIZE_THETA);
+
   hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+    // Int_t invertedThetaBin = NUM_BINS_THETA_ZOOM - thetaBin - 1;    
     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
       hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][thetaBin][phiBin]);
+      // hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][invertedThetaBin][phiBin]);
     }
   }  
   
@@ -1898,7 +1909,7 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   Int_t thetaZoomBase = TMath::Nint((ptr->zoomThetaMin[pol] - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
 
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){	          	
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       ptr->fineMap[pol][thetaBin][phiBin]=0;
     }
   }
@@ -1957,8 +1968,10 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 
   // ptr->threadPeakPhiDeg[threadInd] = hImage->GetXaxis()->GetBinLowEdge(peakPhiBin+1);
   // ptr->threadPeakThetaDeg[threadInd] = hImage->GetYaxis()->GetBinLowEdge(peakThetaBin+1);
+
+
   ptr->threadPeakPhiDegZoom[threadInd] = ptr->zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI;
-  ptr->threadPeakThetaDegZoom[threadInd] = ptr->zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;
+  ptr->threadPeakThetaDegZoom[threadInd] = ptr->zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;  
 
   return 0;
   

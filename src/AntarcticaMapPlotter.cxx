@@ -169,7 +169,7 @@ Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t
 /**
  * @brief Draws the canvas, image and histogram
 */
-void AntarcticaMapPlotter::DrawHist(TString opt){
+TCanvas* AntarcticaMapPlotter::DrawHist(TString opt){
 
   TString canName = TString::Format("can%s", hCurrent->GetName());
   TString canTitle = TString::Format("Canvas of %s", hCurrent->GetTitle());
@@ -183,6 +183,7 @@ void AntarcticaMapPlotter::DrawHist(TString opt){
     img->Draw("same");
   }
   hCurrent->Draw(opt + "same");
+  return can;
 }
 
 

@@ -112,3 +112,10 @@ if( ${ROOT_VERSION} VERSION_GREATER "5.99.99")
   install (FILES ${PROJECT_BINARY_DIR}/${DICTNAME}_rdict.pcm DESTINATION ${UTIL_LIB_DIR})
 #  install (FILES ${PROJECT_BINARY_DIR}/lib${libname}.rootmap DESTINATION ${UTIL_LIB_DIR})
 endif() 
+
+
+file(MAKE_DIRECTORY ${UTIL_SHARE_DIR}/anitaMap)
+file(GLOB IMAGE_FILES
+  "anitaMap/*.png"
+  )
+install(FILES ${IMAGE_FILES} DESTINATION ${UTIL_SHARE_DIR}/anitaMap)
