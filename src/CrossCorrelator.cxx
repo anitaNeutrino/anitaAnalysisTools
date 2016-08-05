@@ -2268,12 +2268,15 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   std::pair<Int_t, Int_t> key(nSamp, 0);
   // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
   Double_t* vArray = FancyFFTs::getRealArray(key);
-
+  Double_t* rmsArray = NULL;
   if(nSamp==numSamples){
     FancyFFTs::doInvFFT(nSamp, ffts[pol][firstAnt], false);
+    rmsArray = interpRMS[pol];
   }
   else{
-    FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);    
+    FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);
+    // rmsArray = interpRMS2[pol];
+    rmsArray = interpRMS[pol];
   }
 
   std::vector<Double_t> tArray(nSamp, 0);
@@ -2308,7 +2311,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
       else{
 	FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);
       }
-	
+
       if(firstAnt!=ant){ // Don't do the first antenna twice
 
 	// std::cout << pol << "\t" << firstAnt << "\t" << ant << "\t" << phiRad << "\t" << thetaRad << "\t" << std::endl;
@@ -2332,17 +2335,27 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
 	    Double_t vInterp = tOverDeltaT*(v2 - v1) + v1;
 
-	    grCoherent->GetY()[samp] += vInterp*interpRMS[pol][ant];
+	    grCoherent->GetY()[samp] += vInterp*rmsArray[ant]; //interpRMS[pol][ant];
 	  }
 	}
       }
 
       // Here we look at the RMS of the first few ns of the uninterpolated waveforms
       const Double_t timeToEvalRms = 10; // ns 
-      for(Int_t samp3=0; samp3 < grs[pol][ant]->GetN(); samp3++){
-	if(grs[pol][ant]->GetX()[samp3] - grs[pol][ant]->GetX()[0] < timeToEvalRms){
-	  rms += grs[pol][ant]->GetY()[samp3]*grs[pol][ant]->GetY()[samp3];
+      // for(Int_t samp3=0; samp3 < grs[pol][ant]->GetN(); samp3++){
+      // start time of the interpolated waveform... but this could be front padded with zero...
+      Double_t t0 = grsResampled[pol][ant]->GetX()[0];      
+      // this is when we've got the good stuff..., we really want to start counting from here
+      Double_t t0Good = grs[pol][ant]->GetX()[0];
+      for(Int_t samp3=0; samp3 < nSamp; samp3++){
+	Double_t t = t0 + samp3*theDeltaT;
+	if(t >= t0Good && t < t0Good + timeToEvalRms){
+	  // rms += grs[pol][ant]->GetY()[samp3]*grs[pol][ant]->GetY()[samp3];
+	  double V = rmsArray[ant]*vArray[samp3];
+	  rms += V*V;
 	  numSampRms++;
+
+	  // std::cout << ant << "\t" << t << "\t" << samp3 << "\t" << V << "\t" << numSampRms << std::endl;
 	}
       }
       numAnts++;
@@ -2358,11 +2371,13 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
     }
 
     if(pol==AnitaPol::kHorizontal){
-      name += TString::Format("H_%u", eventNumber[pol]);
+      // name += TString::Format("H_%u", eventNumber[pol]);
+      name += TString::Format("H_%u", lastEventNormalized[pol]);      
       title = "HPOL ";
     }
     else{
-      name += TString::Format("V_%u", eventNumber[pol]);
+      // name += TString::Format("V_%u", eventNumber[pol]);
+      name += TString::Format("V_%u", lastEventNormalized[pol]);      
       title = "VPOL ";      
     }
 
@@ -2380,6 +2395,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
     Double_t minX = 0;
     RootTools::getLocalMaxToMin(grCoherent, maxY, maxX, minY, minX);
     snr = (maxY - minY)/(2*rms);
+    // std::cout << std::endl << snr << "\t" << maxY - maxX << "\t" << rms << "\t" << numSampRms << std::endl;
   }
   else{
     snr = -9999;
