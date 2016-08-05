@@ -35,7 +35,8 @@ public:
   OutputConvention(int argcIn, char* argvIn[]);
 
   TString getOutputFileName(TString ext="");
-
+  TString getOutputDir();
+  
   static TFile* getFile(TString fileNameWithWildcards);
   
 private:
@@ -47,7 +48,6 @@ private:
   TString outFileName; ///!< The output total file output name.
   
   TString getDateTimeSuffix(); 
-  TString getOutputDir();
   
   
   
