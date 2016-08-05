@@ -2259,7 +2259,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   
   Double_t phiRad = phiDeg*TMath::DegToRad();
   Double_t thetaRad = thetaDeg*TMath::DegToRad();
-  // Int_t numAnts = 0;
+  Int_t numAnts = 0;
 
   Int_t centerPhiSector = getPhiSectorOfAntennaClosestToPhiDeg(pol, phiDeg);
 
@@ -2345,17 +2345,17 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 	  numSampRms++;
 	}
       }
-      // numAnts++;
+      numAnts++;
     }
   }
 
   // Normalize
-  // if(numAnts > 0){
+  if(numAnts > 0){
     TString name = nSamp == numSamples ? "grCoherent" : "grInterpCoherent";
     TString title;
-    // for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
-    //   grCoherent->GetY()[samp]/=numAnts;
-    // }
+    for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
+      grCoherent->GetY()[samp]/=numAnts;
+    }
 
     if(pol==AnitaPol::kHorizontal){
       name += TString::Format("H_%u", eventNumber[pol]);
@@ -2379,8 +2379,11 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
     Double_t minY = 0;
     Double_t minX = 0;
     RootTools::getLocalMaxToMin(grCoherent, maxY, maxX, minY, minX);
-    snr = (maxY - minY)/(2*rms);   
-  // }  
+    snr = (maxY - minY)/(2*rms);
+  }
+  else{
+    snr = -9999;
+  }
   return grCoherent;  
 }
 
