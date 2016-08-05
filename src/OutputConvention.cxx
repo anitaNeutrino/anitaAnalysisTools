@@ -47,7 +47,7 @@ TString OutputConvention::getOutputFileName(TString ext){
       theArgv0 = lastPartOfName->GetString();
     }
     
-    outFileName += theArgv0;
+    outFileName += theArgv0 + "Plots";
 
     // Excutable args
     if(argc > 1){
