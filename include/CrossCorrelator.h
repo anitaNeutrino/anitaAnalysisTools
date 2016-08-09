@@ -25,9 +25,11 @@
 #include "TGraph.h"
 #include "TH2D.h"
 #include "TThread.h"
+#include "TROOT.h" // for gDirectory pointer?
 
 // standard c++ things
 #include <iostream>
+
 
 
 // Number of phi-sectors to cross correlate between
@@ -91,6 +93,76 @@ class CrossCorrelator{
 
 public:
 
+
+
+
+
+  
+  //--------------------------------------------------------------------------------------------------------
+  // Classes declared inside this class
+  //--------------------------------------------------------------------------------------------------------
+  
+
+
+  
+  //--------------------------------------------------------------------------------------------------------
+  /** 
+   * @class SimpleNotch 
+   * @ A class to hold two frequencies, a low notch edge and high notch edge. Should be ROOT read/writable.
+   */
+  class SimpleNotch : public TNamed{
+  public:
+    //------------------------------------------------------------------------------------------------------
+    /** 
+     * @brief Default Constructor for ROOT IO
+     * 
+     */    
+    SimpleNotch(){
+      lowPassFreqMHz=0;
+      highPassFreqMHz=0;
+    }
+    //------------------------------------------------------------------------------------------------------
+    /** 
+     * @brief Proper Constructor
+     * 
+     * @param name The name of the notch, for ROOT IO
+     * @param title The title of the notch, for ROOT IO
+     * @param theLowPassFreqMHz The low pass frequency in MHz, i.e. the low edge of the notch (frequencies less than this value ARE NOT filtered, and frequencies greater than and equal to this value ARE filtered)
+     * @param theHighPassFreqMHz The high pass frequency in MHz, i.e. the high edge of the notch (frequencies less than this value ARE filtered, and frequencies greater than and equal to this value ARE NOT filtered)
+     */
+    SimpleNotch(TString name, TString title, Double_t theLowPassFreqMHz, Double_t theHighPassFreqMHz) : lowPassFreqMHz(theLowPassFreqMHz) , highPassFreqMHz(theHighPassFreqMHz){
+      fName = name;
+      fTitle = title;
+      if(lowPassFreqMHz > highPassFreqMHz){
+	std::cerr << "Warning in " << __FUNCTION__ << ", your highPassFreqMHz < lowPassFreqMHz!" << std::endl;
+	printInfo(std::cerr);
+	std::cerr << "This notch isn't going to do anything!" << std::endl;
+      }
+    }
+    //------------------------------------------------------------------------------------------------------
+    /** 
+     * @grief Get the notch edge values, retured by reference
+     * 
+     * @param theLowPassFreqMHz gets the theLowPassFreqMHz
+     * @param theHighPassFreqMHz get the highPassFreqMHz
+     */
+    
+    void getNotchEdges(Double_t &theLowPassFreqMHz, Double_t& theHighPassFreqMHz) const{
+      theLowPassFreqMHz =  lowPassFreqMHz;
+      theHighPassFreqMHz = highPassFreqMHz;
+    }
+    void printInfo(std::ostream& output = std::cout){
+      output << fName << "\t" << fTitle << ": Low Pass = " << lowPassFreqMHz
+	     << " MHz, High Pass = " << highPassFreqMHz << " MHz" << std::endl;
+    }
+    
+  private:
+    Double_t lowPassFreqMHz;
+    Double_t highPassFreqMHz;
+    ClassDef(SimpleNotch, 1)    
+  };
+
+  
     /**
    * @brief Flag to pass to CrossCorrelator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
    */  
@@ -121,15 +193,34 @@ public:
     CrossCorrelator* ptr; //!< Pointer to the CrossCorrelator
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //--------------------------------------------------------------------------------------------------------
+  // Public member functions
+  //--------------------------------------------------------------------------------------------------------
+
+
+  
   CrossCorrelator();
   ~CrossCorrelator();
 
   void initializeVariables();
   void printInfo();
-
+  
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void simple260MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant);
-  void simple370MHzSatelliteNotch(AnitaPol::AnitaPol_t pol, Int_t ant);
+  Double_t applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch);
+  void writeNotchesIfAble();
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
   
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
@@ -233,6 +324,25 @@ public:
 					 Int_t ant1, Int_t ant2);
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
+
+
+  UInt_t addNotch(SimpleNotch simpleNotch);
+  void printNotchInfo();
+
+
+
+
+
+
+
+
+
+
+
+  //--------------------------------------------------------------------------------------------------------
+  // Public member variables
+  //--------------------------------------------------------------------------------------------------------
+  
   
   TString mapModeNames[kNumMapModes];//!< Maps text to the mapMode_t enum, used for histogram names/titles.
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
@@ -315,9 +425,13 @@ public:
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
-  Int_t kDoSimpleSatelliteFiltering; //!< Does a simple 52MHz wide notch at 260 if flag is greater than 0.
+
 
 private:
+
+  //--------------------------------------------------------------------------------------------------------
+  // Private member variables
+  //--------------------------------------------------------------------------------------------------------
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
 
@@ -326,6 +440,8 @@ private:
   Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
   Double_t zoomPhiMin[NUM_POL]; //!< For the current map
   Double_t zoomThetaMin[NUM_POL]; //!< For the current map
+
+  std::vector<SimpleNotch> allChannelNotches; //!< Holds notches to be applied to all channels for all events (e.g. satellite filters).
 
   
 };

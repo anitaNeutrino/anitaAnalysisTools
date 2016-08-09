@@ -5,6 +5,7 @@
 #pragma link off all functions;
 
 #pragma link C++ class CrossCorrelator+;
+#pragma link C++ class CrossCorrelator::SimpleNotch+;
 #pragma link C++ class FancyTTreeInterpolator+;
 #pragma link C++ namespace RootTools+;
 #pragma link C++ namespace FancyFFTs+;
