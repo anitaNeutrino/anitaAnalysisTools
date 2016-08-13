@@ -50,6 +50,7 @@ void CrossCorrelator::writeNotchesIfAble(){
 void CrossCorrelator::initializeVariables(){
 
   kDeltaPhiSect = 2;
+  multiplyTopRingByMinusOne = 0;
   
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -251,6 +252,12 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
 
+      if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
+	for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
+	  grs[pol][ant]->GetY()[samp] *= -1;
+	}
+      }
+      
       // Find the start time of all waveforms 
       if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
 	earliestStart.at(pol) = grs[pol][ant]->GetX()[0];

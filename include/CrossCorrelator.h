@@ -421,11 +421,12 @@ public:
   std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.
   std::vector<TThread*> upsampledCorrThreads; //!< TThreads for doing upsampled cross correlations.
 
+
+  Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
   Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
-
 
 private:
 
