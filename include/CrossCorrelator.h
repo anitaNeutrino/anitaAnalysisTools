@@ -50,7 +50,7 @@
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
-#define NUM_THREADS 8
+#define NUM_THREADS 4
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
