@@ -23,6 +23,11 @@ CrossCorrelator::~CrossCorrelator(){
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
   }
+
+  if(corrInterp!=NULL){
+    delete corrInterp;
+    corrInterp = NULL;
+  }
 }
 
 
@@ -51,7 +56,9 @@ void CrossCorrelator::initializeVariables(){
 
   kDeltaPhiSect = 2;
   multiplyTopRingByMinusOne = 0;
-  
+
+  corrInterp = NULL;    
+
   // Initialize with NULL otherwise very bad things will happen with gcc 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
@@ -323,6 +330,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
+    // FFTtools::doFFT(numSamples, grsResampled[pol][ant]->GetY(), (FFTWComplex *)ffts[pol][ant]);
 
     for(std::vector<SimpleNotch>::iterator i=allChannelNotches.begin(); i!=allChannelNotches.end(); ++i){
       SimpleNotch& notch = (*i);
@@ -412,6 +420,7 @@ Double_t CrossCorrelator::applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const 
       notchedPower += theAbs*theAbs*deltaFMHz;
       ffts[pol][ant][freqInd].real(0);
       ffts[pol][ant][freqInd].imag(0);
+      // std::cerr << notch.GetName() << "\t" << lowPassFreqMHz << "\t" << highPassFreqMHz << "\t" << freqMHz << std::endl;
     }
   }
   return notchedPower;
@@ -537,6 +546,55 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
 
 
 
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Reconstruct event but only do interpolated peak finding on the polarization with the highest interpolated peak finding
+ *
+ * @param usefulEvent is the event to process
+ * @param numFinePeaks is the number of fine peaks to reconstruct (should be >= numCoarsePeaks but < MAX_NUM_PEAKS)
+ * @param numCoarsePeaks is the number of coarse peaks to reconstruct (should < MAX_NUM_PEAKS)
+ *
+ * Wraps the key reconstruction algorithms and puts the results in internal memory.
+ */
+AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
+
+  for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
+
+    // now calls reconstruct inside correlate event
+    correlateEvent(usefulEvent, pol);
+
+    findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
+    		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
+
+  }
+  AnitaPol::AnitaPol_t peakPol = AnitaPol::kVertical;
+  if(coarseMapPeakValues[AnitaPol::kHorizontal][0] > coarseMapPeakValues[AnitaPol::kVertical][0]){
+    peakPol = AnitaPol::kHorizontal;
+  }
+  
+  
+  if(numFinePeaks > 0 && numFinePeaks <= numCoarsePeaks){
+    for(Int_t peakInd=numFinePeaks-1; peakInd >= 0; peakInd--){
+
+      reconstructZoom(peakPol, fineMapPeakValues[peakPol][peakInd],
+		      fineMapPeakPhiDegs[peakPol][peakInd], fineMapPeakThetaDegs[peakPol][peakInd],
+		      coarseMapPeakPhiDegs[peakPol][peakInd], coarseMapPeakThetaDegs[peakPol][peakInd],
+		      peakInd);
+
+      // std::cerr << fineMapPeakValues[pol][peakInd] << "\t" << fineMapPeakPhiDegs[pol][peakInd] << "\t"
+      // 	  << fineMapPeakThetaDegs[pol][peakInd] << std::endl << std::endl;
+    }
+  }
+  return peakPol;
+}
+
+
+
+
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Reconstruct event
@@ -567,7 +625,8 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numF
 
 	reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
 			fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
-			coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd]);
+			coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd],
+			peakInd);
 
 	// std::cerr << fineMapPeakValues[pol][peakInd] << "\t" << fineMapPeakPhiDegs[pol][peakInd] << "\t"
 	// 	  << fineMapPeakThetaDegs[pol][peakInd] << std::endl << std::endl;
@@ -774,12 +833,18 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
     if(ptr->lastEventUpsampleCorrelated[pol][combo]!=ptr->eventNumber[pol]){
       Int_t ant1 = ptr->comboToAnt1s.at(combo);
       Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    
+      
+      // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
+      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
+      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
+      // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
       FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-				ptr->fftsPadded[pol][ant2],
-				ptr->fftsPadded[pol][ant1],
-				ptr->crossCorrelationsUpsampled[pol][combo],
-				threadInd);
+      				ptr->fftsPadded[pol][ant2],
+      				ptr->fftsPadded[pol][ant1],
+      				ptr->crossCorrelationsUpsampled[pol][combo],
+      				threadInd);
+      
+      
 
       // experiment, copy negative times to behind positive times...
       for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
@@ -807,10 +872,15 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
       Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
       FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-				ptr->fftsPadded[pol][ant2],
-				ptr->fftsPadded[pol][ant1],
-				ptr->crossCorrelationsUpsampled[pol][combo],
-				threadInd);
+      				ptr->fftsPadded[pol][ant2],
+      				ptr->fftsPadded[pol][ant1],
+      				ptr->crossCorrelationsUpsampled[pol][combo],
+      				threadInd);
+      // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
+      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
+      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
+      // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
+      
 
       // experiment, copy negative times to behind positive times...
       for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
@@ -858,10 +928,10 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
     FancyFFTs::crossCorrelate(ptr->numSamples,
-			      ptr->ffts[pol][ant2],
-			      ptr->ffts[pol][ant1],
-			      ptr->crossCorrelations[pol][combo],
-			      threadInd);
+    			      ptr->ffts[pol][ant2],
+    			      ptr->ffts[pol][ant1],
+    			      ptr->crossCorrelations[pol][combo],
+    			      threadInd);    
 
     // experiment, copy negative times to behind positive times...
     for(Int_t samp=0; samp < ptr->numSamples; samp++){
@@ -887,7 +957,48 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 
 //---------------------------------------------------------------------------------------------------------
 /**
- * @brief Static member function which generates the finely binned set of cross correlations from the FFTs held in memory.
+ * @brief Function which generates the finely binned set of cross correlations from upsampling the coarse cross-correlations with Akima interpolation. Don't use this.
+ *
+ * @param pol tells CrossCorrelator to only do this polarization.
+ * @param phiSector is used to figure out which finely binned cross correlations are required.
+ */
+void CrossCorrelator::akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
+
+  threadPhiSector = phiSector;
+  threadPol = pol;
+
+  const std::vector<Int_t>* combosToUse = &combosToUseGlobal[phiSector];
+  for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+    Int_t combo = combosToUse->at(comboInd);
+
+    if(lastEventUpsampleCorrelated[pol][combo]!=eventNumber[pol]){
+      if(corrInterp==NULL){
+	ccTimes.reserve(numSamples);
+	for(int samp=0; samp < numSamples; samp++){
+	  Int_t offset = samp - numSamples/2;
+	  ccTimes.push_back(offset*nominalSamplingDeltaT);
+	}
+	ccMaxTime = ccTimes.at(numSamples-1);
+	corrInterp = new ROOT::Math::Interpolator(ccTimes.size(), ROOT::Math::Interpolation::kAKIMA_PERIODIC);
+	
+      }
+      corrInterp->SetData(ccTimes.size(), &ccTimes[0], crossCorrelations[pol][combo]);
+
+      for(Int_t samp=0; samp < numSamplesUpsampled; samp++){
+	double t = samp*correlationDeltaT;
+	crossCorrelationsUpsampled[pol][combo][samp] = t <= ccMaxTime ? corrInterp->Eval(t) : 0;	
+      }
+    }
+  }
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Function which launches threads 
  *
  * @param pol tells CrossCorrelator to only do this polarization.
  * @param phiSector is used to figure out which finely binned cross correlations are required.
@@ -1486,9 +1597,10 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
  * @brief Gets an actual histogram of the zoomed in map.
  *
  * @param pol is the polarization
+ * @param peakInd picks out which maxima to get, 0 is the largest, 1 is the second largest etc.
  * @returns the TH2D histogram
  */
-TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol){
+TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
   TString name = "hZoom";
   name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
@@ -1514,7 +1626,7 @@ TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol){
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
     // Int_t invertedThetaBin = NUM_BINS_THETA_ZOOM - thetaBin - 1;    
     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-      hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][thetaBin][phiBin]);
+      hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][peakInd][thetaBin][phiBin]);
       // hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][invertedThetaBin][phiBin]);
     }
   }  
@@ -1541,12 +1653,7 @@ TH2D* CrossCorrelator::getZoomMap(AnitaPol::AnitaPol_t pol){
 TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 				       Double_t& peakThetaDeg){
 
-  // return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, ALL_PHI_TRIGS,
-  // 			   kGlobal, kZoomedOut);
-  
-  // std::cerr << "Global image is currently not functional: returning triggered image." << std::endl;
   return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg);
-  // return makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, 0xffff);
 }
 
 
@@ -1582,11 +1689,6 @@ TH2D* CrossCorrelator::makeGlobalImage(AnitaPol::AnitaPol_t pol){
 TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 					  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 					  UShort_t l3TrigPattern){
-
-  // return makeImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg,
-  // 			   l3TrigPattern, kTriggered, kZoomedOut);
-
-  // std::cout << __PRETTY_FUNCTION__ << "\t" << l3TrigPattern << std::endl;
   return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern);
 }
 
@@ -1609,9 +1711,6 @@ TH2D* CrossCorrelator::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& im
 TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol,
 				       Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
-
-  // return makeZoomImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, 0,
-  // 			       kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
 
   reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
 		  zoomCenterPhiDeg, zoomCenterThetaDeg);  
@@ -1638,9 +1737,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol,
 TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
 				       Double_t& peakThetaDeg, UShort_t l3TrigPattern,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
-
-  // return makeZoomImageThreaded(pol, 0, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern,
-  // 			       kTriggered, kZoomedIn, zoomCenterPhiDeg, zoomCenterThetaDeg);
   reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
 		  zoomCenterPhiDeg, zoomCenterThetaDeg);  
   return getZoomMap(pol);
@@ -1840,15 +1936,17 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 				      Double_t zoomCenterPhiDeg,
-				      Double_t zoomCenterThetaDeg){
+				      Double_t zoomCenterThetaDeg,
+				      Int_t peakIndex){
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
   if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
      zoomCenterPhiDeg >= 500 || zoomCenterThetaDeg >= 500){
 
-    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << ". zoomCenterPhiDeg = "
-	      << zoomCenterPhiDeg << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
-	      << " these values look suspicious so I'm skipping this reconstruction." << std::endl;
+    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
+	      << ". zoomCenterPhiDeg = " << zoomCenterPhiDeg
+	      << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
+	      << " ...these values look suspicious so I'm skipping this reconstruction." << std::endl;
     imagePeak = -9999;
     peakPhiDeg = -9999;
     peakThetaDeg = -9999;
@@ -1856,15 +1954,13 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
   }
   
   threadPol = pol;
+  threadPeakIndex = peakIndex; // used to indentify the map
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
-  // Int_t phiSector = floor(deltaPhiDegPhi0)/PHI_RANGE;
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);  
-  // std::cout << "is it the phi-sector? " << phiSector << std::endl;
   doUpsampledCrossCorrelationsThreaded(pol, phiSector); // sets threadPhiSector
-
-  // std::cout << deltaPhiDegPhi0 << "\t" << zoomCenterPhiDeg << "\t" << phiSector << std::endl;
+  // akimaUpsampleCrossCorrelations(pol, phiSector); // sets threadPhiSector  
 
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
@@ -1896,13 +1992,84 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
   
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
+  Int_t peakPhiBin, peakThetaBin;
   for(Long_t threadInd=0; threadInd<NUM_THREADS; threadInd++){
     if(threadImagePeakZoom[threadInd] > imagePeak){
       imagePeak = threadImagePeakZoom[threadInd];
       peakPhiDeg = threadPeakPhiDegZoom[threadInd];
       peakThetaDeg = threadPeakThetaDegZoom[threadInd];
+      peakPhiBin = threadPeakPhiBinZoom[threadInd];
+      peakThetaBin = threadPeakThetaBinZoom[threadInd];
     }
   }
+
+  const int numAkimaBins = 5;
+
+  Int_t startThetaBin = peakThetaBin - numAkimaBins/2;
+  if(startThetaBin < 0){
+    startThetaBin = 0;
+  }
+  Int_t endThetaBin = startThetaBin + numAkimaBins;
+  if(endThetaBin >= NUM_BINS_THETA_ZOOM){
+    endThetaBin = NUM_BINS_THETA_ZOOM - 1;
+    startThetaBin = endThetaBin - numAkimaBins;
+  }
+  std::vector<Double_t> thetaVecTheta(numAkimaBins, 0);
+  std::vector<Double_t> thetaVecVals(numAkimaBins, 0);
+  Int_t thetaInd = 0;
+  for(int thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+    thetaVecTheta.at(thetaInd) = zoomThetaMin[pol] + thetaBin*ZOOM_BIN_SIZE_THETA;
+    thetaVecVals.at(thetaInd) = fineMap[pol][peakIndex][thetaBin][peakPhiBin];
+    thetaInd++;
+  }
+  ROOT::Math::Interpolator thetaInterp(thetaVecTheta,thetaVecVals,ROOT::Math::Interpolation::kAKIMA);
+
+  // peakThetaDeg = ;
+
+  double thetaDeg = thetaVecTheta.at(0);
+  double peakTheta = -1;
+  while(thetaDeg <= thetaVecTheta.at(numAkimaBins-1)){
+    Double_t val = thetaInterp.Eval(thetaDeg);
+    if(val > imagePeak){
+      peakTheta = val;
+      peakThetaDeg = thetaDeg;
+    }    
+    thetaDeg += AKIMA_PEAK_INTERP_DELTA_THETA_DEG;    
+  }
+    
+
+  Int_t startPhiBin = peakPhiBin - numAkimaBins/2;
+  if(startPhiBin < 0){
+    startPhiBin = 0;
+  }
+  Int_t endPhiBin = startPhiBin + numAkimaBins;
+  if(endPhiBin >= NUM_BINS_PHI_ZOOM){
+    endPhiBin = NUM_BINS_PHI_ZOOM - 1;
+    startPhiBin = endPhiBin - numAkimaBins;
+  }
+  std::vector<Double_t> phiVecPhi(numAkimaBins, 0);
+  std::vector<Double_t> phiVecVals(numAkimaBins, 0);
+  Int_t phiInd = 0;
+  for(int phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+    phiVecPhi.at(phiInd) = zoomPhiMin[pol] + phiBin*ZOOM_BIN_SIZE_PHI;
+    phiVecVals.at(phiInd) = fineMap[pol][peakIndex][peakThetaBin][phiBin];
+    phiInd++;
+  }
+
+  ROOT::Math::Interpolator phiInterp(phiVecPhi,phiVecVals,ROOT::Math::Interpolation::kAKIMA);
+
+  double phiDeg = phiVecPhi.at(0);
+  double peakPhi = -1;
+  while(phiDeg <= phiVecPhi.at(numAkimaBins-1)){
+    Double_t val = phiInterp.Eval(phiDeg);
+    if(val > peakPhi){
+      peakPhi = val;
+      peakPhiDeg = phiDeg;
+    }    
+    phiDeg += AKIMA_PEAK_INTERP_DELTA_PHI_DEG;    
+  }
+
+  imagePeak = peakTheta > peakPhi ?  peakTheta : peakPhi;  
 }
 
 
@@ -1925,18 +2092,20 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   Long_t threadInd = args->threadInd;
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
+  Int_t peakIndex = ptr->threadPeakIndex;
 
-  // const Int_t numThetaBinsPerThread = NUM_BINS_THETA_ZOOM/NUM_THREADS;
-  // const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
-  // const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
-  // const Int_t startPhiBin = 0;
-  // const Int_t endPhiBin = NUM_BINS_PHI_ZOOM;
+  const Int_t numThetaBinsPerThread = NUM_BINS_THETA_ZOOM/NUM_THREADS;
+  const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
+  const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
+  const Int_t startPhiBin = 0;
+  const Int_t endPhiBin = NUM_BINS_PHI_ZOOM;
+  
 
-  const Int_t numPhiBinsPerThread = NUM_BINS_PHI_ZOOM/NUM_THREADS;
-  const Int_t startThetaBin = 0;
-  const Int_t endThetaBin = NUM_BINS_THETA_ZOOM;
-  const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
-  const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
+  // const Int_t numPhiBinsPerThread = NUM_BINS_PHI_ZOOM/NUM_THREADS;
+  // const Int_t startThetaBin = 0;
+  // const Int_t endThetaBin = NUM_BINS_THETA_ZOOM;
+  // const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
+  // const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
 
   // TThread::Lock();
   // std::cerr << threadInd << "\t" << startPhiBin << "\t" << endPhiBin << std::endl;
@@ -1956,10 +2125,10 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      ptr->fineMap[pol][thetaBin][phiBin]=0;
+      ptr->fineMap[pol][peakIndex][thetaBin][phiBin]=0;
     }
   }
-
+  
   const Int_t offset = ptr->numSamplesUpsampled/2;
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
@@ -1974,13 +2143,8 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
 	Double_t deltaT = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
 
-	if(kUseOffAxisDelay != 0){
-	  deltaT += kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd];
-	}
+	deltaT += kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0;
 	
-	// (int) x - (x < (int) x)
-	// Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
-	// Int_t offsetLow = floor(deltaT/ptr->correlationDeltaT);
 	Double_t offsetLowDouble = deltaT/ptr->correlationDeltaT;
 
 	// hack for floor() 
@@ -1993,7 +2157,7 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 	Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 	Double_t cInterp = deltaT*(c2 - c1) + c1;
 
-	ptr->fineMap[pol][thetaBin][phiBin] += cInterp;
+	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
       }
     }
   }    
@@ -2001,13 +2165,13 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	ptr->fineMap[pol][thetaBin][phiBin] /= combosToUse->size();
+	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= combosToUse->size();
       }
 
-      if(ptr->fineMap[pol][thetaBin][phiBin] > ptr->threadImagePeakZoom[threadInd]){
-	ptr->threadImagePeakZoom[threadInd] = ptr->fineMap[pol][thetaBin][phiBin];
+      if(ptr->fineMap[pol][peakIndex][thetaBin][phiBin] > ptr->threadImagePeakZoom[threadInd]){
+	ptr->threadImagePeakZoom[threadInd] = ptr->fineMap[pol][peakIndex][thetaBin][phiBin];
 	peakPhiBin = phiBin;
-	peakThetaBin = thetaBin;
+	peakThetaBin = thetaBin;	
       }
     }
   }
@@ -2018,7 +2182,9 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
 
   ptr->threadPeakPhiDegZoom[threadInd] = ptr->zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI;
   ptr->threadPeakThetaDegZoom[threadInd] = ptr->zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;  
-
+  ptr->threadPeakPhiBinZoom[threadInd] = peakPhiBin;
+  ptr->threadPeakThetaBinZoom[threadInd] = peakThetaBin;
+  
   return 0;
   
 }
@@ -2161,6 +2327,7 @@ TGraph* CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol
   std::vector<Double_t> offsets = std::vector<Double_t>(numSamps, 0);
   std::vector<Double_t> corrs = std::vector<Double_t>(numSamps, 0);
 
+  // put the correlations in, in time order in memory
   for(Int_t i=0; i<numSamps; i++){
     Int_t offset = (i - numSamps/2);
     offsets.at(i) = offset*graphDt;
@@ -2448,4 +2615,3 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   }
   return grCoherent;  
 }
-

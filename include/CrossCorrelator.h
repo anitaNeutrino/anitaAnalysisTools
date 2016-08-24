@@ -32,19 +32,33 @@
 
 
 
+// Anita & Geometry definitions
+#define NUM_POL AnitaPol::kNotAPol
+#define NUM_RING AnitaRing::kNotARing
+#define DEGREES_IN_CIRCLE 360
+
+#define MAX_NUM_PEAKS 5
+#define PEAK_PHI_DEG_RANGE 10
+#define PEAK_THETA_DEG_RANGE 10
+
+#define SPEED_OF_LIGHT 2.99792458e8
+#define SPEED_OF_LIGHT_NS 0.299792458
+
+
 // Number of phi-sectors to cross correlate between
 #define DELTA_PHI_SECT 2
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
-#define NUM_THREADS 4
+#define NUM_THREADS 8
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
-#define UPSAMPLE_FACTOR 40
+#define UPSAMPLE_FACTOR 10
+// #define UPSAMPLE_FACTOR 40
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 #define PAD_FACTOR 2
-#define GETNUMFREQS(n)((n)/2+1)
+#define GET_NUM_FREQS(n)((n)/2+1)
 
 // Image definitions
 #define NUM_BINS_THETA 100
@@ -52,32 +66,27 @@
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
 
-#define NUM_BINS_THETA_ZOOM 200
-#define NUM_BINS_PHI_ZOOM 200
-#define ZOOM_BIN_SIZE_PHI 0.05
-#define ZOOM_BIN_SIZE_THETA 0.05
+// #define NUM_BINS_THETA_ZOOM 200
+// #define NUM_BINS_PHI_ZOOM 200
+// #define ZOOM_BINS_PER_DEGREE_PHI 20
+// #define ZOOM_BINS_PER_DEGREE_THETA 20
+
+#define NUM_BINS_THETA_ZOOM 40
+#define NUM_BINS_PHI_ZOOM 40
+#define ZOOM_BINS_PER_DEGREE_PHI 4
+#define ZOOM_BINS_PER_DEGREE_THETA 4
+
+// angular distance to traverse akima fits along peak
+#define AKIMA_PEAK_INTERP_DELTA_THETA_DEG 0.05
+#define AKIMA_PEAK_INTERP_DELTA_PHI_DEG 0.05
+
+#define ZOOM_BIN_SIZE_PHI (1./ZOOM_BINS_PER_DEGREE_PHI)
+#define ZOOM_BIN_SIZE_THETA (1./ZOOM_BINS_PER_DEGREE_THETA)
 #define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
 #define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
 
-// #define NUM_BINS_PHI_ZOOM_TOTAL 7200
-// #define NUM_BINS_THETA_ZOOM_TOTAL 3000
-// #define NUM_BINS_PHI_ZOOM_TOTAL (floor(360./ZOOM_BIN_SIZE_PHI)+NUM_BINS_PHI_ZOOM)
-// #define NUM_BINS_THETA_ZOOM_TOTAL (floor(THETA_RANGE/ZOOM_BIN_SIZE_THETA)+NUM_BINS_THETA_ZOOM)
-
-#define NUM_BINS_PHI_ZOOM_TOTAL (7200 + NUM_BINS_PHI_ZOOM)
-#define NUM_BINS_THETA_ZOOM_TOTAL (3000 + NUM_BINS_THETA_ZOOM)
-
-// Anita Geometry definitions, shouldn't really be here
-#define NUM_POL AnitaPol::kNotAPol
-#define NUM_RING AnitaRing::kNotARing
-#define DEGREES_IN_CIRCLE 360
-
-#define MAX_NUM_PEAKS 2
-#define PEAK_PHI_DEG_RANGE 10
-#define PEAK_THETA_DEG_RANGE 10
-
-#define SPEED_OF_LIGHT 2.99792458e8
-#define SPEED_OF_LIGHT_NS 0.299792458
+#define NUM_BINS_PHI_ZOOM_TOTAL (DEGREES_IN_CIRCLE*ZOOM_BINS_PER_DEGREE_PHI + NUM_BINS_PHI_ZOOM)
+#define NUM_BINS_THETA_ZOOM_TOTAL (THETA_RANGE*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
 
 #define ALL_PHI_TRIGS 0xffff
 
@@ -228,6 +237,7 @@ public:
   void correlateEvent(UsefulAnitaEvent* realEvent);
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+  AnitaPol::AnitaPol_t reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);  
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
 
@@ -240,7 +250,8 @@ public:
 
   
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
-  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
+  void akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector); // akima interp
+  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
 
   
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
@@ -281,13 +292,14 @@ public:
 	       UShort_t l3TrigPattern=ALL_PHI_TRIGS);
     
 
-  TH2D* getZoomMap(AnitaPol::AnitaPol_t pol);
+  TH2D* getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd=0);
   
   void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 		   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   void reconstructZoom(AnitaPol::AnitaPol_t pol,
 		       Double_t& imagePeak, Double_t& peakPhiDeg,
-		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0);
+		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0,
+		       Int_t peakIndex = 0);
   
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
   			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
@@ -359,11 +371,11 @@ public:
   Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
-  Double_t fineMap[NUM_POL][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
+  Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
   
-  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GETNUMFREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
+  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
 
-  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GETNUMFREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
+  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
@@ -407,15 +419,18 @@ public:
   Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
   
   AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
+  Int_t threadPeakIndex; //!< Which fine peak are we on
   UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
   Int_t threadPhiSector; //!< phi-sector to use in thread functions.  
   Double_t threadImagePeak[NUM_THREADS]; //!< Store image peaks found by different threads.
   Double_t threadPeakPhiDeg[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
   Double_t threadPeakThetaDeg[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
-
   Double_t threadImagePeakZoom[NUM_THREADS]; //!< Store image peaks found by different threads.
   Double_t threadPeakPhiDegZoom[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
   Double_t threadPeakThetaDegZoom[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
+  Int_t threadPeakPhiBinZoom[NUM_THREADS]; //!< Store phi bin of image peaks found by different threads.
+  Int_t threadPeakThetaBinZoom[NUM_THREADS]; //!< Store theta bin of image peaks found by different threads.
+  
   
   std::vector<TThread*> mapThreads; //!< TThreads for doing interferometric map making.
   std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.
@@ -428,6 +443,13 @@ public:
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
 
+
+  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
+  Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
+  Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
+  Double_t zoomPhiMin[NUM_POL]; //!< For the current map
+  Double_t zoomThetaMin[NUM_POL]; //!< For the current map
+  
 private:
 
   //--------------------------------------------------------------------------------------------------------
@@ -436,14 +458,12 @@ private:
   
   std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
 
-  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
-  Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
-  Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
-  Double_t zoomPhiMin[NUM_POL]; //!< For the current map
-  Double_t zoomThetaMin[NUM_POL]; //!< For the current map
 
   std::vector<SimpleNotch> allChannelNotches; //!< Holds notches to be applied to all channels for all events (e.g. satellite filters).
-
+ 
+  ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);  
+  std::vector<double> ccTimes;
+  double ccMaxTime;
   
 };
 #endif
