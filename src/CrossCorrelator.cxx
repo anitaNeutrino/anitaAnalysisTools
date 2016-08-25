@@ -1946,7 +1946,8 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
     std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
 	      << ". zoomCenterPhiDeg = " << zoomCenterPhiDeg
 	      << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
-	      << " ...these values look suspicious so I'm skipping this reconstruction." << std::endl;
+	      << " ...these values look suspicious so I'm skipping this reconstruction."
+	      << " eventNumber = " << eventNumber[pol] << std::endl;
     imagePeak = -9999;
     peakPhiDeg = -9999;
     peakThetaDeg = -9999;
@@ -2466,7 +2467,11 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 					    Double_t& snr,
 					    Int_t nSamp){
 
-  // std::cout << phiDeg << "\t" << thetaDeg << std::endl;
+  // I can get an out of range error (I think) in the 
+  if(phiDeg < -500 || thetaDeg < -500 || phiDeg >= 500 || thetaDeg >= 500){
+    std::cerr << "Requesting coherently summed waveform with implausible incoming angle." << std::endl;
+    return NULL;
+  }
   
   Double_t theDeltaT = nSamp == numSamples ? nominalSamplingDeltaT : correlationDeltaT;
   

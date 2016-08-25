@@ -1070,19 +1070,21 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
     }
   }
 
-  if(gr->GetY()[extremaSamps.at(maxSampInd)] > gr->GetY()[extremaSamps.at(maxSampInd+1)]){
-    maxY = gr->GetY()[extremaSamps.at(maxSampInd)];
-    maxX = gr->GetX()[extremaSamps.at(maxSampInd)];
+  if(maxSampInd > -1){
+    if(gr->GetY()[extremaSamps.at(maxSampInd)] > gr->GetY()[extremaSamps.at(maxSampInd+1)]){
+      maxY = gr->GetY()[extremaSamps.at(maxSampInd)];
+      maxX = gr->GetX()[extremaSamps.at(maxSampInd)];
 
-    minY = gr->GetY()[extremaSamps.at(maxSampInd+1)];
-    minX = gr->GetX()[extremaSamps.at(maxSampInd+1)];
-  }
-  else{
-    maxY = gr->GetY()[extremaSamps.at(maxSampInd+1)];
-    maxX = gr->GetX()[extremaSamps.at(maxSampInd+1)];
+      minY = gr->GetY()[extremaSamps.at(maxSampInd+1)];
+      minX = gr->GetX()[extremaSamps.at(maxSampInd+1)];
+    }
+    else{
+      maxY = gr->GetY()[extremaSamps.at(maxSampInd+1)];
+      maxX = gr->GetX()[extremaSamps.at(maxSampInd+1)];
 
-    minY = gr->GetY()[extremaSamps.at(maxSampInd)];
-    minX = gr->GetX()[extremaSamps.at(maxSampInd)];
+      minY = gr->GetY()[extremaSamps.at(maxSampInd)];
+      minX = gr->GetX()[extremaSamps.at(maxSampInd)];
+    }
   }
 }
 
