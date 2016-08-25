@@ -483,9 +483,11 @@ void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t a
 void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 				     Double_t* phiDegs, Double_t* thetaDegs){
 
+  // In this function I want to find numPeak peaks and set an exclusion zone around each peak
+  // so that the next peak isn't just a neighbour of a true peak.
 
-  // You can have numPeaks less than or requal MAX_NUM_PEAKS, but not greater than.
-  if(numPeaks > MAX_NUM_PEAKS){    
+  if(numPeaks > MAX_NUM_PEAKS){
+    // You can have numPeaks less than or requal MAX_NUM_PEAKS, but not greater than.    
     std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
 	      << ". numPeaks = " << numPeaks << ", CrossCorrelator compiled with MAX_NUM_PEAKS  = "
 	      << MAX_NUM_PEAKS << ", setting numPeaks = " << MAX_NUM_PEAKS << std::endl;
@@ -495,52 +497,111 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
   // Set not crazy, but still debug visible values for peak values/location
   // Believe -DBL_MAX was causing me some while loop issues in RootTools::getDeltaAngleDeg(...)
   // which has an unrestricted while loop inside.
-  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){    
+  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
     peakValues[peakInd] = -999;
     phiDegs[peakInd] = -999;
     thetaDegs[peakInd] = -999;
   }
 
+  // As we start, all regions are allowed.
   Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
   for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
     for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-      allowedBins[phiBin][thetaBin] = 1; // everything is allowed
+      allowedBins[phiBin][thetaBin] = 1;
     }
   }
 
   for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
+    Int_t gotHere = 0;    
     for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
       for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	if(coarseMap[pol][phiBin][thetaBin] > peakValues[peakInd]){
-	  if(allowedBins[phiBin][thetaBin] > 0){
-	    peakValues[peakInd] = coarseMap[pol][phiBin][thetaBin];
-	    phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
-	    thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+
+	if(allowedBins[phiBin][thetaBin] > 0){
+	  // then we are in an allowed region
+
+	  Double_t mapValue = coarseMap[pol][phiBin][thetaBin];
+	  if(mapValue > peakValues[peakInd]){
+	    // higher than the current highest map value
+
+	    gotHere = 1;	    
+	    // Time for something a little tricky to read...
+	    // I want to stop bins that are on the edge of allowed regions registering as peaks
+	    // if the bins just inside the disallowed regions are higher valued.
+	    // To ensure a local maxima so I am going to ensure that all neighbouring
+	    // bins are less than the current value.
+	    // Checking the 3x3 grid around the current bin (wrapping in phi).
+
+	    // Wrap phi edges
+	    Int_t lastPhiBin = phiBin != 0 ? phiBin - 1 : (NUM_BINS_PHI*NUM_PHI) - 1;
+	    Int_t nextPhiBin = phiBin != (NUM_BINS_PHI*NUM_PHI) - 1 ? phiBin + 1 : 0;
+
+
+	    // Is current bin higher than phi neighbours in same theta row?
+	    if(coarseMap[pol][lastPhiBin][thetaBin] < mapValue &&
+	       coarseMap[pol][nextPhiBin][thetaBin] < mapValue){
+	      
+	      gotHere = 2;
+	      // So far so good, now check theta neigbours
+	      // This doesn't wrap, so I will allow edge cases to pass as maxima
+	      Int_t nextThetaBin = thetaBin != (NUM_BINS_THETA) - 1 ? thetaBin+1 : thetaBin;
+	      Int_t lastThetaBin = thetaBin != 0 ? thetaBin-1 : thetaBin;
+
+	      // Check theta bins below
+	      gotHere = 3;
+	      if(thetaBin == 0 || (coarseMap[pol][lastPhiBin][lastThetaBin] < mapValue &&
+				   coarseMap[pol][phiBin][lastThetaBin] < mapValue &&
+				   coarseMap[pol][nextPhiBin][lastThetaBin] < mapValue)){
+
+		// Check theta bins above
+		gotHere = 4;
+		if(thetaBin == NUM_BINS_THETA-1 || (coarseMap[pol][lastPhiBin][nextThetaBin] < mapValue &&
+						    coarseMap[pol][phiBin][nextThetaBin] < mapValue &&
+						    coarseMap[pol][nextPhiBin][nextThetaBin] < mapValue)){
+
+		  // Okay okay okay... you're a local maxima, you can be my next peak.
+		  peakValues[peakInd] = coarseMap[pol][phiBin][thetaBin];
+		  phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
+		  thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+		}
+	      }
+	    }
 	  }
 	}
-      }
-    }
+      } // thetaBin
+    } // phiBin
 
-    // std::cerr << pol << "\t" << peakInd << "\t" << peakValues[peakInd] << "\t"
-    // 	      << phiDegs[peakInd] << "\t" << thetaDegs[peakInd] << std::endl;
-    if(peakValues[peakInd] >= 0){
+    // Still inside the peakInd loop
+
+    // Here I set the exclusion zone around the peak bin.
+    if(peakValues[peakInd] >= -999){ // Checks that a peak was found, probably unnecessary
+
       for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-	Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
 
-	if(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg) < PEAK_PHI_DEG_RANGE){
+	Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+	Double_t absDeltaPhi = TMath::Abs(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg));
+	if(absDeltaPhi < PEAK_PHI_DEG_RANGE){
 
 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	    Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
 
-	    if(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg) < PEAK_THETA_DEG_RANGE){
-	      // Now this region in phi/theta is disallowed when looking for peaks
+	    Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+	    Double_t absDeltaTheta = TMath::Abs(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg));
+	    if(absDeltaTheta < PEAK_THETA_DEG_RANGE){
+
+	      // Now this region in phi/theta is disallowed on the next loop through...
 	      allowedBins[phiBin][thetaBin] = 0; 
 	    }
 	  }
 	}
       }
     }
-  }
+    if(peakValues[peakInd] < 0){      
+      std::cerr << "Peak " << peakInd << " = " << peakValues[peakInd] << "\t" << gotHere << std::endl;
+      for(int pi=0; pi <= peakInd; pi++){
+	std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
+      }
+    }
+
+  }  
 }
 
 
