@@ -348,6 +348,47 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 //---------------------------------------------------------------------------------------------------------
 /** 
+ * @brief Adds my default analysis notches, this will probably change with time.
+ * Currently I have several analysis scripts in which I set this and sometimes want to set these up in =MagicDisplay=, which is quite tedious. Hopefully not any more.
+ * 
+ * @return the size of the allChannelNotches vector.
+ */
+UInt_t CrossCorrelator::setDefaultNotches(){
+
+  // Just a little wrapper so I can only call this if there aren't any other notches.
+  // Is this a good idea? 
+  if(allChannelNotches.size()==0){
+    
+    CrossCorrelator::SimpleNotch notch260("n260Notch", "260MHz Satellite And 200MHz Notch Notch",
+					  260-26, 260+26);
+    CrossCorrelator::SimpleNotch notch370("n370Notch", "370MHz Satellite Notch",
+					  370-26, 370+26);
+    CrossCorrelator::SimpleNotch notch400("n400Notch", "400 MHz Satellite Notch",
+					  400-10, 410);  
+    CrossCorrelator::SimpleNotch notch762("n762Notch", "762MHz Satellite Notch (one bin wide)",
+					  762-8, 762+8);
+    CrossCorrelator::SimpleNotch notch200("n200Notch", "200 MHz high pass band",
+					  0, 200);
+    CrossCorrelator::SimpleNotch notch1200("n1200Notch", "1200 MHz low pass band",
+					   1200, 9999);
+  
+    addNotch(notch260);
+    addNotch(notch370);
+    addNotch(notch400);  
+    addNotch(notch762);
+    addNotch(notch200);
+    addNotch(notch1200);
+
+  }
+  return allChannelNotches.size();  
+}
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
  * @brief Adds a notch to the list of SimpleNotches which get applied to every channel, every event.
  * 
  * @param simpleNotch the SimpleNotch object to add to CrossCorrelator

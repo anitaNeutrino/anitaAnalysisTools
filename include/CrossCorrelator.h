@@ -339,6 +339,7 @@ public:
 
 
   UInt_t addNotch(SimpleNotch simpleNotch);
+  UInt_t setDefaultNotches();
   void printNotchInfo();
 
 
