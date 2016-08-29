@@ -12,10 +12,7 @@
 #include "FancyFFTs.h"
 #include "AnitaConventions.h"
 #include "RawAnitaHeader.h"
-
-
-
-// #include "CrossCorrelator.h"
+#include "CrossCorrelator.h"
 
 /**
  * @namespace Analysis Cuts 
