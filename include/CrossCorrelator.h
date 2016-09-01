@@ -40,6 +40,7 @@
 #define MAX_NUM_PEAKS 5
 #define PEAK_PHI_DEG_RANGE 10
 #define PEAK_THETA_DEG_RANGE 10
+// #define PEAK_THETA_DEG_RANGE 180
 
 #define SPEED_OF_LIGHT 2.99792458e8
 #define SPEED_OF_LIGHT_NS 0.299792458
@@ -50,7 +51,7 @@
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
-#define NUM_THREADS 4
+#define MAX_THREADS 8
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
@@ -419,25 +420,7 @@ public:
   Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
   Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
   
-  AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
-  Int_t threadPeakIndex; //!< Which fine peak are we on
-  UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
-  Int_t threadPhiSector; //!< phi-sector to use in thread functions.  
-  Double_t threadImagePeak[NUM_THREADS]; //!< Store image peaks found by different threads.
-  Double_t threadPeakPhiDeg[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
-  Double_t threadPeakThetaDeg[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
-  Double_t threadImagePeakZoom[NUM_THREADS]; //!< Store image peaks found by different threads.
-  Double_t threadPeakPhiDegZoom[NUM_THREADS]; //!< Store phi of image peaks found by different threads.
-  Double_t threadPeakThetaDegZoom[NUM_THREADS]; //!< Store theta of image peaks found by different threads.
-  Int_t threadPeakPhiBinZoom[NUM_THREADS]; //!< Store phi bin of image peaks found by different threads.
-  Int_t threadPeakThetaBinZoom[NUM_THREADS]; //!< Store theta bin of image peaks found by different threads.
   
-  
-  std::vector<TThread*> mapThreads; //!< TThreads for doing interferometric map making.
-  std::vector<TThread*> corrThreads; //!< TThreads for doing cross correlations.
-  std::vector<TThread*> upsampledCorrThreads; //!< TThreads for doing upsampled cross correlations.
-
-
   Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
   Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
@@ -450,21 +433,39 @@ public:
   Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
   Double_t zoomPhiMin[NUM_POL]; //!< For the current map
   Double_t zoomThetaMin[NUM_POL]; //!< For the current map
+
+  Int_t getNumThreads();
+  Int_t setNumThreads(Int_t numDesiredThreads);
   
 private:
 
   //--------------------------------------------------------------------------------------------------------
   // Private member variables
   //--------------------------------------------------------------------------------------------------------
+
+  Int_t numThreads;//!< Number of threads to use in threaded functions.
   
-  std::vector<threadArgs> threadArgsVec; //!< Vector of threadArgs, accessed by threaded functions so they can work out what portion of the work are supposed to be doing.
-
-
   std::vector<SimpleNotch> allChannelNotches; //!< Holds notches to be applied to all channels for all events (e.g. satellite filters).
  
   ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);  
   std::vector<double> ccTimes;
   double ccMaxTime;
+
+
+  AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
+  Int_t threadPeakIndex; //!< Which fine peak are we on
+  UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
+  Int_t threadPhiSector; //!< phi-sector to use in thread functions.  
+  std::vector<Double_t> threadImagePeak; //!< Store image peaks found by different threads.
+  std::vector<Double_t> threadPeakPhiDeg; //!< Store phi of image peaks found by different threads.
+  std::vector<Double_t> threadPeakThetaDeg; //!< Store theta of image peaks found by different threads.
+  std::vector<Double_t> threadImagePeakZoom; //!< Store image peaks found by different threads.
+  std::vector<Double_t> threadPeakPhiDegZoom; //!< Store phi of image peaks found by different threads.
+  std::vector<Double_t> threadPeakThetaDegZoom; //!< Store theta of image peaks found by different threads.
+  std::vector<Int_t> threadPeakPhiBinZoom; //!< Store phi bin of image peaks found by different threads.
+  std::vector<Int_t> threadPeakThetaBinZoom; //!< Store theta bin of image peaks found by different threads.
+  
+  
   
 };
 #endif

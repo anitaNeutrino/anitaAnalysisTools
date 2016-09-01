@@ -18,19 +18,29 @@ std::map<std::pair<int, int>, complex<double>*> fComplex;
 */
 bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
 
+  // std::cout << "threadInd = " << threadInd << "\tfComplex[key] = " << tempVals << std::endl << std::endl;
+
   std::pair<int, int> key(len, threadInd);
   std::map<std::pair<int, int>,fftw_plan>::iterator it = fRealToComplex.find(key);
   if(it==fRealToComplex.end()){
     // std::cout << len << "\t" << threadInd << std::endl;
+    TThread::Lock();
+    
     fReals[key] = (double*) fftw_malloc(sizeof(double)*len);
     fComplex[key] = (complex<double>*) fftw_malloc(sizeof(fftw_complex)*len);
     fRealToComplex[key] = fftw_plan_dft_r2c_1d(len,fReals[key],(fftw_complex*)fComplex[key],FFTW_MEASURE);
     fComplexToReal[key] = fftw_plan_dft_c2r_1d(len,(fftw_complex*)fComplex[key],fReals[key],FFTW_MEASURE);
+
+    TThread::UnLock();    
     return true;
   }
   else{
     return false;
   }
+
+
+  
+  
 }
 
 
@@ -671,5 +681,6 @@ double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double
  * @returns a pointer to fftw's internal real array. DO NOT DELETE THIS!
  */
 double* FancyFFTs::getRealArray(std::pair<Int_t, Int_t> key){
+  makeNewPlanIfNeeded(key.first, key.second);
   return fReals[key];
 }
