@@ -13,5 +13,6 @@
 #pragma link C++ class AveragePowerSpectrum+;
 #pragma link C++ class AnitaAveragePowerSpectrum+;
 #pragma link C++ class AntarcticaMapPlotter+;
+#pragma link C++ class AnalysisCuts+;
 #endif
 

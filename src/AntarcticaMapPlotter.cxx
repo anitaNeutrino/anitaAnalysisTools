@@ -36,7 +36,7 @@ AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nB
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Destructor
- * 
+ *
  * Deletes all internal hists and TGraphs, like a good destructor should.
 */
 AntarcticaMapPlotter::~AntarcticaMapPlotter(){
@@ -61,12 +61,12 @@ AntarcticaMapPlotter::~AntarcticaMapPlotter(){
 */
 void AntarcticaMapPlotter::initializeInternals(){
   /* The numbers in this function also come from Matt Mottram or Ryan */
-  
+
   // This image taken from http://earthobservatory.nasa.gov/IOTD/view.php?id=6087
   // TString mapName = "antarcticaMosaic.png";
   TString mapName = "antarcticaIceMapBW.png";
 
-  
+
   // From Ryan
   if(mapName=="antarcticaMosaic.png"){
     TrueScaleLat=71;
@@ -82,7 +82,7 @@ void AntarcticaMapPlotter::initializeInternals(){
     TrueScaleLat=71;
     RadiusOfEarth=6378.1e3; //Metres
     xOffest=375;
-    yOffset=312.5; 
+    yOffset=312.5;
     // xOffest=0;
     // yOffset=0;
     scale=271.5/2.19496e+06;
@@ -100,11 +100,11 @@ void AntarcticaMapPlotter::initializeInternals(){
   }
   else{
     std::cerr << "Warning in " << __FILE__ << "! Unable to open " << mapFileName.Data()
-	      << ", check ANITA_UTIL_INSTALL_DIR environment variable is correctly set" << std::endl; 
+	      << ", check ANITA_UTIL_INSTALL_DIR environment variable is correctly set" << std::endl;
   }
 
   hCurrent = NULL;
-  grCurrent = NULL;  
+  grCurrent = NULL;
 }
 
 
@@ -121,7 +121,7 @@ void AntarcticaMapPlotter::initializeInternals(){
 */
 void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y){
   /* This function, which really does all the hard work, was made either by Matt Mottram or Ryan */
-  
+
   // Negative longitude is west
   // All latitudes assumed south
   Double_t absLat=TMath::Abs(latitude);
@@ -157,7 +157,7 @@ void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longi
 Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t weight){
   Double_t x, y;
   getRelXYFromLatLong(latitude, longitude, x, y);
-  return hCurrent->Fill(x, y, weight); 
+  return hCurrent->Fill(x, y, weight);
 }
 
 
@@ -198,18 +198,23 @@ TCanvas* AntarcticaMapPlotter::DrawHist(TString opt){
 */
 void AntarcticaMapPlotter::DrawTGraph(TString opt){
 
-  TString canName = TString::Format("can%s", grCurrent->GetName());
-  TString canTitle = TString::Format("Canvas of %s", grCurrent->GetTitle());
-  TCanvas* can = new TCanvas(canName, canTitle, (Int_t) xSize, (Int_t) ySize);
-  can->Draw();
-  can->SetTopMargin(0.03);
-  can->SetBottomMargin(0.03);
-  can->SetLeftMargin(0.03);
-  can->SetRightMargin(0.15);
-  if(img){
-    img->Draw("same");
+  if(opt.Contains("same")==false){
+    TString canName = TString::Format("can%s", grCurrent->GetName());
+    TString canTitle = TString::Format("Canvas of %s", grCurrent->GetTitle());
+    TCanvas* can = new TCanvas(canName, canTitle, (Int_t) xSize, (Int_t) ySize);
+    can->Draw();
+    can->SetTopMargin(0.03);
+    can->SetBottomMargin(0.03);
+    can->SetLeftMargin(0.03);
+    can->SetRightMargin(0.15);
+    if(img){
+      img->Draw("same");
+    }
+    grCurrent->Draw(opt + "same");
   }
-  grCurrent->Draw(opt + "same");
+  else{
+    grCurrent->Draw(opt);
+  }
 }
 
 
@@ -225,7 +230,7 @@ void AntarcticaMapPlotter::DrawTGraph(TString opt){
  * @returns 0 on failure (TH2D with name not in* @a hists) and 1 on success.
 */
 Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
-  
+
   std::map<TString, TH2D*>::iterator histItr = hists.find(name);
   Int_t successState = 0;
   if(histItr == hists.end()){
@@ -306,7 +311,7 @@ void AntarcticaMapPlotter::addProfile(TString name, TString title, Int_t nBinsX,
  * @param n is the number of points
  * @param latitudes is a pointer to an array of latitude values
  * @param longitudes is a pointer to an array of longitude values
-*/  
+*/
 void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
 				     Double_t* latitudes, Double_t* longitudes){
 
@@ -317,7 +322,7 @@ void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
       getRelXYFromLatLong(latitudes[i], longitudes[i], xs[i], ys[i]);
     }
     TGraph* theGraph = new TGraph(n, &xs[0], &ys[0]);
-    
+
     theGraph->SetName(name);
     theGraph->SetTitle(title);
     grs[name] = theGraph;
@@ -327,7 +332,7 @@ void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
     std::cerr << "Warning in " << __FILE__ << "! TGraph with name "
 	      << name.Data() << ", already exists!" << std::endl;
     if(n>0){
-      std::cerr << "No points added to " << name.Data() << "!" << std::endl;      
+      std::cerr << "No points added to " << name.Data() << "!" << std::endl;
     }
   }
 }
@@ -345,7 +350,7 @@ void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
  * @return 0 on failure (TGraph with name not in* @a grs) and 1 on success.
 */
 Int_t AntarcticaMapPlotter::setCurrentTGraph(TString name){
-  
+
   std::map<TString, TGraph*>::iterator grItr = grs.find(name);
   Int_t successState = 0;
   if(grItr == grs.end()){
