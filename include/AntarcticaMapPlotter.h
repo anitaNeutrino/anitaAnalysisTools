@@ -2,7 +2,7 @@
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
- Description: 
+ Description:
              Antarctica canvas for plotting locations on the continent class
 ************************************************************************************************************/
 
@@ -32,14 +32,14 @@ class AntarcticaMapPlotter : public TNamed{
 public:
 
   AntarcticaMapPlotter();
-  AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY);  
+  AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
   ~AntarcticaMapPlotter();
 
   void addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
-  void addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY);  
+  void addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
   void addTGraph(TString name, TString title, Int_t n=0, Double_t* latitude=NULL, Double_t* longitude=NULL);
 
-  Int_t setCurrentHistogram(TString name);  
+  Int_t setCurrentHistogram(TString name);
   TCanvas* DrawHist(TString opt);
   TH2D* getCurrentHistogram();
 
@@ -47,13 +47,12 @@ public:
   // Int_t GetN();
   // void SetPoint(Int_t n, Double_t latitude, Double_t longitude);
   Int_t Fill(Double_t latitude, Double_t longitude, Double_t weight=1);
-  
+
   Int_t setCurrentTGraph(TString name);
   void DrawTGraph(TString opt);
   TGraph* getCurrentTGraph();
 
-  
-private:
+
 
   // Image scaling factors
   Double_t TrueScaleLat; //!< ????
@@ -67,7 +66,7 @@ private:
 
   // PNG of antarctica
   TImage *img; //!< The png image of Antarctica.
- 
+
  void getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y);
   void initializeInternals();
 
@@ -76,6 +75,9 @@ private:
 
   std::map<TString, TH2D*> hists; //!< Stored histograms by name
   std::map<TString, TGraph*> grs; //!< Stored graphs by name
+
+private:
+
 
   ClassDef(AntarcticaMapPlotter,2);
 };
