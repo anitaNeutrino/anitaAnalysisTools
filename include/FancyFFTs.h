@@ -21,20 +21,11 @@
 #include "TThread.h"
 
 
-// Needs to be in front of including fftw3.h!
-#ifdef __CINT__
-#ifdef FFTW_64_BIT // Hack for Hawaii install of FFTW. Is there ever a reason to now have this defed? 
-typedef struct {char a[16];} __float128; /* 16 chars have the same size as one __float128 */
-#endif
-#endif 
-
-
 /* 
    Will use std::complex<double> for i/o as should be bit-to-bit identical to typdef fftw_complex double[2].
    So long as <complex> is included in front of fftw3.h.
 */
 #include <complex>
-#include <fftw3.h>
 
 
 
