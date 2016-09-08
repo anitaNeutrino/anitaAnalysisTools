@@ -196,7 +196,7 @@ AnalysisCuts::Status_t AnalysisCuts::applySurfSaturationCut(Double_t maxVolts[][
 
 }
 
-AnalysisCuts::Status_t AnalysisCuts::applySurfSaturationCut(Double_t theMaxVolts, Double_t theMinVolts, Double_t absSumMaxMin){
+AnalysisCuts::Status_t AnalysisCuts::applySurfSaturationCutBetter(Double_t theMaxVolts, Double_t theMinVolts, Double_t absSumMaxMin){
   Status_t status = kPass;
 
   if(theMaxVolts > maxVoltsLimit || theMinVolts < minVoltsLimit || absSumMaxMin > absMaxMinSumLimit){

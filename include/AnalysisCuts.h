@@ -37,7 +37,7 @@ namespace AnalysisCuts{
   static const double minVoltsLimit = -2000;
   static const double absMaxMinSumLimit = 500;
   Status_t applySurfSaturationCut(Double_t maxVolts[][NUM_SEAVEYS], Double_t minVolts[][NUM_SEAVEYS], Double_t& maxMaxVolts, Double_t& minMinVolts, Double_t& absSumMaxMin);
-  Status_t applySurfSaturationCut(Double_t theMaxVolts, Double_t theMinVolts, Double_t absSumMaxMin);
+  Status_t applySurfSaturationCutBetter(Double_t theMaxVolts, Double_t theMinVolts, Double_t absSumMaxMin);
 
 
   static const double ratioCutHigh = 2.8;
