@@ -2,8 +2,8 @@
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
- Description: 
-             A Cross Correlator to interact with the ROOTified ANITA-3 data and do some interferometry. 
+ Description:
+             A Cross Correlator to interact with the ROOTified ANITA-3 data and do some interferometry.
 ***********************************************************************************************************/
 
 #ifndef CROSSCORRELATOR_H
@@ -96,8 +96,8 @@
 /**
  * @class CrossCorrelator
  * @brief A class to take in UsefulAnitaEvents and get interferometric maps with a single function.
- * 
- * Does all the heavy lifting: gets waveforms from a UsefulAnitaEvent, cross correlates them, and produces interferometric maps. 
+ *
+ * Does all the heavy lifting: gets waveforms from a UsefulAnitaEvent, cross correlates them, and produces interferometric maps.
 */
 class CrossCorrelator{
 
@@ -107,34 +107,34 @@ public:
 
 
 
-  
+
   //--------------------------------------------------------------------------------------------------------
   // Classes declared inside this class
   //--------------------------------------------------------------------------------------------------------
-  
 
 
-  
+
+
   //--------------------------------------------------------------------------------------------------------
-  /** 
-   * @class SimpleNotch 
+  /**
+   * @class SimpleNotch
    * @ A class to hold two frequencies, a low notch edge and high notch edge. Should be ROOT read/writable.
    */
   class SimpleNotch : public TNamed{
   public:
     //------------------------------------------------------------------------------------------------------
-    /** 
+    /**
      * @brief Default Constructor for ROOT IO
-     * 
-     */    
+     *
+     */
     SimpleNotch(){
       lowPassFreqMHz=0;
       highPassFreqMHz=0;
     }
     //------------------------------------------------------------------------------------------------------
-    /** 
+    /**
      * @brief Proper Constructor
-     * 
+     *
      * @param name The name of the notch, for ROOT IO
      * @param title The title of the notch, for ROOT IO
      * @param theLowPassFreqMHz The low pass frequency in MHz, i.e. the low edge of the notch (frequencies less than this value ARE NOT filtered, and frequencies greater than and equal to this value ARE filtered)
@@ -150,13 +150,13 @@ public:
       }
     }
     //------------------------------------------------------------------------------------------------------
-    /** 
+    /**
      * @grief Get the notch edge values, retured by reference
-     * 
+     *
      * @param theLowPassFreqMHz gets the theLowPassFreqMHz
      * @param theHighPassFreqMHz get the highPassFreqMHz
      */
-    
+
     void getNotchEdges(Double_t &theLowPassFreqMHz, Double_t& theHighPassFreqMHz) const{
       theLowPassFreqMHz =  lowPassFreqMHz;
       theHighPassFreqMHz = highPassFreqMHz;
@@ -165,17 +165,17 @@ public:
       output << fName << "\t" << fTitle << ": Low Pass = " << lowPassFreqMHz
 	     << " MHz, High Pass = " << highPassFreqMHz << " MHz" << std::endl;
     }
-    
+
   private:
     Double_t lowPassFreqMHz;
     Double_t highPassFreqMHz;
-    ClassDef(SimpleNotch, 1)    
+    ClassDef(SimpleNotch, 1)
   };
 
-  
+
     /**
    * @brief Flag to pass to CrossCorrelator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
-   */  
+   */
   enum mapMode_t{
     kGlobal,
     kTriggered,
@@ -221,24 +221,26 @@ public:
   //--------------------------------------------------------------------------------------------------------
 
 
-  
+
   CrossCorrelator();
   ~CrossCorrelator();
 
   void initializeVariables();
   void printInfo();
-  
+
   void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   Double_t applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch);
+  Double_t applyFilterBits(AnitaPol::AnitaPol_t pol, Int_t ant, TBits* filterBits);
+
   void writeNotchesIfAble();
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
-  
+
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
-  void doFFTs(AnitaPol::AnitaPol_t pol);
-  void correlateEvent(UsefulAnitaEvent* realEvent);
-  void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-  AnitaPol::AnitaPol_t reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);  
+  void doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+  void correlateEvent(UsefulAnitaEvent* realEvent, TBits* filterBits=NULL);
+  void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+  void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+  AnitaPol::AnitaPol_t reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
 
@@ -249,12 +251,12 @@ public:
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
 
 
-  
+
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
   void akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector); // akima interp
-  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
+  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
 
-  
+
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
   // Double_t getDeltaTExpectedFast(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
@@ -282,26 +284,26 @@ public:
   void getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t& value,
 			 Double_t& phiDeg, Double_t& thetaDeg);
   void getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t& value,
-		       Double_t& phiDeg, Double_t& thetaDeg);  
+		       Double_t& phiDeg, Double_t& thetaDeg);
 
 
-  
+
   Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
   TH2D* getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
 	       Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 	       UShort_t l3TrigPattern=ALL_PHI_TRIGS);
-    
+
 
   TH2D* getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd=0);
-  
+
   void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 		   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   void reconstructZoom(AnitaPol::AnitaPol_t pol,
 		       Double_t& imagePeak, Double_t& peakPhiDeg,
 		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0,
 		       Int_t peakIndex = 0);
-  
+
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
   			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
   TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol);
@@ -321,14 +323,14 @@ public:
   TGraph* makeCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
 				       Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);
   TGraph* makeUpsampledCoherentlySummedWaveform(AnitaPol::AnitaPol_t pol, Double_t phiDeg,
-						Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);  
+						Double_t thetaDeg, Int_t maxDeltaPhiSect, Double_t& snr);
   TGraph* makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg,
 			     Int_t maxDeltaPhiSect, Double_t& snr, Int_t nSamp);
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
   static void* makeSomeOfZoomImageThreaded(void* voidPtrArgs);
-  
+
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
 
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
@@ -356,43 +358,43 @@ public:
   //--------------------------------------------------------------------------------------------------------
   // Public member variables
   //--------------------------------------------------------------------------------------------------------
-  
-  
+
+
   TString mapModeNames[kNumMapModes];//!< Maps text to the mapMode_t enum, used for histogram names/titles.
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
-  
+
   // Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
-  Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
+  Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
-  Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
+  Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
 
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
   Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
-  
+
   Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
-  
+
   std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
 
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
-  Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.  
+  Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
   UInt_t eventNumber[NUM_POL]; //!< For tracking event number
   UInt_t lastEventNormalized[NUM_POL]; //!< Prevents cross-correlation of the same event twice
-  UInt_t lastEventUpsampleCorrelated[NUM_POL][NUM_COMBOS]; //!< Prevents upsampled cross-correlation of the same event twice  
+  UInt_t lastEventUpsampleCorrelated[NUM_POL][NUM_COMBOS]; //!< Prevents upsampled cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
   Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
   Int_t numSamples; //!< Number of samples in waveform after padding.
   Int_t numSamplesUpsampled; //!< Number of samples in waveform after padding and up sampling.
   Int_t numCombos; //!< Number of possible antenna pairs, counted during initialization. Should equal NUM_COMBOS.
-  
+
   std::vector<Int_t> comboToAnt1s; //!< Vector mapping combo index to ant1.
   std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
   std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
@@ -409,18 +411,18 @@ public:
   Double_t fineMapPeakPhiDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
   Double_t fineMapPeakThetaDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
-  
+
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
   Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
-  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.  
+  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
   Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
   Double_t offAxisDelays[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
-  
+
   Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
   Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
-  
-  
+
+
   Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
   Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
   Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
@@ -436,7 +438,7 @@ public:
 
   Int_t getNumThreads();
   Int_t setNumThreads(Int_t numDesiredThreads);
-  
+
 private:
 
   //--------------------------------------------------------------------------------------------------------
@@ -444,10 +446,10 @@ private:
   //--------------------------------------------------------------------------------------------------------
 
   Int_t numThreads;//!< Number of threads to use in threaded functions.
-  
+
   std::vector<SimpleNotch> allChannelNotches; //!< Holds notches to be applied to all channels for all events (e.g. satellite filters).
- 
-  ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);  
+
+  ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);
   std::vector<double> ccTimes;
   double ccMaxTime;
 
@@ -455,7 +457,7 @@ private:
   AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
   Int_t threadPeakIndex; //!< Which fine peak are we on
   UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
-  Int_t threadPhiSector; //!< phi-sector to use in thread functions.  
+  Int_t threadPhiSector; //!< phi-sector to use in thread functions.
   std::vector<Double_t> threadImagePeak; //!< Store image peaks found by different threads.
   std::vector<Double_t> threadPeakPhiDeg; //!< Store phi of image peaks found by different threads.
   std::vector<Double_t> threadPeakThetaDeg; //!< Store theta of image peaks found by different threads.
@@ -464,8 +466,8 @@ private:
   std::vector<Double_t> threadPeakThetaDegZoom; //!< Store theta of image peaks found by different threads.
   std::vector<Int_t> threadPeakPhiBinZoom; //!< Store phi bin of image peaks found by different threads.
   std::vector<Int_t> threadPeakThetaBinZoom; //!< Store theta bin of image peaks found by different threads.
-  
-  
-  
+
+
+
 };
 #endif
