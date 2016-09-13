@@ -73,7 +73,9 @@ AnalysisCuts::Status_t AnalysisCuts::L3TriggerDirectionCut(AnitaPol::AnitaPol_t 
   for(int phi=0; phi<NUM_PHI; phi++){
 
     // check against masked phi-sectors
-    UInt_t phiMaskBit = header->isInL1Mask(phi, pol) || header->isInPhiMask(phi, pol);
+    // UInt_t phiMaskBit = header->isInL1Mask(phi, pol) || header->isInPhiMask(phi, pol);
+
+    UInt_t phiMaskBit = header->isInL1MaskOffline(phi, pol) + header->isInPhiMaskOffline(phi, pol);
     if(phiMaskBit > 0 && phiSectorOfPeak==phi){
       peakIsInMaskedPhiSector = true;
     }

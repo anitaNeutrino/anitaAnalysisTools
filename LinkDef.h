@@ -14,5 +14,5 @@
 #pragma link C++ class AnitaAveragePowerSpectrum+;
 #pragma link C++ class AntarcticaMapPlotter+;
 #pragma link C++ class AnalysisCuts+;
+#pragma link C++ enum AnalysisCuts::Status_t;
 #endif
-
