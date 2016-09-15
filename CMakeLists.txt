@@ -57,7 +57,7 @@ if(TARGET AnitaEvent)
 else()
  link_directories(${UTIL_LIB_DIR})
 endif()
-  
+
 
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 
@@ -67,7 +67,7 @@ if( ${ROOT_VERSION} VERSION_GREATER "5.99/99")
     include(${ROOT_USE_FILE})
 else()
 #    include(RootNewMacros)
-     add_definitions(${ROOT_DEFINITIONS})	
+     add_definitions(${ROOT_DEFINITIONS})
 endif()
 
 message("ROOT_INCLUDE_DIRS is set to ${ROOT_INCLUDE_DIRS}")
@@ -77,7 +77,7 @@ include_directories(${PROJECT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${PROJECT_SOURCE_
 add_definitions(${ROOT_CXX_FLAGS})
 
 file(GLOB HEADER_FILES
-    "include/*.h"    
+    "include/*.h"
 )
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cxx)
@@ -88,7 +88,7 @@ ROOT_GENERATE_DICTIONARY(${DICTNAME} ${HEADER_FILES} LINKDEF LinkDef.h)
 
 #---Create a shared library with geneated dictionary
 add_library(${libname} SHARED ${SOURCE_FILES} ${DICTNAME}.cxx)
-target_link_libraries(${libname} ${ZLIB_LIBRARIES} AnitaEvent RootFftwWrapper ${ROOT_LIBRARIES} ${FFTW_LIBRARIES})
+target_link_libraries(${libname} ${ZLIB_LIBRARIES} AnitaEvent AnitaCorrelator RootFftwWrapper ${ROOT_LIBRARIES} ${FFTW_LIBRARIES})
 
 if( ${ROOT_VERSION} VERSION_GREATER "5.99.99")
     add_custom_target(${DICTNAME}.pcm DEPENDS ${DICTNAME})
@@ -108,11 +108,11 @@ install (TARGETS ${libname}
 	ARCHIVE DESTINATION ${UTIL_LIB_DIR}
 	LIBRARY DESTINATION ${UTIL_LIB_DIR}
 	RUNTIME DESTINATION ${UTIL_BIN_DIR})
-      #Only needed for ROOT6      
+      #Only needed for ROOT6
 if( ${ROOT_VERSION} VERSION_GREATER "5.99.99")
   install (FILES ${PROJECT_BINARY_DIR}/${DICTNAME}_rdict.pcm DESTINATION ${UTIL_LIB_DIR})
 #  install (FILES ${PROJECT_BINARY_DIR}/lib${libname}.rootmap DESTINATION ${UTIL_LIB_DIR})
-endif() 
+endif()
 
 
 file(MAKE_DIRECTORY ${UTIL_SHARE_DIR}/anitaMap)
