@@ -21,15 +21,15 @@ Double_t RootTools::getSumOfYVals(TGraph* gr){
 
 
 
-/** 
+/**
  * @brief I use this function to define my min bias sample
- * 
+ *
  * Used in several places, and I've changed it at least once, so it gets its own function.
  * Since the PPS2 was only switched on around MCM for ANITA-3 I'm not going to use it
  *
  * @param header is the RawAnitaHeader of the event in question.
- * 
- * @return 
+ *
+ * @return
  */
 Int_t RootTools::isMinBiasSampleEvent(const RawAnitaHeader* header){
   // Not using PPS2 for ANITA-3 since it was only switched on around McM
@@ -46,7 +46,7 @@ Int_t RootTools::isMinBiasSampleEvent(const RawAnitaHeader* header){
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Print all the elements of a c-styles array to the screen for debugging.
- * 
+ *
  * @param n is the length of the array.
  * @param array is the first element of the array.
  * @param delimiter is for decoration, ", " by default, change as you please.
@@ -58,7 +58,7 @@ void RootTools::printArray(int n, double* array, TString delimiter, TString star
   for(int i=0; i<n; i++){
     std::cout << array[i];
     if(i<n-1) std::cout << delimiter.Data();
-  }  
+  }
   std::cout << end.Data();
 }
 
@@ -106,7 +106,7 @@ void RootTools::printXVals(TGraph* gr, TString delimiter, TString start, TString
 /**
  * @brief Makes a derivative TGraph, contains gr->GetN() - 1 points.
  *
- * @param gr is the TGraph from which to make the derivative 
+ * @param gr is the TGraph from which to make the derivative
  * @returns Pointer to TGraph containing derivative of input gr.
 */
 TGraph* RootTools::makeDerivativeTGraph(TGraph* gr){
@@ -182,7 +182,7 @@ void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
  * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
  * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
-void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX, 
+void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
 			  Double_t& minY, Double_t& minX){
 
   maxY=gr->GetY()[0];
@@ -199,7 +199,7 @@ void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
       minY = gr->GetY()[i];
       minX = gr->GetX()[i];
     }
-  } 
+  }
 }
 
 
@@ -218,8 +218,8 @@ void RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
  * @param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
  * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
-void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX, 
-				      Double_t& minY, Double_t& minX, 
+void RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX,
+				      Double_t& minY, Double_t& minX,
 				      Double_t lowerLimit, Double_t upperLimit){
 
   // Macro values from <cfloat> header
@@ -285,12 +285,12 @@ void RootTools::subtractOffset(TGraph* gr, Double_t offset){
  * If it looks like there's an insane angle being passed in will return -9999.
 */
 Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
-  
+
   Double_t deltaAngle = angle1 - angle2;
   Int_t loopCount = 0;
   const Int_t maxLoopCount = 5;
   if(deltaAngle > 180){
-    while(deltaAngle >= 180){      
+    while(deltaAngle >= 180){
       deltaAngle -= 360;
       loopCount++;
       if(loopCount >= maxLoopCount){
@@ -309,7 +309,7 @@ Double_t RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
       }
     }
   }
-  
+
   return deltaAngle;
 }
 
@@ -343,7 +343,7 @@ void RootTools::normalize(TGraph* gr){
 void RootTools::normalize(TGraph* gr, Double_t& mean, Double_t& rms){
   RootTools::getMeanAndRms(gr, mean, rms);
   if(rms>0){ // Don't make any NaNs
-    for(int i=0; i<gr->GetN(); i++){    
+    for(int i=0; i<gr->GetN(); i++){
       gr->GetY()[i] -= mean;
       gr->GetY()[i] /= rms;
     }
@@ -434,7 +434,7 @@ Int_t RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "!" << std::endl;
     std::cerr << "Could not find an index > " << max << std::endl;
   }
-  
+
   return maxIndex;
 }
 
@@ -508,7 +508,7 @@ void RootTools::printTGraphInfo(TGraph* gr){
  * @param wrapValue e.g. with wrapValue=360, if neighbouring points go 359->1 degrees, then draw them as 359->361. i.e. remove discontinuities.
 */
 TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue){
-  
+
   // Draw
   const Int_t nEntries = tree->Draw(drawText, cutString, "goff"); // "goff" means graphics off
 
@@ -517,7 +517,7 @@ TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutSt
   TMath::Sort(nEntries, tree->GetV2(), &sortedIndices.front(), kFALSE);
   std::vector<Double_t> newX(nEntries);
   std::vector<Double_t> newY(nEntries);
-  
+
   for(int i=0; i<nEntries; i++){
     newX.at(i) = tree->GetV2()[sortedIndices.at(i)];
     newY.at(i) = tree->GetV1()[sortedIndices.at(i)];
@@ -528,20 +528,20 @@ TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutSt
   if(wrapValue != 0){
     for(int i=1; i<nEntries; i++){
       // If y[i] >> y[i-1] => then we went below zero to the wrap value
-      // can only modify y[i], so we should subtract wrapValue enough times 
+      // can only modify y[i], so we should subtract wrapValue enough times
       // that the graph becomes smooth
       while (newY.at(i) - newY.at(i-1) > wrapValue/2){
 	newY.at(i) -= wrapValue;
       }
 
       // If y[i] << y[i-1] => then we went add zero to the wrap value
-      // can only modify y[i], so we should add wrapValue enough times 
+      // can only modify y[i], so we should add wrapValue enough times
       // that the graph becomes smooth
       while (newY.at(i) - newY.at(i-1) < -wrapValue/2){
 	newY.at(i) += wrapValue;
-      }    
+      }
 
-    }   
+    }
   }
 
   // sorted TGraph
@@ -552,7 +552,7 @@ TGraph* RootTools::makeSortedTGraph(TTree* tree, TString drawText, TString cutSt
   gr->GetXaxis()->SetTitle(((TObjString*) tokens->At(1))->String());
   gr->GetYaxis()->SetTitle(((TObjString*) tokens->At(0))->String());
   delete tokens;
-  
+
   return gr;
 }
 
@@ -591,7 +591,7 @@ TH1D* RootTools::plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xM
  *
  * @param gr is the TGraph you want to pad.
  * @param newLen is the desired length of gr.
- * @param dt 
+ * @param dt
 */
 void RootTools::zeroPadTGraph(TGraph* gr, Int_t newLen, Double_t dt){
   Int_t oldLen = gr->GetN();
@@ -627,14 +627,14 @@ TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
   Double_t time = grIn->GetX()[0];
   Double_t lastTime = grIn->GetX()[nIn-1];
 
-  Int_t sampOut = 0; // Will iterate through 
+  Int_t sampOut = 0; // Will iterate through
   Int_t sampIn = 0;
 
   Double_t y1 = grIn->GetY()[sampIn];
   Double_t x1 = grIn->GetX()[sampIn];
   Double_t x2 = grIn->GetX()[sampIn+1];
   Double_t m = (grIn->GetY()[sampIn+1]-y1)/(grIn->GetX()[sampIn+1]-x1);
-  
+
   while(time < lastTime){
     if(time > x2){
 
@@ -674,9 +674,9 @@ TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
   }
 
   TGraph* grOut = new TGraph(newTimes.size(), &newTimes[0], &newVolts[0]);
-  // std::cout << grOut->GetN() - newPoints << " " << grIn->GetN() << " " << sampIn << " " 
+  // std::cout << grOut->GetN() - newPoints << " " << grIn->GetN() << " " << sampIn << " "
   // 	    << grIn->GetX()[0] << " " << grIn->GetX()[nIn-1] << " " << dt << std::endl;
-	    
+
 
 
 
@@ -696,7 +696,7 @@ TGraph* RootTools::makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt){
  * @param dt is the time between samples
  * @param nSamp is the time number of samples
 */
-TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp){  
+TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp){
 
   std::vector<Double_t> newTimes = std::vector<Double_t>(nSamp, 0);
   std::vector<Double_t> newVolts = std::vector<Double_t>(nSamp, 0);
@@ -704,22 +704,22 @@ TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Do
   Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
 
 
-  // Quantizes the start and end times so data poInt_ts lie at Int_teger multiples of nominal sampling 
+  // Quantizes the start and end times so data poInt_ts lie at Int_teger multiples of nominal sampling
   // startTime = correlationDeltaT*TMath::Nint(startTime/correlationDeltaT + 0.5);
   // lastTime = correlationDeltaT*TMath::Nint(lastTime/correlationDeltaT - 0.5);
   startTime = dt*TMath::Nint(startTime/dt + 0.5);
-  lastTime = dt*TMath::Nint(lastTime/dt - 0.5);  
+  lastTime = dt*TMath::Nint(lastTime/dt - 0.5);
 
    //ROOT Int_terpolator object constructor takes std::vector objects
   std::vector<Double_t> tVec(grIn->GetX(), grIn->GetX() + grIn->GetN());
   std::vector<Double_t> vVec(grIn->GetY(), grIn->GetY() + grIn->GetN());
-  
+
   // This is ROOT's Int_terpolator object
   ROOT::Math::Interpolator chanInterp(tVec,vVec,ROOT::Math::Interpolation::kAKIMA);
-  
+
   // Put new data Int_to arrays
   Double_t time = startTime;
-  for(Int_t samp = 0; samp < nSamp; samp++){    
+  for(Int_t samp = 0; samp < nSamp; samp++){
     newTimes.at(samp) = time;
     if(time >= thisStartTime && time <= lastTime){
       newVolts.at(samp) = chanInterp.Eval(time);
@@ -729,7 +729,7 @@ TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Do
     }
     time += dt;
   }
-  return new TGraph(nSamp, &newTimes[0], &newVolts[0]);  
+  return new TGraph(nSamp, &newTimes[0], &newVolts[0]);
 
 }
 
@@ -740,10 +740,10 @@ TGraph* RootTools::interpolateWithStartTime(TGraph* grIn, Double_t startTime, Do
 /**
  * @brief Draws an array of histograms with a rainbow on a single TCanvas
  *
- * @param hs is a pointer to an array of pointers to the histograms. 
+ * @param hs is a pointer to an array of pointers to the histograms.
  * @param numHists is the number of histograms.
  * @param can is the TCanvas to draw on, if one is not given a new one is created.
- * @param colWeights is a pointer to a Double_t array, which will weight to colors drawn. 
+ * @param colWeights is a pointer to a Double_t array, which will weight to colors drawn.
  * @returns the TCanvas the histograms are drawn on.
 */
 
@@ -772,8 +772,8 @@ TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanva
       TString opt = numDrawn == 0 ? "" : "same";
       if(colWeights!=NULL){
 	hs[histInd]->SetLineColor(gStyle->GetColorPalette(Int_t(250.*(colWeights[histInd] - minCol)/(maxCol-minCol))));
-	// std::cout << colWeights[histInd] << "\t" << maxCol << "\t" << minCol << "\t" 
-	// 	  << ((colWeights[histInd] - minCol)/(maxCol-minCol)) << "\t" 
+	// std::cout << colWeights[histInd] << "\t" << maxCol << "\t" << minCol << "\t"
+	// 	  << ((colWeights[histInd] - minCol)/(maxCol-minCol)) << "\t"
 	// 	  << Int_t(250.*(colWeights[histInd] - minCol)/(maxCol-minCol))
 	// 	  << std::endl;
       }
@@ -801,7 +801,7 @@ TCanvas* RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanva
  * @param numGrs is the length of both arrays.
  * @param grs is a vector of pointers to TGraphs.
  * @param offsets a vector of Double_ts to add to each x-axis point of the respective TGraph.
-  
+
   Assumes that both grs and offsets point to arrays of length numGrs
 */
 void RootTools::offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[]){
@@ -823,7 +823,7 @@ void RootTools::offsetTGraphXAxes(Int_t numGrs, TGraph* grs[], Double_t offsets[
  * @param numGrs is the length of both arrays.
  * @param grs is an array of pointers to TGraphs.
  * @param factors an array of Double_ts to add to each x-axis point of the respective TGraph.
-  
+
   Assumes that both grs and factors point to arrays of length numGrs
 */
 void RootTools::multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factors[]){
@@ -842,14 +842,14 @@ void RootTools::multiplyTGraphYAxes(Int_t numGrs, TGraph* grs[], Double_t factor
 /**
  * @brief Draws an array of TGraphs with a rainbow on a single TCanvas
  *
- * @param grs is a pointer to an array of pointers to the TGraphs. 
+ * @param grs is a pointer to an array of pointers to the TGraphs.
  * @param numGrs is the number of TGraphs.
  * @param can is the TCanvas to draw on, if one is not given a new one is created.
  * @param drawOpt is the draw option, select "p" for markers and "l" for lines.
  * @param colWeights is a pointer to an array of doubles to be used as weights for colors.
  * @returns the TCanvas the TGraphs are drawn on.
 */
-TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs, 
+TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
 					       TString drawOpt, TCanvas* can, Double_t* colWeights){
 
   if(can==NULL){
@@ -919,7 +919,7 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
 /**
  * @brief Generates a TLegend from input arrays of TGraphs and titles (TStrings)
  *
- * @param grs is a pointer to an array of pointers to the TGraphs. 
+ * @param grs is a pointer to an array of pointers to the TGraphs.
  * @param numGrs is the number of TGraphs.
  * @param titles is an array of TStrings containing the titles
  * @param opt is the legend option ("l" by default)
@@ -930,8 +930,8 @@ TCanvas* RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t numGrs,
  * @returns the newly generated TLegend
 */
 
-TLegend* RootTools::makeLegend(TGraph* grs[], Int_t numGrs, 
-			       TString titles[], TString opt, 
+TLegend* RootTools::makeLegend(TGraph* grs[], Int_t numGrs,
+			       TString titles[], TString opt,
 			       Double_t minX, Double_t minY,
 			       Double_t maxX, Double_t maxY){
 
@@ -962,8 +962,8 @@ TLegend* RootTools::makeLegend(TGraph* grs[], Int_t numGrs,
  * @param maxY is the Pad coordinates, 1 by default.
  * @returns the newly generated TLegend
 */
-TLegend* RootTools::makeLegend(TH1D* hs[], Int_t numHists, 
-			       TString titles[], TString opt, 
+TLegend* RootTools::makeLegend(TH1D* hs[], Int_t numHists,
+			       TString titles[], TString opt,
 			       Double_t minX, Double_t minY,
 			       Double_t maxX, Double_t maxY){
 
@@ -1008,8 +1008,8 @@ void RootTools::writeTGraph(TGraph* gr, TString name){
  * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
 
-void RootTools::getLocalMaxToMin(TGraph* gr, 
-				 Double_t& maxY, Double_t& maxX, 
+void RootTools::getLocalMaxToMin(TGraph* gr,
+				 Double_t& maxY, Double_t& maxX,
 				 Double_t& minY, Double_t& minX){
   getLocalMaxToMinWithinLimits(gr, maxY, maxX, minY, minX, gr->GetX()[0], gr->GetX()[gr->GetN()-1]);
 
@@ -1032,8 +1032,8 @@ void RootTools::getLocalMaxToMin(TGraph* gr,
  * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
 
-void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr, 
-					     Double_t& maxY, Double_t& maxX, 
+void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
+					     Double_t& maxY, Double_t& maxX,
 					     Double_t& minY, Double_t& minX,
 					     Double_t lowerLimit, Double_t upperLimit){
 
@@ -1047,7 +1047,7 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
       Double_t y0 = gr->GetY()[samp-1];
       Double_t y1 = gr->GetY()[samp];
       Double_t y2 = gr->GetY()[samp+1];
-    
+
 
       if(y0 > y1 && y1 < y2){
 	// Is a local minimum
@@ -1059,10 +1059,10 @@ void RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
       }
     }
   }
-  
+
   Double_t maxOffset = -DBL_MAX;
   Int_t maxSampInd = -1;
-  for(UInt_t sampInd = 0; sampInd < extremaSamps.size()-1; sampInd++){
+  for(Int_t sampInd = 0; sampInd < ((Int_t)extremaSamps.size())-1; sampInd++){
     Double_t offset = TMath::Abs(gr->GetY()[extremaSamps.at(sampInd)] - gr->GetY()[extremaSamps.at(sampInd+1)]);
     if(offset > maxOffset){
       maxOffset = offset;
@@ -1105,7 +1105,7 @@ void RootTools::saveCanvas(TCanvas* c, TString fileName){
   fName = fileName + ".png";
   c->SaveAs(fName);
   fName = fileName + ".C";
-  c->SaveAs(fName);  
+  c->SaveAs(fName);
   std::cout << "...Complete!" << std::endl;
   c->Update();
 }
@@ -1122,7 +1122,7 @@ void RootTools::saveCanvas(TCanvas* c, TString fileName){
  * @returns the full width half max
 */
 Double_t RootTools::getFullWidthHalfMax(TH1D* h){
-  
+
   Int_t maxBin = RootTools::getPeakBinOfHistogram(h);
   Int_t n = h->GetNbinsX();
   Double_t max = h->GetBinContent(maxBin);
@@ -1191,7 +1191,7 @@ Int_t RootTools::getPeakBinOfHistogram(TH1D* h){
 Double_t RootTools::getPeakBinOfHistogram(TH2D* hist, Int_t& binx, Int_t& biny){
 
   Int_t nx = hist->GetNbinsX();
-  Int_t ny = hist->GetNbinsY();  
+  Int_t ny = hist->GetNbinsY();
   Double_t histPeak = -DBL_MAX;
   for(Int_t by = 1; by<=ny; by++){
     for(Int_t bx = 1; bx<=nx; bx++){
@@ -1205,7 +1205,7 @@ Double_t RootTools::getPeakBinOfHistogram(TH2D* hist, Int_t& binx, Int_t& biny){
   }
 
   return histPeak;
-  
+
 }
 
 
@@ -1281,7 +1281,7 @@ Int_t RootTools::getNumBitsSet(Int_t numBitsToCheck, UInt_t bitMask){
   for(Int_t bitInd=0; bitInd < numBitsToCheck; bitInd++){
     if(getBit(bitInd, bitMask) > 0){
       numBitsHigh++;
-    }    
+    }
   }
   return numBitsHigh;
 }
@@ -1305,7 +1305,7 @@ void RootTools::setWhiteZeroColorScale(){
   Double_t blue[NRGBs]  = { 1.00, 1.00, 0.00};
   TColor color;
   color.InitializeColors();
-  color.CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont); 
+  color.CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont);
 }
 
 
@@ -1387,14 +1387,14 @@ TChain* RootTools::getAdu5PatChain(Int_t firstRun, Int_t lastRun, Adu5Pat*& pat)
 TString RootTools::getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd){
   // Assumes antInd starts at 0. Returns the name w/ +1
   Int_t phi = (antInd % NUM_PHI) + 1;
-  
+
   Int_t ring = antInd / NUM_PHI;
 
   TString antName = TString::Format("%d", phi);
-  
+
   antName += AnitaRing::ringAsChar(AnitaRing::AnitaRing_t(ring));
-  antName += AnitaPol::polAsChar(pol);  
-  
+  antName += AnitaPol::polAsChar(pol);
+
   return antName;
 }
 
@@ -1411,7 +1411,7 @@ TString RootTools::getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd){
  * @param maxVal is the denominator of the fraction
 */
 Int_t RootTools::getColorFracThroughPalette(Int_t index, Int_t maxVal){
-  return gStyle->GetColorPalette(index*Int_t(255./maxVal));  
+  return gStyle->GetColorPalette(index*Int_t(255./maxVal));
 }
 
 
@@ -1435,12 +1435,12 @@ TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString 
 
   Double_t boxSize = 0.2; // In normalized coordinates
   const Int_t maxNumBoxes = 1./boxSize;
-  
-  Int_t divisor = (numHists/maxNumBoxes) + 1; 
+
+  Int_t divisor = (numHists/maxNumBoxes) + 1;
 
   // This is dumb and will get messy If I have more than 2*maxnumBoxes
   boxSize/=divisor;
-  
+
   for(Int_t histInd=0; histInd < numHists; histInd++){
 
     TString thisDrawOpt = histInd == 0 ? drawOpt : drawOpt+"sames";
@@ -1456,21 +1456,21 @@ TCanvas* RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString 
   }
 
   theCan->Update();
-  return theCan; 
+  return theCan;
 }
 
- 
 
 
 
-/** 
+
+/**
  * @brief Generic function to set the bin labels from the low edge values.
- * 
+ *
  * @param ax is the histogram axis
  * @param format is the format specifier for TString/sprintf, should match histogram type, e.g. %2.0lf if hist is TH1D
  */
 void RootTools::setBinLabelsFromLowEdge(TAxis* ax, const char* format){
-  
+
   Int_t n = ax->GetNbins();
   for(int bin=1; bin <= n; bin++){
     ax->SetBinLabel(bin, TString::Format(format, ax->GetBinLowEdge(bin)));

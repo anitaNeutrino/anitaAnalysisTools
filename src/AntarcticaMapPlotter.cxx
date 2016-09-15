@@ -261,7 +261,7 @@ void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBins
   if(setCurrentHistogram(name)==0){
     TH2D* theHist = new TH2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
     hists[name] = theHist;
-    std::cerr << theHist << "\t" << theHist->GetName() << std::endl;
+    // std::cerr << theHist << "\t" << theHist->GetName() << std::endl;
     hCurrent = theHist;
   }
   else{

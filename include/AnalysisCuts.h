@@ -58,10 +58,11 @@ namespace AnalysisCuts{
   // these variables all come from the output of things in the defineThermalCut subfolder
   static const int numFisherWeights = 3;
   // 0.105275	0.000663689
-  static const Double_t fisherWeights[numFisherWeights] = {-2.80469, 15.9061, 0.00742922};
+  static const Double_t fisherWeights[numFisherWeights] = {-2.77328, 14.5089, 0.0104461};
+  // static const Double_t fisherWeights[numFisherWeights] = {-2.80469, 15.9061, 0.00742922};
   // static const Double_t fisherWeights[numFisherWeights] = {-2.80469, 15.9061, 0.0074292};
   // static const Double_t fisherWeights[numFisherWeights] = {-2.81448, 15.7929, 0.00783315};
-  static const Double_t fisherCutVal = -0.0101151; //-0.64206; //-0.526251;
+  static const Double_t fisherCutVal = 0.000950146; //-0.0101151; //-0.64206; //-0.526251;
   Status_t applyThermalBackgroundCut(Double_t imagePeak, Double_t hilbertPeak, Double_t& fisher);
 
   static const Double_t maxImagePeakRatio = 0.5;

@@ -68,14 +68,18 @@ AnalysisCuts::Status_t AnalysisCuts::L3TriggerDirectionCut(AnitaPol::AnitaPol_t 
   // UShort_t phiTrigMask = pol==AnitaPol::kVertical ? header->phiTrigMask : header->phiTrigMaskH;
   bool peakIsInMaskedPhiSector = false;
 
-  bool wasAnL3Trigger = false;
+  bool l3TriggerInPeakDir = false;
+  bool l3TriggerInMaskedPhiSector = false;
+  // bool hasAtLeastTwoNeighbouringL3Trigs = false;
   // Int_t deltaPhiSect = NUM_PHI/2;
+  // for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
   for(int phi=0; phi<NUM_PHI; phi++){
 
-    // check against masked phi-sectors
-    // UInt_t phiMaskBit = header->isInL1Mask(phi, pol) || header->isInPhiMask(phi, pol);
+    UInt_t phiMaskBitH = header->isInL1MaskOffline(phi, AnitaPol::kHorizontal) | header->isInPhiMaskOffline(phi, AnitaPol::kHorizontal);
+    UInt_t phiMaskBitV = header->isInL1MaskOffline(phi, AnitaPol::kVertical) | header->isInPhiMaskOffline(phi, AnitaPol::kVertical);
 
-    UInt_t phiMaskBit = header->isInL1MaskOffline(phi, pol) + header->isInPhiMaskOffline(phi, pol);
+    UInt_t phiMaskBit = phiMaskBitH && phiMaskBitV;
+
     if(phiMaskBit > 0 && phiSectorOfPeak==phi){
       peakIsInMaskedPhiSector = true;
     }
@@ -92,12 +96,21 @@ AnalysisCuts::Status_t AnalysisCuts::L3TriggerDirectionCut(AnitaPol::AnitaPol_t 
       }
       if(TMath::Abs(dPhiSect) < deltaPhiSect){
 	deltaPhiSect = TMath::Abs(dPhiSect);
-	wasAnL3Trigger = true;
+	l3TriggerInPeakDir = true;
       }
+      if(phiMaskBit > 0){
+	l3TriggerInMaskedPhiSector = true;
+      }
+      // if(lastL3Trig+1 == phi){
+      // 	// this L3 trigger neighbours another
+      // 	hasAtLeastTwoNeighbouringL3Trigs = true;
+      // }
+      // lastL3Trig = phi;
     }
   }
-  if(wasAnL3Trigger == true && deltaPhiSect >= NUM_PHI/2){
-    std::cerr << "You bloody fool of a took" << wasAnL3Trigger << "\t" << deltaPhiSect << std::endl;
+  // }
+  if(l3TriggerInPeakDir == true && deltaPhiSect >= NUM_PHI/2){
+    std::cerr << "You bloody fool of a took" << l3TriggerInPeakDir << "\t" << deltaPhiSect << std::endl;
   }
   // if(deltaPhiSect >= NUM_PHI/2){
   // 	std::cerr << header->run << "\t" << header->eventNumber << std::endl;
@@ -105,9 +118,16 @@ AnalysisCuts::Status_t AnalysisCuts::L3TriggerDirectionCut(AnitaPol::AnitaPol_t 
   if(peakIsInMaskedPhiSector==true){
     status = kFail;
   }
+  else if(isMinBias==0 && l3TriggerInMaskedPhiSector==true){
+    status = kFail;
+  }
+  // else if(isMinBias==0 && hasAtLeastTwoNeighbouringL3Trigs==false){
+  //   status = kFail;
+  // }
   else if(isMinBias==0 && TMath::Abs(deltaPhiSect) > maxAbsDeltaPhiSect){
     status = kFail;
   }
+
 
   return status;
 }
