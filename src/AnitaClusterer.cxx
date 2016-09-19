@@ -13,8 +13,9 @@ AnitaClusterer::AnitaClusterer(Int_t nClusters, Int_t numIterations, Int_t appro
   runs.reserve(approxNumPoints);
 
 
-  maxRetestClusterSize = 5;
+  maxRetestClusterSize = 10;
   numIsolatedSmallClusters.resize(maxRetestClusterSize, 0);
+  numIsolatedSmallBaseClusters.resize(maxRetestClusterSize, 0);
 
   initialized = false;
   llCut = 250;
@@ -244,18 +245,21 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 
   for(int i=0; i < maxRetestClusterSize; i++){
     numIsolatedSmallClusters.at(i) = 0;
+    numIsolatedSmallBaseClusters.at(i) = 0;
   }
 
-  // loop through clusters and find the ones that have a size of one
-  Int_t numSinglets = 0;
+  // loop through clusters and find the small ones
   for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
     if(clusters.at(clusterInd).numEvents > 0 && clusters.at(clusterInd).numEvents <= maxRetestClusterSize){
+
 
       Cluster& cluster = clusters.at(clusterInd);
 
       Int_t numNearPoints = 0;
 
       // now loop through and see how close this isolated cluster is close to any other point...
+      Double_t minLL = 9e99;
+      Int_t minPointInd = -1;
       for(int pointInd=0; pointInd < (int)points.size(); pointInd++){
 
 	// skip points in the cluster under test
@@ -269,6 +273,10 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 	    if(ll < llCut){
 	      numNearPoints++;
 	      cluster.numPointsWithinMinLL++;
+	      if(ll < minLL){
+		minLL = ll;
+		minPointInd = pointInd;
+	      }
 	    }
 	  }
 	}
@@ -277,14 +285,34 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
       // std::cout << runs.at(isolatedPointInd) << "\t" << eventNumbers.at(isolatedPointInd) << "\t"
       // 		<< clusterInd << "\t" << numNearPoints << std::endl;
 
+      if(numNearPoints > 0){
 
-      if(numNearPoints == 0){
-	numIsolatedSmallClusters.at(clusters.at(clusterInd).numEvents-1)++;
-	numSinglets++;
+	// re-assign points...
+	for(int pointInd=0; pointInd < (int)points.size(); pointInd++){
+	  if(points.at(pointInd).inCluster==clusterInd){
+	    points.at(pointInd).inCluster = points.at(minPointInd).inCluster;
+	    clusters.at(points.at(minPointInd).inCluster).numEvents++;
+	    clusters.at(points.at(clusterInd).inCluster).numEvents--;
+	  }
+	}
       }
     }
   }
 
+  const int numBases = BaseList::getNumBases();
+  for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
+    if(clusters.at(clusterInd).numEvents > 0 &&
+       clusters.at(clusterInd).numEvents <= maxRetestClusterSize){
+
+      if(clusterInd < numBases){
+	numIsolatedSmallBaseClusters.at(clusters.at(clusterInd).numEvents-1)++;
+      }
+      else{
+	numIsolatedSmallClusters.at(clusters.at(clusterInd).numEvents-1)++;
+      }
+
+    }
+  }
 }
 
 
@@ -641,7 +669,6 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
     clusteredEvent->eventLon = point.longitude;
     clusteredEvent->eventAlt = point.altitude;
 
-
     clusteredEvent->anitaLat = mcpats.at(pointInd)->latitude;
     clusteredEvent->anitaLon = mcpats.at(pointInd)->longitude;
     clusteredEvent->anitaAlt = mcpats.at(pointInd)->altitude;
@@ -657,6 +684,7 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
       const Cluster& cluster = clusters.at(clusterInd);
 
       clusteredEvent->isBase = clusterInd < numBases ? 1 : 0;
+      clusteredEvent->numPointsWithinMinLL = cluster.numPointsWithinMinLL;
 
       clusteredEvent->clusterLat = cluster.latitude;
       clusteredEvent->clusterLon = cluster.longitude;
