@@ -265,12 +265,15 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 	// skip points in the cluster under test
 	if(points.at(pointInd).inCluster!=clusterInd){
 	  UsefulAdu5Pat usefulPat(pats.at(pointInd));
-	  Double_t dist = usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
+	  Double_t dist = usefulPat.getDistanceFromSource(cluster.latitude,
+							  cluster.longitude,
+							  cluster.altitude);
 
 	  if(dist < maxDistCluster){
 	    Double_t ll = getAngDistSq(points.at(pointInd), cluster, usefulPat);
 
 	    if(ll < llCut){
+
 	      numNearPoints++;
 	      cluster.numPointsWithinMinLL++;
 	      if(ll < minLL){
@@ -286,16 +289,19 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
       // 		<< clusterInd << "\t" << numNearPoints << std::endl;
 
       if(numNearPoints > 0){
-
+	std::cout << "reassign " << clusterInd << "\t" << cluster.numEvents << " to " << points.at(minPointInd).inCluster << "\t" << clusters.at(points.at(minPointInd).inCluster).numEvents << std::endl;
 	// re-assign points...
 	for(int pointInd=0; pointInd < (int)points.size(); pointInd++){
 	  if(points.at(pointInd).inCluster==clusterInd){
-	    points.at(pointInd).inCluster = points.at(minPointInd).inCluster;
 	    clusters.at(points.at(minPointInd).inCluster).numEvents++;
-	    clusters.at(points.at(clusterInd).inCluster).numEvents--;
+	    cluster.numEvents--;
+	    points.at(pointInd).inCluster = points.at(minPointInd).inCluster;
 	  }
 	}
       }
+      // else{
+      // 	std::cout << "don't reassign " << clusterInd << "\t" << cluster.numEvents << std::endl;
+      // }
     }
   }
 
@@ -305,6 +311,9 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
        clusters.at(clusterInd).numEvents <= maxRetestClusterSize){
 
       if(clusterInd < numBases){
+	// if(clusters.at(clusterInd).numEvents==1){
+	//   std::cout << clusterInd << "\t" << clusters.at(clusterInd).numEvents  << std::endl;
+	// }
 	numIsolatedSmallBaseClusters.at(clusters.at(clusterInd).numEvents-1)++;
       }
       else{
@@ -383,9 +392,9 @@ void AnitaClusterer::assignMCPointsToClusters(){
 
 
 
-size_t AnitaClusterer::addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight){
+size_t AnitaClusterer::addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
 
-  mcpoints.push_back(MCPoint(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol, weight));
+  mcpoints.push_back(MCPoint(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol, weight, energy));
   mceventNumbers.push_back(eventNumber);
   mcruns.push_back(run);
   mcpats.push_back((Adu5Pat*)pat->Clone());
@@ -659,6 +668,7 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
     clusteredEvent->pol = point.pol;
     clusteredEvent->isMC = 1;
     clusteredEvent->weight = point.weight;
+    clusteredEvent->energy = point.energy;
 
     // convert from km back to m for conversion to lat/lon/alt
     // for(int dim=0; dim < nDim; dim++){

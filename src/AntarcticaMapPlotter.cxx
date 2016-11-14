@@ -255,8 +255,10 @@ Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
  * @param title is the histogram title
  * @param nBinsX is the number of bins on the x-axis
  * @param nBinsY is the number of bins on the y-axis
+ *
+ * @returns the current histogram
 */
-void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
+TH2D* AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
 
   if(setCurrentHistogram(name)==0){
     TH2D* theHist = new TH2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
@@ -267,6 +269,7 @@ void AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBins
   else{
     std::cerr << "Warning in " << __FILE__ << "! Histogram with name " << name.Data() << ", already exists!" << std::endl;
   }
+  return hCurrent;
 }
 
 

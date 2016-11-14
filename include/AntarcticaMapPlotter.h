@@ -35,7 +35,7 @@ public:
   AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
   ~AntarcticaMapPlotter();
 
-  void addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
+  TH2D* addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
   void addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY);
   void addTGraph(TString name, TString title, Int_t n=0, Double_t* latitude=NULL, Double_t* longitude=NULL);
 

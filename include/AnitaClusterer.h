@@ -4,7 +4,6 @@
 
  Description:
              A class to cluster. What were you expecting?
-	     It does a kmeans++ cluster algorithm on the positions you feed in.
 ***********************************************************************************************************/
 
 #ifndef ANITACLUSTERER_H
@@ -70,7 +69,8 @@ public:
   Int_t numPointsWithinMinLL = -1; // if > -1 then is a singlet, if > 0 then is a non-isolated singlet
 
   Int_t isMC;
-  Double_t weight;
+  Double_t weight; // for MC only
+  Double_t energy; // for MC only
 
   Int_t isBase;
   Int_t numEventsInCluster; // number of events in the cluster containing this event
@@ -191,13 +191,15 @@ public:
   class MCPoint : public Point{
   public:
     Double_t weight;
-    explicit MCPoint() : Point(){ weight = 0;}
+    Double_t energy;
+    explicit MCPoint() : Point(){ weight = 0; energy=0;}
     explicit MCPoint(Adu5Pat* pat,					\
 		     Double_t lat=0, Double_t lon=0, Double_t alt=0,	\
 		     Double_t sigmaTheta = 0.5, Double_t sigmaPhi = 1,	\
 		     Int_t polIn=AnitaPol::kVertical,
-		     Double_t theWeight=1) : Point(pat,	lat, lon, alt, sigmaTheta, sigmaPhi, polIn){
+		     Double_t theWeight=1, Double_t theEnergy=0) : Point(pat,	lat, lon, alt, sigmaTheta, sigmaPhi, polIn){
       weight = theWeight;
+      energy = theEnergy;
     }
   };
 
@@ -266,7 +268,7 @@ public:
 
   AnitaClusterer(Int_t nClusters, Int_t numIterations, Int_t approxNumPoints=0);
   size_t addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
-  size_t addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight);
+  size_t addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy);
 
   TGraph* makeClusterSummaryTGraph(Int_t clusterInd);
   TTree* makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox);
