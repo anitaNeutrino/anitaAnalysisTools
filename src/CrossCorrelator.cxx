@@ -2330,73 +2330,73 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
       peakThetaBin = threadPeakThetaBinZoom[threadInd];
     }
   }
-  const int numAkimaBins = 5;
+  // const int numAkimaBins = 5;
 
-  Int_t startThetaBin = peakThetaBin - numAkimaBins/2;
-  if(startThetaBin < 0){
-    startThetaBin = 0;
-  }
-  Int_t endThetaBin = startThetaBin + numAkimaBins;
-  if(endThetaBin >= NUM_BINS_THETA_ZOOM){
-    endThetaBin = NUM_BINS_THETA_ZOOM - 1;
-    startThetaBin = endThetaBin - numAkimaBins;
-  }
-  std::vector<Double_t> thetaVecTheta(numAkimaBins, 0);
-  std::vector<Double_t> thetaVecVals(numAkimaBins, 0);
-  Int_t thetaInd = 0;
-  for(int thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    thetaVecTheta.at(thetaInd) = zoomThetaMin[pol] + thetaBin*ZOOM_BIN_SIZE_THETA;
-    thetaVecVals.at(thetaInd) = fineMap[pol][peakIndex][thetaBin][peakPhiBin];
-    thetaInd++;
-  }
-  ROOT::Math::Interpolator thetaInterp(thetaVecTheta,thetaVecVals,ROOT::Math::Interpolation::kAKIMA);
+  // Int_t startThetaBin = peakThetaBin - numAkimaBins/2;
+  // if(startThetaBin < 0){
+  //   startThetaBin = 0;
+  // }
+  // Int_t endThetaBin = startThetaBin + numAkimaBins;
+  // if(endThetaBin >= NUM_BINS_THETA_ZOOM){
+  //   endThetaBin = NUM_BINS_THETA_ZOOM - 1;
+  //   startThetaBin = endThetaBin - numAkimaBins;
+  // }
+  // std::vector<Double_t> thetaVecTheta(numAkimaBins, 0);
+  // std::vector<Double_t> thetaVecVals(numAkimaBins, 0);
+  // Int_t thetaInd = 0;
+  // for(int thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+  //   thetaVecTheta.at(thetaInd) = zoomThetaMin[pol] + thetaBin*ZOOM_BIN_SIZE_THETA;
+  //   thetaVecVals.at(thetaInd) = fineMap[pol][peakIndex][thetaBin][peakPhiBin];
+  //   thetaInd++;
+  // }
+  // ROOT::Math::Interpolator thetaInterp(thetaVecTheta,thetaVecVals,ROOT::Math::Interpolation::kAKIMA);
 
-  // peakThetaDeg = ;
+  // // peakThetaDeg = ;
 
-  double thetaDeg = thetaVecTheta.at(0);
-  double peakTheta = -1;
-  while(thetaDeg <= thetaVecTheta.at(numAkimaBins-1)){
-    Double_t val = thetaInterp.Eval(thetaDeg);
-    if(val > imagePeak){
-      peakTheta = val;
-      peakThetaDeg = thetaDeg;
-    }
-    thetaDeg += AKIMA_PEAK_INTERP_DELTA_THETA_DEG;
-  }
+  // double thetaDeg = thetaVecTheta.at(0);
+  // double peakTheta = -1;
+  // while(thetaDeg <= thetaVecTheta.at(numAkimaBins-1)){
+  //   Double_t val = thetaInterp.Eval(thetaDeg);
+  //   if(val > imagePeak){
+  //     peakTheta = val;
+  //     peakThetaDeg = thetaDeg;
+  //   }
+  //   thetaDeg += AKIMA_PEAK_INTERP_DELTA_THETA_DEG;
+  // }
 
 
-  Int_t startPhiBin = peakPhiBin - numAkimaBins/2;
-  if(startPhiBin < 0){
-    startPhiBin = 0;
-  }
-  Int_t endPhiBin = startPhiBin + numAkimaBins;
-  if(endPhiBin >= NUM_BINS_PHI_ZOOM){
-    endPhiBin = NUM_BINS_PHI_ZOOM - 1;
-    startPhiBin = endPhiBin - numAkimaBins;
-  }
-  std::vector<Double_t> phiVecPhi(numAkimaBins, 0);
-  std::vector<Double_t> phiVecVals(numAkimaBins, 0);
-  Int_t phiInd = 0;
-  for(int phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-    phiVecPhi.at(phiInd) = zoomPhiMin[pol] + phiBin*ZOOM_BIN_SIZE_PHI;
-    phiVecVals.at(phiInd) = fineMap[pol][peakIndex][peakThetaBin][phiBin];
-    phiInd++;
-  }
+  // Int_t startPhiBin = peakPhiBin - numAkimaBins/2;
+  // if(startPhiBin < 0){
+  //   startPhiBin = 0;
+  // }
+  // Int_t endPhiBin = startPhiBin + numAkimaBins;
+  // if(endPhiBin >= NUM_BINS_PHI_ZOOM){
+  //   endPhiBin = NUM_BINS_PHI_ZOOM - 1;
+  //   startPhiBin = endPhiBin - numAkimaBins;
+  // }
+  // std::vector<Double_t> phiVecPhi(numAkimaBins, 0);
+  // std::vector<Double_t> phiVecVals(numAkimaBins, 0);
+  // Int_t phiInd = 0;
+  // for(int phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+  //   phiVecPhi.at(phiInd) = zoomPhiMin[pol] + phiBin*ZOOM_BIN_SIZE_PHI;
+  //   phiVecVals.at(phiInd) = fineMap[pol][peakIndex][peakThetaBin][phiBin];
+  //   phiInd++;
+  // }
 
-  ROOT::Math::Interpolator phiInterp(phiVecPhi,phiVecVals,ROOT::Math::Interpolation::kAKIMA);
+  // ROOT::Math::Interpolator phiInterp(phiVecPhi,phiVecVals,ROOT::Math::Interpolation::kAKIMA);
 
-  double phiDeg = phiVecPhi.at(0);
-  double peakPhi = -1;
-  while(phiDeg <= phiVecPhi.at(numAkimaBins-1)){
-    Double_t val = phiInterp.Eval(phiDeg);
-    if(val > peakPhi){
-      peakPhi = val;
-      peakPhiDeg = phiDeg;
-    }
-    phiDeg += AKIMA_PEAK_INTERP_DELTA_PHI_DEG;
-  }
+  // double phiDeg = phiVecPhi.at(0);
+  // double peakPhi = -1;
+  // while(phiDeg <= phiVecPhi.at(numAkimaBins-1)){
+  //   Double_t val = phiInterp.Eval(phiDeg);
+  //   if(val > peakPhi){
+  //     peakPhi = val;
+  //     peakPhiDeg = phiDeg;
+  //   }
+  //   phiDeg += AKIMA_PEAK_INTERP_DELTA_PHI_DEG;
+  // }
 
-  imagePeak = peakTheta > peakPhi ?  peakTheta : peakPhi;
+  // imagePeak = peakTheta > peakPhi ?  peakTheta : peakPhi;
 }
 
 
