@@ -198,7 +198,10 @@ TMultiGraph* AnitaAveragePowerSpectrum::drawSpectralSummary(AnitaPol::AnitaPol_t
     AveragePowerSpectrum* aps = get(pol, ant);
     TGraph* gr = aps->makeAvePowSpecTGraph_dB();
     gr->SetLineColor(gStyle->GetColorPalette(phi*Int_t(254./(NUM_PHI-1))));
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
+    std::cerr << "Your  version of ROOT does not support all the features of eventReaderRoot\n";
     gr->SetFillColorAlpha(0, 0);
+#endif
     mg->Add(gr);
   }
 

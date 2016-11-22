@@ -266,7 +266,7 @@ public:
   AnitaClusterer(Int_t nClusters, Int_t numIterations, Int_t approxNumPoints=0);
   size_t addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
   size_t addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight);
-  void kMeansCluster(Int_t iterationsPerCout=0);
+//  void kMeansCluster(Int_t iterationsPerCout=0);
 
   TGraph* makeClusterSummaryTGraph(Int_t clusterInd);
   TTree* makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox);
@@ -283,7 +283,7 @@ public:
   void recursivelyAddClusters(Int_t minBinContent);
   void assignMCPointsToClusters();
   void assignEventsToDefaultClusters();
-  void mergeClusters();
+//  void mergeClusters();
   void findClosestPointToClustersOfSizeOne();
   double llCut;
   double maxDistCluster;
