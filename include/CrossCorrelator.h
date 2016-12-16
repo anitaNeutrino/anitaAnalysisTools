@@ -376,7 +376,8 @@ public:
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
 
   // Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
-  Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  // Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  Double_t interpPreFactors[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_COMBOS][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   // Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_COMBOS][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples

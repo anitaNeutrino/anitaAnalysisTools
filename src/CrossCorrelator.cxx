@@ -1681,7 +1681,8 @@ void CrossCorrelator::fillDeltaTLookup(){
 	    // offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
 	    offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
 	    Double_t dt1 = offsetLow*nominalSamplingDeltaT;
-	    interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+	    // interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+	    interpPreFactors[pol][phiBin][combo][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
 
 	    // Here we account for the fact that we are now time ordering the correlations
 	    // offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
@@ -2226,7 +2227,8 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	Int_t offsetLow = ptr->offsetLows[pol][phiBin][combo][thetaBin];
 	Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
 	Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	// Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	Double_t cInterp = ptr->interpPreFactors[pol][phiBin][combo][thetaBin]*(c2 - c1) + c1;
 	ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
       }
     }
