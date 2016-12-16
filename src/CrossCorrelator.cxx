@@ -1139,7 +1139,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 				      ptr->ffts[pol][ant2],
 				      ptr->ffts[pol][ant1],
 				      ptr->crossCorrelationsUpsampled[pol][combo],
-				      threadInd);
+				      threadInd, false);
 
 
 
@@ -1173,7 +1173,14 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 				      ptr->ffts[pol][ant2],
 				      ptr->ffts[pol][ant1],
 				      ptr->crossCorrelationsUpsampled[pol][combo],
-				      threadInd);
+				      threadInd, false);
+      // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+      // 				      UPSAMPLE_FACTOR,
+      // 				      ptr->ffts[pol][ant2],
+      // 				      ptr->ffts[pol][ant1],
+      // 				      ptr->crossCorrelationsUpsampled[pol][combo],
+      // 				      threadInd);
+
       // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
       // 				ptr->fftsPadded[pol][ant2],
       // 				ptr->fftsPadded[pol][ant1],
@@ -1238,11 +1245,19 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
     // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
     // TThread::UnLock();
 
-    FancyFFTs::crossCorrelate(ptr->numSamples,
-    			      ptr->ffts[pol][ant2],
-    			      ptr->ffts[pol][ant1],
-    			      ptr->crossCorrelations[pol][combo],
-    			      threadInd);
+    FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+				    1,
+				    ptr->ffts[pol][ant2],
+				    ptr->ffts[pol][ant1],
+				    ptr->crossCorrelations[pol][combo],
+				    threadInd,
+				    false);
+    // FancyFFTs::crossCorrelate(ptr->numSamples,
+    // 			      ptr->ffts[pol][ant2],
+    // 			      ptr->ffts[pol][ant1],
+    // 			      ptr->crossCorrelations[pol][combo],
+    // 			      threadInd);
+
 
     // TThread::Lock();
     // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
@@ -2265,14 +2280,19 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
     combosToUse = &ptr->combosToUseGlobal[phiSector];
 
+    Double_t normFactor = ptr->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+    // absorb the removed inverse FFT normalization
+    normFactor*=(ptr->numSamples*ptr->numSamples);
+
     Int_t startPhiBin = phiSector*NUM_BINS_PHI;
     Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
 
-	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	  ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
-	}
+	// if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
+	//   ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
+	// }
+	ptr->coarseMap[pol][phiBin][thetaBin]/=normFactor;
 	if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
 	  ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
 	  peakPhiBin = phiBin;
@@ -2550,11 +2570,17 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
     }
   }
 
+  Double_t normFactor = ptr->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+  // absorb the removed inverse FFT normalization
+  normFactor*=(ptr->numSamples*ptr->numSamples);
+
   for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= combosToUse->size();
-      }
+      ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= normFactor;
+      // if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
+      // 	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= combosToUse->size();
+      // }
+
 
       if(ptr->fineMap[pol][peakIndex][thetaBin][phiBin] > ptr->threadImagePeakZoom[threadInd]){
 	ptr->threadImagePeakZoom[threadInd] = ptr->fineMap[pol][peakIndex][thetaBin][phiBin];

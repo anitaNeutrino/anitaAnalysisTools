@@ -296,8 +296,8 @@ complex<double>* FancyFFTs::doFFT(int len, double* input, complex<double>* outpu
  * @param threadInd uses a particular threads plans to do the ffts.
  * @returns a pointer to an array of doubles containing the (real) inverse FFT.
 */
-double* FancyFFTs::doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd){
-  return doInvFFT(len, input, NULL, copyOutputToNewArray, threadInd);
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd, bool doNormalization){
+  return doInvFFT(len, input, NULL, copyOutputToNewArray, threadInd, doNormalization);
 }
 
 
@@ -314,8 +314,8 @@ double* FancyFFTs::doInvFFT(int len, complex<double>* input, bool copyOutputToNe
  * @param threadInd uses a particular threads plans to do the ffts.
  * @returns a pointer to an array of doubles containing the (real) inverse FFT.
 */
-double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, int threadInd){
-  return doInvFFT(len, input, output, true, threadInd);
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, int threadInd, bool doNormalization){
+  return doInvFFT(len, input, output, true, threadInd, doNormalization);
 }
 
 
@@ -333,7 +333,7 @@ double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, int
  * @param threadInd uses a particular threads plans to do the ffts.
  * @returns a pointer to an array of doubles containing the (real) inverse FFT.
 */
-double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, bool copyOutputToNewArray, int threadInd){
+double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, bool copyOutputToNewArray, int threadInd, bool doNormalization){
 
   /*
      Normalization of 1/N done in this function.
@@ -358,8 +358,10 @@ double* FancyFFTs::doInvFFT(int len, complex<double>* input, double* output, boo
 
   /* Normalization needed on the inverse transform */
   double* invFftOutPtr = fReals[key];
-  for(int i=0; i<len; i++){
-    invFftOutPtr[i]/=len;
+  if(doNormalization){
+    for(int i=0; i<len; i++){
+      invFftOutPtr[i]/=len;
+    }
   }
 
   double* theOutput = output;
@@ -644,7 +646,7 @@ double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double
  * @returns a pointer to an array of doubles containing the cross correlations.
  */
 double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
-					double* output, int threadInd){
+					double* output, int threadInd, bool doNormalization){
 
   /*
     Cross correlation is the same as bin-by-bin multiplication (and some conjugation) in the frequency domain.
@@ -661,8 +663,6 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
 
   // Grab array associated with plan from internal memory
   complex<double>* tempVals = (complex<double>*) fComplex[key];
-
-
 
   /* Take the product */
   // After profiling, it turns out this complex multiplication is slow (the operator* makes it look so cheap!)
@@ -682,13 +682,12 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
   double* crossCorr = output;
   if(crossCorr==NULL){
     /* Allocates new memory */
-    crossCorr = doInvFFT(padLen, tempVals, true, threadInd);
+    crossCorr = doInvFFT(padLen, tempVals, true, threadInd, doNormalization);
   }
   else{
     /* Does not allocate new memory */
-    crossCorr = doInvFFT(padLen, tempVals, crossCorr, true, threadInd);
+    crossCorr = doInvFFT(padLen, tempVals, crossCorr, true, threadInd, doNormalization);
   }
-
 
   /*
      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
@@ -700,10 +699,14 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
      This takes out the second factor.
   */
 
-  double normalization  = double(padLen)/(len*len);
-  for(int i=0; i<padLen; i++){
-    // std::cout << crossCorr[i] << std::endl;
-    crossCorr[i] *= normalization;
+
+  if(doNormalization){
+    // std::cout << doNormalization << std::endl;
+    double normalization  = double(padLen)/(len*len);
+    for(int i=0; i<padLen; i++){
+      // std::cout << crossCorr[i] << std::endl;
+      crossCorr[i] *= normalization;
+    }
   }
 
   return crossCorr;

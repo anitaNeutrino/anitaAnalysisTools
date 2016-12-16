@@ -54,10 +54,10 @@ namespace FancyFFTs {
   complex<double>* doFFT(int len, double* input, complex<double>* output, int threadInd=0);
   complex<double>* doFFT(int len, double* input, complex<double>* output,
 				     bool copyOutputToNewArray, int threadInd=0);
-  double* doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd=0);
-  double* doInvFFT(int len, complex<double>* input, double* output, int threadInd=0);
+  double* doInvFFT(int len, complex<double>* input, bool copyOutputToNewArray, int threadInd=0, bool doNormalization = true);
+  double* doInvFFT(int len, complex<double>* input, double* output, int threadInd=0, bool doNormalization = true);
   double* doInvFFT(int len, complex<double>* input, double* output,
-			  bool copyOutputToNewArray, int threadInd=0);
+		   bool copyOutputToNewArray, int threadInd=0, bool doNormalization=true);
 
   double* getPowerSpectrum(int len, double* input, double dt,
 				  conventionFlag normFlag,
@@ -78,7 +78,7 @@ namespace FancyFFTs {
   double* crossCorrelate(int len, complex<double>* fft1, complex<double>* fft2,
 				double* output, int threadInd=0);
   double* crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
-			       double* output, int threadInd=0);
+			       double* output, int threadInd=0, bool doNormalization=true);
 
   int extendToPowerOfTwo(int len);
   complex<double>* zeroPadFFT(complex<double>* fft, int numSamples, int numSamplesUpsampled);
