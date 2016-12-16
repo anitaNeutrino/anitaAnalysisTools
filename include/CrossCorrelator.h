@@ -68,11 +68,12 @@
 // #define THETA_RANGE 150
 // #define PHI_RANGE 22.5
 
-#define NUM_BINS_THETA 60
+// #define NUM_BINS_THETA 60
+#define NUM_BINS_THETA 35
 #define NUM_BINS_PHI 9
 // #define THETA_RANGE 150
-#define MIN_THETA -75
-#define MAX_THETA 75
+#define MIN_THETA -55
+#define MAX_THETA 35
 #define PHI_RANGE 22.5
 
 

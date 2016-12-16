@@ -1660,7 +1660,8 @@ void CrossCorrelator::fillDeltaTLookup(){
   // const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
   const Double_t thetaBinSize = (Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA);
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
-    Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
+    Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
+    // Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
   }
