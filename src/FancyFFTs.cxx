@@ -689,18 +689,16 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
     crossCorr = doInvFFT(padLen, tempVals, crossCorr, true, threadInd, doNormalization);
   }
 
-  /*
-     Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
-     This takes out the second factor.
-  */
-  /*
-    This is a non-trivial normalization.
-    Picked up two factors of len when doing forward FFTs, removed a factor of padLen when doing inverse FFT
-     This takes out the second factor.
-  */
-
-
   if(doNormalization){
+    /*
+      Picked up two factors of len when doing forward FFT, only removed one doing invFFT.
+      This takes out the second factor.
+
+      This is now a non-trivial normalization.
+      Picked up two factors of len when doing forward FFTs, removed a factor of padLen when doing inverse FFT
+      This takes out the second factor.
+    */
+
     // std::cout << doNormalization << std::endl;
     double normalization  = double(padLen)/(len*len);
     for(int i=0; i<padLen; i++){
