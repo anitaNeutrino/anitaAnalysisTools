@@ -383,7 +383,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits){
     applyFilterBits(pol, ant, filterBits);
 
     renormalizeFourierDomain(pol, ant);
-    FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
+    // FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
 }
 
@@ -749,10 +749,9 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
     if(peakValues[peakInd] < 0){
       std::cerr << "Peak " << peakInd << " = " << peakValues[peakInd] << "\t" << gotHere << std::endl;
       for(int pi=0; pi <= peakInd; pi++){
-	std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
+    	std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
       }
     }
-
   }
 }
 
@@ -894,6 +893,12 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numF
 	// std::cerr << peakInd << "\t" << numFinePeaks << "\t" << numCoarsePeaks << "\t"
 	// 	  << coarseMapPeakPhiDegs[pol][peakInd] << "\t" << coarseMapPeakThetaDegs[pol][peakInd]
 	// 	  << std::endl;
+
+
+	// reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
+	// 		fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
+	// 		0, 0,
+	// 		peakInd);
 
 	reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
 			fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
@@ -1120,11 +1125,17 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
       // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
       // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
       // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
-      FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-      				ptr->fftsPadded[pol][ant2],
-      				ptr->fftsPadded[pol][ant1],
-      				ptr->crossCorrelationsUpsampled[pol][combo],
-      				threadInd);
+      // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
+      // 				ptr->fftsPadded[pol][ant2],
+      // 				ptr->fftsPadded[pol][ant1],
+      // 				ptr->crossCorrelationsUpsampled[pol][combo],
+      // 				threadInd);
+      FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+				      UPSAMPLE_FACTOR,
+				      ptr->ffts[pol][ant2],
+				      ptr->ffts[pol][ant1],
+				      ptr->crossCorrelationsUpsampled[pol][combo],
+				      threadInd);
 
 
 
@@ -1153,11 +1164,18 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
       Int_t ant1 = ptr->comboToAnt1s.at(combo);
       Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
-      FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-      				ptr->fftsPadded[pol][ant2],
-      				ptr->fftsPadded[pol][ant1],
-      				ptr->crossCorrelationsUpsampled[pol][combo],
-      				threadInd);
+      FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+				      UPSAMPLE_FACTOR,
+				      ptr->ffts[pol][ant2],
+				      ptr->ffts[pol][ant1],
+				      ptr->crossCorrelationsUpsampled[pol][combo],
+				      threadInd);
+      // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
+      // 				ptr->fftsPadded[pol][ant2],
+      // 				ptr->fftsPadded[pol][ant1],
+      // 				ptr->crossCorrelationsUpsampled[pol][combo],
+      // 				threadInd);
+
       // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
       // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
       // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
@@ -1660,12 +1678,14 @@ void CrossCorrelator::fillDeltaTLookup(){
   	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
   	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
 	    Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
-	    offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
+	    // offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
+	    offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
 	    Double_t dt1 = offsetLow*nominalSamplingDeltaT;
 	    interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
 
 	    // Here we account for the fact that we are now time ordering the correlations
-	    offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
+	    // offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
+	    offsetLows[pol][phiBin][combo][thetaBin]+=numSamples/2;
 	  }
   	}
       }
@@ -2201,7 +2221,9 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 	continue;
       }
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	// Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	// Int_t offsetLow = 0;
+	Int_t offsetLow = ptr->offsetLows[pol][phiBin][combo][thetaBin];
 	Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
 	Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
 	Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
@@ -2796,8 +2818,11 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
   // I can get an out of range error (I think) in the
   if(phiDeg < -500 || thetaDeg < -500 || phiDeg >= 500 || thetaDeg >= 500){
-    std::cerr << "Requesting coherently summed waveform with implausible incoming angle." << std::endl;
-    return NULL;
+    phiDeg = 0;
+    thetaDeg = 0;
+
+    // std::cerr << "Requesting coherently summed waveform with implausible incoming angle." << std::endl;
+    // return NULL;
   }
 
   Double_t theDeltaT = nSamp == numSamples ? nominalSamplingDeltaT : correlationDeltaT;
@@ -2819,7 +2844,8 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
     rmsArray = interpRMS[pol];
   }
   else{
-    FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);
+    // FIX ME!!!
+    // FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);
     // rmsArray = interpRMS2[pol];
     rmsArray = interpRMS[pol];
   }
@@ -2854,7 +2880,8 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 	FancyFFTs::doInvFFT(nSamp, ffts[pol][ant], false);
       }
       else{
-	FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);
+	// FIX ME!!!
+	// FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);
       }
 
       if(firstAnt!=ant){ // Don't do the first antenna twice

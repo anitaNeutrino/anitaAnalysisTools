@@ -662,10 +662,6 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
   // Grab array associated with plan from internal memory
   complex<double>* tempVals = (complex<double>*) fComplex[key];
 
-  int numPadFreqs = getNumFreqs(padLen);
-  for(int i=0; i < numPadFreqs; i++){
-    tempVals[i] = 0;
-  }
 
 
   /* Take the product */
@@ -675,6 +671,10 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
   int numFreqs = getNumFreqs(len);
   for(int i=0; i<numFreqs; i++){
     tempVals[i] = fft1[i]*std::conj(fft2[i]);
+  }
+  int numPadFreqs = getNumFreqs(padLen);
+  for(int i=numFreqs; i < numPadFreqs; i++){
+    tempVals[i] = 0;
   }
 
 
