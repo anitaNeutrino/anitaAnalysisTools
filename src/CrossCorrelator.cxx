@@ -37,15 +37,19 @@ Int_t CrossCorrelator::getNumThreads(){
 }
 
 Int_t CrossCorrelator::setNumThreads(Int_t numDesiredThreads){
-  if(numDesiredThreads > 0 && numDesiredThreads <= MAX_THREADS){
-    numThreads = numDesiredThreads;
-  }
-  else if(numDesiredThreads > MAX_THREADS){
-    numThreads = MAX_THREADS;
-  }
-  else{
-    numThreads = 1;
-  }
+
+  // std::cerr << "Threading temporarily disabled in CrossCorrelator" << std::endl;
+  numThreads = 1;
+
+  // if(numDesiredThreads > 0 && numDesiredThreads <= MAX_THREADS){
+  //   numThreads = numDesiredThreads;
+  // }
+  // else if(numDesiredThreads > MAX_THREADS){
+  //   numThreads = MAX_THREADS;
+  // }
+  // else{
+  //   numThreads = 1;
+  // }
 
   while((Int_t)threadImagePeak.size() < numThreads){
     threadImagePeak.push_back(0);
@@ -57,7 +61,6 @@ Int_t CrossCorrelator::setNumThreads(Int_t numDesiredThreads){
     threadPeakPhiBinZoom.push_back(0);
     threadPeakThetaBinZoom.push_back(0);
   }
-
   return numThreads;
 }
 
@@ -1678,15 +1681,15 @@ void CrossCorrelator::fillDeltaTLookup(){
   	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
   	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
 	    Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
-	    // offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
-	    offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
+	    offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
+	    // offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
 	    Double_t dt1 = offsetLow*nominalSamplingDeltaT;
-	    // interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
-	    interpPreFactors[pol][phiBin][combo][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+	    interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
+	    // interpPreFactors[pol][phiBin][combo][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
 
 	    // Here we account for the fact that we are now time ordering the correlations
-	    // offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
-	    offsetLows[pol][phiBin][combo][thetaBin]+=numSamples/2;
+	    offsetLows[pol][combo][phiBin][thetaBin]+=numSamples/2;
+	    // offsetLows[pol][phiBin][combo][thetaBin]+=numSamples/2;
 	  }
   	}
       }
@@ -2179,6 +2182,9 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
  */
 
 void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
+
+  // std::cout << "here 0" << std::endl;
+
   // Disgusting hacks to get ROOT threading to compile inside a class.
   CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
   Long_t threadInd = args->threadInd;
@@ -2191,62 +2197,86 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   // const Int_t startPhiBin = 0;
   // const Int_t endPhiBin = hImage->GetNbinsX();
 
-  const Int_t numPhiBinsPerThread = (NUM_BINS_PHI*NUM_PHI)/numThreads;
+
+  // const Int_t numPhiBinsPerThread = (NUM_BINS_PHI*NUM_PHI)/numThreads;
+  const Int_t numPhiSectorsPerThread = NUM_PHI/numThreads;
   const Int_t startThetaBin = 0;
   const Int_t endThetaBin = NUM_BINS_THETA;
-  const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
-  const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
+  const Int_t startPhiSector = threadInd*numPhiSectorsPerThread;
+  const Int_t endPhiSector = startPhiSector+numPhiSectorsPerThread;
+
+
+  // std::cout << numPhiSectorsPerThread << "\t" << startThetaBin << "\t" << endThetaBin << "\t" << startPhiSector << "\t" << endPhiSector << std::endl;
+
 
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
 
   // zero internal map
-  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-      ptr->coarseMap[pol][phiBin][thetaBin] = 0;
+  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
+    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
+    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
+    // std::cout << startPhiBin << "\t" << endPhiBin << std::endl;
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+      for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	ptr->coarseMap[pol][phiBin][thetaBin] = 0;
+      }
     }
   }
 
-  Int_t phiSector = -1;
+  // std::cout << "here 1" << std::endl;
+
   std::vector<Int_t>* combosToUse = NULL;
-  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-    Int_t thisPhiSector = phiBin/NUM_BINS_PHI;
-    if(phiSector!=thisPhiSector){
-      phiSector = thisPhiSector;
-      combosToUse = &ptr->combosToUseGlobal[phiSector];
-    }
+  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
+    combosToUse = &ptr->combosToUseGlobal[phiSector];
+
+    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
+    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
       Int_t combo = combosToUse->at(comboInd);
       if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
 	continue;
       }
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+
+	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
+	  // Int_t offsetLow = 0;
+	  // Int_t offsetLow = ptr->offsetLows[pol][phiBin][combo][thetaBin];
+	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
+	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
+	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+
+	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
+	}
+      }
+    }
+  }
+
+  // std::cout << "here 2" << std::endl;
+
+  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
+    combosToUse = &ptr->combosToUseGlobal[phiSector];
+
+    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
+    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	// Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
-	// Int_t offsetLow = 0;
-	Int_t offsetLow = ptr->offsetLows[pol][phiBin][combo][thetaBin];
-	Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
-	Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	// Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
-	Double_t cInterp = ptr->interpPreFactors[pol][phiBin][combo][thetaBin]*(c2 - c1) + c1;
-	ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
+
+	if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
+	  ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
+	}
+	if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
+	  ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
+	  peakPhiBin = phiBin;
+	  peakThetaBin = thetaBin;
+	}
       }
     }
   }
 
-  for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-
-      if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
-      }
-      if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
-	ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
-	peakPhiBin = phiBin;
-	peakThetaBin = thetaBin;
-      }
-    }
-  }
+  // std::cout << "here 3" << std::endl;
 
   ptr->threadPeakPhiDeg[threadInd] = ptr->phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
   ptr->threadPeakThetaDeg[threadInd] = ptr->thetaWaves[peakThetaBin]*TMath::RadToDeg();
