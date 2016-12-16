@@ -172,7 +172,8 @@ void CrossCorrelator::initializeVariables(){
 void CrossCorrelator::printInfo(){
   std::cerr << __PRETTY_FUNCTION__ << std::endl;
   std::cerr << "\tupsample factor = " << UPSAMPLE_FACTOR << std::endl;
-  std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
+  // std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
+  std::cerr << "\tBin size theta (deg) = " << Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA << std::endl;
   std::cerr << "\tBin size phi (deg) = " << Double_t(PHI_RANGE)/NUM_BINS_PHI << std::endl;
   std::cerr << "\tdeltaTs array size = "
 	    << sizeof(Double_t)*NUM_POL*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA
@@ -1656,7 +1657,8 @@ void CrossCorrelator::fillDeltaTLookup(){
     phiWaveLookup[phiIndex] = phiWave;
   }
 
-  const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
+  // const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
+  const Double_t thetaBinSize = (Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA);
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
     Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
@@ -1698,7 +1700,8 @@ void CrossCorrelator::fillDeltaTLookup(){
 
   // minThetaDegZoom = -78.5;
   // minPhiDegZoom = -59.25;
-  minThetaDegZoom = -THETA_RANGE/2 - THETA_RANGE_ZOOM/2;
+  // minThetaDegZoom = -THETA_RANGE/2 - THETA_RANGE_ZOOM/2;
+  minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
   minPhiDegZoom = getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
@@ -1879,8 +1882,10 @@ TH2D* CrossCorrelator::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
   Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
   // Double_t thetaMin = -THETA_RANGE/2 + double(THETA_RANGE)/NUM_BINS_THETA;
   // Double_t thetaMax = THETA_RANGE/2 + double(THETA_RANGE)/NUM_BINS_THETA;
-  Double_t thetaMin = -THETA_RANGE/2;
-  Double_t thetaMax = THETA_RANGE/2;
+  // Double_t thetaMin = -THETA_RANGE/2;;
+  // Double_t thetaMax = THETA_RANGE/2;
+  Double_t thetaMin = MIN_THETA;
+  Double_t thetaMax = MAX_THETA;
 
   TH2D* hImage = new TH2D(name, title,
 			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
