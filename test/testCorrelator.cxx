@@ -1,8 +1,9 @@
+
 /*****************************************************************************************************************
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
- Description: 
+ Description:
              Program to test the functionality of the CrossCorrelator class, nothing more complicated than that. Writes some output to /tmp.
 
 *************************************************************************************************************** */
@@ -26,7 +27,7 @@ void testNewCombinatorics();
 void testImageFullStyle();
 void writeCorrelationGraphs(CrossCorrelator* cc);
 void testCoherentlySummedWaveform();
-void testNormalization();
+// void testNormalization();
 // void testHackyFilter();
 void testOffAxisDelay();
 // void testFileWriting();
@@ -42,7 +43,7 @@ int main(){
   // testHackyFilter();
   // testOffAxisDelay();
   //  testFileWriting();
-  testSimpleNotch();  
+  testSimpleNotch();
 
   return 0;
 
@@ -54,7 +55,7 @@ void testSimpleNotch(){
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 
 
-  char eventFileName[1024];  
+  char eventFileName[1024];
 
   Int_t run = 352;
   sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
@@ -68,25 +69,25 @@ void testSimpleNotch(){
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  CalibratedAnitaEvent* event = NULL;  
+  CalibratedAnitaEvent* event = NULL;
   eventTree->SetBranchAddress("event", &event);
 
   RawAnitaHeader* header = NULL;
   headTree->SetBranchAddress("header", &header);
-  
-  
+
+
   headTree->BuildIndex("eventNumber");
   eventTree->BuildIndex("eventNumber");
-  
+
   const Long64_t eventNumber = 60832108;
   headTree->GetEntryWithIndex(eventNumber);
   eventTree->GetEntryWithIndex(eventNumber);
   std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
 
-  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);  
+  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);
   cc->reconstructEvent(usefulEvent, 1, 1);
 
-  TFile* outFile = new TFile("/tmp/testSimpleNotches.root","recreate");    
+  TFile* outFile = new TFile("/tmp/testSimpleNotches.root","recreate");
 
   Double_t peakValue, peakPhiDeg, peakThetaDeg;
   TH2D* hCoarse = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
@@ -95,13 +96,13 @@ void testSimpleNotch(){
   hCoarse->Write();
   delete hCoarse;
   hCoarse = NULL;
-  
+
   CrossCorrelator::SimpleNotch notch260("n260Notch", "260MHz Satellite Notch", 260 - 26, 260 + 26);
   cc->addNotch(notch260);
 
-  cc->eventNumber[0] = 0; // force re-event correlation  
+  cc->eventNumber[0] = 0; // force re-event correlation
 
-  cc->reconstructEvent(usefulEvent, 1, 1); 
+  cc->reconstructEvent(usefulEvent, 1, 1);
   TH2D* hCoarse2 = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
   TString name2 = hCoarse2->GetName();
   hCoarse2->SetName(name + "_oneNotch");
@@ -111,20 +112,20 @@ void testSimpleNotch(){
 
   CrossCorrelator::SimpleNotch notch370("n370Notch", "370MHz Satellite Notch", 370 - 26, 370 + 26);
   cc->addNotch(notch370);
-  cc->eventNumber[0] = 0; // force re-event correlation  
+  cc->eventNumber[0] = 0; // force re-event correlation
 
-  cc->reconstructEvent(usefulEvent, 1, 1); 
+  cc->reconstructEvent(usefulEvent, 1, 1);
   TH2D* hCoarse3 = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
   TString name3 = hCoarse3->GetName();
   hCoarse3->SetName(name + "_twoNotches");
   hCoarse3->Write();
-  delete hCoarse3;  
-  hCoarse3 = NULL;  
+  delete hCoarse3;
+  hCoarse3 = NULL;
 
   delete cc;
-  
+
   outFile->Write();
-  outFile->Close();  
+  outFile->Close();
 }
 
 
@@ -134,7 +135,7 @@ void testOffAxisDelay(){
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
 
 
-  char eventFileName[1024];  
+  char eventFileName[1024];
 
   Int_t run = 352;
   sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
@@ -148,53 +149,53 @@ void testOffAxisDelay(){
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  CalibratedAnitaEvent* event = NULL;  
+  CalibratedAnitaEvent* event = NULL;
   eventTree->SetBranchAddress("event", &event);
 
   RawAnitaHeader* header = NULL;
   headTree->SetBranchAddress("header", &header);
-  
-  
+
+
   headTree->BuildIndex("eventNumber");
   eventTree->BuildIndex("eventNumber");
-  
+
   const Long64_t eventNumber = 60832108;
   headTree->GetEntryWithIndex(eventNumber);
   eventTree->GetEntryWithIndex(eventNumber);
   std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
 
-  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);  
+  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);
   cc->kUseOffAxisDelay = 1;
   cc->reconstructEvent(usefulEvent, 2, 2);
 
 
-  TFile* outFile = new TFile("/tmp/testOffAxisDelay.root","recreate");    
+  TFile* outFile = new TFile("/tmp/testOffAxisDelay.root","recreate");
 
   Double_t peakValue, imagePeak, peakPhiDeg, peakThetaDeg;
   TH2D* hCoarse = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
   // hCoarse->Write();
-  
+
 
   for(int i=0; i < 2; i++){
     std::cout << i << "\t" << cc->coarseMapPeakValues[pol][i] << "\t"
-	      << cc->coarseMapPeakPhiDegs[pol][i] << "\t" 
+	      << cc->coarseMapPeakPhiDegs[pol][i] << "\t"
 	      << cc->coarseMapPeakThetaDegs[pol][i] << std::endl;
   }
-  
-  cc->kUseOffAxisDelay = 1;  
+
+  cc->kUseOffAxisDelay = 1;
   TH2D* hWithOffAxisDelay = cc->makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
 						   cc->coarseMapPeakPhiDegs[pol][0],
 						   cc->coarseMapPeakThetaDegs[pol][0]);
   hWithOffAxisDelay->SetName("hWithOffAxisDelay");
   hWithOffAxisDelay->SetTitle("With Off-Axis Delay");
-  
-  cc->kUseOffAxisDelay = 0; 
+
+  cc->kUseOffAxisDelay = 0;
   TH2D* hWithOutOffAxisDelay = cc->makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
 						   cc->coarseMapPeakPhiDegs[pol][0],
 						   cc->coarseMapPeakThetaDegs[pol][0]);
 
   hWithOutOffAxisDelay->SetName("hWithOutOffAxisDelay");
-  hWithOutOffAxisDelay->SetTitle("Without Off-Axis Delay");  
+  hWithOutOffAxisDelay->SetTitle("Without Off-Axis Delay");
 
 
 
@@ -208,7 +209,7 @@ void testOffAxisDelay(){
 
     std::cout << cc->phiArrayDeg[pol].at(ant1) << "\t" << mp
 	      << "\t" << cc->phiArrayDeg[pol].at(ant2) << "\t" << dPhi << std::endl;
-    
+
     TGraph* grOffAxisDelay = new TGraph();
     for(Double_t phiFromMidPoint = -90; phiFromMidPoint <= 90; phiFromMidPoint += 1){
       Double_t delay = cc->relativeOffAxisDelay(pol, ant1, ant2, phiFromMidPoint+mp);
@@ -226,150 +227,150 @@ void testOffAxisDelay(){
 
 
 
-  
-  
+
+
   delete cc;
-  
+
   outFile->Write();
-  outFile->Close();  
+  outFile->Close();
 }
 
 
 
+// This test is broken now removing fftsPadded
+// void testNormalization(){
+//   char eventFileName[1024];
 
-void testNormalization(){
-  char eventFileName[1024];
+//   Int_t run = 352;
+//   sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
 
-  Int_t run = 352;
-  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
+//   TFile* eventFile = TFile::Open(eventFileName);
+//   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
 
-  TFile* eventFile = TFile::Open(eventFileName);
-  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
+//   char rawHeaderFileName[1024];
+//   sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
 
-  char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
+//   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
+//   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
+//   CalibratedAnitaEvent* event = NULL;
+//   eventTree->SetBranchAddress("event", &event);
 
-  CalibratedAnitaEvent* event = NULL;  
-  eventTree->SetBranchAddress("event", &event);
+//   RawAnitaHeader* header = NULL;
+//   headTree->SetBranchAddress("header", &header);
 
-  RawAnitaHeader* header = NULL;
-  headTree->SetBranchAddress("header", &header);
+//   TFile* outFile = new TFile("/tmp/testNormalization.root","recreate");
 
-  TFile* outFile = new TFile("/tmp/testNormalization.root","recreate");
+//   CrossCorrelator* cc = new CrossCorrelator();
 
-  CrossCorrelator* cc = new CrossCorrelator();
+//   headTree->BuildIndex("eventNumber");
+//   eventTree->BuildIndex("eventNumber");
 
-  headTree->BuildIndex("eventNumber");
-  eventTree->BuildIndex("eventNumber");
-  
-  const Long64_t eventNumber = 60832108;
-  headTree->GetEntryWithIndex(eventNumber);
-  eventTree->GetEntryWithIndex(eventNumber);
-  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
-  
-  // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
-  UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
-  cc->correlateEvent(realEvent);
+//   const Long64_t eventNumber = 60832108;
+//   headTree->GetEntryWithIndex(eventNumber);
+//   eventTree->GetEntryWithIndex(eventNumber);
+//   std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
 
-  if(cc->grsResampled[0][1]){
-    delete cc->grsResampled[0][1];
-    cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
-  }
+//   // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
+//   UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
+//   cc->correlateEvent(realEvent);
 
-  cc->doFFTs(AnitaPol::kHorizontal);
-  cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
-  cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
+//   if(cc->grsResampled[0][1]){
+//     delete cc->grsResampled[0][1];
+//     cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
+//   }
 
-  TGraph* grCrossCorr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
-  grCrossCorr->Write();
+//   cc->doFFTs(AnitaPol::kHorizontal);
+//   cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
+//   cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
 
-  TGraph* grCrossCorr2 = cc->getUpsampledCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
-  grCrossCorr2->Write();
-  
-  Double_t mean=0, rms=1;
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      RootTools::getMeanAndRms(cc->grsResampled[pol][ant], mean, rms);
-      // std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << std::endl;
-      std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << "\t";
-      std::cout << pow(cc->interpRMS[pol][ant], 2) << "\t" << pow(cc->interpRMS2[pol][ant], 2) << "\t"
-		<< pow(cc->interpRMS[pol][ant],2)/pow(cc->interpRMS2[pol][ant],2) << "\t"
-		<< std::endl;
-    }
-  }
+//   TGraph* grCrossCorr = cc->getCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
+//   grCrossCorr->Write();
 
-  Double_t* volts = FancyFFTs::doInvFFT(cc->numSamples, cc->ffts[0][0], true);
-  Double_t* voltsUpsampled = FancyFFTs::doInvFFT(cc->numSamplesUpsampled, cc->fftsPadded[0][0], true);
+//   TGraph* grCrossCorr2 = cc->getUpsampledCrossCorrelationGraph(AnitaPol::kHorizontal, 0, 1);
+//   grCrossCorr2->Write();
 
-  std::vector<Double_t> times(cc->numSamples, 0);
-  for(int samp=0; samp < cc->numSamples; samp++){
-    times.at(samp) = cc->nominalSamplingDeltaT*samp;
-  }
-  
-  std::vector<Double_t> timesUpsampled(cc->numSamplesUpsampled, 0);
-  for(int samp=0; samp < cc->numSamplesUpsampled; samp++){
-    timesUpsampled.at(samp) = cc->correlationDeltaT*samp;    
-  }
+//   Double_t mean=0, rms=1;
+//   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+//     for(int ant=0; ant < NUM_SEAVEYS; ant++){
+//       RootTools::getMeanAndRms(cc->grsResampled[pol][ant], mean, rms);
+//       // std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << std::endl;
+//       std::cout << pol << "\t" << ant << "\t" << mean << "\t" << rms << "\t";
+//       std::cout << pow(cc->interpRMS[pol][ant], 2) << "\t" << pow(cc->interpRMS2[pol][ant], 2) << "\t"
+// 		<< pow(cc->interpRMS[pol][ant],2)/pow(cc->interpRMS2[pol][ant],2) << "\t"
+// 		<< std::endl;
+//     }
+//   }
 
-  TGraph* grVolts = new TGraph(cc->numSamples, &times[0], volts);  
-  TGraph* grVoltsUpsampled = new TGraph(cc->numSamplesUpsampled, &timesUpsampled[0], voltsUpsampled);
+//   Double_t* volts = FancyFFTs::doInvFFT(cc->numSamples, cc->ffts[0][0], true);
+//   Double_t* voltsUpsampled = FancyFFTs::doInvFFT(cc->numSamplesUpsampled, cc->fftsPadded[0][0], true);
 
-  {
-    Double_t mean, rms;
-    RootTools::getMeanAndRms(grVolts, mean, rms);
-    std::cout << "grVolts\t" << mean << "\t" << rms << std::endl;
-    RootTools::getMeanAndRms(grVoltsUpsampled, mean, rms);    
-    std::cout << "grVoltsUpsampled\t" << mean << "\t" << rms << std::endl;    
-  }
+//   std::vector<Double_t> times(cc->numSamples, 0);
+//   for(int samp=0; samp < cc->numSamples; samp++){
+//     times.at(samp) = cc->nominalSamplingDeltaT*samp;
+//   }
 
-  grVolts->SetName("grVolts");
-  grVoltsUpsampled->SetName("grVoltsUpsampled");
+//   std::vector<Double_t> timesUpsampled(cc->numSamplesUpsampled, 0);
+//   for(int samp=0; samp < cc->numSamplesUpsampled; samp++){
+//     timesUpsampled.at(samp) = cc->correlationDeltaT*samp;
+//   }
 
-  grVolts->Write();
-  grVoltsUpsampled->Write();
+//   TGraph* grVolts = new TGraph(cc->numSamples, &times[0], volts);
+//   TGraph* grVoltsUpsampled = new TGraph(cc->numSamplesUpsampled, &timesUpsampled[0], voltsUpsampled);
 
-  delete [] volts;
-  delete [] voltsUpsampled;  
-  
-  const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
-  const int numFreqsPadded = FancyFFTs::getNumFreqs(cc->numSamplesUpsampled);
+//   {
+//     Double_t mean, rms;
+//     RootTools::getMeanAndRms(grVolts, mean, rms);
+//     std::cout << "grVolts\t" << mean << "\t" << rms << std::endl;
+//     RootTools::getMeanAndRms(grVoltsUpsampled, mean, rms);
+//     std::cout << "grVoltsUpsampled\t" << mean << "\t" << rms << std::endl;
+//   }
 
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      Double_t sumSquaredPadded = 0;
-      for(int freqInd=0; freqInd < numFreqsPadded; freqInd++){
-	if(freqInd == numFreqsPadded - 1){
-	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;
-	}
-	// if(freqInd == numFreqs - 1){
-	//   sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;	  
-	// }	
-	else{
-	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd]);
-	}
-      }
-      std::cout << pol << "\t" << ant << "\t" << sumSquaredPadded << "\t" << cc->numSamplesUpsampled << "\t" << sumSquaredPadded/cc->numSamplesUpsampled << std::endl;
+//   grVolts->SetName("grVolts");
+//   grVoltsUpsampled->SetName("grVoltsUpsampled");
 
-      Double_t sumSquared = 0;
-      for(int freqInd=0; freqInd < numFreqs; freqInd++){
-	if(freqInd == numFreqs - 1){
-	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd])/2;
-	}
-	else{
-	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd]);
-	}
-      }
-      std::cout << pol << "\t" << ant << "\t" << sumSquared << "\t" << cc->numSamples << "\t" << sumSquared/cc->numSamples << std::endl;
-    }
-  }
+//   grVolts->Write();
+//   grVoltsUpsampled->Write();
 
-  
-  outFile->Write();
-  outFile->Close();  
-}
+//   delete [] volts;
+//   delete [] voltsUpsampled;
+
+//   const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
+//   const int numFreqsPadded = FancyFFTs::getNumFreqs(cc->numSamplesUpsampled);
+
+//   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+//     for(int ant=0; ant < NUM_SEAVEYS; ant++){
+//       Double_t sumSquaredPadded = 0;
+//       for(int freqInd=0; freqInd < numFreqsPadded; freqInd++){
+// 	if(freqInd == numFreqsPadded - 1){
+// 	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;
+// 	}
+// 	// if(freqInd == numFreqs - 1){
+// 	//   sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd])/2;
+// 	// }
+// 	else{
+// 	  sumSquaredPadded += std::norm(cc->fftsPadded[pol][ant][freqInd]);
+// 	}
+//       }
+//       std::cout << pol << "\t" << ant << "\t" << sumSquaredPadded << "\t" << cc->numSamplesUpsampled << "\t" << sumSquaredPadded/cc->numSamplesUpsampled << std::endl;
+
+//       Double_t sumSquared = 0;
+//       for(int freqInd=0; freqInd < numFreqs; freqInd++){
+// 	if(freqInd == numFreqs - 1){
+// 	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd])/2;
+// 	}
+// 	else{
+// 	  sumSquared += std::norm(cc->ffts[pol][ant][freqInd]);
+// 	}
+//       }
+//       std::cout << pol << "\t" << ant << "\t" << sumSquared << "\t" << cc->numSamples << "\t" << sumSquared/cc->numSamples << std::endl;
+//     }
+//   }
+
+
+//   outFile->Write();
+//   outFile->Close();
+// }
 
 
 
@@ -389,7 +390,7 @@ void testNormalization(){
 //   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
 //   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-//   CalibratedAnitaEvent* event = NULL;  
+//   CalibratedAnitaEvent* event = NULL;
 //   eventTree->SetBranchAddress("event", &event);
 
 //   RawAnitaHeader* header = NULL;
@@ -402,12 +403,12 @@ void testNormalization(){
 
 //   headTree->BuildIndex("eventNumber");
 //   eventTree->BuildIndex("eventNumber");
-  
+
 //   const Long64_t eventNumber = 60832108;
 //   headTree->GetEntryWithIndex(eventNumber);
 //   eventTree->GetEntryWithIndex(eventNumber);
 //   std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
-  
+
 //   // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
 //   UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
 //   cc->correlateEvent(realEvent);
@@ -442,8 +443,8 @@ void testNormalization(){
 //   }
 //   const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
 //   std::vector<Double_t> powSpec(numFreqs, 0);
-//   std::vector<Double_t> freqsMHz(numFreqs, 0);  
-  
+//   std::vector<Double_t> freqsMHz(numFreqs, 0);
+
 //   for(int freqInd=0; freqInd < numFreqs; freqInd++){
 //     freqsMHz.at(freqInd) = freqInd*1e3/(cc->nominalSamplingDeltaT*cc->numSamples);
 //     powSpec.at(freqInd) = std::norm(cc->ffts[0][0][freqInd]);
@@ -460,9 +461,9 @@ void testNormalization(){
 //   TGraph* grPowSpec = new TGraph(numFreqs, &freqsMHz[0], &powSpec[0]);
 //   grPowSpec->SetName("grPowSpecTest");
 //   grPowSpec->Write();
-  
+
 //   outFile->Write();
-//   outFile->Close();  
+//   outFile->Close();
 // }
 
 
@@ -489,7 +490,7 @@ void testCoherentlySummedWaveform(){
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  CalibratedAnitaEvent* event = NULL;  
+  CalibratedAnitaEvent* event = NULL;
   eventTree->SetBranchAddress("event", &event);
 
   RawAnitaHeader* header = NULL;
@@ -498,16 +499,16 @@ void testCoherentlySummedWaveform(){
   TFile* outFile = new TFile("/tmp/testCoherentlySummedWaveform.root","recreate");
   TTree* corrTree = new TTree("corrTree","corrTree");
   Double_t imagePeak;
-  Double_t imagePeakZoom;  
+  Double_t imagePeakZoom;
   corrTree->Branch("imagePeak", &imagePeak);
 
   CrossCorrelator* cc = new CrossCorrelator();
 
   headTree->BuildIndex("eventNumber");
-  eventTree->BuildIndex("eventNumber");  
-  
+  eventTree->BuildIndex("eventNumber");
+
   imagePeak = -1;
-  imagePeakZoom = -1;    
+  imagePeakZoom = -1;
   Double_t peakPhiDeg = -1;
   Double_t peakThetaDeg = -1;
   Double_t peakPhiDegZoom = -1;
@@ -516,9 +517,9 @@ void testCoherentlySummedWaveform(){
   const Long64_t eventNumber = 60832108;
   headTree->GetEntryWithIndex(eventNumber);
   eventTree->GetEntryWithIndex(eventNumber);
-  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;  
+  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
 
-  
+
   // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
   UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
   cc->correlateEvent(realEvent);
@@ -527,10 +528,10 @@ void testCoherentlySummedWaveform(){
   // writeCorrelationGraphs(cc);
 
   std::vector<TH2D*> hImages;
-  std::vector<TH2D*> hZoomedImages;    
+  std::vector<TH2D*> hZoomedImages;
 
   AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
-  
+
   UInt_t l3TrigPattern = 0;
   if(pol==AnitaPol::kHorizontal){
     l3TrigPattern = header->l3TrigPatternH;
@@ -542,7 +543,7 @@ void testCoherentlySummedWaveform(){
     std::cerr << "??????????????????????" << std::endl;
   }
   std::cout << l3TrigPattern << std::endl;
-      
+
   hImages.push_back(cc->makeTriggeredImage(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern));
   hZoomedImages.push_back(cc->makeZoomedImage(pol, imagePeakZoom, peakPhiDegZoom, peakThetaDegZoom,
 					      l3TrigPattern, peakPhiDeg, peakThetaDeg));
@@ -565,7 +566,7 @@ void testCoherentlySummedWaveform(){
     grHilbert = NULL;
   }
 
-  
+
   for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
     Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
     if(doPhiSector > 0){
@@ -580,8 +581,8 @@ void testCoherentlySummedWaveform(){
       }
     }
   }
-      
-    
+
+
   delete realEvent;
 
   outFile->Write();
@@ -629,9 +630,9 @@ void testNewCombinatorics(){
   Double_t imagePeak = -1;
   Double_t peakPhiDeg = -1;
   Double_t peakThetaDeg = -1;
-  
+
   // TH2D* hImage = cc->makeGlobalImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg);
-  TH2D* hImage = cc->makeTriggeredImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg, header->l3TrigPatternH);  
+  TH2D* hImage = cc->makeTriggeredImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg, header->l3TrigPatternH);
   hImage->Write();
   delete hImage;
 
@@ -639,7 +640,7 @@ void testNewCombinatorics(){
   outFile->Close();
 
   delete cc;
-  
+
 }
 
 void testImageFullStyle(){
@@ -661,7 +662,7 @@ void testImageFullStyle(){
   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
 
-  CalibratedAnitaEvent* event = NULL;  
+  CalibratedAnitaEvent* event = NULL;
   eventTree->SetBranchAddress("event", &event);
 
   RawAnitaHeader* header = NULL;
@@ -699,11 +700,11 @@ void testImageFullStyle(){
     }
 
     // hImages.push_back(cc->makeTriggeredImage(AnitaPol::kHorizontal, imagePeak, peakPhiDeg, peakThetaDeg,
-    // 					     header->l3TrigPatternH));  
+    // 					     header->l3TrigPatternH));
     // hImages.push_back(cc->makeTriggeredImage(AnitaPol::kVertical, imagePeak, peakPhiDeg, peakThetaDeg,
-    // 					     header->l3TrigPattern));  
+    // 					     header->l3TrigPattern));
 
-    
+
     delete realEvent;
   }
 

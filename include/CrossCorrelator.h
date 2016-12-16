@@ -55,32 +55,39 @@
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
-#define UPSAMPLE_FACTOR 10
+#define UPSAMPLE_FACTOR 6
+// #define UPSAMPLE_FACTOR 10
 // #define UPSAMPLE_FACTOR 40
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 #define PAD_FACTOR 2
 #define GET_NUM_FREQS(n)((n)/2+1)
 
 // Image definitions
-#define NUM_BINS_THETA 100
-#define NUM_BINS_PHI 15
+// #define NUM_BINS_THETA 100
+// #define NUM_BINS_PHI 15
+// #define THETA_RANGE 150
+// #define PHI_RANGE 22.5
+
+#define NUM_BINS_THETA 60
+#define NUM_BINS_PHI 9
 #define THETA_RANGE 150
 #define PHI_RANGE 22.5
+
 
 // #define NUM_BINS_THETA_ZOOM 200
 // #define NUM_BINS_PHI_ZOOM 200
 // #define ZOOM_BINS_PER_DEGREE_PHI 20
 // #define ZOOM_BINS_PER_DEGREE_THETA 20
 
-#define NUM_BINS_THETA_ZOOM 100
-#define NUM_BINS_PHI_ZOOM 200
-#define ZOOM_BINS_PER_DEGREE_PHI 20
-#define ZOOM_BINS_PER_DEGREE_THETA 20
+// #define NUM_BINS_THETA_ZOOM 100
+// #define NUM_BINS_PHI_ZOOM 200
+// #define ZOOM_BINS_PER_DEGREE_PHI 20
+// #define ZOOM_BINS_PER_DEGREE_THETA 20
 
-// #define NUM_BINS_THETA_ZOOM 40
-// #define NUM_BINS_PHI_ZOOM 40
-// #define ZOOM_BINS_PER_DEGREE_PHI 4
-// #define ZOOM_BINS_PER_DEGREE_THETA 4
+#define NUM_BINS_THETA_ZOOM 40
+#define NUM_BINS_PHI_ZOOM 40
+#define ZOOM_BINS_PER_DEGREE_PHI 4
+#define ZOOM_BINS_PER_DEGREE_THETA 4
 
 // angular distance to traverse akima fits along peak
 #define AKIMA_PEAK_INTERP_DELTA_THETA_DEG 0.05
@@ -381,8 +388,6 @@ public:
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
-
-  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
 
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
