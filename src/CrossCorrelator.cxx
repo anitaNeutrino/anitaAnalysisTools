@@ -1761,6 +1761,7 @@ void CrossCorrelator::fillDeltaTLookup(){
 	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
 	Double_t offAxisDelay = relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
 	offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
+	offAxisDelaysDivided[pol][combo][phiIndex] = offAxisDelay/correlationDeltaT;
 
 	part21sZoom[pol][combo][phiIndex] = zoomedCosPartLookup[pol][ant2][phiIndex] - zoomedCosPartLookup[pol][ant1][phiIndex];
 
@@ -2552,17 +2553,11 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
 	Double_t offsetLowDouble = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
-
-	// deltaT += kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0;
-	offsetLowDouble += (kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0)/ptr->correlationDeltaT;
-
-	// Double_t offsetLowDouble = deltaT/ptr->correlationDeltaT;
-
+	offsetLowDouble += kUseOffAxisDelay > 0 ? ptr->offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
 	// hack for floor()
 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
 
 	Double_t deltaT = (offsetLowDouble - offsetLow);
-	// deltaT /= ptr->correlationDeltaT;
 	offsetLow += offset;
 	Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
 	Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
