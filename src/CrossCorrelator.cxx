@@ -1726,6 +1726,7 @@ void CrossCorrelator::fillDeltaTLookup(){
     zoomedThetaWaves[thetaIndex] = thetaWave;
     zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
     zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
+    dtFactors[thetaIndex] = zoomedCosThetaWaves[thetaIndex]/(SPEED_OF_LIGHT_NS*correlationDeltaT);
   }
 
   for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
@@ -2546,20 +2547,22 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
     for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
       Int_t zoomThetaInd = thetaZoomBase + thetaBin;
       Double_t partBA = ptr->partBAsZoom[pol][combo][zoomThetaInd];
-      Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+      // Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+      Double_t dtFactor = ptr->dtFactors[zoomThetaInd];
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
-	Double_t deltaT = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
+	Double_t offsetLowDouble = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
 
-	deltaT += kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0;
+	// deltaT += kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0;
+	offsetLowDouble += (kUseOffAxisDelay!= 0 ? (kUseOffAxisDelay*ptr->offAxisDelays[pol][combo][zoomPhiInd]) : 0)/ptr->correlationDeltaT;
 
-	Double_t offsetLowDouble = deltaT/ptr->correlationDeltaT;
+	// Double_t offsetLowDouble = deltaT/ptr->correlationDeltaT;
 
 	// hack for floor()
 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
 
-	deltaT -= offsetLow*ptr->correlationDeltaT;
-	deltaT /= ptr->correlationDeltaT;
+	Double_t deltaT = (offsetLowDouble - offsetLow);
+	// deltaT /= ptr->correlationDeltaT;
 	offsetLow += offset;
 	Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
 	Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
