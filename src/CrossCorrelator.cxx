@@ -1116,7 +1116,8 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 
   Int_t startComboInd = threadInd*numCorrPerThread;
 
-  Double_t stash[NUM_SAMPLES*UPSAMPLE_FACTOR*PAD_FACTOR];
+  // Double_t stash[NUM_SAMPLES*UPSAMPLE_FACTOR*PAD_FACTOR];
+  Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(ptr->numSamplesUpsampled, threadInd));
 
   for(int comboInd=startComboInd; comboInd<startComboInd+numCorrPerThread; comboInd++){
     Int_t combo = combosToUse->at(comboInd);
@@ -1134,28 +1135,35 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
       // 				ptr->fftsPadded[pol][ant1],
       // 				ptr->crossCorrelationsUpsampled[pol][combo],
       // 				threadInd);
+      // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+      // 				      UPSAMPLE_FACTOR,
+      // 				      ptr->ffts[pol][ant2],
+      // 				      ptr->ffts[pol][ant1],
+      // 				      ptr->crossCorrelationsUpsampled[pol][combo],
+      // 				      threadInd, false);
       FancyFFTs::crossCorrelatePadded(ptr->numSamples,
 				      UPSAMPLE_FACTOR,
 				      ptr->ffts[pol][ant2],
 				      ptr->ffts[pol][ant1],
 				      ptr->crossCorrelationsUpsampled[pol][combo],
+				      false,
 				      threadInd, false);
 
 
 
       // experiment, copy negative times to behind positive times...
-      for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-      }
+      // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
+      // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
+      // }
       const int offset = ptr->numSamplesUpsampled/2;
 
       // copies first half of original array (times >= 0) into second half of internal storage
       for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = stash[samp];
+	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
       }
       // copies second half of original array (times < 0) into first half of internal storage
       for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = stash[samp];
+	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
       }
     }
   }
@@ -1173,6 +1181,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 				      ptr->ffts[pol][ant2],
 				      ptr->ffts[pol][ant1],
 				      ptr->crossCorrelationsUpsampled[pol][combo],
+				      false,
 				      threadInd, false);
       // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
       // 				      UPSAMPLE_FACTOR,
@@ -1194,18 +1203,18 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 
 
       // experiment, copy negative times to behind positive times...
-      for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-      }
+      // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
+      // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
+      // }
       const int offset = ptr->numSamplesUpsampled/2;
 
       // copies first half of original array (times >= 0) into second half of internal storage
       for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = stash[samp];
+	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
       }
       // copies second half of original array (times < 0) into first half of internal storage
       for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = stash[samp];
+	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
       }
     }
   }
@@ -1236,7 +1245,9 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   Int_t numCorrPerThread = NUM_COMBOS/numThreads;
   Int_t startCombo = threadInd*numCorrPerThread;
 
-  Double_t stash[NUM_SAMPLES*PAD_FACTOR];
+  // Double_t stash[NUM_SAMPLES*PAD_FACTOR];
+
+  Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(ptr->numSamples, threadInd));
 
   for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
@@ -1250,6 +1261,7 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 				    ptr->ffts[pol][ant2],
 				    ptr->ffts[pol][ant1],
 				    ptr->crossCorrelations[pol][combo],
+				    false,
 				    threadInd,
 				    false);
     // FancyFFTs::crossCorrelate(ptr->numSamples,
@@ -1263,19 +1275,23 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
     // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
     // TThread::UnLock();
 
+
+
     // experiment, copy negative times to behind positive times...
-    for(Int_t samp=0; samp < ptr->numSamples; samp++){
-      stash[samp] = ptr->crossCorrelations[pol][combo][samp];
-    }
+    // for(Int_t samp=0; samp < ptr->numSamples; samp++){
+    //   stash[samp] = ptr->crossCorrelations[pol][combo][samp];
+    // }
     const int offset = ptr->numSamples/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
     for(Int_t samp=0; samp < ptr->numSamples/2; samp++){
-      ptr->crossCorrelations[pol][combo][samp+offset] = stash[samp];
+      ptr->crossCorrelations[pol][combo][samp+offset] = ccInternalArray[samp];
+      // ptr->crossCorrelations[pol][combo][samp+offset] = stash[samp];
     }
     // copies second half of original array (times < 0) into first half of internal storage
     for(Int_t samp=ptr->numSamples/2; samp < ptr->numSamples; samp++){
-      ptr->crossCorrelations[pol][combo][samp-offset] = stash[samp];
+      ptr->crossCorrelations[pol][combo][samp-offset] = ccInternalArray[samp];
+      // ptr->crossCorrelations[pol][combo][samp-offset] = stash[samp];
     }
   }
   return 0;

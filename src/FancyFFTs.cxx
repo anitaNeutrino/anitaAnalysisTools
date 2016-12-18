@@ -38,10 +38,6 @@ bool FancyFFTs::makeNewPlanIfNeeded(int len, int threadInd){
   else{
     return false;
   }
-
-
-
-
 }
 
 
@@ -632,7 +628,6 @@ double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double
 
 
 
-
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Cross correlates the two input arrays.
@@ -645,8 +640,32 @@ double* FancyFFTs::crossCorrelate(int len, complex<double>* fft1, complex<double
  * @param threadInd uses a particular threads plans to do the ffts.
  * @returns a pointer to an array of doubles containing the cross correlations.
  */
+
 double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
 					double* output, int threadInd, bool doNormalization){
+
+  return crossCorrelatePadded(len, padFactor, fft1, fft2, output, true, threadInd, doNormalization);
+
+
+}
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Cross correlates the two input arrays.
+ *
+ * @param len is the length of the unpadded time domain input (not the length of the ffts).
+ * @param padFactor is the extra length of the time domain to pad out the frequency domain to, i.e. cross correlation interpolation factor.
+ * @param fft1 is the fft of the first input array.
+ * @param fft2 is the fft of the second input array.
+ * @param output is a pointer to copy the outputted cross correlations to.
+ * @param copyOutputToNewArray is a boolian, if true copies the cross correlation into the output array
+ * @param threadInd uses a particular threads plans to do the ffts.
+ * @returns a pointer to an array of doubles containing the cross correlations.
+ */
+
+double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
+					double* output, bool copyOutputToNewArray, int threadInd, bool doNormalization){
+
 
   /*
     Cross correlation is the same as bin-by-bin multiplication (and some conjugation) in the frequency domain.
@@ -677,16 +696,15 @@ double* FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex<double>*
     tempVals[i] = 0;
   }
 
-
   /* Product back to time domain */
   double* crossCorr = output;
   if(crossCorr==NULL){
     /* Allocates new memory */
-    crossCorr = doInvFFT(padLen, tempVals, true, threadInd, doNormalization);
+    crossCorr = doInvFFT(padLen, tempVals, copyOutputToNewArray, threadInd, doNormalization);
   }
   else{
     /* Does not allocate new memory */
-    crossCorr = doInvFFT(padLen, tempVals, crossCorr, true, threadInd, doNormalization);
+    crossCorr = doInvFFT(padLen, tempVals, crossCorr, copyOutputToNewArray, threadInd, doNormalization);
   }
 
   if(doNormalization){

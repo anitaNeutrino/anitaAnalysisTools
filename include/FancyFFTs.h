@@ -79,7 +79,8 @@ namespace FancyFFTs {
 				double* output, int threadInd=0);
   double* crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
 			       double* output, int threadInd=0, bool doNormalization=true);
-
+  double* crossCorrelatePadded(int len, int padFactor, complex<double>* fft1, complex<double>* fft2,
+			       double* output, bool copyOutputToNewArray, int threadInd=0, bool doNormalization=true);
   int extendToPowerOfTwo(int len);
   complex<double>* zeroPadFFT(complex<double>* fft, int numSamples, int numSamplesUpsampled);
   complex<double>* zeroPadFFT(complex<double>* fft, complex<double>* output,
