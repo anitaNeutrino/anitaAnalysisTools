@@ -2913,26 +2913,38 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
   const Int_t firstAnt = centerPhiSector;
 
+
   std::pair<Int_t, Int_t> key(nSamp, 0);
   // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
   Double_t* vArray = FancyFFTs::getRealArray(key);
+  std::complex<double>* cArray = FancyFFTs::getComplexArray(key);
   Double_t* rmsArray = NULL;
   if(nSamp==numSamples){
     FancyFFTs::doInvFFT(nSamp, ffts[pol][firstAnt], false);
     rmsArray = interpRMS[pol];
   }
   else{
-    // FIX ME!!!
-    // FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][firstAnt], false);
-    // rmsArray = interpRMS2[pol];
-    rmsArray = interpRMS[pol];
+    // Here is the fix, do something hacky manually copying the waveform fft into the longer internal array
+    const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+    for(int freqInd=0; freqInd < numFreqs; freqInd++){
+      cArray[freqInd] = ffts[pol][firstAnt][freqInd];
+    }
+    const int moreFreqs = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+    for(int freqInd=numFreqs; freqInd < moreFreqs; freqInd++){
+      cArray[freqInd] = 0;
+    }
+    FancyFFTs::doInvFFT(nSamp, cArray, false);
+    rmsArray = interpRMS2[pol];
+    //rmsArray = interpRMS[pol];
   }
+
+  double lengthFftNorm = double(nSamp)/numSamples;
 
   std::vector<Double_t> tArray(nSamp, 0);
   Double_t t0 = grsResampled[pol][firstAnt]->GetX()[0];
   for(Int_t samp=0; samp<nSamp; samp++){
     tArray.at(samp) = t0 + samp*theDeltaT;
-    vArray[samp] *= interpRMS[pol][firstAnt]; // Undo the normalization.
+    vArray[samp] *= interpRMS[pol][firstAnt]*lengthFftNorm; // Undo the normalization.
   }
 
   // sum of rms of first few ns of each waveform
@@ -2951,15 +2963,24 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
     for(Int_t ring=0; ring<NUM_RING; ring++){
       Int_t ant= phiSector + ring*NUM_PHI;
-
+      //break;
       // Here we do the inverse FFT on the padded FFTs in memory.
       // The output is now in the vArray
       if(nSamp==numSamples){
 	FancyFFTs::doInvFFT(nSamp, ffts[pol][ant], false);
       }
       else{
-	// FIX ME!!!
-	// FancyFFTs::doInvFFT(nSamp, fftsPadded[pol][ant], false);
+	// Here is the fix, do something hacky manually copying the waveform fft into the longer internal array
+	const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+	for(int freqInd=0; freqInd < numFreqs; freqInd++){
+	  cArray[freqInd] = ffts[pol][ant][freqInd];
+	}
+	const int moreFreqs = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+	for(int freqInd=numFreqs; freqInd < moreFreqs; freqInd++){
+	  cArray[freqInd] = 0;
+	}
+	FancyFFTs::doInvFFT(nSamp, cArray, false);
+	rmsArray = interpRMS2[pol];
       }
 
       if(firstAnt!=ant){ // Don't do the first antenna twice
@@ -2985,7 +3006,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
 	    Double_t vInterp = tOverDeltaT*(v2 - v1) + v1;
 
-	    grCoherent->GetY()[samp] += vInterp*rmsArray[ant]; //interpRMS[pol][ant];
+	    grCoherent->GetY()[samp] += vInterp*rmsArray[ant]*lengthFftNorm; //interpRMS[pol][ant];
 	  }
 	}
       }

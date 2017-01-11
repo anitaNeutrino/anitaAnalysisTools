@@ -740,3 +740,18 @@ double* FancyFFTs::getRealArray(std::pair<Int_t, Int_t> key){
   makeNewPlanIfNeeded(key.first, key.second);
   return fReals[key];
 }
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Get the complex array of the internal fftw memory. Do not delete this!
+ *
+ * @param key is an std::pair of the real array length and the thread index of the plan.
+ * @returns a pointer to fftw's internal complex array. DO NOT DELETE THIS!
+ */
+std::complex<double>* FancyFFTs::getComplexArray(std::pair<Int_t, Int_t> key){
+  makeNewPlanIfNeeded(key.first, key.second);
+  return fComplex[key];
+}
