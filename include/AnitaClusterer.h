@@ -66,7 +66,8 @@ public:
 
   Int_t inCluster; // ID of cluster
   Int_t secondClosestCluster; // ID of cluster
-  Int_t numPointsWithinMinLL = -1; // if > -1 then is a singlet, if > 0 then is a non-isolated singlet
+  //Int_t numPointsWithinMinLL = -1; // if > -1 then is a singlet, if > 0 then is a non-isolated singlet
+  Int_t numPointsWithinMinLL; // if > -1 then is a singlet, if > 0 then is a non-isolated singlet
 
   Int_t isMC;
   Double_t weight; // for MC only
@@ -86,6 +87,9 @@ public:
   Int_t numClusters; // Total number of clusters (maybe gratuitous)
   Int_t numIterations; // number of loop iterations (maybe gratuitous)
 
+  ClusteredAnitaEvent(){
+    numPointsWithinMinLL = -1;
+  }
 };
 
 
