@@ -55,32 +55,42 @@
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 256
-#define UPSAMPLE_FACTOR 10
+#define UPSAMPLE_FACTOR 6
+// #define UPSAMPLE_FACTOR 10
 // #define UPSAMPLE_FACTOR 40
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 #define PAD_FACTOR 2
 #define GET_NUM_FREQS(n)((n)/2+1)
 
 // Image definitions
-#define NUM_BINS_THETA 100
-#define NUM_BINS_PHI 15
-#define THETA_RANGE 150
+// #define NUM_BINS_THETA 100
+// #define NUM_BINS_PHI 15
+// #define THETA_RANGE 150
+// #define PHI_RANGE 22.5
+
+// #define NUM_BINS_THETA 60
+#define NUM_BINS_THETA 35
+#define NUM_BINS_PHI 9
+// #define THETA_RANGE 150
+#define MIN_THETA -55
+#define MAX_THETA 35
 #define PHI_RANGE 22.5
+
 
 // #define NUM_BINS_THETA_ZOOM 200
 // #define NUM_BINS_PHI_ZOOM 200
 // #define ZOOM_BINS_PER_DEGREE_PHI 20
 // #define ZOOM_BINS_PER_DEGREE_THETA 20
 
-#define NUM_BINS_THETA_ZOOM 100
-#define NUM_BINS_PHI_ZOOM 200
-#define ZOOM_BINS_PER_DEGREE_PHI 20
-#define ZOOM_BINS_PER_DEGREE_THETA 20
+// #define NUM_BINS_THETA_ZOOM 100
+// #define NUM_BINS_PHI_ZOOM 200
+// #define ZOOM_BINS_PER_DEGREE_PHI 20
+// #define ZOOM_BINS_PER_DEGREE_THETA 20
 
-// #define NUM_BINS_THETA_ZOOM 40
-// #define NUM_BINS_PHI_ZOOM 40
-// #define ZOOM_BINS_PER_DEGREE_PHI 4
-// #define ZOOM_BINS_PER_DEGREE_THETA 4
+#define NUM_BINS_THETA_ZOOM 40
+#define NUM_BINS_PHI_ZOOM 40
+#define ZOOM_BINS_PER_DEGREE_PHI 4
+#define ZOOM_BINS_PER_DEGREE_THETA 4
 
 // angular distance to traverse akima fits along peak
 #define AKIMA_PEAK_INTERP_DELTA_THETA_DEG 0.05
@@ -92,7 +102,7 @@
 #define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
 
 #define NUM_BINS_PHI_ZOOM_TOTAL (DEGREES_IN_CIRCLE*ZOOM_BINS_PER_DEGREE_PHI + NUM_BINS_PHI_ZOOM)
-#define NUM_BINS_THETA_ZOOM_TOTAL (THETA_RANGE*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
+#define NUM_BINS_THETA_ZOOM_TOTAL ((MAX_THETA - MIN_THETA)*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
 
 #define ALL_PHI_TRIGS 0xffff
 
@@ -370,8 +380,10 @@ public:
 
   // Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  // Double_t interpPreFactors[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_COMBOS][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_BINS_THETA][NUM_PHI*NUM_BINS_PHI]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  // Int_t offsetLows[NUM_POL][NUM_PHI*NUM_BINS_PHI][NUM_COMBOS][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
 
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
   Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
@@ -381,8 +393,6 @@ public:
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
-
-  std::complex<Double_t> fftsPadded[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR)]; //!< FFTs of evenly resampled waveforms, padded with zeros so that the inverse fourier transform is interpolated.
 
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
   TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
@@ -420,9 +430,11 @@ public:
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
   Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
+  Double_t dtFactors[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta)/c/dt for zoomed image.
   Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
   Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
   Double_t offAxisDelays[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
+  Double_t offAxisDelaysDivided[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
 
   Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
   Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.

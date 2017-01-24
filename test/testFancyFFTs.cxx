@@ -2,7 +2,7 @@
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
- Description: 
+ Description:
              C++ ROOT friendly class to do FFTs faster than FFTtools, but is mostly a shameless copy.
 	     Will probably be pretty bare bones intially as I only really want this for doing Cross Correlations.
 *************************************************************************************************************** */
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
     sineWave1[i] = 3.3*TMath::Sin(omega1*t + phi);
     sineWave2[i] = 1.6*TMath::Sin(omega2*t);
   }
-  
+
   TGraph* gr1 = new TGraph(n, ts, sineWave1);
   gr1->SetName("grSineWave");
   gr1->SetTitle("A sine wave; t (s); Amplitude (V)");
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
   double* ps2 = FancyFFTs::getPowerSpectrum(n, sineWave2, dt, FancyFFTs::kSum);
 
   std::cout << "After makeing two power spectrums of length " << n<< ": ";
-  FancyFFTs::printListOfKeys();  
+  FancyFFTs::printListOfKeys();
 
   TGraph* gr3 = new TGraph(FancyFFTs::getNumFreqs(n), fs, ps1);
   TGraph* gr4 = new TGraph(FancyFFTs::getNumFreqs(n), fs, ps2);
@@ -128,20 +128,20 @@ int main(int argc, char *argv[]){
   std::cout << std::endl << std::endl << std::endl;
 
   /* Hardcore test of parsevals theorem: kAverage normalization. */
-  assert(TMath::Abs(powFreq_ave-(powTime/n)) < 1e-10);  
+  assert(TMath::Abs(powFreq_ave-(powTime/n)) < 1e-10);
 
   delete [] ps1_ave;
 
 
   double* ps1_timeIntegral = FancyFFTs::getPowerSpectrum(n, sineWave1, dt, FancyFFTs::kTimeIntegral);
-  double powFreq_timeIntegral = sum(FancyFFTs::getNumFreqs(n), ps1_timeIntegral);  
+  double powFreq_timeIntegral = sum(FancyFFTs::getNumFreqs(n), ps1_timeIntegral);
   std::cout << "powFreq_timeIntegral = " << powFreq_timeIntegral << std::endl;
   std::cout << "powFreq_timeIntegral/powTime_ave = " << powFreq_timeIntegral/(dt*powTime) << std::endl;
   std::cout << "powFreq_timeIntegral-powTime_ave = " << powFreq_timeIntegral-(dt*powTime) << std::endl;
   std::cout << std::endl << std::endl << std::endl;
 
   /* Hardcore test of parsevals theorem: kTimeIntegral normalization. */
-  assert(TMath::Abs(powFreq_timeIntegral-(dt*powTime)) < 1e-10);  
+  assert(TMath::Abs(powFreq_timeIntegral-(dt*powTime)) < 1e-10);
 
   delete [] ps1_timeIntegral;
 
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]){
 
 
 
-  std::cout << "Checking conversion between fftw_complex and std::complex<double>... " << std::endl; 
+  std::cout << "Checking conversion between fftw_complex and std::complex<double>... " << std::endl;
   std::cout << "sizeof(std::complex<double>) = " << sizeof(std::complex<double>) << std::endl;
   std::cout << "sizeof(fftw_complex) = " << sizeof(fftw_complex) << std::endl;
   std::cout << "sizeof(double) = " << sizeof(double) << std::endl;
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]){
   std::cout << "std::complex<double> x(1, 1) = " << x << std::endl;
   fftw_complex y;
   std::cout << "Doing memcpy(&y, &x, sizeof(fftw_complex))... " << std::endl;
-  memcpy(&y, &x, sizeof(fftw_complex));  
+  memcpy(&y, &x, sizeof(fftw_complex));
   std::cout << "fftw_complex y has y[0] = " << y[0] << " and y[1] = " << y[1] << std::endl;
   std::cout << std::endl << std::endl;
 
@@ -221,6 +221,6 @@ int main(int argc, char *argv[]){
   gSystem->ProcessEvents();
   std::cerr << "Select File->Quit to quit." << std::endl;
   theApp->Run();
-  
+
   return 0;
 }
