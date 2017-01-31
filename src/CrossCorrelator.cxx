@@ -329,9 +329,9 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
       }
       interpRMS[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamples);
       interpRMS2[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamplesUpsampled);
-      for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
-	grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
-      }
+      // for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
+      // 	grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
+      // }
     }
 
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
@@ -2918,33 +2918,35 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   // vArray is actually internal memory managed by FancyFFTs... don't delete this!!!
   Double_t* vArray = FancyFFTs::getRealArray(key);
   std::complex<double>* cArray = FancyFFTs::getComplexArray(key);
-  Double_t* rmsArray = NULL;
-  if(nSamp==numSamples){
-    FancyFFTs::doInvFFT(nSamp, ffts[pol][firstAnt], false);
-    rmsArray = interpRMS[pol];
-  }
-  else{
-    // Here is the fix, do something hacky manually copying the waveform fft into the longer internal array
-    const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
-    for(int freqInd=0; freqInd < numFreqs; freqInd++){
-      cArray[freqInd] = ffts[pol][firstAnt][freqInd];
-    }
-    const int moreFreqs = FancyFFTs::getNumFreqs(numSamplesUpsampled);
-    for(int freqInd=numFreqs; freqInd < moreFreqs; freqInd++){
-      cArray[freqInd] = 0;
-    }
-    FancyFFTs::doInvFFT(nSamp, cArray, false);
-    rmsArray = interpRMS2[pol];
-    //rmsArray = interpRMS[pol];
-  }
+  // Double_t* rmsArray = NULL;
+  // if(nSamp==numSamples){
+  //   FancyFFTs::doInvFFT(nSamp, ffts[pol][firstAnt], false);
+  //   rmsArray = interpRMS[pol];
+  // }
+  // else{
+  //   // Here is the fix, do something hacky manually copying the waveform fft into the longer internal array
+  //   const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  //   for(int freqInd=0; freqInd < numFreqs; freqInd++){
+  //     cArray[freqInd] = ffts[pol][firstAnt][freqInd];
+  //   }
+  //   const int moreFreqs = FancyFFTs::getNumFreqs(numSamplesUpsampled);
+  //   for(int freqInd=numFreqs; freqInd < moreFreqs; freqInd++){
+  //     cArray[freqInd] = 0;
+  //   }
+  //   FancyFFTs::doInvFFT(nSamp, cArray, false);
+  //   rmsArray = interpRMS2[pol];
+  //   //rmsArray = interpRMS[pol];
+  // }
 
-  double lengthFftNorm = double(nSamp)/numSamples;
+  // double lengthFftNorm = double(nSamp)/numSamples;
 
   std::vector<Double_t> tArray(nSamp, 0);
   Double_t t0 = grsResampled[pol][firstAnt]->GetX()[0];
   for(Int_t samp=0; samp<nSamp; samp++){
-    tArray.at(samp) = t0 + samp*theDeltaT;
-    vArray[samp] *= interpRMS[pol][firstAnt]*lengthFftNorm; // Undo the normalization.
+    double time = t0 + samp*theDeltaT;
+    tArray.at(samp) = time;
+    // vArray[samp] *= interpRMS[pol][firstAnt]*lengthFftNorm; // Undo the normalization.
+    vArray[samp] = grsResampled[pol][firstAnt]->Eval(time);
   }
 
   // sum of rms of first few ns of each waveform
@@ -2956,58 +2958,30 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   TGraph* grCoherent = new TGraph(nSamp/2, &tArray[0], &vArray[0]);
 
   for(Int_t deltaPhiSect=-maxDeltaPhiSect; deltaPhiSect<=maxDeltaPhiSect; deltaPhiSect++){
-
+  // for(int i=0; i < 0; i++){
+    // int deltaPhiSect = 0;
     Int_t phiSector = deltaPhiSect + centerPhiSector;
     phiSector = phiSector < 0 ? phiSector + NUM_PHI : phiSector;
     phiSector = phiSector >= NUM_PHI ? phiSector - NUM_PHI : phiSector;
 
     for(Int_t ring=0; ring<NUM_RING; ring++){
+    // for(Int_t ring=0; ring<1; ring++){
       Int_t ant= phiSector + ring*NUM_PHI;
-      //break;
-      // Here we do the inverse FFT on the padded FFTs in memory.
-      // The output is now in the vArray
-      if(nSamp==numSamples){
-	FancyFFTs::doInvFFT(nSamp, ffts[pol][ant], false);
-      }
-      else{
-	// Here is the fix, do something hacky manually copying the waveform fft into the longer internal array
-	const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
-	for(int freqInd=0; freqInd < numFreqs; freqInd++){
-	  cArray[freqInd] = ffts[pol][ant][freqInd];
-	}
-	const int moreFreqs = FancyFFTs::getNumFreqs(numSamplesUpsampled);
-	for(int freqInd=numFreqs; freqInd < moreFreqs; freqInd++){
-	  cArray[freqInd] = 0;
-	}
-	FancyFFTs::doInvFFT(nSamp, cArray, false);
-	rmsArray = interpRMS2[pol];
-      }
+
 
       if(firstAnt!=ant){ // Don't do the first antenna twice
 
-	// std::cout << pol << "\t" << firstAnt << "\t" << ant << "\t" << phiRad << "\t" << thetaRad << "\t" << std::endl;
-	Double_t deltaT = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
+	Double_t dt = getDeltaTExpected(pol, firstAnt, ant, phiRad, thetaRad);
 
-	Int_t offset1 = floor(deltaT/theDeltaT);
-	Int_t offset2 = ceil(deltaT/theDeltaT);
-
-	// std::cout << deltaT << "\t" << offset1 << "\t" << offset2 << std::endl;
-
-	// How far between the samples we need to interpolate.
-	Double_t tOverDeltaT = (deltaT - theDeltaT*offset1)/theDeltaT;
+	Double_t t0 = grsResampled[pol][ant]->GetX()[0];
 
 	for(Int_t samp=0; samp<grCoherent->GetN(); samp++){
-	  Int_t samp1 = samp + offset1;
-	  Int_t samp2 = samp + offset2;
-	  if(samp1 >= 0 && samp1 < grCoherent->GetN() && samp2 >= 0 && samp2 < grCoherent->GetN()){
+	  double time = t0 + samp*theDeltaT + dt;
 
-	    Double_t v1 = vArray[samp1];
-	    Double_t v2 = vArray[samp2];
+	  // grCoherent->GetY()[samp] += grsResampled[pol][ant]->Eval(time - deltaT); //interpRMS[pol][ant];
+	  // grCoherent->GetY()[samp] += grsResampled[pol][ant]->Eval(time + deltaT); //interpRMS[pol][ant];
+	  grCoherent->GetY()[samp] += grsResampled[pol][ant]->Eval(time + dt); //interpRMS[pol][ant];
 
-	    Double_t vInterp = tOverDeltaT*(v2 - v1) + v1;
-
-	    grCoherent->GetY()[samp] += vInterp*rmsArray[ant]*lengthFftNorm; //interpRMS[pol][ant];
-	  }
 	}
       }
 
@@ -3022,7 +2996,7 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 	Double_t t = t0 + samp3*theDeltaT;
 	if(t >= t0Good && t < t0Good + timeToEvalRms){
 	  // rms += grs[pol][ant]->GetY()[samp3]*grs[pol][ant]->GetY()[samp3];
-	  double V = rmsArray[ant]*vArray[samp3];
+	  double V = grsResampled[pol][ant]->GetY()[samp3];
 	  rms += V*V;
 	  numSampRms++;
 

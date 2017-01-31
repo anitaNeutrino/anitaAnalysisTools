@@ -155,6 +155,10 @@ void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longi
  * @return the corresponding global bin number which has its content incremented by 1 (copied from TH2).
 */
 Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t weight){
+
+  if(!hCurrent){
+    std::cerr << "Warning in " << __FILE__ << ", no histogram was created!" << std::endl;
+  }
   Double_t x, y;
   getRelXYFromLatLong(latitude, longitude, x, y);
   return hCurrent->Fill(x, y, weight);
