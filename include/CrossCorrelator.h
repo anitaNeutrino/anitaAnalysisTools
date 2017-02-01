@@ -14,12 +14,13 @@
 #include "AnitaEventCalibrator.h"
 #include "AnitaGeomTool.h"
 #include "UsefulAdu5Pat.h"
+#include "FFTtools.h"
 
-// #include "FFTtools.h"
-#include "FancyFFTs.h"
+#include "AnitaEventSummary.h"
 
 // My things
 #include "RootTools.h"
+#include "FancyFFTs.h"
 
 // ROOT things
 #include "TGraph.h"
@@ -256,6 +257,8 @@ public:
   void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
   void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
   AnitaPol::AnitaPol_t reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+  void reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
+
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
 
@@ -453,6 +456,7 @@ public:
   Double_t zoomPhiMin[NUM_POL]; //!< For the current map
   Double_t zoomThetaMin[NUM_POL]; //!< For the current map
 
+  Int_t coherentDeltaPhi;
   Int_t getNumThreads();
   Int_t setNumThreads(Int_t numDesiredThreads);
 

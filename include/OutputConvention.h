@@ -36,9 +36,9 @@ public:
 
   TString getOutputFileName(TString ext="");
   TString getOutputDir();
-  TFile* makeFile();
+  TFile* makeFile(); //!< Create the new output file with proper name
 
-  static TFile* getFile(TString fileNameWithWildcards); //!< The the most recent file with the
+  static TFile* getFile(TString fileNameWithWildcards); //!< Opens matching file with the most recent suffix
 
 private:
   int argc; //!< The argc from the main program
@@ -49,7 +49,6 @@ private:
   TString outFileName; ///!< The output total file output name.
 
   TString getDateTimeSuffix();
-
 
 
 };

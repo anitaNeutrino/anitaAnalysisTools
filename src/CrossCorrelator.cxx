@@ -92,7 +92,7 @@ void CrossCorrelator::initializeVariables(){
   multiplyTopRingByMinusOne = 0;
 
   corrInterp = NULL;
-
+  coherentDeltaPhi = 0;
 
   // Here we look for an environment variable called NUM_CC_THREADS
   // if it's there, set the number of threads, otherwise set it to 1.
@@ -763,50 +763,6 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
 
 
 
-// //---------------------------------------------------------------------------------------------------------
-// /**
-//  * @brief Reconstruct event but only do interpolated peak finding on the polarization with the highest interpolated peak finding
-//  *
-//  * @param usefulEvent is the event to process
-//  * @param numFinePeaks is the number of fine peaks to reconstruct (should be >= numCoarsePeaks but < MAX_NUM_PEAKS)
-//  * @param numCoarsePeaks is the number of coarse peaks to reconstruct (should < MAX_NUM_PEAKS)
-//  *
-//  * Wraps the key reconstruction algorithms and puts the results in internal memory.
-//  */
-// AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
-
-//   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
-//     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
-
-//     // now calls reconstruct inside correlate event
-//     correlateEvent(usefulEvent, pol, filterBits);
-
-//     findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
-//     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
-
-//   }
-//   AnitaPol::AnitaPol_t peakPol = AnitaPol::kVertical;
-//   if(coarseMapPeakValues[AnitaPol::kHorizontal][0] > coarseMapPeakValues[AnitaPol::kVertical][0]){
-//     peakPol = AnitaPol::kHorizontal;
-//   }
-
-
-//   if(numFinePeaks > 0 && numFinePeaks <= numCoarsePeaks){
-//     for(Int_t peakInd=numFinePeaks-1; peakInd >= 0; peakInd--){
-
-//       reconstructZoom(peakPol, fineMapPeakValues[peakPol][peakInd],
-// 		      fineMapPeakPhiDegs[peakPol][peakInd], fineMapPeakThetaDegs[peakPol][peakInd],
-// 		      coarseMapPeakPhiDegs[peakPol][peakInd], coarseMapPeakThetaDegs[peakPol][peakInd],
-// 		      peakInd);
-
-//       // std::cerr << fineMapPeakValues[pol][peakInd] << "\t" << fineMapPeakPhiDegs[pol][peakInd] << "\t"
-//       // 	  << fineMapPeakThetaDegs[pol][peakInd] << std::endl << std::endl;
-//     }
-//   }
-//   return peakPol;
-// }
-
-
 
 
 
@@ -852,6 +808,73 @@ AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(UsefulAnitaEvent* 
   }
   return peakPol;
 }
+
+
+
+
+
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Reconstruct event
+ *
+ * @param usefulEvent is the event to process
+ * @param numFinePeaks is the number of fine peaks to reconstruct (should be >= numCoarsePeaks but < MAX_NUM_PEAKS)
+ * @param numCoarsePeaks is the number of coarse peaks to reconstruct (should < MAX_NUM_PEAKS)
+ *
+ * Wraps the key reconstruction algorithms and puts the results in internal memory.
+ */
+void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
+
+  reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
+
+  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+
+    for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){
+
+      getFinePeakInfo(pol, peakInd,
+		      eventSummary->peak[pol][peakInd].value,
+		      eventSummary->peak[pol][peakInd].phi,
+		      eventSummary->peak[pol][peakInd].theta);
+
+      Double_t minY = 0;
+
+      TGraph* grZ0 = makeUpsampledCoherentlySummedWaveform(pol,
+							   eventSummary->peak[pol][peakInd].phi,
+							   eventSummary->peak[pol][peakInd].theta,
+							   coherentDeltaPhi,
+							   eventSummary->peak[pol][peakInd].snr);
+
+      TGraph* grZ0Hilbert = FFTtools::getHilbertEnvelope(grZ0);
+
+      RootTools::getMaxMin(grZ0Hilbert, eventSummary->coherent[pol][peakInd].peakHilbert, minY);
+
+      delete grZ0;
+      delete grZ0Hilbert;
+
+
+      usefulPat.getSourceLonAndLatAtAlt(eventSummary->peak[pol][peakInd].phi*TMath::DegToRad(),
+					eventSummary->peak[pol][peakInd].theta*TMath::DegToRad(),
+					eventSummary->peak[pol][peakInd].longitude,
+					eventSummary->peak[pol][peakInd].latitude,
+					eventSummary->peak[pol][peakInd].altitude);
+    }
+  }
+
+}
+
+
+
+
+
+
+
 
 
 
