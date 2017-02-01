@@ -2,7 +2,7 @@
  Author: Ben Strutt
  Email: b.strutt.12@ucl.ac.uk
 
- Description: 
+ Description:
              A class to manage output file names from environment variables, exec arguments and time.
 *************************************************************************************************************** */
 
@@ -25,20 +25,21 @@
 /**
  * @class OutputConvention
  * @brief A class to systematically name files produced by my analysis programs.
- * 
+ *
  * Uses the program name, arguments, date, and time.
 */
 class OutputConvention{
 
 public:
-  
+
   OutputConvention(int argcIn, char* argvIn[]);
 
   TString getOutputFileName(TString ext="");
   TString getOutputDir();
-  
-  static TFile* getFile(TString fileNameWithWildcards);
-  
+  TFile* makeFile();
+
+  static TFile* getFile(TString fileNameWithWildcards); //!< The the most recent file with the
+
 private:
   int argc; //!< The argc from the main program
   char** argv; //!< The argv from the main program
@@ -46,11 +47,11 @@ private:
   TString outputDir; //!< TString contining the output directory.
   TString dateTimeSuffix; //!< TString contining the fileName suffix extracted from the date/time.
   TString outFileName; ///!< The output total file output name.
-  
-  TString getDateTimeSuffix(); 
-  
-  
-  
+
+  TString getDateTimeSuffix();
+
+
+
 };
 
 

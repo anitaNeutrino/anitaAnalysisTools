@@ -46,8 +46,9 @@ TString OutputConvention::getOutputFileName(TString ext){
       TObjString* lastPartOfName = (TObjString*) tkns->At(tkns->GetLast());
       theArgv0 = lastPartOfName->GetString();
     }
-    
-    outFileName += theArgv0 + "Plots";
+
+    // outFileName += theArgv0 + "Plots";
+    outFileName += theArgv0;
 
     // Excutable args
     if(argc > 1){
@@ -55,12 +56,12 @@ TString OutputConvention::getOutputFileName(TString ext){
 	outFileName += TString::Format("_%s", argv[argInd]);
       }
     }
-    
-    // Date and time of running executable 
+
+    // Date and time of running executable
     outFileName += getDateTimeSuffix();
 
     if(ext==""){
-      // ROOT suffix      
+      // ROOT suffix
       outFileName += ".root";
     }
     else{
@@ -71,11 +72,30 @@ TString OutputConvention::getOutputFileName(TString ext){
     }
   }
 
-  
+
   return outFileName;
 
-  
+
 }
+
+
+
+/**
+ * Makes the standard named ROOT file.
+ * Complains if there's a problem and returns NULL.
+ *
+ * @return the newly created makefile or NULL if there was a problem.
+ */
+TFile* OutputConvention::makeFile(){
+  TString outFileName = getOutputFileName();
+  TFile* outFile = new TFile(outFileName, "recreate");
+  if(outFile->IsZombie()){
+    std::cerr << "Error! Unable to open output file " << outFileName.Data() << std::endl;
+    outFile = NULL;
+  }
+  return outFile;
+}
+
 
 
 
@@ -152,7 +172,7 @@ TString OutputConvention::getDateTimeSuffix(){
  * @return The output dir.
  */
 TString OutputConvention::getOutputDir(){
-  
+
   outputDir = "";
   const char* outputDirPoss = getenv("OUTPUT_DIR");
   if(outputDirPoss!=NULL){
@@ -171,24 +191,24 @@ TString OutputConvention::getOutputDir(){
  *
  * @param fileNameWithWildcards is the name of the file (with wildcards) that you wish to open.
  * @return NULL if no matches, the opened file if there is a match.
- * 
+ *
  * Sorts all matching files into increasing order of fileName.
  * If the files have my standard date suffix attached to them, then this should correspond to the most recent file.
  */
 TFile* OutputConvention::getFile(TString fileNameWithWildcards){
   // This might be my favourite little bit of stand alone code.
-  
+
   TFile* theFile = NULL;
 
   TChain* tempChain = new TChain("tempChain");
   tempChain->Add(fileNameWithWildcards);
-  
+
   TObjArray* fileList = tempChain->GetListOfFiles();
 
   const int numFiles = fileList->GetEntries();
   if(numFiles > 0){
     // std::cerr << "numFiles = " << numFiles << std::endl;
-    std::vector<TString> fileNames(numFiles, "");;  
+    std::vector<TString> fileNames(numFiles, "");;
 
     for(int fileInd=0; fileInd < numFiles; fileInd++){
       fileNames.at(fileInd) = TString::Format("%s", fileList->At(fileInd)->GetTitle());
@@ -197,11 +217,10 @@ TFile* OutputConvention::getFile(TString fileNameWithWildcards){
     for(int fileInd=0; fileInd < numFiles; fileInd++){
       // std::cerr << fileInd << "\t" << fileNames.at(fileInd) << std::endl;
     }
-    theFile = TFile::Open(fileNames.at(0));    
+    theFile = TFile::Open(fileNames.at(0));
   }
   delete tempChain;
 
   return theFile;
 
 }
-
