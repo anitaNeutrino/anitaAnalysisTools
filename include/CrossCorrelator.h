@@ -1,6 +1,6 @@
 /* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
- Email: b.strutt.12@ucl.ac.uk
+ Email: strutt@physics.ucla.edu
 
  Description:
              A Cross Correlator to interact with the ROOTified ANITA-3 data and do some interferometry.
@@ -360,7 +360,9 @@ public:
 
 
   UInt_t addNotch(SimpleNotch simpleNotch);
+  UInt_t removeNotch(Int_t notchInd = -1);
   UInt_t setDefaultNotches();
+  UInt_t getNumNotches();
   void printNotchInfo();
 
 
@@ -459,6 +461,7 @@ public:
   Int_t coherentDeltaPhi;
   Int_t getNumThreads();
   Int_t setNumThreads(Int_t numDesiredThreads);
+  UInt_t lastNumNotches[NUM_POL];
 
 private:
 

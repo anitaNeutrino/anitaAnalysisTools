@@ -1,6 +1,31 @@
 #include "RootTools.h"
 
 
+UsefulAnitaEvent* RootTools::makeGaussianEvent(UInt_t eventNumber){
+
+  TRandom3 randy(eventNumber);
+  const double meanGauss = 0;
+  const double sigmaGauss = 1;
+  const double dt = 1./2.6;
+
+  UsefulAnitaEvent* useful = new UsefulAnitaEvent();
+  useful->eventNumber = eventNumber;
+  for(int surf=0; surf < NUM_SURF; surf++){
+    for(int chan = 0; chan < NUM_CHAN - 1; chan++){
+      int chanIndex = surf*NUM_CHAN + chan;
+      double t = 0;
+      useful->fNumPoints[chanIndex] = NUM_SAMP;
+      for(int samp=0; samp < NUM_SAMP; samp++){
+	useful->fVolts[chanIndex][samp] = randy.Gaus(meanGauss, sigmaGauss);
+	useful->fTimes[chanIndex][samp] = t;
+	t += dt;
+      }
+    }
+  }
+  return useful;
+
+}
+
 
 
 

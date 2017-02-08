@@ -114,6 +114,7 @@ void CrossCorrelator::initializeVariables(){
     }
     lastEventNormalized[pol] = 0;
     eventNumber[pol] = 0;
+    lastNumNotches[pol] = 0;
     for(int combo=0; combo < NUM_COMBOS; combo++){
       lastEventUpsampleCorrelated[pol][combo] = 0;
     }
@@ -304,6 +305,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulE
 
     std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+
       grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
 
       if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
@@ -389,6 +391,8 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits){
     renormalizeFourierDomain(pol, ant);
     // FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
+
+  lastNumNotches[pol] = allChannelNotches.size();
 }
 
 
@@ -434,6 +438,41 @@ UInt_t CrossCorrelator::setDefaultNotches(){
 
 
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Gets the size of the notch vector.
+ * @return the size of the allChannelNotches vector.
+ */
+UInt_t CrossCorrelator::getNumNotches(){
+
+  return allChannelNotches.size();
+
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Remove a notch by index. If index is out of bounds then removes the last notch.
+ *
+ * @param notchIndex is the index to remove.
+ *
+ * @return the size of the allChannelNotches vector.
+ */
+UInt_t CrossCorrelator::removeNotch(Int_t notchInd){
+
+  if(notchInd < 0 || notchInd >= (Int_t)allChannelNotches.size()){
+    if(allChannelNotches.size() > 0){
+      allChannelNotches.pop_back();
+    }
+  }
+  else{
+    allChannelNotches.erase(allChannelNotches.begin() + notchInd);
+  }
+  return allChannelNotches.size();
+
+}
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -859,14 +898,26 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5
       delete grZ0Hilbert;
 
 
-      usefulPat.getSourceLonAndLatAtAlt(eventSummary->peak[pol][peakInd].phi*TMath::DegToRad(),
-					eventSummary->peak[pol][peakInd].theta*TMath::DegToRad(),
-					eventSummary->peak[pol][peakInd].longitude,
-					eventSummary->peak[pol][peakInd].latitude,
-					eventSummary->peak[pol][peakInd].altitude);
+      Double_t phiWave = eventSummary->peak[pol][peakInd].phi*TMath::DegToRad();
+      Double_t thetaWave = -1*eventSummary->peak[pol][peakInd].theta*TMath::DegToRad();
+      Double_t sourceLat, sourceLon, sourceAlt;
+      int success = usefulPat.getSourceLonAndLatAtAlt(phiWave, thetaWave,
+						      sourceLon, sourceLat, sourceAlt);
+
+      if(success==1){
+	eventSummary->peak[pol][peakInd].latitude = sourceLat;
+	eventSummary->peak[pol][peakInd].longitude = sourceLon;
+	eventSummary->peak[pol][peakInd].altitude = sourceAlt;
+	eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
+      }
+      else{
+	eventSummary->peak[pol][peakInd].latitude = -9999;
+	eventSummary->peak[pol][peakInd].longitude = -9999;
+	eventSummary->peak[pol][peakInd].altitude = -9999;
+	eventSummary->peak[pol][peakInd].distanceToSource = -9999;
+      }
     }
   }
-
 }
 
 
@@ -1050,7 +1101,8 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::An
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
 
   // Now cross correlate those already FFT'd waveforms
-  if(eventNumber[pol]!=usefulEvent->eventNumber){
+  if(eventNumber[pol]!=usefulEvent->eventNumber && lastNumNotches[pol]!=allChannelNotches.size()){
+
     // Generate set of ffts for cross correlation (each waveform only needs to be done once)
     doFFTs(pol, filterBits);
 
