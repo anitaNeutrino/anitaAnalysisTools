@@ -1,6 +1,8 @@
 #include "CrossCorrelator.h"
 
 
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Constructor
@@ -289,12 +291,14 @@ TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Doubl
 
 //---------------------------------------------------------------------------------------------------------
 /**
- * @brief Makes evenly re-sampled, normalized waveform graphs from the UsefulAnitaEvent.
+ * @brief Makes evenly re-sampled, normalized waveform graphs from a UsefulAnitaEvent or FilteredAnitaEvent.
  *
  * @param usefulEvent points to the UsefulAnitaEvent of interest.
  * @param pol is the polarization of interest.
  */
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* usefulEvent,
+// Allow functions to take UsefulAnitaEvent and/or FilteredAnitaEvent.
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(NiceAnitaEvent* usefulEvent,
 						       AnitaPol::AnitaPol_t pol){
 
   if(lastEventNormalized[pol]!=usefulEvent->eventNumber){
@@ -815,7 +819,8 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  */
-AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
@@ -868,22 +873,34 @@ AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(UsefulAnitaEvent* 
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  */
-void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void CrossCorrelator::reconstructEvent(NiceAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
 
-  reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
+  // reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
+  // const int thisNumPeaks = MAX_NUM_PEAKS;
+  const int thisNumPeaks = 1;
+  reconstructEvent(usefulEvent, thisNumPeaks, thisNumPeaks);
 
   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
-    for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){
+    for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
+
+      Double_t coarsePeak, coarsePhi, coarseTheta;
+      getCoarsePeakInfo(pol, peakInd, coarsePeak, coarsePhi, coarseTheta);
 
       getFinePeakInfo(pol, peakInd,
 		      eventSummary->peak[pol][peakInd].value,
 		      eventSummary->peak[pol][peakInd].phi,
 		      eventSummary->peak[pol][peakInd].theta);
 
-      Double_t minY = 0;
+      // std::cout << eventSummary->eventNumber << "\t" << eventSummary->peak[pol][peakInd].value << "\t" << eventSummary->peak[pol][peakInd].phi << "\t" << eventSummary->peak[pol][peakInd].theta << std::endl;
 
+      eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarsePhi;
+      eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseTheta;
+
+
+      Double_t minY = 0;
       TGraph* grZ0 = makeUpsampledCoherentlySummedWaveform(pol,
 							   eventSummary->peak[pol][peakInd].phi,
 							   eventSummary->peak[pol][peakInd].theta,
@@ -896,7 +913,6 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5
 
       delete grZ0;
       delete grZ0Hilbert;
-
 
       Double_t phiWave = eventSummary->peak[pol][peakInd].phi*TMath::DegToRad();
       Double_t thetaWave = -1*eventSummary->peak[pol][peakInd].theta*TMath::DegToRad();
@@ -954,7 +970,8 @@ void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5
  *
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  */
-void CrossCorrelator::reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void CrossCorrelator::reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
@@ -1072,8 +1089,8 @@ void CrossCorrelator::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
  *
  * @param usefulEvent is the event to process.
  */
-
-void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, TBits* filterBits){
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, TBits* filterBits){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol, filterBits);
@@ -1087,21 +1104,21 @@ void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, TBits* filte
 /**
  * @brief Correlate the event
  *
- * First step in interferometry is to pass the pointer to the UsefulAnitaEvent in here.
+ * First step in interferometry is to pass the pointer to the UsefulAnitaEvent/FilteredAnitaEvent in here.
  * This populates the internal arrays of normalized, interpolated waveforms and set of cross correlations.
  * These data are then used as look up tables for generating interferometic images.
  *
  * @param usefulEvent is the event to process.
  * @param pol tells CrossCorrelator to only do this polarization.
  */
-void CrossCorrelator::correlateEvent(UsefulAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits){
+template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
-
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
 
   // Now cross correlate those already FFT'd waveforms
-  if(eventNumber[pol]!=usefulEvent->eventNumber && lastNumNotches[pol]!=allChannelNotches.size()){
+  if(eventNumber[pol]!=usefulEvent->eventNumber || lastNumNotches[pol]!=allChannelNotches.size()){
 
     // Generate set of ffts for cross correlation (each waveform only needs to be done once)
     doFFTs(pol, filterBits);
@@ -3122,3 +3139,31 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
   }
   return grCoherent;
 }
+
+
+
+
+
+// https://www.codeproject.com/Articles/3515/How-To-Organize-Template-Source-Code
+// http://stackoverflow.com/questions/115703/storing-c-template-function-definitions-in-a-cpp-file
+// and now I see why people hate template meta-programming...
+template void CrossCorrelator::getNormalizedInterpolatedTGraphs<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+template void CrossCorrelator::getNormalizedInterpolatedTGraphs<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+
+
+template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, TBits* filterBits=NULL);
+template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, TBits* filterBits=NULL);
+
+
+template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+
+template void CrossCorrelator::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+template void CrossCorrelator::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+
+template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+
+
+template void CrossCorrelator::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
+template void CrossCorrelator::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);

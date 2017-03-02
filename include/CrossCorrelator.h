@@ -11,6 +11,8 @@
 
 // Ryan things
 #include "UsefulAnitaEvent.h"
+#include "FilteredAnitaEvent.h"
+#include "AnalysisWaveform.h"
 #include "AnitaEventCalibrator.h"
 #include "AnitaGeomTool.h"
 #include "UsefulAdu5Pat.h"
@@ -109,9 +111,14 @@
 
 
 
+
+
+
+
+
 /**
  * @class CrossCorrelator
- * @brief A class to take in UsefulAnitaEvents and get interferometric maps with a single function.
+ * @brief A class to take in UsefulAnitaEvents or FiteredAnitaEvents and get interferometric maps with a single function.
  *
  * Does all the heavy lifting: gets waveforms from a UsefulAnitaEvent, cross correlates them, and produces interferometric maps.
 */
@@ -244,7 +251,9 @@ public:
   void initializeVariables();
   void printInfo();
 
-  void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  // void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void getNormalizedInterpolatedTGraphs(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   Double_t applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch);
   Double_t applyFilterBits(AnitaPol::AnitaPol_t pol, Int_t ant, TBits* filterBits);
 
@@ -253,11 +262,21 @@ public:
 
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
   void doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
-  void correlateEvent(UsefulAnitaEvent* realEvent, TBits* filterBits=NULL);
-  void correlateEvent(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
-  void reconstructEvent(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
-  AnitaPol::AnitaPol_t reconstructEventPeakPol(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
-  void reconstructEvent(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
+
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void correlateEvent(NiceAnitaEvent* realEvent, TBits* filterBits=NULL);
+
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void correlateEvent(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  AnitaPol::AnitaPol_t reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+
+  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void reconstructEvent(NiceAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
 
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
@@ -400,7 +419,7 @@ public:
   Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
 
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
-  TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent.
+  TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent/FilteredAnitaEvent.
   TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
   Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
