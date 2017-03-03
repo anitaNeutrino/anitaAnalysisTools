@@ -21,5 +21,6 @@
 #pragma link C++ class ClusteredAnitaEvent+;
 #pragma link C++ namespace BaseList+;
 #pragma link C++ class BaseList::base+;
+#pragma link C++ class TGraphAntarctica+;
 
 #endif
