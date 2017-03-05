@@ -22,5 +22,6 @@
 #pragma link C++ namespace BaseList+;
 #pragma link C++ class BaseList::base+;
 #pragma link C++ class TGraphAntarctica+;
+#pragma link C++ class AntarcticaBackground+;
 
 #endif
