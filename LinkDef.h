@@ -19,9 +19,5 @@
 #pragma link C++ class AnitaClusterer::Point+;
 #pragma link C++ class AnitaClusterer::Cluster+;
 #pragma link C++ class ClusteredAnitaEvent+;
-#pragma link C++ namespace BaseList+;
-#pragma link C++ class BaseList::base+;
-#pragma link C++ class TGraphAntarctica+;
-#pragma link C++ class AntarcticaBackground+;
 
 #endif
