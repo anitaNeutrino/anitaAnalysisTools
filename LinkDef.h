@@ -20,4 +20,7 @@
 #pragma link C++ class AnitaClusterer::Cluster+;
 #pragma link C++ class ClusteredAnitaEvent+;
 
+#pragma link C++ class RayleighInfo+;
+#pragma link C++ class RiceInfo+;
+
 #endif
