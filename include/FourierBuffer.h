@@ -9,7 +9,6 @@
 #ifndef FOURIERBUFFER_H
 #define FOURIERBUFFER_H
 
-#include "RTypes.h"
 #include "AnalysisWaveform.h"
 
 #include "RayleighInfo.h"
