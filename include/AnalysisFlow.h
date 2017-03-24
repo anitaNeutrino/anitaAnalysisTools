@@ -29,7 +29,7 @@ public:
 
 
 
-  AnalysisFlow(const char* outFileBaseName, int run, selection selection, BlindDataset::strategy blindStrat, int theDivision=0, int theNumDivisions=1);
+  AnalysisFlow(const char* outFileBaseName, int run, selection selection, BlindDataset::strategy blindStrat=BlindDataset::kDefault, int theDivision=0, int theNumDivisions=1);
   ~AnalysisFlow();
 
   void doAnalysis();  
