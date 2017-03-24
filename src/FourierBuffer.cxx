@@ -133,33 +133,33 @@ TH1D* FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
   TH1D* hRay = fillRayleighInfo(freqBin, info);
 
 
-  // if(info->rayChiSquare/info->rayNdf > 2){
+  if(info->rayChiSquare/info->rayNdf > 2){
 
-  //   TString fName = TString::Format("fRice%d", freqBin);
-  //   Double_t xMin = hRay->GetXaxis()->GetBinLowEdge(1);
-  //   Double_t xMax = hRay->GetXaxis()->GetBinLowEdge(hRay->GetNbinsX()+1);
-  //   TF1* fRice = new TF1(fName, riceFuncText, xMin, xMax);
+    TString fName = TString::Format("fRice%d", freqBin);
+    Double_t xMin = hRay->GetXaxis()->GetBinLowEdge(1);
+    Double_t xMax = hRay->GetXaxis()->GetBinLowEdge(hRay->GetNbinsX()+1);
+    TF1* fRice = new TF1(fName, riceFuncText, xMin, xMax);
 
-  //   fRice->FixParameter(0, info->rayFitNorm);
-  //   fRice->SetParameter(1, info->rayGuessAmp);
-  //   fRice->SetParLimits(1, 0, 1e9); // essentially infinite
-  //   fRice->SetParameter(2, 0);
-  //   fRice->SetParLimits(2, 0, 1e9); // essentially infinite
+    fRice->FixParameter(0, info->rayFitNorm);
+    fRice->SetParameter(1, info->rayGuessAmp);
+    fRice->SetParLimits(1, 0, 1e9); // essentially infinite
+    fRice->SetParameter(2, 0);
+    fRice->SetParLimits(2, 0, 1e9); // essentially infinite
 
-  //   hRay->Fit(fRice, "Q0");
+    hRay->Fit(fRice, "Q0");
 
 
-  //   info->riceFitNorm = fRice->GetParameter(0); // fixed for the fit  
-  //   info->riceFitAmp = fRice->GetParameter(1);
-  //   info->riceFitAmpError = fRice->GetParError(1);  
-  //   info->riceFitSignal = fRice->GetParameter(2);
-  //   info->riceFitSignalError = fRice->GetParError(2);  
+    info->riceFitNorm = fRice->GetParameter(0); // fixed for the fit  
+    info->riceFitAmp = fRice->GetParameter(1);
+    info->riceFitAmpError = fRice->GetParError(1);  
+    info->riceFitSignal = fRice->GetParameter(2);
+    info->riceFitSignalError = fRice->GetParError(2);  
 
-  //   info->riceChiSquare = fRice->GetChisquare();
-  //   info->riceNdf = fRice->GetNDF();
+    info->riceChiSquare = fRice->GetChisquare();
+    info->riceNdf = fRice->GetNDF();
 
-  //   delete fRice;
-  // }
+    delete fRice;
+  }
   
   return hRay;
 }
