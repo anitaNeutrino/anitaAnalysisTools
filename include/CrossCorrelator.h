@@ -57,7 +57,7 @@
 #define MAX_THREADS 8
 
 // Typical number of samples in waveform
-#define NUM_SAMPLES 256
+#define NUM_SAMPLES 260
 #define UPSAMPLE_FACTOR 6
 // #define UPSAMPLE_FACTOR 10
 // #define UPSAMPLE_FACTOR 40
@@ -426,8 +426,6 @@ public:
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
   UInt_t eventNumber[NUM_POL]; //!< For tracking event number
-  UInt_t lastEventNormalized[NUM_POL]; //!< Prevents cross-correlation of the same event twice
-  UInt_t lastEventUpsampleCorrelated[NUM_POL][NUM_COMBOS]; //!< Prevents upsampled cross-correlation of the same event twice
   Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
   Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
   Int_t numSamples; //!< Number of samples in waveform after padding.

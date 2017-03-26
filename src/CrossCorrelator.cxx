@@ -114,12 +114,7 @@ void CrossCorrelator::initializeVariables(){
       grsResampled[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
     }
-    lastEventNormalized[pol] = 0;
-    eventNumber[pol] = 0;
     lastNumNotches[pol] = 0;
-    for(int combo=0; combo < NUM_COMBOS; combo++){
-      lastEventUpsampleCorrelated[pol][combo] = 0;
-    }
   }
 
   maxDPhiDeg = 0;
@@ -301,71 +296,70 @@ template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant
 void CrossCorrelator::getNormalizedInterpolatedTGraphs(NiceAnitaEvent* usefulEvent,
 						       AnitaPol::AnitaPol_t pol){
 
-  if(lastEventNormalized[pol]!=usefulEvent->eventNumber){
+  // now that MagicDisplay allows filtering on the fly, remove all lastEventNumber crap
+  // still want this somewhere, so put it here for now...
+  eventNumber[pol] = usefulEvent->eventNumber;
 
-    // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
-    deleteAllWaveforms(pol);
+  // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
+  deleteAllWaveforms(pol);
 
 
-    std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+  std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 
-      grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
+    grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
 
-      if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
-	for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
-	  grs[pol][ant]->GetY()[samp] *= -1;
-	}
-      }
-
-      // Find the start time of all waveforms
-      if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
-	earliestStart.at(pol) = grs[pol][ant]->GetX()[0];
+    if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
+      for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
+	grs[pol][ant]->GetY()[samp] *= -1;
       }
     }
 
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grsResampled[pol][ant] = interpolateWithStartTimeAndZeroMean(grs[pol][ant], earliestStart.at(pol),
-								   nominalSamplingDeltaT, numSamples);
-
-      Double_t sumOfVSquared = 0;
-      for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
-	Double_t V = grsResampled[pol][ant]->GetY()[samp];
-	sumOfVSquared += V*V;
-      }
-      interpRMS[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamples);
-      interpRMS2[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamplesUpsampled);
-      // for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
-      // 	grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
-      // }
+    // Find the start time of all waveforms
+    if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
+      earliestStart.at(pol) = grs[pol][ant]->GetX()[0];
     }
+  }
 
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+    grsResampled[pol][ant] = interpolateWithStartTimeAndZeroMean(grs[pol][ant], earliestStart.at(pol),
+								 nominalSamplingDeltaT, numSamples);
 
-      TString name, title;
-      TString name2, title2;
-      if(pol==AnitaPol::kHorizontal){
-	name = TString::Format("gr%dH_%u", ant, usefulEvent->eventNumber);
-	name2 = TString::Format("grInterp%dH_%u", ant, usefulEvent->eventNumber);
-	title = TString::Format("Antenna %d HPOL eventNumber %u", ant, usefulEvent->eventNumber);
-	title2 = TString::Format("Antenna %d HPOL eventNumber %u (evenly resampled)",
-				 ant, usefulEvent->eventNumber);
-      }
-      else if(pol==AnitaPol::kVertical){
-	name = TString::Format("gr%dV_%u", ant, usefulEvent->eventNumber);
-	name2 = TString::Format("grInterp%dV_%u", ant, usefulEvent->eventNumber);
-	title = TString::Format("Antenna %d VPOL eventNumber %u", ant, usefulEvent->eventNumber);
-	title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
-				 ant, usefulEvent->eventNumber);
-      }
-      title += "; Time (ns); Voltage (mV)";
-      grs[pol][ant]->SetName(name);
-      grsResampled[pol][ant]->SetName(name2);
-      grs[pol][ant]->SetTitle(title);
-      grsResampled[pol][ant]->SetTitle(title2);
+    Double_t sumOfVSquared = 0;
+    for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
+      Double_t V = grsResampled[pol][ant]->GetY()[samp];
+      sumOfVSquared += V*V;
     }
+    interpRMS[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamples);
+    interpRMS2[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamplesUpsampled);
+    // for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
+    // 	grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
+    // }
+  }
 
-    lastEventNormalized[pol] = usefulEvent->eventNumber;
+  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+
+    TString name, title;
+    TString name2, title2;
+    if(pol==AnitaPol::kHorizontal){
+      name = TString::Format("gr%dH_%u", ant, usefulEvent->eventNumber);
+      name2 = TString::Format("grInterp%dH_%u", ant, usefulEvent->eventNumber);
+      title = TString::Format("Antenna %d HPOL eventNumber %u", ant, usefulEvent->eventNumber);
+      title2 = TString::Format("Antenna %d HPOL eventNumber %u (evenly resampled)",
+			       ant, usefulEvent->eventNumber);
+    }
+    else if(pol==AnitaPol::kVertical){
+      name = TString::Format("gr%dV_%u", ant, usefulEvent->eventNumber);
+      name2 = TString::Format("grInterp%dV_%u", ant, usefulEvent->eventNumber);
+      title = TString::Format("Antenna %d VPOL eventNumber %u", ant, usefulEvent->eventNumber);
+      title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
+			       ant, usefulEvent->eventNumber);
+    }
+    title += "; Time (ns); Voltage (mV)";
+    grs[pol][ant]->SetName(name);
+    grsResampled[pol][ant]->SetName(name2);
+    grs[pol][ant]->SetTitle(title);
+    grsResampled[pol][ant]->SetTitle(title2);
   }
 }
 
@@ -1118,22 +1112,19 @@ void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::Anit
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
 
   // Now cross correlate those already FFT'd waveforms
-  if(eventNumber[pol]!=usefulEvent->eventNumber || lastNumNotches[pol]!=allChannelNotches.size()){
 
-    // Generate set of ffts for cross correlation (each waveform only needs to be done once)
-    doFFTs(pol, filterBits);
+  // Generate set of ffts for cross correlation (each waveform only needs to be done once)
+  doFFTs(pol, filterBits);
 
 
-    doAllCrossCorrelationsThreaded(pol);
+  doAllCrossCorrelationsThreaded(pol);
 
-    // reconstruct
-    reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
+  // reconstruct
+  reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
 
-    // fprintf(stderr, "%lf\t%lf\t%lf\n", coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
+  // fprintf(stderr, "%lf\t%lf\t%lf\n", coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
 
-    // Safety check to make sure we don't do any hard work twice.
-    eventNumber[pol] = usefulEvent->eventNumber;
-  }
+  // Safety check to make sure we don't do any hard work twice.
 }
 
 
@@ -1214,49 +1205,47 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
   for(int comboInd=startComboInd; comboInd<startComboInd+numCorrPerThread; comboInd++){
     Int_t combo = combosToUse->at(comboInd);
 
-    if(ptr->lastEventUpsampleCorrelated[pol][combo]!=ptr->eventNumber[pol]){
-      Int_t ant1 = ptr->comboToAnt1s.at(combo);
-      Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
-      // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
-      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
-      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
-      // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
-      // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-      // 				ptr->fftsPadded[pol][ant2],
-      // 				ptr->fftsPadded[pol][ant1],
-      // 				ptr->crossCorrelationsUpsampled[pol][combo],
-      // 				threadInd);
-      // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-      // 				      UPSAMPLE_FACTOR,
-      // 				      ptr->ffts[pol][ant2],
-      // 				      ptr->ffts[pol][ant1],
-      // 				      ptr->crossCorrelationsUpsampled[pol][combo],
-      // 				      threadInd, false);
-      FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-				      UPSAMPLE_FACTOR,
-				      ptr->ffts[pol][ant2],
-				      ptr->ffts[pol][ant1],
-				      ptr->crossCorrelationsUpsampled[pol][combo],
-				      false,
-				      threadInd, false);
-
+    // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
+    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
+    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
+    // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
+    // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
+    // 				ptr->fftsPadded[pol][ant2],
+    // 				ptr->fftsPadded[pol][ant1],
+    // 				ptr->crossCorrelationsUpsampled[pol][combo],
+    // 				threadInd);
+    // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+    // 				      UPSAMPLE_FACTOR,
+    // 				      ptr->ffts[pol][ant2],
+    // 				      ptr->ffts[pol][ant1],
+    // 				      ptr->crossCorrelationsUpsampled[pol][combo],
+    // 				      threadInd, false);
+    FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+				    UPSAMPLE_FACTOR,
+				    ptr->ffts[pol][ant2],
+				    ptr->ffts[pol][ant1],
+				    ptr->crossCorrelationsUpsampled[pol][combo],
+				    false,
+				    threadInd, false);
 
 
-      // experiment, copy negative times to behind positive times...
-      // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-      // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-      // }
-      const int offset = ptr->numSamplesUpsampled/2;
 
-      // copies first half of original array (times >= 0) into second half of internal storage
-      for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
-      }
-      // copies second half of original array (times < 0) into first half of internal storage
-      for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
-      }
+    // experiment, copy negative times to behind positive times...
+    // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
+    // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
+    // }
+    const int offset = ptr->numSamplesUpsampled/2;
+
+    // copies first half of original array (times >= 0) into second half of internal storage
+    for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
+      ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
+    }
+    // copies second half of original array (times < 0) into first half of internal storage
+    for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
+      ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
     }
   }
 
@@ -1264,53 +1253,51 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
     Int_t numDoneInAllThreads = numThreads*numCorrPerThread;
     Int_t comboInd = numDoneInAllThreads + threadInd;
     Int_t combo = combosToUse->at(comboInd);
-    if(ptr->lastEventUpsampleCorrelated[pol][combo]!=ptr->eventNumber[pol]){
-      Int_t ant1 = ptr->comboToAnt1s.at(combo);
-      Int_t ant2 = ptr->comboToAnt2s.at(combo);
+    Int_t ant1 = ptr->comboToAnt1s.at(combo);
+    Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
-      FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-				      UPSAMPLE_FACTOR,
-				      ptr->ffts[pol][ant2],
-				      ptr->ffts[pol][ant1],
-				      ptr->crossCorrelationsUpsampled[pol][combo],
-				      false,
-				      threadInd, false);
-      // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-      // 				      UPSAMPLE_FACTOR,
-      // 				      ptr->ffts[pol][ant2],
-      // 				      ptr->ffts[pol][ant1],
-      // 				      ptr->crossCorrelationsUpsampled[pol][combo],
-      // 				      threadInd);
+    FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+				    UPSAMPLE_FACTOR,
+				    ptr->ffts[pol][ant2],
+				    ptr->ffts[pol][ant1],
+				    ptr->crossCorrelationsUpsampled[pol][combo],
+				    false,
+				    threadInd, false);
+    // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+    // 				      UPSAMPLE_FACTOR,
+    // 				      ptr->ffts[pol][ant2],
+    // 				      ptr->ffts[pol][ant1],
+    // 				      ptr->crossCorrelationsUpsampled[pol][combo],
+    // 				      threadInd);
 
-      // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-      // 				ptr->fftsPadded[pol][ant2],
-      // 				ptr->fftsPadded[pol][ant1],
-      // 				ptr->crossCorrelationsUpsampled[pol][combo],
-      // 				threadInd);
+    // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
+    // 				ptr->fftsPadded[pol][ant2],
+    // 				ptr->fftsPadded[pol][ant1],
+    // 				ptr->crossCorrelationsUpsampled[pol][combo],
+    // 				threadInd);
 
-      // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
-      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
-      // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
-      // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
+    // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
+    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
+    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
+    // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
 
 
-      // experiment, copy negative times to behind positive times...
-      // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-      // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-      // }
-      const int offset = ptr->numSamplesUpsampled/2;
+    // experiment, copy negative times to behind positive times...
+    // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
+    // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
+    // }
+    const int offset = ptr->numSamplesUpsampled/2;
 
-      // copies first half of original array (times >= 0) into second half of internal storage
-      for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
-      }
-      // copies second half of original array (times < 0) into first half of internal storage
-      for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
-	ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
-      }
+    // copies first half of original array (times >= 0) into second half of internal storage
+    for(Int_t samp=0; samp < ptr->numSamplesUpsampled/2; samp++){
+      ptr->crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
+    }
+    // copies second half of original array (times < 0) into first half of internal storage
+    for(Int_t samp=ptr->numSamplesUpsampled/2; samp < ptr->numSamplesUpsampled; samp++){
+      ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
     }
   }
-  return 0;
+return 0;
 }
 
 
@@ -1409,23 +1396,21 @@ void CrossCorrelator::akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, I
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
 
-    if(lastEventUpsampleCorrelated[pol][combo]!=eventNumber[pol]){
-      if(corrInterp==NULL){
-	ccTimes.reserve(numSamples);
-	for(int samp=0; samp < numSamples; samp++){
-	  Int_t offset = samp - numSamples/2;
-	  ccTimes.push_back(offset*nominalSamplingDeltaT);
-	}
-	ccMaxTime = ccTimes.at(numSamples-1);
-	corrInterp = new ROOT::Math::Interpolator(ccTimes.size(), ROOT::Math::Interpolation::kAKIMA_PERIODIC);
-
+    if(corrInterp==NULL){
+      ccTimes.reserve(numSamples);
+      for(int samp=0; samp < numSamples; samp++){
+	Int_t offset = samp - numSamples/2;
+	ccTimes.push_back(offset*nominalSamplingDeltaT);
       }
-      corrInterp->SetData(ccTimes.size(), &ccTimes[0], crossCorrelations[pol][combo]);
+      ccMaxTime = ccTimes.at(numSamples-1);
+      corrInterp = new ROOT::Math::Interpolator(ccTimes.size(), ROOT::Math::Interpolation::kAKIMA_PERIODIC);
 
-      for(Int_t samp=0; samp < numSamplesUpsampled; samp++){
-	double t = samp*correlationDeltaT;
-	crossCorrelationsUpsampled[pol][combo][samp] = t <= ccMaxTime ? corrInterp->Eval(t) : 0;
-      }
+    }
+    corrInterp->SetData(ccTimes.size(), &ccTimes[0], crossCorrelations[pol][combo]);
+
+    for(Int_t samp=0; samp < numSamplesUpsampled; samp++){
+      double t = samp*correlationDeltaT;
+      crossCorrelationsUpsampled[pol][combo][samp] = t <= ccMaxTime ? corrInterp->Eval(t) : 0;
     }
   }
 }
@@ -3109,12 +3094,12 @@ TGraph* CrossCorrelator::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t p
 
     if(pol==AnitaPol::kHorizontal){
       // name += TString::Format("H_%u", eventNumber[pol]);
-      name += TString::Format("H_%u", lastEventNormalized[pol]);
+      name += TString::Format("H_%u", eventNumber[pol]);
       title = "HPOL ";
     }
     else{
       // name += TString::Format("V_%u", eventNumber[pol]);
-      name += TString::Format("V_%u", lastEventNormalized[pol]);
+      name += TString::Format("V_%u", eventNumber[pol]);
       title = "VPOL ";
     }
 
