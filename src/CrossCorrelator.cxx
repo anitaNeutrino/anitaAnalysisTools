@@ -1829,145 +1829,89 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
     return;
   }
 
-  threadPol = pol;
-  threadPeakIndex = peakIndex; // used to indentify the map
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);
-  doUpsampledCrossCorrelationsThreaded(pol, phiSector); // sets threadPhiSector
-  // akimaUpsampleCrossCorrelations(pol, phiSector); // sets threadPhiSector
+  doUpsampledCrossCorrelationsThreaded(pol, phiSector);
+
+
+
+  
 
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
 
   zoomPhiMin[pol] = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
   zoomThetaMin[pol] = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
-  CrossCorrelator::threadArgs threadArgVals;
-  threadArgVals.threadInd = 0;
-  threadArgVals.ptr = this;
-  CrossCorrelator::makeSomeOfZoomImageThreaded((void*)&threadArgVals);
-
-  // Combine peak search results from each thread.
-  imagePeak = -DBL_MAX;
-  Int_t peakPhiBin, peakThetaBin;
-  int threadInd = 0;
-  imagePeak = threadImagePeakZoom[threadInd];
-  peakPhiDeg = threadPeakPhiDegZoom[threadInd];
-  peakThetaDeg = threadPeakThetaDegZoom[threadInd];
-  peakPhiBin = threadPeakPhiBinZoom[threadInd];
-  peakThetaBin = threadPeakThetaBinZoom[threadInd];
-}
 
 
+  std::vector<Int_t>* combosToUse = &combosToUseGlobal[phiSector];
 
+  Int_t phiZoomBase = TMath::Nint((zoomPhiMin[pol] - minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
+  Int_t thetaZoomBase = TMath::Nint((zoomThetaMin[pol] - minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
 
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Static member function which fills the interferometric maps.
- *
- * @param voidPtrArgs contains a pointer to a CrossCorrelator::threadArgs struct
- *
- * This function contains the meat and bones of this class.
- * I've really tried to optimize this for speed, which means it's not very readable, sorry.
- */
-void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
-  // Disgusting hacks to get ROOT threading to compile inside a class.
-
-  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
-  Long_t threadInd = args->threadInd;
-  CrossCorrelator* ptr = args->ptr;
-  AnitaPol::AnitaPol_t pol = ptr->threadPol;
-  Int_t peakIndex = ptr->threadPeakIndex;
-  Int_t numThreads = ptr->numThreads;
-
-  const Int_t numThetaBinsPerThread = NUM_BINS_THETA_ZOOM/numThreads;
-  const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
-  const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
-  const Int_t startPhiBin = 0;
-  const Int_t endPhiBin = NUM_BINS_PHI_ZOOM;
-
-
-  ptr->threadImagePeakZoom[threadInd] = -DBL_MAX;
-  Int_t peakPhiBin = -1;
-  Int_t peakThetaBin = -1;
-
-  Int_t kUseOffAxisDelay = ptr->kUseOffAxisDelay;
-
-  Int_t phiSector = ptr->threadPhiSector;
-  std::vector<Int_t>* combosToUse = &ptr->combosToUseGlobal[phiSector];
-
-  Int_t phiZoomBase = TMath::Nint((ptr->zoomPhiMin[pol] - ptr->minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
-  Int_t thetaZoomBase = TMath::Nint((ptr->zoomThetaMin[pol] - ptr->minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
-
-  for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      ptr->fineMap[pol][peakIndex][thetaBin][phiBin]=0;
+  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+      fineMap[pol][peakIndex][thetaBin][phiBin]=0;
     }
   }
 
-  const Int_t offset = ptr->numSamplesUpsampled/2;
+  const Int_t offset = numSamplesUpsampled/2;
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
-    if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+    if(kOnlyThisCombo >= 0 && combo!=kOnlyThisCombo){
       continue;
     }
-    for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
+    for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
       Int_t zoomThetaInd = thetaZoomBase + thetaBin;
-      Double_t partBA = ptr->partBAsZoom[pol][combo][zoomThetaInd];
-      // Double_t dtFactor = ptr->zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
-      Double_t dtFactor = ptr->dtFactors[zoomThetaInd];
-      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+      Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
+      // Double_t dtFactor = zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+      Double_t dtFactor = dtFactors[zoomThetaInd];
+      for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
-	Double_t offsetLowDouble = dtFactor*(partBA - ptr->part21sZoom[pol][combo][zoomPhiInd]);
-	offsetLowDouble += kUseOffAxisDelay > 0 ? ptr->offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
+	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
 	// hack for floor()
 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
 
 	Double_t deltaT = (offsetLowDouble - offsetLow);
 	offsetLow += offset;
-	Double_t c1 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow];
-	Double_t c2 = ptr->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
+	Double_t c1 = crossCorrelationsUpsampled[pol][combo][offsetLow];
+	Double_t c2 = crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 	Double_t cInterp = deltaT*(c2 - c1) + c1;
 
-	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
+	fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
       }
     }
   }
 
-  Double_t normFactor = ptr->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+  Double_t normFactor = kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
   // absorb the removed inverse FFT normalization
-  normFactor*=(ptr->numSamples*ptr->numSamples);
+  normFactor*=(numSamples*numSamples);
 
-  for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= normFactor;
-      // if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-      // 	ptr->fineMap[pol][peakIndex][thetaBin][phiBin] /= combosToUse->size();
-      // }
+  // set peak finding variables
+  imagePeak = -DBL_MAX;
+  Int_t peakPhiBin = -1;
+  Int_t peakThetaBin = -1;
+  
+  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+      fineMap[pol][peakIndex][thetaBin][phiBin] /= normFactor;
 
-
-      if(ptr->fineMap[pol][peakIndex][thetaBin][phiBin] > ptr->threadImagePeakZoom[threadInd]){
-	ptr->threadImagePeakZoom[threadInd] = ptr->fineMap[pol][peakIndex][thetaBin][phiBin];
+      if(fineMap[pol][peakIndex][thetaBin][phiBin] > imagePeak){	
+	imagePeak = fineMap[pol][peakIndex][thetaBin][phiBin];
 	peakPhiBin = phiBin;
 	peakThetaBin = thetaBin;
       }
     }
   }
 
-  // ptr->threadPeakPhiDeg[threadInd] = hImage->GetXaxis()->GetBinLowEdge(peakPhiBin+1);
-  // ptr->threadPeakThetaDeg[threadInd] = hImage->GetYaxis()->GetBinLowEdge(peakThetaBin+1);
-
-
-  ptr->threadPeakPhiDegZoom[threadInd] = ptr->zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI;
-  ptr->threadPeakThetaDegZoom[threadInd] = ptr->zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;
-  ptr->threadPeakPhiBinZoom[threadInd] = peakPhiBin;
-  ptr->threadPeakThetaBinZoom[threadInd] = peakThetaBin;
-
-  return 0;
-
+  peakPhiDeg = zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI; //threadPeakPhiDegZoom[threadInd];
+  peakThetaDeg = zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;
 }
+
+
 
 
 

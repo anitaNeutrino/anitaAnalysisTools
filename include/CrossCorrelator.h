@@ -286,7 +286,6 @@ public:
   TGraph* makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg,
 			     Int_t maxDeltaPhiSect, Double_t& snr, Int_t nSamp);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
-  static void* makeSomeOfZoomImageThreaded(void* voidPtrArgs);
 
   void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
 
