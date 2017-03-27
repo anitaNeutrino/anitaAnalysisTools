@@ -286,7 +286,6 @@ public:
   TGraph* makeCoherentWorker(AnitaPol::AnitaPol_t pol, Double_t phiDeg, Double_t thetaDeg,
 			     Int_t maxDeltaPhiSect, Double_t& snr, Int_t nSamp);
   static void* doSomeCrossCorrelationsThreaded(void* voidPtrArgs);
-  static void* doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArgs);
   static void* makeSomeOfImageThreaded(void* voidPtrArgs);
   static void* makeSomeOfZoomImageThreaded(void* voidPtrArgs);
 
