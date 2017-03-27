@@ -208,18 +208,13 @@ public:
   void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
 		      Double_t* phiDegs, Double_t* thetaDegs);
 
-
   void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,Double_t& time, Double_t& value);
   void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t& time, Double_t& value);
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
 
-
-
   void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
-  void akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector); // akima interp
   void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
-
 
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
@@ -390,8 +385,6 @@ public:
   Double_t zoomThetaMin[NUM_POL]; //!< For the current map
 
   Int_t coherentDeltaPhi;
-  Int_t getNumThreads();
-  Int_t setNumThreads(Int_t numDesiredThreads);
 
 private:
 

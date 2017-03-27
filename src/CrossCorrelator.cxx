@@ -33,41 +33,6 @@ CrossCorrelator::~CrossCorrelator(){
 
 
 
-Int_t CrossCorrelator::getNumThreads(){
-  return numThreads;
-}
-
-Int_t CrossCorrelator::setNumThreads(Int_t numDesiredThreads){
-
-  // std::cerr << "Threading temporarily disabled in CrossCorrelator" << std::endl;
-  numThreads = 1;
-
-  // if(numDesiredThreads > 0 && numDesiredThreads <= MAX_THREADS){
-  //   numThreads = numDesiredThreads;
-  // }
-  // else if(numDesiredThreads > MAX_THREADS){
-  //   numThreads = MAX_THREADS;
-  // }
-  // else{
-  //   numThreads = 1;
-  // }
-
-  while((Int_t)threadImagePeak.size() < numThreads){
-    threadImagePeak.push_back(0);
-    threadPeakPhiDeg.push_back(0);
-    threadPeakThetaDeg.push_back(0);
-    threadImagePeakZoom.push_back(0);
-    threadPeakPhiDegZoom.push_back(0);
-    threadPeakThetaDegZoom.push_back(0);
-    threadPeakPhiBinZoom.push_back(0);
-    threadPeakThetaBinZoom.push_back(0);
-  }
-  return numThreads;
-}
-
-
-
-
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -82,16 +47,17 @@ void CrossCorrelator::initializeVariables(){
   corrInterp = NULL;
   coherentDeltaPhi = 0;
 
-  // Here we look for an environment variable called NUM_CC_THREADS
-  // if it's there, set the number of threads, otherwise set it to 1.
-  const char* strNumCcThreads = getenv("NUM_CC_THREADS");
-  if(strNumCcThreads==NULL){
-    setNumThreads(1);
+  numThreads = 1;
+  while((Int_t)threadImagePeak.size() < numThreads){
+    threadImagePeak.push_back(0);
+    threadPeakPhiDeg.push_back(0);
+    threadPeakThetaDeg.push_back(0);
+    threadImagePeakZoom.push_back(0);
+    threadPeakPhiDegZoom.push_back(0);
+    threadPeakThetaDegZoom.push_back(0);
+    threadPeakPhiBinZoom.push_back(0);
+    threadPeakThetaBinZoom.push_back(0);
   }
-  else{
-    setNumThreads(atoi(strNumCcThreads));
-  }
-  std::cerr << getNumThreads() << std::endl;
 
   // Initialize with NULL otherwise very bad things will happen with gcc
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
@@ -928,21 +894,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
 
-    // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
-    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
-    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
-    // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
-    // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-    // 				ptr->fftsPadded[pol][ant2],
-    // 				ptr->fftsPadded[pol][ant1],
-    // 				ptr->crossCorrelationsUpsampled[pol][combo],
-    // 				threadInd);
-    // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-    // 				      UPSAMPLE_FACTOR,
-    // 				      ptr->ffts[pol][ant2],
-    // 				      ptr->ffts[pol][ant1],
-    // 				      ptr->crossCorrelationsUpsampled[pol][combo],
-    // 				      threadInd, false);
     FancyFFTs::crossCorrelatePadded(ptr->numSamples,
 				    UPSAMPLE_FACTOR,
 				    ptr->ffts[pol][ant2],
@@ -951,12 +902,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 				    false,
 				    threadInd, false);
 
-
-
-    // experiment, copy negative times to behind positive times...
-    // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-    // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-    // }
     const int offset = ptr->numSamplesUpsampled/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
@@ -983,29 +928,6 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
 				    ptr->crossCorrelationsUpsampled[pol][combo],
 				    false,
 				    threadInd, false);
-    // FancyFFTs::crossCorrelatePadded(ptr->numSamples,
-    // 				      UPSAMPLE_FACTOR,
-    // 				      ptr->ffts[pol][ant2],
-    // 				      ptr->ffts[pol][ant1],
-    // 				      ptr->crossCorrelationsUpsampled[pol][combo],
-    // 				      threadInd);
-
-    // FancyFFTs::crossCorrelate(ptr->numSamplesUpsampled,
-    // 				ptr->fftsPadded[pol][ant2],
-    // 				ptr->fftsPadded[pol][ant1],
-    // 				ptr->crossCorrelationsUpsampled[pol][combo],
-    // 				threadInd);
-
-    // FFTtools::crossCorrelate(ptr->numSamplesUpsampled,
-    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant2],
-    // 			       (FFTWComplex*)ptr->fftsPadded[pol][ant1],
-    // 			       ptr->crossCorrelationsUpsampled[pol][combo]);
-
-
-    // experiment, copy negative times to behind positive times...
-    // for(Int_t samp=0; samp < ptr->numSamplesUpsampled; samp++){
-    // 	stash[samp] = ptr->crossCorrelationsUpsampled[pol][combo][samp];
-    // }
     const int offset = ptr->numSamplesUpsampled/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
@@ -1017,7 +939,7 @@ void* CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded(void* voidPtrArg
       ptr->crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
     }
   }
-return 0;
+  return 0;
 }
 
 
@@ -1051,10 +973,6 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
   for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
     Int_t ant1 = ptr->comboToAnt1s.at(combo);
     Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    // TThread::Lock();
-    // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
-    // TThread::UnLock();
-
     FancyFFTs::crossCorrelatePadded(ptr->numSamples,
 				    1,
 				    ptr->ffts[pol][ant2],
@@ -1063,23 +981,6 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 				    false,
 				    threadInd,
 				    false);
-    // FancyFFTs::crossCorrelate(ptr->numSamples,
-    // 			      ptr->ffts[pol][ant2],
-    // 			      ptr->ffts[pol][ant1],
-    // 			      ptr->crossCorrelations[pol][combo],
-    // 			      threadInd);
-
-
-    // TThread::Lock();
-    // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
-    // TThread::UnLock();
-
-
-
-    // experiment, copy negative times to behind positive times...
-    // for(Int_t samp=0; samp < ptr->numSamples; samp++){
-    //   stash[samp] = ptr->crossCorrelations[pol][combo][samp];
-    // }
     const int offset = ptr->numSamples/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
@@ -1097,43 +998,6 @@ void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
 }
 
 
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Function which generates the finely binned set of cross correlations from upsampling the coarse cross-correlations with Akima interpolation. Don't use this.
- *
- * @param pol tells CrossCorrelator to only do this polarization.
- * @param phiSector is used to figure out which finely binned cross correlations are required.
- */
-void CrossCorrelator::akimaUpsampleCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
-
-  threadPhiSector = phiSector;
-  threadPol = pol;
-
-  const std::vector<Int_t>* combosToUse = &combosToUseGlobal[phiSector];
-  for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-    Int_t combo = combosToUse->at(comboInd);
-
-    if(corrInterp==NULL){
-      ccTimes.reserve(numSamples);
-      for(int samp=0; samp < numSamples; samp++){
-	Int_t offset = samp - numSamples/2;
-	ccTimes.push_back(offset*nominalSamplingDeltaT);
-      }
-      ccMaxTime = ccTimes.at(numSamples-1);
-      corrInterp = new ROOT::Math::Interpolator(ccTimes.size(), ROOT::Math::Interpolation::kAKIMA_PERIODIC);
-
-    }
-    corrInterp->SetData(ccTimes.size(), &ccTimes[0], crossCorrelations[pol][combo]);
-
-    for(Int_t samp=0; samp < numSamplesUpsampled; samp++){
-      double t = samp*correlationDeltaT;
-      crossCorrelationsUpsampled[pol][combo][samp] = t <= ccMaxTime ? corrInterp->Eval(t) : 0;
-    }
-  }
-}
 
 
 
