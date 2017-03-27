@@ -824,69 +824,36 @@ void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::Anit
 void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
 
   // Set variable for use in threads
-  threadPol = pol;
 
-  CrossCorrelator::threadArgs threadArgVals;
-  threadArgVals.threadInd = 0;
-  threadArgVals.ptr = this;
-  CrossCorrelator::doSomeCrossCorrelationsThreaded((void*) &threadArgVals);
-}
+  Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(numSamples, 0));
 
-
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Static member function which generates the coarsely binned set of cross correlations from the FFTs held in memory.
- *
- * @param voidPtrArgs contains a pointer to a CrossCorrelator::threadArgs struct
- */
-void* CrossCorrelator::doSomeCrossCorrelationsThreaded(void* voidPtrArgs){
-
-  // Disgusting hacks to get ROOT threading to compile inside a class.
-  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
-  Long_t threadInd = args->threadInd;
-  CrossCorrelator* ptr = args->ptr;
-  // TThread::Lock();
-  // std::cerr << __PRETTY_FUNCTION__ << "\t" << threadInd << std::endl;
-  // TThread::UnLock();
-  AnitaPol::AnitaPol_t pol = ptr->threadPol;
-  Int_t numThreads = ptr->numThreads;
-  Int_t numCorrPerThread = NUM_COMBOS/numThreads;
-  Int_t startCombo = threadInd*numCorrPerThread;
-
-  // Double_t stash[NUM_SAMPLES*PAD_FACTOR];
-
-  Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(ptr->numSamples, threadInd));
-
-  for(int combo=startCombo; combo<startCombo+numCorrPerThread; combo++){
-    Int_t ant1 = ptr->comboToAnt1s.at(combo);
-    Int_t ant2 = ptr->comboToAnt2s.at(combo);
-    FancyFFTs::crossCorrelatePadded(ptr->numSamples,
+  for(int combo=0; combo<NUM_COMBOS; combo++){
+    Int_t ant1 = comboToAnt1s.at(combo);
+    Int_t ant2 = comboToAnt2s.at(combo);
+    FancyFFTs::crossCorrelatePadded(numSamples,
 				    1,
-				    ptr->ffts[pol][ant2],
-				    ptr->ffts[pol][ant1],
-				    ptr->crossCorrelations[pol][combo],
+				    ffts[pol][ant2],
+				    ffts[pol][ant1],
+				    crossCorrelations[pol][combo],
 				    false,
-				    threadInd,
+				    0,
 				    false);
-    const int offset = ptr->numSamples/2;
+    const int offset = numSamples/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
-    for(Int_t samp=0; samp < ptr->numSamples/2; samp++){
-      ptr->crossCorrelations[pol][combo][samp+offset] = ccInternalArray[samp];
+    for(Int_t samp=0; samp < numSamples/2; samp++){
+      crossCorrelations[pol][combo][samp+offset] = ccInternalArray[samp];
       // ptr->crossCorrelations[pol][combo][samp+offset] = stash[samp];
     }
     // copies second half of original array (times < 0) into first half of internal storage
-    for(Int_t samp=ptr->numSamples/2; samp < ptr->numSamples; samp++){
-      ptr->crossCorrelations[pol][combo][samp-offset] = ccInternalArray[samp];
+    for(Int_t samp=numSamples/2; samp < numSamples; samp++){
+      crossCorrelations[pol][combo][samp-offset] = ccInternalArray[samp];
       // ptr->crossCorrelations[pol][combo][samp-offset] = stash[samp];
     }
   }
-  return 0;
+  
 }
+
 
 
 
