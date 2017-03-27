@@ -826,38 +826,10 @@ void CrossCorrelator::doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol){
   // Set variable for use in threads
   threadPol = pol;
 
-  if(numThreads > 1){
-    std::vector<TThread*> corrThreads(numThreads, NULL);
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      TString name = TString::Format("threadCorr%ld", threadInd);
-      CrossCorrelator::threadArgs threadArgVals;
-      threadArgVals.threadInd = threadInd;
-      threadArgVals.ptr = this;
-
-      corrThreads.at(threadInd) = new TThread(name.Data(),
-					      CrossCorrelator::doSomeCrossCorrelationsThreaded,
-					      (void*)&threadArgVals);
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      corrThreads.at(threadInd)->Run();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      corrThreads.at(threadInd)->Join();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      delete corrThreads.at(threadInd);
-    }
-    corrThreads.clear();
-  }
-  else{
-    CrossCorrelator::threadArgs threadArgVals;
-    threadArgVals.threadInd = 0;
-    threadArgVals.ptr = this;
-    CrossCorrelator::doSomeCrossCorrelationsThreaded((void*) &threadArgVals);
-  }
+  CrossCorrelator::threadArgs threadArgVals;
+  threadArgVals.threadInd = 0;
+  threadArgVals.ptr = this;
+  CrossCorrelator::doSomeCrossCorrelationsThreaded((void*) &threadArgVals);
 }
 
 
@@ -1015,37 +987,10 @@ void CrossCorrelator::doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t 
   threadPhiSector = phiSector;
   threadPol = pol;
 
-  if(numThreads > 1){
-    std::vector<TThread*> upsampledCorrThreads(numThreads, NULL);
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      TString name = TString::Format("threadUpsampledCorr%ld", threadInd);
-      CrossCorrelator::threadArgs threadArgVals;
-      threadArgVals.threadInd = threadInd;
-      threadArgVals.ptr = this;
-      upsampledCorrThreads.at(threadInd) = new TThread(name.Data(),
-						       CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded,
-						       (void*)&threadArgVals);
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      upsampledCorrThreads.at(threadInd)->Run();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      upsampledCorrThreads.at(threadInd)->Join();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      delete upsampledCorrThreads.at(threadInd);
-    }
-    upsampledCorrThreads.clear();
-  }
-  else{
-    CrossCorrelator::threadArgs threadArgVals;
-    threadArgVals.threadInd = 0;
-    threadArgVals.ptr = this;
-    CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded((void*)&threadArgVals);
-  }
+  CrossCorrelator::threadArgs threadArgVals;
+  threadArgVals.threadInd = 0;
+  threadArgVals.ptr = this;
+  CrossCorrelator::doSomeUpsampledCrossCorrelationsThreaded((void*)&threadArgVals);
 
 }
 
@@ -1802,9 +1747,6 @@ TH2D* CrossCorrelator::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3Trig
 
 
 
-
-
-
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Wrapper function which launches the threaded functions, which fill the interferometric maps.
@@ -1821,49 +1763,17 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 
   threadPol = pol;
 
-  // LAUNCH THREADS HERE
-  if(numThreads > 1){
-    std::vector<TThread*> mapThreads(numThreads, NULL);
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      TString name = TString::Format("threadMap%ld", threadInd);
-      CrossCorrelator::threadArgs threadArgVals;
-      threadArgVals.threadInd = threadInd;
-      threadArgVals.ptr = this;
-      mapThreads.at(threadInd) = new TThread(name.Data(),
-					     CrossCorrelator::makeSomeOfImageThreaded,
-					     // (void*)&threadArgsVec.at(threadInd))
-					     (void*)&threadArgVals);
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      mapThreads.at(threadInd)->Run();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      mapThreads.at(threadInd)->Join();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      delete mapThreads.at(threadInd);
-    }
-    mapThreads.clear();
-  }
-  else{// call function directly
-    CrossCorrelator::threadArgs threadArgVals;
-    threadArgVals.threadInd = 0;
-    threadArgVals.ptr = this;
-    CrossCorrelator::makeSomeOfImageThreaded((void*)&threadArgVals);
-  }
+  CrossCorrelator::threadArgs threadArgVals;
+  threadArgVals.threadInd = 0;
+  threadArgVals.ptr = this;
+  CrossCorrelator::makeSomeOfImageThreaded((void*)&threadArgVals);
 
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
-  for(Long_t threadInd=0; threadInd<numThreads; threadInd++){
-    if(threadImagePeak[threadInd] > imagePeak){
-      imagePeak = threadImagePeak[threadInd];
-      peakPhiDeg = threadPeakPhiDeg[threadInd];
-      peakThetaDeg = threadPeakThetaDeg[threadInd];
-    }
-  }
+  int threadInd = 0;
+  imagePeak = threadImagePeak[threadInd];
+  peakPhiDeg = threadPeakPhiDeg[threadInd];
+  peakThetaDeg = threadPeakThetaDeg[threadInd];
 
 }
 
@@ -1891,23 +1801,11 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
   CrossCorrelator* ptr = args->ptr;
   AnitaPol::AnitaPol_t pol = ptr->threadPol;
   Int_t numThreads = ptr->numThreads;
-  // const Int_t numThetaBinsPerThread = hImage->GetNbinsY()/numThreads;
-  // const Int_t startThetaBin = threadInd*numThetaBinsPerThread;
-  // const Int_t endThetaBin = startThetaBin+numThetaBinsPerThread;
-  // const Int_t startPhiBin = 0;
-  // const Int_t endPhiBin = hImage->GetNbinsX();
-
-
-  // const Int_t numPhiBinsPerThread = (NUM_BINS_PHI*NUM_PHI)/numThreads;
   const Int_t numPhiSectorsPerThread = NUM_PHI/numThreads;
   const Int_t startThetaBin = 0;
   const Int_t endThetaBin = NUM_BINS_THETA;
   const Int_t startPhiSector = threadInd*numPhiSectorsPerThread;
   const Int_t endPhiSector = startPhiSector+numPhiSectorsPerThread;
-
-
-  // std::cout << numPhiSectorsPerThread << "\t" << startThetaBin << "\t" << endThetaBin << "\t" << startPhiSector << "\t" << endPhiSector << std::endl;
-
 
   ptr->threadImagePeak[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
@@ -1925,8 +1823,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     }
   }
 
-  // std::cout << "here 1" << std::endl;
-
   std::vector<Int_t>* combosToUse = NULL;
   for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
     combosToUse = &ptr->combosToUseGlobal[phiSector];
@@ -1942,8 +1838,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
 
 	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
 	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
-	  // Int_t offsetLow = 0;
-	  // Int_t offsetLow = ptr->offsetLows[pol][phiBin][combo][thetaBin];
 	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
 	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
 	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
@@ -1953,8 +1847,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
       }
     }
   }
-
-  // std::cout << "here 2" << std::endl;
 
   for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
     combosToUse = &ptr->combosToUseGlobal[phiSector];
@@ -1968,9 +1860,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
 
-	// if(combosToUse->size()>0 && ptr->kOnlyThisCombo < 0){
-	//   ptr->coarseMap[pol][phiBin][thetaBin] /= combosToUse->size();
-	// }
 	ptr->coarseMap[pol][phiBin][thetaBin]/=normFactor;
 	if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
 	  ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
@@ -1980,8 +1869,6 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
       }
     }
   }
-
-  // std::cout << "here 3" << std::endl;
 
   ptr->threadPeakPhiDeg[threadInd] = ptr->phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
   ptr->threadPeakThetaDeg[threadInd] = ptr->thetaWaves[peakThetaBin]*TMath::RadToDeg();
@@ -2042,120 +1929,20 @@ void CrossCorrelator::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imageP
 
   zoomPhiMin[pol] = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
   zoomThetaMin[pol] = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
-
-  // LAUNCH THREADS HERE
-  if(numThreads > 1){
-    std::vector<TThread*> mapThreads(numThreads, NULL);
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      TString name = TString::Format("threadZoomMap%ld", threadInd);
-      CrossCorrelator::threadArgs threadArgVals;
-      threadArgVals.threadInd = threadInd;
-      threadArgVals.ptr = this;
-      mapThreads.at(threadInd) = new TThread(name.Data(),
-					     CrossCorrelator::makeSomeOfZoomImageThreaded,
-					     (void*)&threadArgVals);
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      mapThreads.at(threadInd)->Run();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      mapThreads.at(threadInd)->Join();
-    }
-
-    for(long threadInd=0; threadInd<numThreads; threadInd++){
-      delete mapThreads.at(threadInd);
-    }
-    mapThreads.clear();
-  }
-  else{
-    CrossCorrelator::threadArgs threadArgVals;
-    threadArgVals.threadInd = 0;
-    threadArgVals.ptr = this;
-    CrossCorrelator::makeSomeOfZoomImageThreaded((void*)&threadArgVals);
-  }
-
+  CrossCorrelator::threadArgs threadArgVals;
+  threadArgVals.threadInd = 0;
+  threadArgVals.ptr = this;
+  CrossCorrelator::makeSomeOfZoomImageThreaded((void*)&threadArgVals);
 
   // Combine peak search results from each thread.
   imagePeak = -DBL_MAX;
   Int_t peakPhiBin, peakThetaBin;
-  for(Long_t threadInd=0; threadInd<numThreads; threadInd++){
-    if(threadImagePeakZoom[threadInd] > imagePeak){
-      imagePeak = threadImagePeakZoom[threadInd];
-      peakPhiDeg = threadPeakPhiDegZoom[threadInd];
-      peakThetaDeg = threadPeakThetaDegZoom[threadInd];
-      peakPhiBin = threadPeakPhiBinZoom[threadInd];
-      peakThetaBin = threadPeakThetaBinZoom[threadInd];
-    }
-  }
-  // const int numAkimaBins = 5;
-
-  // Int_t startThetaBin = peakThetaBin - numAkimaBins/2;
-  // if(startThetaBin < 0){
-  //   startThetaBin = 0;
-  // }
-  // Int_t endThetaBin = startThetaBin + numAkimaBins;
-  // if(endThetaBin >= NUM_BINS_THETA_ZOOM){
-  //   endThetaBin = NUM_BINS_THETA_ZOOM - 1;
-  //   startThetaBin = endThetaBin - numAkimaBins;
-  // }
-  // std::vector<Double_t> thetaVecTheta(numAkimaBins, 0);
-  // std::vector<Double_t> thetaVecVals(numAkimaBins, 0);
-  // Int_t thetaInd = 0;
-  // for(int thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-  //   thetaVecTheta.at(thetaInd) = zoomThetaMin[pol] + thetaBin*ZOOM_BIN_SIZE_THETA;
-  //   thetaVecVals.at(thetaInd) = fineMap[pol][peakIndex][thetaBin][peakPhiBin];
-  //   thetaInd++;
-  // }
-  // ROOT::Math::Interpolator thetaInterp(thetaVecTheta,thetaVecVals,ROOT::Math::Interpolation::kAKIMA);
-
-  // // peakThetaDeg = ;
-
-  // double thetaDeg = thetaVecTheta.at(0);
-  // double peakTheta = -1;
-  // while(thetaDeg <= thetaVecTheta.at(numAkimaBins-1)){
-  //   Double_t val = thetaInterp.Eval(thetaDeg);
-  //   if(val > imagePeak){
-  //     peakTheta = val;
-  //     peakThetaDeg = thetaDeg;
-  //   }
-  //   thetaDeg += AKIMA_PEAK_INTERP_DELTA_THETA_DEG;
-  // }
-
-
-  // Int_t startPhiBin = peakPhiBin - numAkimaBins/2;
-  // if(startPhiBin < 0){
-  //   startPhiBin = 0;
-  // }
-  // Int_t endPhiBin = startPhiBin + numAkimaBins;
-  // if(endPhiBin >= NUM_BINS_PHI_ZOOM){
-  //   endPhiBin = NUM_BINS_PHI_ZOOM - 1;
-  //   startPhiBin = endPhiBin - numAkimaBins;
-  // }
-  // std::vector<Double_t> phiVecPhi(numAkimaBins, 0);
-  // std::vector<Double_t> phiVecVals(numAkimaBins, 0);
-  // Int_t phiInd = 0;
-  // for(int phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-  //   phiVecPhi.at(phiInd) = zoomPhiMin[pol] + phiBin*ZOOM_BIN_SIZE_PHI;
-  //   phiVecVals.at(phiInd) = fineMap[pol][peakIndex][peakThetaBin][phiBin];
-  //   phiInd++;
-  // }
-
-  // ROOT::Math::Interpolator phiInterp(phiVecPhi,phiVecVals,ROOT::Math::Interpolation::kAKIMA);
-
-  // double phiDeg = phiVecPhi.at(0);
-  // double peakPhi = -1;
-  // while(phiDeg <= phiVecPhi.at(numAkimaBins-1)){
-  //   Double_t val = phiInterp.Eval(phiDeg);
-  //   if(val > peakPhi){
-  //     peakPhi = val;
-  //     peakPhiDeg = phiDeg;
-  //   }
-  //   phiDeg += AKIMA_PEAK_INTERP_DELTA_PHI_DEG;
-  // }
-
-  // imagePeak = peakTheta > peakPhi ?  peakTheta : peakPhi;
+  int threadInd = 0;
+  imagePeak = threadImagePeakZoom[threadInd];
+  peakPhiDeg = threadPeakPhiDegZoom[threadInd];
+  peakThetaDeg = threadPeakThetaDegZoom[threadInd];
+  peakPhiBin = threadPeakPhiBinZoom[threadInd];
+  peakThetaBin = threadPeakThetaBinZoom[threadInd];
 }
 
 
@@ -2187,16 +1974,6 @@ void* CrossCorrelator::makeSomeOfZoomImageThreaded(void* voidPtrArgs){
   const Int_t startPhiBin = 0;
   const Int_t endPhiBin = NUM_BINS_PHI_ZOOM;
 
-
-  // const Int_t numPhiBinsPerThread = NUM_BINS_PHI_ZOOM/numThreads;
-  // const Int_t startThetaBin = 0;
-  // const Int_t endThetaBin = NUM_BINS_THETA_ZOOM;
-  // const Int_t startPhiBin = threadInd*numPhiBinsPerThread;
-  // const Int_t endPhiBin = startPhiBin+numPhiBinsPerThread;
-
-  // TThread::Lock();
-  // std::cerr << threadInd << "\t" << startPhiBin << "\t" << endPhiBin << std::endl;
-  // TThread::UnLock();
 
   ptr->threadImagePeakZoom[threadInd] = -DBL_MAX;
   Int_t peakPhiBin = -1;
