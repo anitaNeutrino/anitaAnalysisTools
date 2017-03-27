@@ -1682,101 +1682,70 @@ void CrossCorrelator::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
   threadArgVals.ptr = this;
   CrossCorrelator::makeSomeOfImageThreaded((void*)&threadArgVals);
 
-  // Combine peak search results from each thread.
-  imagePeak = -DBL_MAX;
-  int threadInd = 0;
-  imagePeak = threadImagePeak[threadInd];
-  peakPhiDeg = threadPeakPhiDeg[threadInd];
-  peakThetaDeg = threadPeakThetaDeg[threadInd];
 
-}
-
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Static member function which fills the interferometric maps.
- *
- * @param voidPtrArgs contains a pointer to a CrossCorrelator::threadArgs struct
- *
- * This function contains the meat and bones of this class.
- * I've really tried to optimize this for speed, which means it's not very readable, sorry.
- */
-
-void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
-
-  // std::cout << "here 0" << std::endl;
-
-  // Disgusting hacks to get ROOT threading to compile inside a class.
-  CrossCorrelator::threadArgs* args = (CrossCorrelator::threadArgs*) voidPtrArgs;
-  Long_t threadInd = args->threadInd;
-  CrossCorrelator* ptr = args->ptr;
-  AnitaPol::AnitaPol_t pol = ptr->threadPol;
-  Int_t numThreads = ptr->numThreads;
   const Int_t numPhiSectorsPerThread = NUM_PHI/numThreads;
   const Int_t startThetaBin = 0;
   const Int_t endThetaBin = NUM_BINS_THETA;
-  const Int_t startPhiSector = threadInd*numPhiSectorsPerThread;
-  const Int_t endPhiSector = startPhiSector+numPhiSectorsPerThread;
 
-  ptr->threadImagePeak[threadInd] = -DBL_MAX;
+  imagePeak = -DBL_MAX;
+  peakPhiDeg = -9999;
+  peakThetaDeg = -9999;
+  
   Int_t peakPhiBin = -1;
   Int_t peakThetaBin = -1;
 
   // zero internal map
-  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
+  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
     Int_t startPhiBin = phiSector*NUM_BINS_PHI;
     Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
     // std::cout << startPhiBin << "\t" << endPhiBin << std::endl;
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	ptr->coarseMap[pol][phiBin][thetaBin] = 0;
+	coarseMap[pol][phiBin][thetaBin] = 0;
       }
     }
   }
 
   std::vector<Int_t>* combosToUse = NULL;
-  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
-    combosToUse = &ptr->combosToUseGlobal[phiSector];
+  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
+    combosToUse = &combosToUseGlobal[phiSector];
 
     Int_t startPhiBin = phiSector*NUM_BINS_PHI;
     Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
       Int_t combo = combosToUse->at(comboInd);
-      if(ptr->kOnlyThisCombo >= 0 && combo!=ptr->kOnlyThisCombo){
+      if(kOnlyThisCombo >= 0 && combo!=kOnlyThisCombo){
 	continue;
       }
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 
 	for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
-	  Int_t offsetLow = ptr->offsetLows[pol][combo][phiBin][thetaBin];
-	  Double_t c1 = ptr->crossCorrelations[pol][combo][offsetLow];
-	  Double_t c2 = ptr->crossCorrelations[pol][combo][offsetLow+1];
-	  Double_t cInterp = ptr->interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+	  Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
+	  Double_t c1 = crossCorrelations[pol][combo][offsetLow];
+	  Double_t c2 = crossCorrelations[pol][combo][offsetLow+1];
+	  Double_t cInterp = interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
 
-	  ptr->coarseMap[pol][phiBin][thetaBin] += cInterp;
+	  coarseMap[pol][phiBin][thetaBin] += cInterp;
 	}
       }
     }
   }
 
-  for(Int_t phiSector = startPhiSector; phiSector < endPhiSector; phiSector++){
-    combosToUse = &ptr->combosToUseGlobal[phiSector];
+  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
+    combosToUse = &combosToUseGlobal[phiSector];
 
-    Double_t normFactor = ptr->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+    Double_t normFactor = kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
     // absorb the removed inverse FFT normalization
-    normFactor*=(ptr->numSamples*ptr->numSamples);
+    normFactor*=(numSamples*numSamples);
 
     Int_t startPhiBin = phiSector*NUM_BINS_PHI;
     Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
     for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
       for(Int_t thetaBin = startThetaBin; thetaBin < endThetaBin; thetaBin++){
 
-	ptr->coarseMap[pol][phiBin][thetaBin]/=normFactor;
-	if(ptr->coarseMap[pol][phiBin][thetaBin] > ptr->threadImagePeak[threadInd]){
-	  ptr->threadImagePeak[threadInd] = ptr->coarseMap[pol][phiBin][thetaBin];
+	coarseMap[pol][phiBin][thetaBin]/=normFactor;
+	if(coarseMap[pol][phiBin][thetaBin] > imagePeak){//ptr->threadImagePeak[threadInd]){
+	  imagePeak = coarseMap[pol][phiBin][thetaBin];
 	  peakPhiBin = phiBin;
 	  peakThetaBin = thetaBin;
 	}
@@ -1784,13 +1753,11 @@ void* CrossCorrelator::makeSomeOfImageThreaded(void* voidPtrArgs){
     }
   }
 
-  ptr->threadPeakPhiDeg[threadInd] = ptr->phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
-  ptr->threadPeakThetaDeg[threadInd] = ptr->thetaWaves[peakThetaBin]*TMath::RadToDeg();
+  peakPhiDeg = phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
+  peakThetaDeg = thetaWaves[peakThetaBin]*TMath::RadToDeg();
+  // Combine peak search results from each thread.
 
-  return NULL;
 }
-
-
 
 
 
