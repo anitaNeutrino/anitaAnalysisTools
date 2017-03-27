@@ -1674,7 +1674,7 @@ Double_t CrossCorrelator::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1
  */
 void CrossCorrelator::insertPhotogrammetryGeometry(){
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnita3Numbers(1);
+  geom->usePhotogrammetryNumbers(1);
   for(Int_t pol=0; pol < NUM_POL; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
       rArray[pol].at(ant) = geom->getAntR(ant, AnitaPol::AnitaPol_t(pol));
@@ -1691,7 +1691,7 @@ void CrossCorrelator::insertPhotogrammetryGeometry(){
   }
 
   fillDeltaTLookup();
-  geom->useKurtAnita3Numbers(0);
+  geom->usePhotogrammetryNumbers(0);
 
 }
 
@@ -2742,7 +2742,7 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
   // I need the help of a machine to check I'm testing the geometry I think I'm testing.
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->useKurtAnita3Numbers(0); // i.e. definitely use the numbers I am inserting.
+  geom->usePhotogrammetryNumbers(0); // i.e. definitely use the numbers I am inserting.
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
 
 
@@ -2760,9 +2760,9 @@ Int_t CrossCorrelator::directlyInsertGeometry(TString pathToLindasFile, AnitaPol
     geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
 				       surf, chan, ant2);
 
-    Double_t newR = geom->rPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dr;
-    Double_t newPhi = geom->azPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dPhiRad;
-    Double_t newZ = geom->zPhaseCentreFromVerticalHornKurtAnita3[ant][pol] + dz;
+    Double_t newR = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dr;
+    Double_t newPhi = geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dPhiRad;
+    Double_t newZ = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dz;
     Double_t newT = dt;
 
     if(newPhi >= TMath::TwoPi()){
