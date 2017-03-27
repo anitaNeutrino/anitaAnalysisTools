@@ -255,25 +255,24 @@ public:
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
   void getNormalizedInterpolatedTGraphs(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   Double_t applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch);
-  Double_t applyFilterBits(AnitaPol::AnitaPol_t pol, Int_t ant, TBits* filterBits);
 
   void writeNotchesIfAble();
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
 
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
-  void doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+  void doFFTs(AnitaPol::AnitaPol_t pol);
 
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void correlateEvent(NiceAnitaEvent* realEvent, TBits* filterBits=NULL);
+  void correlateEvent(NiceAnitaEvent* realEvent);
 
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void correlateEvent(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+  void correlateEvent(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+  void reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  AnitaPol::AnitaPol_t reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+  AnitaPol::AnitaPol_t reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
   void reconstructEvent(NiceAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);

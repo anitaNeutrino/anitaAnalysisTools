@@ -373,7 +373,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(NiceAnitaEvent* usefulEve
  *
  * Now also creates the zero padded FFTs used for upsampled cross-correlations.
  */
-void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits){
+void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
@@ -384,7 +384,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol, TBits* filterBits){
       applyNotch(pol, ant, notch);
     }
 
-    applyFilterBits(pol, ant, filterBits);
+    // applyFilterBits(pol, ant);
 
     renormalizeFourierDomain(pol, ant);
     // FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
@@ -513,69 +513,6 @@ void CrossCorrelator::printNotchInfo(){
 
 
 
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Takes in some TBits, which contains one bit for each unpadded FFT bin. Filters if bins bit is true.
- * If that sounds confusing, it's because it is confusing.
- *
- * @param pol is the polarization of interest
- * @param ant is the antenna to filter
- * @param filterBits is the ROOT class containg the results of the filtering bits
- *
- * @return the amount of notched power.
- */
-Double_t CrossCorrelator::applyFilterBits(AnitaPol::AnitaPol_t pol, Int_t ant, TBits* filterBits){
-
-  // Dear future self, I apologise for this hacky stuff...
-
-  // After bemoaning the lack of filtering in my CrossCorrelator I remembered that
-  // I made a whole set of rayleigh distributions + thresholds 6 months ago
-  // and forgot all about them...
-  // There's a list of frequency bins above threshold sitting in a TTree
-  // on the UCL file system.
-  // I may as well reconstruct with them and see if they make any sense.
-
-  // As it's a pretty large data set they're stored in the form of TBits.
-  // Which is what it sounds like , a wrapper around a set of bits.
-  // It has a nice interface to set and get bit values.
-  // The problem is I made them from the FFTs of 256 samples.
-  // So in my new scheme where I have 512 samples, I need to filter two bins
-  // for every bin in the filterBits...
-
-  Double_t notchedPower = 0;
-
-  if(filterBits!=NULL){
-
-    const int shortNumFreqs = FancyFFTs::getNumFreqs(NUM_SAMPLES);
-    const int longNumFreqs = FancyFFTs::getNumFreqs(numSamples);
-    const double longDeltaFMHz = 1e3/(numSamples*nominalSamplingDeltaT);
-
-    Int_t fftInd=0;
-    UInt_t baseIndex = (pol*NUM_SEAVEYS + ant)*shortNumFreqs;
-    for(int freqInd=0; freqInd < shortNumFreqs; freqInd++){
-      UInt_t filterBitsIndex = baseIndex + freqInd;
-      Bool_t filterThisBin = filterBits->TestBitNumber(filterBitsIndex);
-      for(int padInd=0; padInd < PAD_FACTOR; padInd++){
-	if(filterThisBin==true){
-	  Double_t theAbs = std::abs(ffts[pol][ant][fftInd]);
-	  notchedPower += theAbs*theAbs*longDeltaFMHz;
-	  ffts[pol][ant][fftInd].real(0);
-	  ffts[pol][ant][fftInd].imag(0);
-	}
-	fftInd++;
-	if(fftInd == longNumFreqs){
-	  break;
-	}
-      }
-    }
-    // std::cerr << "My fftInd reached " << fftInd << ", from antenna " << ant << " and pol " << pol << ", I filtered " << notchedPower << std::endl;
-  }
-  return notchedPower;
-}
 
 
 
@@ -814,13 +751,13 @@ void CrossCorrelator::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, D
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  */
 template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
+AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
     // now calls reconstruct inside correlate event
-    correlateEvent(usefulEvent, pol, filterBits);
+    correlateEvent(usefulEvent, pol);
 
     findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
@@ -965,13 +902,13 @@ void CrossCorrelator::reconstructEvent(NiceAnitaEvent* usefulEvent, UsefulAdu5Pa
  * Wraps the key reconstruction algorithms and puts the results in internal memory.
  */
 template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks, TBits* filterBits){
+void CrossCorrelator::reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
     // now calls reconstruct inside correlate event
-    correlateEvent(usefulEvent, pol, filterBits);
+    correlateEvent(usefulEvent, pol);
 
     findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
@@ -1084,10 +1021,10 @@ void CrossCorrelator::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
  * @param usefulEvent is the event to process.
  */
 template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, TBits* filterBits){
+void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol, filterBits);
+    correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol);
   }
 }
 
@@ -1106,7 +1043,7 @@ void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, TBits* filterB
  * @param pol tells CrossCorrelator to only do this polarization.
  */
 template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits){
+void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
@@ -1114,7 +1051,7 @@ void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::Anit
   // Now cross correlate those already FFT'd waveforms
 
   // Generate set of ffts for cross correlation (each waveform only needs to be done once)
-  doFFTs(pol, filterBits);
+  doFFTs(pol);
 
 
   doAllCrossCorrelationsThreaded(pol);
@@ -3136,18 +3073,18 @@ template void CrossCorrelator::getNormalizedInterpolatedTGraphs<UsefulAnitaEvent
 template void CrossCorrelator::getNormalizedInterpolatedTGraphs<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
 
-template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, TBits* filterBits=NULL);
-template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, TBits* filterBits=NULL);
+template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent);
+template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent);
 
 
-template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
-template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, TBits* filterBits=NULL);
+template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
-template void CrossCorrelator::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
-template void CrossCorrelator::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+template void CrossCorrelator::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+template void CrossCorrelator::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
-template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
-template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS, TBits* filterBits = NULL);
+template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+template AnitaPol::AnitaPol_t CrossCorrelator::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
 
 template void CrossCorrelator::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
