@@ -21,7 +21,6 @@ CrossCorrelator::CrossCorrelator(){
  * @brief Destructor
  */
 CrossCorrelator::~CrossCorrelator(){
-  writeNotchesIfAble();
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
   }
@@ -69,19 +68,6 @@ Int_t CrossCorrelator::setNumThreads(Int_t numDesiredThreads){
 
 
 
-/**
- * @brief Writes all the notches in allChannelNotches to the current directory, if writable
- *
- */
-void CrossCorrelator::writeNotchesIfAble(){
-  if(gDirectory->IsWritable()){
-    for(std::vector<SimpleNotch>::iterator i=allChannelNotches.begin(); i!=allChannelNotches.end(); ++i){
-      SimpleNotch& notch = (*i);
-      notch.Write();
-    }
-  }
-}
-
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -114,7 +100,6 @@ void CrossCorrelator::initializeVariables(){
       grsResampled[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
     }
-    lastNumNotches[pol] = 0;
   }
 
   maxDPhiDeg = 0;
@@ -377,138 +362,8 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
-    // FFTtools::doFFT(numSamples, grsResampled[pol][ant]->GetY(), (FFTWComplex *)ffts[pol][ant]);
-
-    for(std::vector<SimpleNotch>::iterator i=allChannelNotches.begin(); i!=allChannelNotches.end(); ++i){
-      SimpleNotch& notch = (*i);
-      applyNotch(pol, ant, notch);
-    }
-
-    // applyFilterBits(pol, ant);
-
-    renormalizeFourierDomain(pol, ant);
-    // FancyFFTs::zeroPadFFT(ffts[pol][ant], fftsPadded[pol][ant], numSamples, numSamplesUpsampled);
   }
 
-  lastNumNotches[pol] = allChannelNotches.size();
-}
-
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Adds my default analysis notches, this will probably change with time.
- * Currently I have several analysis scripts in which I set this and sometimes want to set these up in =MagicDisplay=, which is quite tedious. Hopefully not any more.
- *
- * @return the size of the allChannelNotches vector.
- */
-UInt_t CrossCorrelator::setDefaultNotches(){
-
-  // Just a little wrapper so I can only call this if there aren't any other notches.
-  // Is this a good idea?
-  if(allChannelNotches.size()==0){
-
-    CrossCorrelator::SimpleNotch notch260("n260Notch", "260MHz Satellite And 200MHz Notch Notch",
-					  260-26, 260+26);
-    CrossCorrelator::SimpleNotch notch370("n370Notch", "370MHz Satellite Notch",
-					  370-26, 370+26);
-    CrossCorrelator::SimpleNotch notch400("n400Notch", "400 MHz Satellite Notch",
-					  400-10, 410);
-    CrossCorrelator::SimpleNotch notch762("n762Notch", "762MHz Satellite Notch (one bin wide)",
-					  762-8, 762+8);
-    CrossCorrelator::SimpleNotch notch200("n200Notch", "200 MHz high pass band",
-					  0, 200);
-    CrossCorrelator::SimpleNotch notch1200("n1200Notch", "1200 MHz low pass band",
-					   1200, 9999);
-
-    addNotch(notch260);
-    addNotch(notch370);
-    addNotch(notch400);
-    addNotch(notch762);
-    addNotch(notch200);
-    addNotch(notch1200);
-
-  }
-  return allChannelNotches.size();
-}
-
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Gets the size of the notch vector.
- * @return the size of the allChannelNotches vector.
- */
-UInt_t CrossCorrelator::getNumNotches(){
-
-  return allChannelNotches.size();
-
-}
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Remove a notch by index. If index is out of bounds then removes the last notch.
- *
- * @param notchIndex is the index to remove.
- *
- * @return the size of the allChannelNotches vector.
- */
-UInt_t CrossCorrelator::removeNotch(Int_t notchInd){
-
-  if(notchInd < 0 || notchInd >= (Int_t)allChannelNotches.size()){
-    if(allChannelNotches.size() > 0){
-      allChannelNotches.pop_back();
-    }
-  }
-  else{
-    allChannelNotches.erase(allChannelNotches.begin() + notchInd);
-  }
-  return allChannelNotches.size();
-
-}
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Adds a notch to the list of SimpleNotches which get applied to every channel, every event.
- *
- * @param simpleNotch the SimpleNotch object to add to CrossCorrelator
- *
- * @return the size of the allChannelNotches vector.
- */
-UInt_t CrossCorrelator::addNotch(SimpleNotch simpleNotch){
-
-  allChannelNotches.push_back(simpleNotch);
-  return allChannelNotches.size();
-
-}
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Adds a notch to the list of SimpleNotches which get applied to every channel, every event.
- *
- * @param simpleNotch the SimpleNotch object to add to CrossCorrelator
- *
- * @return the size of the allChannelNotches vector.
- */
-void CrossCorrelator::printNotchInfo(){
-
-  std::cout << "Notch info:" << std::endl;
-  std::cout << "Low Pass (MHz)\tHigh Pass (MHz)\tName\tTitle" << std::endl;
-  for(std::vector<SimpleNotch>::iterator i=allChannelNotches.begin(); i!=allChannelNotches.end(); ++i){
-
-    Double_t lp, hp;
-    (*i).getNotchEdges(lp, hp);
-    std::cout << lp << "\t" << hp << "\t"
-	      << (*i).GetName() << "\t" << (*i).GetTitle() << std::endl;
-  }
 }
 
 
@@ -519,78 +374,6 @@ void CrossCorrelator::printNotchInfo(){
 
 
 
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Applies a notch with specified high pass and low pass frequencies
- * While you can call this yourself, the recommended way is to create a SimpleNotch object and add it to CrossCorrelator with CrossCorrelator::addNotch()
- *
- * @param pol is the polarization of interest
- * @param ant is the antenna to filter
- * @param notch is the CrossCorrelator::SimpleNotch object, containing the lowpass and highpass frequencies in MHz.
- *
- * @return the amount of notched power.
- */
-Double_t CrossCorrelator::applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch){
-
-  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  const Double_t deltaFMHz = 1e3/(numSamples*nominalSamplingDeltaT);
-  Double_t notchedPower = 0;
-
-  Double_t highPassFreqMHz = 0;
-  Double_t lowPassFreqMHz = 0;
-  notch.getNotchEdges(lowPassFreqMHz, highPassFreqMHz);
-  for(int freqInd=0; freqInd < numFreqs; freqInd++){
-
-    Double_t freqMHz = deltaFMHz*freqInd;
-    if(freqMHz >= lowPassFreqMHz && freqMHz < highPassFreqMHz){
-      Double_t theAbs = std::abs(ffts[pol][ant][freqInd]);
-      notchedPower += theAbs*theAbs*deltaFMHz;
-      ffts[pol][ant][freqInd].real(0);
-      ffts[pol][ant][freqInd].imag(0);
-      // std::cerr << notch.GetName() << "\t" << lowPassFreqMHz << "\t" << highPassFreqMHz << "\t" << freqMHz << std::endl;
-    }
-  }
-  return notchedPower;
-}
-
-
-
-
-
-
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Scales the fft such that the inverse fft would have mean=0 and rms=1. For use after notching.
- *
- * @param pol is the polarization of interest
- * @param ant is the antenna to filter
- */
-void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
-
-  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  Double_t sumOfVSquared = 0;
-  for(int freqInd=0; freqInd < numFreqs; freqInd++){
-    Double_t re = ffts[pol][ant][freqInd].real();
-    Double_t im = ffts[pol][ant][freqInd].imag();
-    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
-    sumOfVSquared += factor*(re*re + im*im);
-  }
-
-  Double_t timeDomainVSquared = sumOfVSquared/(numSamples*numSamples/2);
-  Double_t norm = TMath::Sqrt(timeDomainVSquared);
-
-  for(int freqInd=0; freqInd < numFreqs; freqInd++){
-    Double_t re = ffts[pol][ant][freqInd].real();
-    Double_t im = ffts[pol][ant][freqInd].imag();
-
-    ffts[pol][ant][freqInd].real(re/norm);
-    ffts[pol][ant][freqInd].imag(im/norm);
-  }
-}
 
 
 

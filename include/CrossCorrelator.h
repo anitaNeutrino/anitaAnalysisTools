@@ -126,76 +126,6 @@ class CrossCorrelator{
 
 public:
 
-
-
-
-
-
-  //--------------------------------------------------------------------------------------------------------
-  // Classes declared inside this class
-  //--------------------------------------------------------------------------------------------------------
-
-
-
-
-  //--------------------------------------------------------------------------------------------------------
-  /**
-   * @class SimpleNotch
-   * @ A class to hold two frequencies, a low notch edge and high notch edge. Should be ROOT read/writable.
-   */
-  class SimpleNotch : public TNamed{
-  public:
-    //------------------------------------------------------------------------------------------------------
-    /**
-     * @brief Default Constructor for ROOT IO
-     *
-     */
-    SimpleNotch(){
-      lowPassFreqMHz=0;
-      highPassFreqMHz=0;
-    }
-    //------------------------------------------------------------------------------------------------------
-    /**
-     * @brief Proper Constructor
-     *
-     * @param name The name of the notch, for ROOT IO
-     * @param title The title of the notch, for ROOT IO
-     * @param theLowPassFreqMHz The low pass frequency in MHz, i.e. the low edge of the notch (frequencies less than this value ARE NOT filtered, and frequencies greater than and equal to this value ARE filtered)
-     * @param theHighPassFreqMHz The high pass frequency in MHz, i.e. the high edge of the notch (frequencies less than this value ARE filtered, and frequencies greater than and equal to this value ARE NOT filtered)
-     */
-    SimpleNotch(TString name, TString title, Double_t theLowPassFreqMHz, Double_t theHighPassFreqMHz) : lowPassFreqMHz(theLowPassFreqMHz) , highPassFreqMHz(theHighPassFreqMHz){
-      fName = name;
-      fTitle = title;
-      if(lowPassFreqMHz > highPassFreqMHz){
-	std::cerr << "Warning in " << __FUNCTION__ << ", your highPassFreqMHz < lowPassFreqMHz!" << std::endl;
-	printInfo(std::cerr);
-	std::cerr << "This notch isn't going to do anything!" << std::endl;
-      }
-    }
-    //------------------------------------------------------------------------------------------------------
-    /**
-     * @grief Get the notch edge values, retured by reference
-     *
-     * @param theLowPassFreqMHz gets the theLowPassFreqMHz
-     * @param theHighPassFreqMHz get the highPassFreqMHz
-     */
-
-    void getNotchEdges(Double_t &theLowPassFreqMHz, Double_t& theHighPassFreqMHz) const{
-      theLowPassFreqMHz =  lowPassFreqMHz;
-      theHighPassFreqMHz = highPassFreqMHz;
-    }
-    void printInfo(std::ostream& output = std::cout){
-      output << fName << "\t" << fTitle << ": Low Pass = " << lowPassFreqMHz
-	     << " MHz, High Pass = " << highPassFreqMHz << " MHz" << std::endl;
-    }
-
-  private:
-    Double_t lowPassFreqMHz;
-    Double_t highPassFreqMHz;
-    ClassDef(SimpleNotch, 1)
-  };
-
-
     /**
    * @brief Flag to pass to CrossCorrelator when making a map telling it whether to use all phi-sectors or triggered phi-sectors.
    */
@@ -254,9 +184,7 @@ public:
   // void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
   void getNormalizedInterpolatedTGraphs(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  Double_t applyNotch(AnitaPol::AnitaPol_t pol, Int_t ant, const SimpleNotch& notch);
 
-  void writeNotchesIfAble();
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
 
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
@@ -377,19 +305,6 @@ public:
   void insertPhotogrammetryGeometry();
 
 
-  UInt_t addNotch(SimpleNotch simpleNotch);
-  UInt_t removeNotch(Int_t notchInd = -1);
-  UInt_t setDefaultNotches();
-  UInt_t getNumNotches();
-  void printNotchInfo();
-
-
-
-
-
-
-
-
 
 
 
@@ -477,7 +392,6 @@ public:
   Int_t coherentDeltaPhi;
   Int_t getNumThreads();
   Int_t setNumThreads(Int_t numDesiredThreads);
-  UInt_t lastNumNotches[NUM_POL];
 
 private:
 
@@ -486,8 +400,6 @@ private:
   //--------------------------------------------------------------------------------------------------------
 
   Int_t numThreads;//!< Number of threads to use in threaded functions.
-
-  std::vector<SimpleNotch> allChannelNotches; //!< Holds notches to be applied to all channels for all events (e.g. satellite filters).
 
   ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);
   std::vector<double> ccTimes;

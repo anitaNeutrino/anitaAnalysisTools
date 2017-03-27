@@ -31,7 +31,6 @@ void testCoherentlySummedWaveform();
 // void testHackyFilter();
 void testOffAxisDelay();
 // void testFileWriting();
-void testSimpleNotch();
 
 int main(){
 
@@ -43,89 +42,9 @@ int main(){
   // testHackyFilter();
   // testOffAxisDelay();
   //  testFileWriting();
-  testSimpleNotch();
 
   return 0;
 
-}
-
-void testSimpleNotch(){
-
-  CrossCorrelator* cc = new CrossCorrelator();
-  AnitaPol::AnitaPol_t pol = AnitaPol::kHorizontal;
-
-
-  char eventFileName[1024];
-
-  Int_t run = 352;
-  sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
-
-  TFile* eventFile = TFile::Open(eventFileName);
-  TTree* eventTree = (TTree*) eventFile->Get("eventTree");
-
-  char rawHeaderFileName[1024];
-  sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
-
-  TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-  TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
-
-  CalibratedAnitaEvent* event = NULL;
-  eventTree->SetBranchAddress("event", &event);
-
-  RawAnitaHeader* header = NULL;
-  headTree->SetBranchAddress("header", &header);
-
-
-  headTree->BuildIndex("eventNumber");
-  eventTree->BuildIndex("eventNumber");
-
-  const Long64_t eventNumber = 60832108;
-  headTree->GetEntryWithIndex(eventNumber);
-  eventTree->GetEntryWithIndex(eventNumber);
-  std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
-
-  UsefulAnitaEvent* usefulEvent = new UsefulAnitaEvent(event);
-  cc->reconstructEvent(usefulEvent, 1, 1);
-
-  TFile* outFile = new TFile("/tmp/testSimpleNotches.root","recreate");
-
-  Double_t peakValue, peakPhiDeg, peakThetaDeg;
-  TH2D* hCoarse = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
-  TString name = hCoarse->GetName();
-  hCoarse->SetName(name + "_noNotches");
-  hCoarse->Write();
-  delete hCoarse;
-  hCoarse = NULL;
-
-  CrossCorrelator::SimpleNotch notch260("n260Notch", "260MHz Satellite Notch", 260 - 26, 260 + 26);
-  cc->addNotch(notch260);
-
-  cc->eventNumber[0] = 0; // force re-event correlation
-
-  cc->reconstructEvent(usefulEvent, 1, 1);
-  TH2D* hCoarse2 = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
-  TString name2 = hCoarse2->GetName();
-  hCoarse2->SetName(name + "_oneNotch");
-  hCoarse2->Write();
-  delete hCoarse2;
-  hCoarse2 = NULL;
-
-  CrossCorrelator::SimpleNotch notch370("n370Notch", "370MHz Satellite Notch", 370 - 26, 370 + 26);
-  cc->addNotch(notch370);
-  cc->eventNumber[0] = 0; // force re-event correlation
-
-  cc->reconstructEvent(usefulEvent, 1, 1);
-  TH2D* hCoarse3 = cc->getMap(pol, peakValue, peakPhiDeg, peakThetaDeg);
-  TString name3 = hCoarse3->GetName();
-  hCoarse3->SetName(name + "_twoNotches");
-  hCoarse3->Write();
-  delete hCoarse3;
-  hCoarse3 = NULL;
-
-  delete cc;
-
-  outFile->Write();
-  outFile->Close();
 }
 
 
@@ -372,99 +291,6 @@ void testOffAxisDelay(){
 //   outFile->Close();
 // }
 
-
-
-// error, this test is now deprecated... see testSimpleNotch
-// void testHackyFilter(){
-//   char eventFileName[1024];
-
-//   Int_t run = 352;
-//   sprintf(eventFileName, "~/UCL/ANITA/calibratedFlight1415/run%d/calEventFile%d.root", run, run);
-
-//   TFile* eventFile = TFile::Open(eventFileName);
-//   TTree* eventTree = (TTree*) eventFile->Get("eventTree");
-
-//   char rawHeaderFileName[1024];
-//   sprintf(rawHeaderFileName, "~/UCL/ANITA/flight1415/root/run%d/headFile%d.root", run, run);
-
-//   TFile* rawHeaderFile = TFile::Open(rawHeaderFileName);
-//   TTree* headTree = (TTree*) rawHeaderFile->Get("headTree");
-
-//   CalibratedAnitaEvent* event = NULL;
-//   eventTree->SetBranchAddress("event", &event);
-
-//   RawAnitaHeader* header = NULL;
-//   headTree->SetBranchAddress("header", &header);
-
-//   TFile* outFile = new TFile("/tmp/testHackyFilter.root","recreate");
-
-//   CrossCorrelator* cc = new CrossCorrelator();
-//   cc->kDoSimpleSatelliteFiltering = 1;
-
-//   headTree->BuildIndex("eventNumber");
-//   eventTree->BuildIndex("eventNumber");
-
-//   const Long64_t eventNumber = 60832108;
-//   headTree->GetEntryWithIndex(eventNumber);
-//   eventTree->GetEntryWithIndex(eventNumber);
-//   std::cout << header->eventNumber << "\t" << event->eventNumber << std::endl;
-
-//   // UsefulAnitaEvent* realEvent(new UsefulAnitaEvent(event, WaveCalType::kDefault,  header));
-//   UsefulAnitaEvent* realEvent = new UsefulAnitaEvent(event);
-//   cc->correlateEvent(realEvent);
-
-//   if(cc->grsResampled[0][1]){
-//     delete cc->grsResampled[0][1];
-//     cc->grsResampled[0][1] = (TGraph*) cc->grsResampled[0][0]->Clone("grCopy");
-//   }
-
-//   Double_t mean = 0;
-//   Double_t rms = 0;
-//   Int_t n = cc->grsResampled[0][1]->GetN();
-//   for(int samp=0; samp < n; samp++){
-//     Double_t y = cc->grsResampled[0][1]->GetY()[samp];
-//     mean += y;
-//     rms += y*y;
-//   }
-
-//   mean /= n;
-//   rms  = rms / n - mean*mean;
-//   std::cout << "mean, rms, n: " << mean << "\t" << rms << "\t" << n << std::endl;
-
-//   cc->doFFTs(AnitaPol::kHorizontal);
-//   cc->doAllCrossCorrelationsThreaded(AnitaPol::kHorizontal);
-//   cc->doUpsampledCrossCorrelationsThreaded(AnitaPol::kHorizontal, 0);
-
-//   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-//     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-//     for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
-//       cc->simple260MHzSatelliteNotch(pol, ant);
-//     }
-//   }
-//   const int numFreqs = FancyFFTs::getNumFreqs(cc->numSamples);
-//   std::vector<Double_t> powSpec(numFreqs, 0);
-//   std::vector<Double_t> freqsMHz(numFreqs, 0);
-
-//   for(int freqInd=0; freqInd < numFreqs; freqInd++){
-//     freqsMHz.at(freqInd) = freqInd*1e3/(cc->nominalSamplingDeltaT*cc->numSamples);
-//     powSpec.at(freqInd) = std::norm(cc->ffts[0][0][freqInd]);
-
-//     if(powSpec.at(freqInd) >= 1e-10){
-//       powSpec.at(freqInd) = 10*TMath::Log10(powSpec.at(freqInd));
-//     }
-//     else{
-//       powSpec.at(freqInd) = -10;
-//     }
-//     std::cout << powSpec.at(freqInd) << "\t"  << cc->ffts[0][0][freqInd] << std::endl;
-//   }
-
-//   TGraph* grPowSpec = new TGraph(numFreqs, &freqsMHz[0], &powSpec[0]);
-//   grPowSpec->SetName("grPowSpecTest");
-//   grPowSpec->Write();
-
-//   outFile->Write();
-//   outFile->Close();
-// }
 
 
 
