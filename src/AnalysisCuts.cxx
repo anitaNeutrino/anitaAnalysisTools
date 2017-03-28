@@ -1,5 +1,5 @@
 #include "AnalysisCuts.h"
-
+#include "InterferometricMapMaker.h"
 
 
 AnalysisCuts::Status_t AnalysisCuts::applyBottomToTopRingPeakToPeakRatioCut(AnitaPol::AnitaPol_t pol, Double_t* peakToPeak, Double_t& maxRatio){
