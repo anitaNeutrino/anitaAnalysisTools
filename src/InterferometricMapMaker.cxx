@@ -1,5 +1,6 @@
 #include "InterferometricMapMaker.h"
 #include "InterferometricMap.h"
+#include "InterferometryCache.h"
 
 
 InterferometricMapMaker::InterferometricMapMaker(){
@@ -483,6 +484,8 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
 
 void InterferometricMapMaker::fillDeltaTLookup(){
 
+  
+
   // here we go...
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
   const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
@@ -775,24 +778,8 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
 	continue;
       }
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-
-	Double_t phiWave = phiWaveLookup[phiBin];
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-
-	  // Double_t thetaWave = thetaWaves[thetaBin];
-	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
-	  // Double_t deltaT = getDeltaTExpected();
-	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
-	  
-	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt1s[combo], cc->comboToAnt2s[combo], phiWave, thetaWave);
-	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt2s[combo], cc->comboToAnt1s[combo], phiWave, thetaWave);
-	  
-
 	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaTs[pol][combo][phiBin][thetaBin]);
- 	  // Double_t c1 = cc->crossCorrelations[pol][combo][offsetLow];
-	  // Double_t c2 = cc->crossCorrelations[pol][combo][offsetLow+1];
-	  // Double_t cInterp = interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
-
 	  coarseMap[pol][phiBin][thetaBin] += cInterp;
 	}
       }

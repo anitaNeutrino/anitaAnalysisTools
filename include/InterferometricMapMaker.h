@@ -3,6 +3,7 @@
 
 #include "AnitaEventReconstructor.h"
 #include "InterferometricMap.h"
+#include "InterferometryCache.h"
 #include "CrossCorrelator.h"
 
 #define DEGREES_IN_CIRCLE 360
@@ -45,17 +46,7 @@
 
 
 
-
-class DeltaTCache {
-
-  Double_t* operator[](int phiBin){return &vals[NUM_BINS_THETA*phiBin];}
-  
-private:
-  // Double_t vals[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
-  Double_t vals[NUM_BINS_PHI*NUM_PHI*NUM_BINS_THETA];    
-  
-  
-};
+class InterferometryCache;
 
 
 /** 
@@ -228,6 +219,11 @@ public:
 private:
   void initializeVariables();
 
+  
+  InterferometryCache dtCache;
+
+
+  
   // The axes of the interferometric maps store the uneven bins in theta (degrees)
   // these will replace the internal map storage...
   // we will imply some pointer ownership scheme with these.
