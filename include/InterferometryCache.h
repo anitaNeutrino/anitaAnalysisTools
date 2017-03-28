@@ -23,6 +23,9 @@ public:
     return ((pol*numCombos + combo)*nCoarseBinsPhi + phiBin)*nCoarseBinsTheta + thetaBin;
   }
 
+  inline double dt(int pol, int combo, int phiBin, int thetaBin){
+    return deltaTs[coarseIndex(pol, combo, phiBin, thetaBin)];
+  }
   
 private:
 
