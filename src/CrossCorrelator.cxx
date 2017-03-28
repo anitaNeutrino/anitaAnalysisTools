@@ -6,9 +6,6 @@ CrossCorrelator::CrossCorrelator(){
 
 
 CrossCorrelator::~CrossCorrelator(){
-  for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    deleteAllWaveforms((AnitaPol::AnitaPol_t)pol);
-  }
 }
 
 
@@ -22,9 +19,8 @@ void CrossCorrelator::initializeVariables(){
   // Initialize with NULL otherwise very bad things will happen with gcc
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      grs[pol][ant] = NULL;
-      grsResampled[pol][ant] = NULL;
       interpRMS[pol][ant] = 0;
+      interpRMS2[pol][ant] = 0;      
     }
   }
 
@@ -160,6 +156,7 @@ TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Doubl
 
 
 
+
 Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
   Int_t ant1 = comboToAnt1s[combo];
@@ -188,111 +185,38 @@ Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t co
 
 
 
-void CrossCorrelator::getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
-
-  for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    interpRMS[pol][ant] = 1;
-    interpRMS2[pol][ant] = 1;    
-
-    const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
-    const TGraphAligned* grEven = wf->even();
-    startTimes[pol][ant] = grEven->GetX()[0];
-
-    if(pol==AnitaPol::kHorizontal && (ant==16 || ant == 32)){
-      std::cout << "new\t" << pol << "\t" << ant << "\t" << grEven->GetX()[0] << std::endl;
-    }
-    
-
-    const int nf = wf->Nfreq();
-    const FFTWComplex* thisFft = wf->freq();
-
-    // std::cout << pol << "\t" << ant << ": " << startTimes[pol][ant] << std::endl;
-    for(int freqInd=0; freqInd < nf; freqInd++){
-      ffts[pol][ant][freqInd].real(thisFft[freqInd].re);
-      ffts[pol][ant][freqInd].imag(thisFft[freqInd].im);
-
-      
-      // std::cout << pol << "\t" << ant << "\t" << thisFft[freqInd].re << "\t" <<  ffts[pol][ant][freqInd].real() << "\t" << thisFft[freqInd].im << "\t" << ffts[pol][ant][freqInd].imag() << std::endl;
-    }
-    // std::cout << std::endl << std::endl;    
-
-  }
-} 
-
-
-// Allow functions to take UsefulAnitaEvent and/or FilteredAnitaEvent.
 void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* fEv,
 						       AnitaPol::AnitaPol_t pol){
 
+  for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
+    const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);    
+    const TGraphAligned* gr = wf->even();
+    startTimes[pol][ant] = gr->GetX()[0];
+    int n = gr->GetN();
 
-  // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
-  deleteAllWaveforms(pol);
+    Double_t invertFactor = multiplyTopRingByMinusOne > 0 && ant < NUM_PHI ? -1 : 1;
 
-
-  std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-
-    grs[pol][ant] = fEv->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
-
-    if(pol==AnitaPol::kHorizontal && (ant==16 || ant == 32)){
-      std::cout << "old\t" << pol << "\t" << ant << "\t" << grs[pol][ant]->GetX()[0] << std::endl;
+    Double_t sumOfV = 0;
+    for(int samp=0; samp < n; samp++){
+      Double_t V = invertFactor*gr->GetY()[samp];
+      fVolts[pol][ant][samp] = V;      
+      sumOfV += V;
     }
 
-    // const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+    Double_t meanV = sumOfV/n;    
+
+    Double_t sumOfVSquared = 0;    
+    for(int samp=0; samp < n; samp++){
+      fVolts[pol][ant][samp] -= meanV;
+      sumOfVSquared += fVolts[pol][ant][samp]*fVolts[pol][ant][samp];
+    }
+
+    for(int samp=n; samp < numSamples; samp++){
+      fVolts[pol][ant][samp] = 0;
+    }
     
-    // grs[pol][ant] = (TGraph*) wf->even();
-
-    if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
-      for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
-	grs[pol][ant]->GetY()[samp] *= -1;
-      }
-    }
-
-    // Find the start time of all waveforms
-    if(grs[pol][ant]->GetX()[0]<earliestStart.at(pol)){
-      earliestStart.at(pol) = grs[pol][ant]->GetX()[0];
-    }
-  }
-
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    grsResampled[pol][ant] = interpolateWithStartTimeAndZeroMean(grs[pol][ant], earliestStart.at(pol),
-								 nominalSamplingDeltaT, numSamples);
-
-    Double_t sumOfVSquared = 0;
-    for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
-      Double_t V = grsResampled[pol][ant]->GetY()[samp];
-      sumOfVSquared += V*V;
-    }
     interpRMS[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamples);
     interpRMS2[pol][ant] = TMath::Sqrt(sumOfVSquared/numSamplesUpsampled);
-    // for(int samp=0; samp < grsResampled[pol][ant]->GetN(); samp++){
-    // 	grsResampled[pol][ant]->GetY()[samp]/=interpRMS[pol][ant];
-    // }
-  }
-
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-
-    TString name, title;
-    TString name2, title2;
-    if(pol==AnitaPol::kHorizontal){
-      name = TString::Format("gr%dH_%u", ant, fEv->eventNumber);
-      name2 = TString::Format("grInterp%dH_%u", ant, fEv->eventNumber);
-      title = TString::Format("Antenna %d HPOL eventNumber %u", ant, fEv->eventNumber);
-      title2 = TString::Format("Antenna %d HPOL eventNumber %u (evenly resampled)",
-			       ant, fEv->eventNumber);
-    }
-    else if(pol==AnitaPol::kVertical){
-      name = TString::Format("gr%dV_%u", ant, fEv->eventNumber);
-      name2 = TString::Format("grInterp%dV_%u", ant, fEv->eventNumber);
-      title = TString::Format("Antenna %d VPOL eventNumber %u", ant, fEv->eventNumber);
-      title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
-			       ant, fEv->eventNumber);
-    }
-    title += "; Time (ns); Voltage (mV)";
-    grs[pol][ant]->SetName(name);
-    grsResampled[pol][ant]->SetName(name2);
-    grs[pol][ant]->SetTitle(title);
-    grsResampled[pol][ant]->SetTitle(title2);
   }
 }
 
@@ -302,7 +226,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* fEv,
 void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    FancyFFTs::doFFT(numSamples, grsResampled[pol][ant]->GetY(), ffts[pol][ant]);
+    FancyFFTs::doFFT(numSamples, fVolts[pol][ant], ffts[pol][ant]);
     // renormalizeFourierDomain(pol, ant); 
   }
 }
@@ -327,9 +251,9 @@ void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv){
 void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
-  getFftsAndStartTimes(fEv, pol);
+  // getFftsAndStartTimes(fEv, pol);
   getNormalizedInterpolatedTGraphs(fEv, pol);
-  // doFFTs(pol);  
+  doFFTs(pol);  
   
   // std::cout << "here" << std::endl;
   doAllCrossCorrelations(pol);
@@ -519,21 +443,6 @@ Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::Ani
 
 
 
-void CrossCorrelator::deleteAllWaveforms(AnitaPol::AnitaPol_t pol){
-  for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-    if(grs[pol][ant]){
-      delete grs[pol][ant];
-      grs[pol][ant] = NULL;
-    }
-    if(grsResampled[pol][ant]){
-      delete grsResampled[pol][ant];
-      grsResampled[pol][ant] = NULL;
-    }
-  }
-}
-
-
-
 
 TGraph* CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
 							Int_t ant1, Int_t ant2){
@@ -561,6 +470,7 @@ TGraph* CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol
   std::vector<Double_t> corrs = std::vector<Double_t>(numSamps, 0);
 
   // put the correlations in, in time order in memory
+
   for(Int_t i=0; i<numSamps; i++){
     Int_t offset = (i - numSamps/2);
     offsets.at(i) = offset*graphDt;

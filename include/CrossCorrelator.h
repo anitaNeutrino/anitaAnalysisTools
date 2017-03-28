@@ -58,7 +58,7 @@
 #define NUM_SAMPLES 260
 #define UPSAMPLE_FACTOR 6
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
-#define PAD_FACTOR 1
+#define PAD_FACTOR 2
 #define GET_NUM_FREQS(n)((n)/2+1)
 
 
@@ -86,9 +86,6 @@ public:
   void initializeVariables();
   void printInfo();
 
-  // void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol);
   void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
@@ -119,8 +116,6 @@ public:
   Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
 
-  void deleteAllWaveforms(AnitaPol::AnitaPol_t pol);
-
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
@@ -135,14 +130,16 @@ public:
   // Public member variables
   //--------------------------------------------------------------------------------------------------------
 
-  Double_t startTimes[NUM_POL][NUM_SEAVEYS];
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
 
   std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
-  TGraph* grs[NUM_POL][NUM_SEAVEYS]; //!< Raw waveforms obtained from the UsefulAnitaEvent/FilteredAnitaEvent.
-  TGraph* grsResampled[NUM_POL][NUM_SEAVEYS]; //!< Evenly resampled TGraphs.
+
+
+  Double_t fVolts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
+  Double_t startTimes[NUM_POL][NUM_SEAVEYS];
+  
   Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
   Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
