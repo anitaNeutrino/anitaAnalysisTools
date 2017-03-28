@@ -22,5 +22,6 @@
 
 #pragma link C++ class RayleighInfo+;
 #pragma link C++ class RiceInfo+;
+#pragma link C++ class InterferometricMap+;
 
 #endif

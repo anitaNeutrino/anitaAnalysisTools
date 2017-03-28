@@ -1,10 +1,12 @@
 #include "InterferometricMap.h"
 #include "InterferometricMapMaker.h" // for the geometric definitions
+#include "InterferometryCache.h"
+
 #include "TAxis.h"
 #include "TMath.h"
 #include <iostream>
 
-
+ClassImp(InterferometricMap)
 
 std::vector<Double_t> coarseBinEdgesPhi; // has size NUM_BINS_PHI+1
 std::vector<Double_t> fineBinEdgesPhi; // has size NUM_BINS_PHI_ZOOM_TOTAL+1
@@ -149,6 +151,56 @@ InterferometricMap::InterferometricMap(TString name, TString title, Double_t phi
 
 
 
+void InterferometricMap::Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache){
+
+  std::vector<Int_t>* combosToUse = NULL;
+  Int_t binsPerPhiSector = GetNbinsPhi()/NUM_PHI;
+  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
+    combosToUse = &cc->combosToUseGlobal[phiSector];
+
+    Int_t startPhiBin = phiSector*binsPerPhiSector;
+    Int_t endPhiBin = startPhiBin + binsPerPhiSector;
+
+    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+      Int_t combo = combosToUse->at(comboInd);
+      if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
+  	continue;
+      }
+      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+  	for(Int_t thetaBin = 0; thetaBin < GetNbinsTheta(); thetaBin++){
+
+	  Int_t bin = (thetaBin+1)*(GetNbinsPhi()+2) + phiBin+1;
+	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, dtCache->coarseDt(pol, combo, phiBin, thetaBin));	  
+	  AddBinContent(bin,cInterp);
+	  fEntries++; // otherwise drawing don't work at all
+  	}
+      }
+    }
+  }
+
+  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
+    combosToUse = &cc->combosToUseGlobal[phiSector];
+
+    Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+    // absorb the removed inverse FFT normalization
+    normFactor*=(cc->numSamples*cc->numSamples);
+
+    Int_t startPhiBin = phiSector*binsPerPhiSector;
+    Int_t endPhiBin = (phiSector+1)*binsPerPhiSector;
+    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
+      for(Int_t thetaBin = 0; thetaBin < GetNbinsTheta(); thetaBin++){
+
+	Double_t val = GetBinContent(phiBin+1, thetaBin+1);
+	SetBinContent(phiBin+1, thetaBin+1, val/normFactor);
+  	// if(val > imagePeak){
+  	//   imagePeak = val;
+  	//   peakPhiBin = phiBin;
+  	//   peakThetaBin = thetaBin;
+  	// }
+      }
+    }
+  }
+}
 
 
 

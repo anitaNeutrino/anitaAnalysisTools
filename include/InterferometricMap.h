@@ -61,10 +61,14 @@
 
 #define ALL_PHI_TRIGS 0xffff
 
+#include "AnitaConventions.h"
+
 
 
 #include "TH2D.h"
 
+class InterferometryCache;
+class CrossCorrelator;
 
 
 class InterferometricMap : public TH2D {
@@ -74,6 +78,17 @@ public:
   InterferometricMap(TString name, TString title, Int_t nBinsPhi, Double_t phiMin, Double_t phiMax, Int_t nBinsTheta, Double_t minTheta, Double_t maxTheta);
   InterferometricMap(TString name, TString title, Double_t phiMin); // constructor for coarse map, don't need extra info
 
+
+  void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
+  Int_t GetNbinsPhi(){return GetNbinsX();}
+  Int_t GetNbinsTheta(){return GetNbinsY();}  
+
+
+
+  // virtual void Draw(Option_t* opt=""){
+  //   TH2D::Draw(opt);
+  // }
+  
   static const std::vector<Double_t>& getCoarseBinEdgesTheta();
   static const std::vector<Double_t>& getFineBinEdgesTheta();
   static const std::vector<Double_t>& getCoarseBinEdgesPhi();
@@ -83,6 +98,12 @@ public:
 protected:
   bool thetaAxisInSinTheta;
   void initializeInternals();
+
+  Double_t imagePeak;
+  Double_t peakPhiDeg;
+  Double_t peakThetaDeg;  
+
+  ClassDef(InterferometricMap, 1)
 };
 
 

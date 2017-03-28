@@ -33,8 +33,8 @@ void InterferometricMapMaker::initializeInternals(){
     }
   }
 
-  coarseMaps[AnitaPol::kHorizontal] = new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
-  coarseMaps[AnitaPol::kVertical] = new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
+  coarseMaps[AnitaPol::kHorizontal] = NULL;//new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
+  coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
   
   fillDeltaTLookup();
 
@@ -302,8 +302,9 @@ void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, 
 
 
 void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
-
+  
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
+    eventNumber[polInd] = usefulEvent->eventNumber;
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
     cc->correlateEvent(usefulEvent, pol);
@@ -554,17 +555,7 @@ InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Do
 // 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 // 				      UShort_t l3TrigPattern){
 
-  TString name = "h";
-  name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
-  name += TString::Format("%u", eventNumber[pol]);
-
-  coarseMaps[pol]->SetName(name);
-
-  TString title = TString::Format("Event %u ", eventNumber[pol]);
-  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
-  title += " Map";
-
-  coarseMaps[pol]->SetTitle(title);
+  std::cout << pol << "\t" << coarseMaps[pol] << std::endl;
 
   // Double_t phiMin = getBin0PhiDeg();
   // Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
@@ -577,34 +568,34 @@ InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Do
   // hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
   // hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
 
-  coarseMaps[pol]->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  coarseMaps[pol]->GetYaxis()->SetTitle("Elevation (Degrees)");
+  // coarseMaps[pol]->GetXaxis()->SetTitle("Azimuth (Degrees)");
+  // coarseMaps[pol]->GetYaxis()->SetTitle("Elevation (Degrees)");
   
-  peakValue = -2;
-  peakPhiDeg = -9999;
-  peakThetaDeg = -9999;
+  // peakValue = -2;
+  // peakPhiDeg = -9999;
+  // peakThetaDeg = -9999;
 
-  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-    for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
-      Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
-      if(doPhiSector){
-	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
-	  coarseMaps[pol]->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
-	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
-	    peakValue = coarseMap[pol][phiBin][thetaBin];
-	    peakPhiDeg = coarseMaps[pol]->GetXaxis()->GetBinLowEdge(phiBin+1);
-	    peakThetaDeg = coarseMaps[pol]->GetYaxis()->GetBinLowEdge(thetaBin+1);
-	  }
-	}
-      }
-    }
-  }
+  // for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
+  //   for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
+  //     Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
+  //     if(doPhiSector){
+  // 	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
+  // 	  coarseMaps[pol]->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+  // 	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
+  // 	    peakValue = coarseMap[pol][phiBin][thetaBin];
+  // 	    peakPhiDeg = coarseMaps[pol]->GetXaxis()->GetBinLowEdge(phiBin+1);
+  // 	    peakThetaDeg = coarseMaps[pol]->GetYaxis()->GetBinLowEdge(thetaBin+1);
+  // 	  }
+  // 	}
+  //     }
+  //   }
+  // }
 
-  InterferometricMap* h = coarseMaps[pol];
-  name = pol == AnitaPol::kHorizontal ? "h0H" : "h0V";
-  coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg());
-  // return hImage;
-  return h;
+  // InterferometricMap* h = coarseMaps[pol];
+  // name = pol == AnitaPol::kHorizontal ? "h0H" : "h0V";
+  // coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg());
+  // // return hImage;
+  return coarseMaps[pol];
 }
 
 
@@ -699,72 +690,31 @@ TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_
 void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
 					  Double_t& peakPhiDeg, Double_t& peakThetaDeg){
 
-  imagePeak = -DBL_MAX;
-  peakPhiDeg = -9999;
-  peakThetaDeg = -9999;
-  
-  Int_t peakPhiBin = -1;
-  Int_t peakThetaBin = -1;
 
-  // zero internal map
-  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
-    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
-    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
-    // std::cout << startPhiBin << "\t" << endPhiBin << std::endl;
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	coarseMap[pol][phiBin][thetaBin] = 0;
+  makerOwnsMap[pol] = false;
+  if(!makerOwnsMap[pol] || coarseMaps[pol]==NULL)
+  {
+    // I don't own the map or there isn't one, so I'll make a new one
+    TString name = "h";
+    name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
+    name += TString::Format("%u", eventNumber[pol]);
+
+    TString title = TString::Format("Event %u ", eventNumber[pol]);
+    title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
+    title += " Map";
+
+    coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg()); // TODO BETTER CONSTRUCTOR
+  }  
+  else{// if(makerOwnsMap[pol]){  {
+    // I own the map so I can overwrite it  
+    for(int phiBin=1; phiBin<=coarseMaps[pol]->GetNbinsPhi(); phiBin++){
+      for(int thetaBin=1; thetaBin<=coarseMaps[pol]->GetNbinsTheta(); thetaBin++){
+	coarseMaps[pol]->SetBinContent(phiBin, thetaBin, 0);	
       }
     }
   }
 
-  std::vector<Int_t>* combosToUse = NULL;
-  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
-    combosToUse = &cc->combosToUseGlobal[phiSector];
-
-    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
-    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
-    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-      Int_t combo = combosToUse->at(comboInd);
-      if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
-	continue;
-      }
-      for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, dtCache.coarseDt(pol, combo, phiBin, thetaBin));	  
-	  coarseMap[pol][phiBin][thetaBin] += cInterp;
-	}
-      }
-    }
-  }
-
-  for(Int_t phiSector = 0; phiSector < NUM_PHI; phiSector++){
-    combosToUse = &cc->combosToUseGlobal[phiSector];
-
-    Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
-    // absorb the removed inverse FFT normalization
-    normFactor*=(cc->numSamples*cc->numSamples);
-
-    Int_t startPhiBin = phiSector*NUM_BINS_PHI;
-    Int_t endPhiBin = (phiSector+1)*NUM_BINS_PHI;
-    for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
-      for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-
-	coarseMap[pol][phiBin][thetaBin]/=normFactor;
-	if(coarseMap[pol][phiBin][thetaBin] > imagePeak){
-	  imagePeak = coarseMap[pol][phiBin][thetaBin];
-	  peakPhiBin = phiBin;
-	  peakThetaBin = thetaBin;
-	}
-      }
-    }
-  }
-
-  // peakPhiDeg = phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
-  // peakThetaDeg = thetaWaves[peakThetaBin]*TMath::RadToDeg();
-  peakPhiDeg = InterferometricMap::getCoarseBinEdgesPhi()[peakPhiBin];
-  peakThetaDeg = InterferometricMap::getCoarseBinEdgesTheta()[peakThetaBin];
-
+  coarseMaps[pol]->Fill(pol, cc, &dtCache);
 }
 
 
