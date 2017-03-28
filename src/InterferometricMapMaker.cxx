@@ -22,7 +22,7 @@ void InterferometricMapMaker::initializeInternals(){
   cc = new CrossCorrelator();    
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  for(Int_t pol=0; pol < NUM_POL; pol++){
+  for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
       rArray[pol].push_back(geom->getAntR(ant, AnitaPol::AnitaPol_t(pol)));
       zArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
@@ -35,7 +35,7 @@ void InterferometricMapMaker::initializeInternals(){
 
   fillDeltaTLookup();
 
-  for(Int_t pol=0; pol < NUM_POL; pol++){
+  for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     eventNumber[pol] = 0;    
     for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){
       coarseMapPeakValues[pol][peakInd] = -9999;
@@ -466,7 +466,7 @@ Double_t InterferometricMapMaker::getDeltaTExpected(AnitaPol::AnitaPol_t pol, In
 void InterferometricMapMaker::insertPhotogrammetryGeometry(){
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(1);
-  for(Int_t pol=0; pol < NUM_POL; pol++){
+  for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
       rArray[pol].at(ant) = geom->getAntR(ant, AnitaPol::AnitaPol_t(pol));
       zArray[pol].at(ant) = geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol));
@@ -513,7 +513,7 @@ void InterferometricMapMaker::fillDeltaTLookup(){
 
   int numCombos = cc->numCombos;
 
-  for(Int_t polInd=0; polInd<NUM_POL; polInd++){
+  for(Int_t polInd=0; polInd<AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(Int_t combo=0; combo<numCombos; combo++){
       Int_t ant1 = cc->comboToAnt1s.at(combo);

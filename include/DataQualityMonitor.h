@@ -43,9 +43,9 @@ public:
 
   // tree variables
   TChain* dataQualityChain;
-  Double_t maxAbsSecondDeriv[NUM_POL][NUM_SEAVEYS];
-  Double_t maxVolts[NUM_POL][NUM_SEAVEYS];
-  Int_t numPoints[NUM_POL][NUM_SEAVEYS];
+  Double_t maxAbsSecondDeriv[AnitaPol::kNotAPol][NUM_SEAVEYS];
+  Double_t maxVolts[AnitaPol::kNotAPol][NUM_SEAVEYS];
+  Int_t numPoints[AnitaPol::kNotAPol][NUM_SEAVEYS];
   UInt_t eventNumber;
 
 

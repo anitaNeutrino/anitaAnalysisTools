@@ -25,8 +25,8 @@
 
 #define MAX_NUM_OUTLIERS 10
 
-// NUM_SAMPLES is included from CrossCorrelator.h
-#define NUM_FREQS ((NUM_SAMPLES/2)+1)
+// get num freqs defined in CrossCorrelator.h... for silly historical reasons
+#define NUM_FREQS GET_NUM_FREQS(NUM_SAMP)
 
 
 /**
@@ -117,7 +117,7 @@ public:
   Double_t eventRayleighAmplitudes[NUM_FREQS]; //!< Rayleigh amplitudes for the last added event.
   Double_t eventPowSpec[NUM_FREQS]; //!< Power spectra for the last added event.
 
-  ClassDef(AveragePowerSpectrum, 10); //!< ROOT's magic I/O macro
+  ClassDef(AveragePowerSpectrum, 11); //!< ROOT's magic I/O macro
 };
 
   

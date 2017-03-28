@@ -6,6 +6,12 @@
 #include "AnitaEventReconstructor.h"
 #include "CrossCorrelator.h"
 
+#define DEGREES_IN_CIRCLE 360
+
+#define MAX_NUM_PEAKS 5
+#define PEAK_PHI_DEG_RANGE 10
+#define PEAK_THETA_DEG_RANGE 10
+
 // Image definitions
 // #define NUM_BINS_THETA 100
 // #define NUM_BINS_PHI 15
@@ -163,28 +169,28 @@ public:
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
 
-  UInt_t eventNumber[NUM_POL];
+  UInt_t eventNumber[AnitaPol::kNotAPol];
 
-  Double_t interpPreFactors[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
-  Int_t offsetLows[NUM_POL][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  Double_t interpPreFactors[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
 
 
-  Double_t coarseMap[NUM_POL][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
-  Double_t partBAsZoom[NUM_POL][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
-  Double_t part21sZoom[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
+  Double_t coarseMap[AnitaPol::kNotAPol][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
+  Double_t partBAsZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
+  Double_t part21sZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
 
-  Double_t fineMap[NUM_POL][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
-  std::vector<Double_t> rArray[NUM_POL]; //!< Vector of antenna radial positions
-  std::vector<Double_t> phiArrayDeg[NUM_POL]; //!< Vector of antenna azimuth positions
-  std::vector<Double_t> zArray[NUM_POL]; //!< Vector of antenna heights
+  Double_t fineMap[AnitaPol::kNotAPol][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
+  std::vector<Double_t> rArray[AnitaPol::kNotAPol]; //!< Vector of antenna radial positions
+  std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
+  std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
 
-  Double_t coarseMapPeakValues[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
-  Double_t coarseMapPeakPhiDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t coarseMapPeakThetaDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
+  Double_t coarseMapPeakValues[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
+  Double_t coarseMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t coarseMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
-  Double_t fineMapPeakValues[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
-  Double_t fineMapPeakPhiDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t fineMapPeakThetaDegs[NUM_POL][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
+  Double_t fineMapPeakValues[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
+  Double_t fineMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
+  Double_t fineMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
 
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
@@ -192,9 +198,9 @@ public:
   Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
   Double_t dtFactors[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta)/c/dt for zoomed image.
   Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
-  Double_t zoomedCosPartLookup[NUM_POL][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
-  Double_t offAxisDelays[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
-  Double_t offAxisDelaysDivided[NUM_POL][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
+  Double_t zoomedCosPartLookup[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
+  Double_t offAxisDelays[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
+  Double_t offAxisDelaysDivided[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
 
   Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
   Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
@@ -207,8 +213,8 @@ public:
   Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
   Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
   Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
-  Double_t zoomPhiMin[NUM_POL]; //!< For the current map
-  Double_t zoomThetaMin[NUM_POL]; //!< For the current map
+  Double_t zoomPhiMin[AnitaPol::kNotAPol]; //!< For the current map
+  Double_t zoomThetaMin[AnitaPol::kNotAPol]; //!< For the current map
 
   TString mapModeNames[kNumMapModes];//!< Maps text to the mapMode_t enum, used for histogram names/titles.
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.

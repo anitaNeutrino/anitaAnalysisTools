@@ -35,13 +35,6 @@
 
 
 // Anita & Geometry definitions
-#define NUM_POL AnitaPol::kNotAPol
-#define NUM_RING AnitaRing::kNotARing
-#define DEGREES_IN_CIRCLE 360
-
-#define MAX_NUM_PEAKS 5
-#define PEAK_PHI_DEG_RANGE 10
-#define PEAK_THETA_DEG_RANGE 10
 // #define PEAK_THETA_DEG_RANGE 180
 
 #define SPEED_OF_LIGHT 2.99792458e8
@@ -55,7 +48,6 @@
 #define NUM_COMBOS 336
 
 // Typical number of samples in waveform
-#define NUM_SAMPLES 260
 #define UPSAMPLE_FACTOR 6
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
 #define PAD_FACTOR 2
@@ -72,49 +64,17 @@ class CrossCorrelator{
 
 public:
 
-
-
   //--------------------------------------------------------------------------------------------------------
   // Public member functions
   //--------------------------------------------------------------------------------------------------------
 
-
-
   CrossCorrelator();
   ~CrossCorrelator();
 
-  void initializeVariables();
-  void printInfo();
-
-  void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-
-  void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
-
-  TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
-  void doFFTs(AnitaPol::AnitaPol_t pol);
-
-  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
   void correlateEvent(FilteredAnitaEvent* realEvent);
-
-  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
   void correlateEvent(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
-  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,Double_t& time, Double_t& value);
-  void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
-  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t& time, Double_t& value);
-  void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
-
-  void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
-  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);
-
-  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
-  void fillCombosToUse();
-  void do5PhiSectorCombinatorics();
-
-
-
-  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
-
+  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
 
   TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
   TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
@@ -122,29 +82,40 @@ public:
 					 Int_t ant1, Int_t ant2);
 
 
-
   Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+
+  void initializeVariables();
+  void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
+  void doFFTs(AnitaPol::AnitaPol_t pol);
+  void doCrossCorrelations(AnitaPol::AnitaPol_t pol);
+
+
+  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
+  void fillCombosToUse();
+  void do5PhiSectorCombinatorics();
+
+  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+
+
 
 
   //--------------------------------------------------------------------------------------------------------
   // Public member variables
   //--------------------------------------------------------------------------------------------------------
 
-  Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
-
-  Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
-
-  std::complex<Double_t> ffts[NUM_POL][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMPLES*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
-
-
-  Double_t fVolts[NUM_POL][NUM_SEAVEYS][NUM_SAMPLES*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
-  Double_t startTimes[NUM_POL][NUM_SEAVEYS];
+  std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMP*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
+  Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR]; //!< Cross correlations.
+  Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   
-  Double_t interpRMS[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
-  Double_t interpRMS2[NUM_POL][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
+  Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_SAMP*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
+  Double_t startTimes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+  
+  Double_t interpRMS[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
+  Double_t interpRMS2[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
   Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
-  UInt_t eventNumber[NUM_POL]; //!< For tracking event number
+  UInt_t eventNumber[AnitaPol::kNotAPol]; //!< For tracking event number
   Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
   Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
   Int_t numSamples; //!< Number of samples in waveform after padding.

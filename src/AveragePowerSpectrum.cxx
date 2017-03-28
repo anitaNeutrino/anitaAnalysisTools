@@ -34,7 +34,7 @@ AveragePowerSpectrum::AveragePowerSpectrum(){
 AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
 
 
-  deltaFMHz = 1e3/(NOMINAL_SAMPLING_DELTAT*NUM_SAMPLES);
+  deltaFMHz = 1e3/(NOMINAL_SAMPLING_DELTAT*NUM_SAMP);
 
   count=0;
   SetName(name);
@@ -140,7 +140,7 @@ TF1* AveragePowerSpectrum::makeRayleighFunction(TString name, Double_t xMin, Dou
  */
 void AveragePowerSpectrum::getEventRayleighAmplitudes(TGraph* gr){
 
-  Double_t* ps = FancyFFTs::getPowerSpectrum(NUM_SAMPLES, gr->GetY(),
+  Double_t* ps = FancyFFTs::getPowerSpectrum(NUM_SAMP, gr->GetY(),
 					     NOMINAL_SAMPLING_DELTAT, FancyFFTs::kSum);
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
     // Double_t sqrtPSD = TMath::Sqrt(ps[freqInd]);

@@ -6,7 +6,7 @@ DataQualityMonitor::DataQualityMonitor(){
 
 DataQualityMonitor::DataQualityMonitor(TChain* c){
 
-  for(int polInd=0; polInd < NUM_POL; polInd++){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       
       maxAbsSecondDeriv[polInd][ant] = 0;
@@ -59,7 +59,7 @@ Int_t DataQualityMonitor::processEntry(Long64_t entry, UInt_t eventNumberCheck){
     phiAboveMaxVoltsThresh[phi] = 0;
   }
 
-  for(int polInd=0; polInd < NUM_POL; polInd++){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     for(int phi=0; phi<NUM_PHI; phi++){
       phiAboveMaxVoltsThresh[phi] = 0;
     }

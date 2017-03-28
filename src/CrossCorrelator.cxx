@@ -25,7 +25,7 @@ void CrossCorrelator::initializeVariables(){
   }
 
   kOnlyThisCombo = -1;
-  numSamples = PAD_FACTOR*NUM_SAMPLES; // Factor of two for padding. Turns circular xcor into linear xcor.
+  numSamples = PAD_FACTOR*NUM_SAMP; // Factor of two for padding. Turns circular xcor into linear xcor.
   numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
 
   nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT;
@@ -68,88 +68,6 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
   }
 
   fillCombosToUse();
-}
-
-// void CrossCorrelator::printInfo(){
-//   std::cerr << __PRETTY_FUNCTION__ << std::endl;
-//   std::cerr << "\tupsample factor = " << UPSAMPLE_FACTOR << std::endl;
-//   // std::cerr << "\tBin size theta (deg) = " << Double_t(THETA_RANGE)/NUM_BINS_THETA << std::endl;
-//   std::cerr << "\tBin size theta (deg) = " << Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA << std::endl;
-//   std::cerr << "\tBin size phi (deg) = " << Double_t(PHI_RANGE)/NUM_BINS_PHI << std::endl;
-//   std::cerr << "\tdeltaTs array size = "
-// 	    << sizeof(Double_t)*NUM_POL*numCombos*NUM_PHI*NUM_BINS_PHI*NUM_BINS_THETA
-// 	    << " bytes" << std::endl;
-// }
-
-
-
-
-
-TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime,
-							     Double_t dt, Int_t nSamp){
-
-  // I want to interpolate the waveform such that the mean of the post interpolation waveform is zero...
-
-  std::vector<Double_t> newTimes = std::vector<Double_t>(nSamp, 0); // for the interp volts
-  std::vector<Double_t> newVolts = std::vector<Double_t>(nSamp, 0); // for the interp times
-  std::vector<Int_t> isPadding = std::vector<Int_t>(nSamp, 1); // whether or not the value is padding
-  Double_t thisStartTime = grIn->GetX()[0];
-  Double_t lastTime = grIn->GetX()[grIn->GetN()-1];
-
-  // // Quantizes the start and end times so data points lie at integer multiples of nominal sampling
-  // // perhaps not really necessary if all waveforms have the same start time...
-  // startTime = dt*TMath::Nint(startTime/dt + 0.5);
-  // lastTime = dt*TMath::Nint(lastTime/dt - 0.5);
-
-   //ROOT interpolator object constructor takes std::vector objects
-  std::vector<Double_t> tVec(grIn->GetX(), grIn->GetX() + grIn->GetN());
-  std::vector<Double_t> vVec(grIn->GetY(), grIn->GetY() + grIn->GetN());
-
-  // This is ROOT's interpolator object
-
-  const int minGlsInterpPoints = 5;
-  if(tVec.size() < minGlsInterpPoints || vVec.size() < minGlsInterpPoints){
-    std::cerr << "Warning! Very short waveform! Make sure you have a data quality cut on number of samples" << std::endl;
-    // not really random, but a hack to make sure GSL doesn't crash
-    // this is why you should do data quality checks BEFORE reconstruction...
-    const int randomPadLength = 20;
-    for(int i=0; i < randomPadLength; i++){
-      vVec.push_back(0);
-      tVec.push_back(nominalSamplingDeltaT + (tVec.at(tVec.size()-1)));
-    }
-  }
-
-  ROOT::Math::Interpolator chanInterp(tVec,vVec,ROOT::Math::Interpolation::kAKIMA);
-
-  // Put new data into arrays
-  Double_t sum = 0;
-  Double_t time = startTime;
-  Int_t meanCount = 0;
-  for(Int_t samp = 0; samp < nSamp; samp++){
-    newTimes.at(samp) = time;
-    if(time >= thisStartTime && time <= lastTime){
-      Double_t V = chanInterp.Eval(time);
-      newVolts.at(samp) = V;
-      sum += V;
-      isPadding.at(samp) = 0;
-      meanCount++;
-    }
-    else{
-      newVolts.at(samp) = 0;
-    }
-    time += dt;
-  }
-
-  // so now we have the new arrays, time to normalize these bad boys
-  Double_t mean = sum/meanCount; // the mean of the non-padded values
-  for(Int_t samp=0; samp < nSamp; samp++){
-    if(isPadding.at(samp)==0){
-      newVolts.at(samp) -= mean;
-    }
-  }
-
-  return new TGraph(nSamp, &newTimes[0], &newVolts[0]);
-
 }
 
 
@@ -256,11 +174,11 @@ void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol
   doFFTs(pol);  
   
   // std::cout << "here" << std::endl;
-  doAllCrossCorrelations(pol);
+  doCrossCorrelations(pol);
 
 }
 
-void CrossCorrelator::doAllCrossCorrelations(AnitaPol::AnitaPol_t pol){
+void CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
 
   // Set variable for use in threads
 
@@ -327,41 +245,6 @@ void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int
       crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
     }
   }
-}
-
-
-void CrossCorrelator::getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
-						 Double_t& time, Double_t& value){
-
-  Int_t maxInd = RootTools::getIndexOfMaximum(numSamples, crossCorrelations[pol][combo]);
-  Int_t offset = maxInd - numSamples/2;
-  value = crossCorrelations[pol][combo][maxInd];
-  time = offset*nominalSamplingDeltaT;
-}
-
-
-void CrossCorrelator::getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-						 Double_t& time, Double_t& value){
-  Int_t combo = comboIndices[ant1][ant2];
-  getMaxCorrelationTimeValue(pol, combo, time, value);
-}
-
-
-void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,
-							  Double_t& time, Double_t& value){
-
-  Int_t maxInd = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
-  Int_t offset = maxInd - numSamplesUpsampled/2;
-  value = crossCorrelationsUpsampled[pol][combo][maxInd];
-  time = offset*correlationDeltaT;
-}
-
-
-
-void CrossCorrelator::getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-							  Double_t& time, Double_t& value){
-  Int_t combo = comboIndices[ant1][ant2];
-  getMaxUpsampledCorrelationTimeValue(pol, combo, time, value);
 }
 
 
