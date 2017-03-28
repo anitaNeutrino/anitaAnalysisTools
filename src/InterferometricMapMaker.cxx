@@ -33,9 +33,11 @@ void InterferometricMapMaker::initializeInternals(){
     }
   }
 
-
   aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg(); //phiArrayDeg[0].at(0);
 
+  coarseMaps[AnitaPol::kHorizontal] = new InterferometricMap("h0H", "h0H", getBin0PhiDeg());
+  coarseMaps[AnitaPol::kVertical] = new InterferometricMap("h0V", "h0V", getBin0PhiDeg());
+  
   fillDeltaTLookup();
 
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
@@ -497,18 +499,23 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
 
 void InterferometricMapMaker::fillDeltaTLookup(){
 
-  Double_t phi0 = getBin0PhiDeg();
-  const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
+  // here we go...
+    
+  // Double_t phi0 = getBin0PhiDeg();
+  // const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
+  Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
   for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
-    Double_t phiDeg = phi0 + phiIndex*phiBinSize;
+    Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
     Double_t phiWave = TMath::DegToRad()*phiDeg;
     phiWaveLookup[phiIndex] = phiWave;
   }
 
   // const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
-  const Double_t thetaBinSize = (Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA);
+  // const Double_t thetaBinSize = (Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA);
+
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
-    Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
+    // Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
+    Double_t thetaWaveDeg = coarseMaps[0]->GetYaxis()->GetBinLowEdge(thetaIndex+1); 
     // Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
@@ -605,29 +612,39 @@ void InterferometricMapMaker::fillDeltaTLookup(){
 
 
 
-TH2D* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
-			      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-			      UShort_t l3TrigPattern){
+InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
+						    Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+						    UShort_t l3TrigPattern){
+// TH2D* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
+// 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+// 				      UShort_t l3TrigPattern){
 
   TString name = "h";
   name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
   name += TString::Format("%u", eventNumber[pol]);
 
+  coarseMaps[pol]->SetName(name);
+
   TString title = TString::Format("Event %u ", eventNumber[pol]);
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
   title += " Map";
 
-  Double_t phiMin = getBin0PhiDeg();
-  Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
-  Double_t thetaMin = MIN_THETA;
-  Double_t thetaMax = MAX_THETA;
+  coarseMaps[pol]->SetTitle(title);
 
-  TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
-			  NUM_BINS_THETA, thetaMin, thetaMax);
-  hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
+  // Double_t phiMin = getBin0PhiDeg();
+  // Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
+  // Double_t thetaMin = MIN_THETA;
+  // Double_t thetaMax = MAX_THETA;
 
+  // TH2D* hImage = new TH2D(name, title,
+  // 			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
+  // 			  NUM_BINS_THETA, thetaMin, thetaMax);
+  // hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
+  // hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
+
+  coarseMaps[pol]->GetXaxis()->SetTitle("Azimuth (Degrees)");
+  coarseMaps[pol]->GetYaxis()->SetTitle("Elevation (Degrees)");
+  
   peakValue = -2;
   peakPhiDeg = -9999;
   peakThetaDeg = -9999;
@@ -637,18 +654,22 @@ TH2D* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakVa
       Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
       if(doPhiSector){
 	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
-	  hImage->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
+	  coarseMaps[pol]->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
 	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
 	    peakValue = coarseMap[pol][phiBin][thetaBin];
-	    peakPhiDeg = hImage->GetXaxis()->GetBinLowEdge(phiBin+1);
-	    peakThetaDeg = hImage->GetYaxis()->GetBinLowEdge(thetaBin+1);
+	    peakPhiDeg = coarseMaps[pol]->GetXaxis()->GetBinLowEdge(phiBin+1);
+	    peakThetaDeg = coarseMaps[pol]->GetYaxis()->GetBinLowEdge(thetaBin+1);
 	  }
 	}
       }
     }
   }
 
-  return hImage;
+  InterferometricMap* h = coarseMaps[pol];
+  name = pol == AnitaPol::kHorizontal ? "h0H" : "h0V";
+  coarseMaps[pol] = new InterferometricMap(name, title, getBin0PhiDeg());
+  // return hImage;
+  return h;
 }
 
 
@@ -690,22 +711,22 @@ TH2D* InterferometricMapMaker::getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakIn
 
 
 
-TH2D* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-				       Double_t& peakThetaDeg){
+InterferometricMap* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
+							     Double_t& peakThetaDeg){
 
   return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg);
 }
 
 
 
-TH2D* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol){
+InterferometricMap* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol){
   Double_t imagePeak, peakPhiDeg, peakThetaDeg;
   return makeGlobalImage(pol, imagePeak, peakPhiDeg, peakThetaDeg);
 }
 
-TH2D* InterferometricMapMaker::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-					  Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-					  UShort_t l3TrigPattern){
+InterferometricMap* InterferometricMapMaker::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
+								Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+								UShort_t l3TrigPattern){
   return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern);
 }
 

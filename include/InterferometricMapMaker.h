@@ -111,8 +111,6 @@ public:
   Double_t singleAntennaOffAxisDelay(Double_t deltaPhiDeg);
 
 
-
-
   void fillDeltaTLookup();
   Double_t getBin0PhiDeg();
 
@@ -135,9 +133,15 @@ public:
 		       Double_t& phiDeg, Double_t& thetaDeg);
 
 
-  TH2D* getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
-	       Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-	       UShort_t l3TrigPattern=ALL_PHI_TRIGS);
+  InterferometricMap* getInterferometricMap(AnitaPol::AnitaPol_t pol){
+    InterferometricMap* h = coarseMaps[pol];
+    coarseMaps[pol] = NULL;
+    return h;
+  }
+  
+  InterferometricMap* getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
+			     Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+			     UShort_t l3TrigPattern=ALL_PHI_TRIGS);
 
 
   TH2D* getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd=0);
@@ -149,12 +153,12 @@ public:
 		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0,
 		       Int_t peakIndex = 0);
 
-  TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-  			Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-  TH2D* makeGlobalImage(AnitaPol::AnitaPol_t pol);
+  InterferometricMap* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
+				      Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  InterferometricMap* makeGlobalImage(AnitaPol::AnitaPol_t pol);
 
-  TH2D* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-  			   Double_t& peakThetaDeg, UShort_t l3TrigPattern);
+  InterferometricMap* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
+					 Double_t& peakThetaDeg, UShort_t l3TrigPattern);
 
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
   			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
@@ -228,7 +232,8 @@ private:
   // these will replace the internal map storage...
   // we will imply some pointer ownership scheme with these.
   // I delete them if the event number changes and they've not been returned. You delete them otherwise...  
-  std::vector<InterferometricMap*> coarseMaps; // these guys do the whole 360 az, and defined elevation...
+
+  InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
   
 };
 
