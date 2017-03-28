@@ -16,6 +16,9 @@ void InterferometricMapMaker::process(const FilteredAnitaEvent * ev, UsefulAdu5P
 
 
 void InterferometricMapMaker::initializeInternals(){
+
+  cc = new CrossCorrelator();    
+  
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(Int_t pol=0; pol < NUM_POL; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
@@ -24,6 +27,8 @@ void InterferometricMapMaker::initializeInternals(){
       phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
     }
   }
+
+
   aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg(); //phiArrayDeg[0].at(0);
 
   fillDeltaTLookup();
@@ -51,7 +56,7 @@ void InterferometricMapMaker::initializeInternals(){
   kUseOffAxisDelay = 1;
   coherentDeltaPhi = 0;
 
-  
+
 }
 
 
@@ -206,8 +211,10 @@ AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(NiceAnitaE
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
-    // now calls reconstruct inside correlate event
     cc->correlateEvent(usefulEvent, pol);
+
+    reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
+
 
     findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
@@ -305,9 +312,9 @@ void InterferometricMapMaker::reconstructEvent(NiceAnitaEvent* usefulEvent, Int_
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
-    // now calls reconstruct inside correlate event
     cc->correlateEvent(usefulEvent, pol);
 
+    reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);    
     findPeakValues(pol, numCoarsePeaks, coarseMapPeakValues[pol],
     		   coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
 

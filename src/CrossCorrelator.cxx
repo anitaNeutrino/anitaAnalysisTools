@@ -265,7 +265,6 @@ void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::Anit
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
   doFFTs(pol);
   doAllCrossCorrelations(pol);
-  // reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
 
 }
 

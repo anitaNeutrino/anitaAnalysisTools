@@ -3,10 +3,6 @@ target_link_libraries (testAveragePowerSpectrum LINK_PUBLIC AnitaAnalysisTools A
 install (TARGETS testAveragePowerSpectrum DESTINATION ${UTIL_BIN_DIR})
 
 
-add_executable (testCorrelator testCorrelator.cxx)
-target_link_libraries (testCorrelator LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testCorrelator DESTINATION ${UTIL_BIN_DIR})
-
 
 
 add_executable (testFancyFFTs testFancyFFTs.cxx)
