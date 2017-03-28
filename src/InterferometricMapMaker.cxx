@@ -6,7 +6,9 @@ InterferometricMapMaker::InterferometricMapMaker(){
 }
 
 InterferometricMapMaker::~InterferometricMapMaker(){
-  
+  if(cc){
+    delete cc;
+  }
 }
 
 void InterferometricMapMaker::process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary) const{
