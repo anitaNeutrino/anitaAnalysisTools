@@ -74,8 +74,9 @@ public:
   InterferometricMap(TString name, TString title, Int_t nBinsPhi, Double_t phiMin, Double_t phiMax, Int_t nBinsTheta, Double_t minTheta, Double_t maxTheta);
   InterferometricMap(TString name, TString title, Double_t phiMin); // constructor for coarse map, don't need extra info
 
+  static const std::vector<Double_t>& getCoarseBinEdgesTheta();
+  static const std::vector<Double_t>& getFineBinEdgesTheta();
   
-
 protected:
   bool thetaAxisInSinTheta;
   void initializeInternals();

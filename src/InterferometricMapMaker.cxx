@@ -2,7 +2,6 @@
 #include "InterferometricMap.h"
 
 
-
 InterferometricMapMaker::InterferometricMapMaker(){
   initializeInternals();
 }
@@ -916,7 +915,6 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 	
 	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
 	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
-
 	
 	offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
 	offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
