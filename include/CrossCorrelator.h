@@ -362,11 +362,6 @@ private:
   // Private member variables
   //--------------------------------------------------------------------------------------------------------
 
-  ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);
-  std::vector<double> ccTimes;
-  double ccMaxTime;
-
-
 
 };
 #endif
