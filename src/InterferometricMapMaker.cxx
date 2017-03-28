@@ -102,6 +102,8 @@ void InterferometricMapMaker::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t num
     }
   }
 
+
+  
   for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
     Int_t gotHere = 0;
     for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
@@ -151,8 +153,10 @@ void InterferometricMapMaker::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t num
 
 		  // Okay okay okay... you're a local maxima, you can be my next peak.
 		  peakValues[peakInd] = coarseMap[pol][phiBin][thetaBin];
-		  phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
-		  thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+		  // phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
+		  // thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+		  phiDegs[peakInd] = InterferometricMap::getCoarseBinEdgesPhi()[phiBin];
+		  thetaDegs[peakInd] = InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
 		}
 	      }
 	    }
@@ -167,14 +171,15 @@ void InterferometricMapMaker::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t num
     if(peakValues[peakInd] >= -999){ // Checks that a peak was found, probably unnecessary
 
       for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-
-	Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+	// Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+	Double_t phiDeg = InterferometricMap::getCoarseBinEdgesPhi()[phiBin];
 	Double_t absDeltaPhi = TMath::Abs(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg));
 	if(absDeltaPhi < PEAK_PHI_DEG_RANGE){
 
 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 
-	    Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+	    // Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+	    Double_t thetaDeg = InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
 	    Double_t absDeltaTheta = TMath::Abs(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg));
 	    if(absDeltaTheta < PEAK_THETA_DEG_RANGE){
 
@@ -486,59 +491,6 @@ void InterferometricMapMaker::fillDeltaTLookup(){
 
   dtCache.populateCache(cc, this);
 
-  // here we go...
-  // const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
-  // const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
-  // for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
-  //   Double_t phiDeg = coarsePhiBinEdges.at(phiIndex);
-  //   Double_t phiWave = TMath::DegToRad()*phiDeg;
-  //   phiWaveLookup[phiIndex] = phiWave;
-  // }
-
-  // const std::vector<Double_t> coarseThetaBinEdges = InterferometricMap::getCoarseBinEdgesTheta();
-  // const int nCoarseBinsTheta = coarseThetaBinEdges.size()-1;
-  // for(Int_t thetaIndex=0; thetaIndex < nCoarseBinsTheta; thetaIndex++){
-  //   Double_t thetaWaveDeg = coarseThetaBinEdges.at(thetaIndex); 
-  //   Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
-  //   thetaWaves[thetaIndex] = thetaWave;
-  // }
-
-  // int numCombos = cc->numCombos;
-
-  // for(Int_t polInd=0; polInd<AnitaPol::kNotAPol; polInd++){
-  //   AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-  //   for(Int_t combo=0; combo<numCombos; combo++){
-  //     Int_t ant1 = cc->comboToAnt1s.at(combo);
-  //     Int_t ant2 = cc->comboToAnt2s.at(combo);
-
-  //     for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
-  // 	for(Int_t phiInd = 0; phiInd < NUM_BINS_PHI; phiInd++){
-  // 	  Int_t phiBin = phiSector*NUM_BINS_PHI + phiInd;
-  // 	  Double_t phiWave = phiWaveLookup[phiBin];
-
-  // 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-  // 	    Double_t thetaWave = thetaWaves[thetaBin];
-  // 	    // Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-  // 	    deltaTs[pol][combo][phiBin][thetaBin] = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-  // 	    // Int_t offsetLow = floor(deltaT/cc->nominalSamplingDeltaT);
-  // 	    // offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
-  // 	    // offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
-  // 	    // Double_t dt1 = offsetLow*cc->nominalSamplingDeltaT;
-  // 	    // interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/cc->nominalSamplingDeltaT;	    
-  // 	    // interpPreFactors[pol][phiBin][combo][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
-
-  // 	    // Here we account for the fact that we are now time ordering the correlations
-  // 	    // offsetLows[pol][combo][phiBin][thetaBin]+=cc->numSamples/2;
-  // 	    // offsetLows[pol][phiBin][combo][thetaBin]+=numSamples/2;
-  // 	  }
-  // 	}
-  //     }
-  //   }
-  // }
-
-  // minThetaDegZoom = -78.5;
-  // minPhiDegZoom = -59.25;
-  // minThetaDegZoom = -THETA_RANGE/2 - THETA_RANGE_ZOOM/2;
   minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
   minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
@@ -779,7 +731,6 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
       }
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  // Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaTs[pol][combo][phiBin][thetaBin]);
 	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, dtCache.dt(pol, combo, phiBin, thetaBin));	  
 	  coarseMap[pol][phiBin][thetaBin] += cInterp;
 	}
@@ -809,8 +760,10 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
     }
   }
 
-  peakPhiDeg = phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
-  peakThetaDeg = thetaWaves[peakThetaBin]*TMath::RadToDeg();
+  // peakPhiDeg = phiWaveLookup[peakPhiBin]*TMath::RadToDeg();
+  // peakThetaDeg = thetaWaves[peakThetaBin]*TMath::RadToDeg();
+  peakPhiDeg = InterferometricMap::getCoarseBinEdgesPhi()[peakPhiBin];
+  peakThetaDeg = InterferometricMap::getCoarseBinEdgesTheta()[peakThetaBin];
 
 }
 

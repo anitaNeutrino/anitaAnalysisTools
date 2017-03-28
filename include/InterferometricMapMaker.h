@@ -197,9 +197,6 @@ public:
   Double_t offAxisDelays[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
   Double_t offAxisDelaysDivided[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
 
-  Double_t thetaWaves[NUM_BINS_THETA]; //!< Cached theta for image.
-  Double_t phiWaveLookup[NUM_BINS_PHI*NUM_PHI]; //!< Cached phi for image.
-
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
   Int_t coherentDeltaPhi;
