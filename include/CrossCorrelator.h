@@ -88,6 +88,7 @@ public:
 
   // void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol);
   void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
@@ -127,12 +128,14 @@ public:
 
 
 
+  Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+
 
   //--------------------------------------------------------------------------------------------------------
   // Public member variables
   //--------------------------------------------------------------------------------------------------------
 
-
+  Double_t startTimes[NUM_POL][NUM_SEAVEYS];
   Double_t crossCorrelations[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR]; //!< Cross correlations.
 
   Double_t crossCorrelationsUpsampled[NUM_POL][NUM_COMBOS][NUM_SAMPLES*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.

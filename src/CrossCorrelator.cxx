@@ -160,27 +160,49 @@ TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Doubl
 
 
 
-// void CrossCorrelator::getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
-//   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+  Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
+  Double_t dt1 = offsetLow*nominalSamplingDeltaT;
+  Double_t interpPrefactor = (deltaT - dt1)/nominalSamplingDeltaT;
+  offsetLow += numSamples/2; // account for time ordering correlations in internal memory (i.e. dt=0 is half way thrugh the array)
+
+  Double_t c1 = crossCorrelations[pol][combo][offsetLow];
+  Double_t c2 = crossCorrelations[pol][combo][offsetLow+1];
+  Double_t cInterp = interpPrefactor*(c2 - c1) + c1;
+  
+  return cInterp;
+  
+}
+
+
+
+void CrossCorrelator::getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+    const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+    const TGraphAligned* grEven = wf->even();
+    startTimes[pol][ant] = grEven->GetX()[0];
     
-//     AnitaAnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
-//     const int nf = wf->Nfreq();
-//     FFTWComplex* thisFft = wf->freq();
 
-//     for(int freqInd=0; freqInd < nf; freqInd++){
-//       ffts[pol][ant][freqInd] = thisFft[freqInd];
-//     }
+    const int nf = wf->Nfreq();
+    const FFTWComplex* thisFft = wf->freq();
 
-//     const TGraphAligned* grEven = wf->even();
-//     startTimes[pol][ant] = grEven->GetX()[0];
-    
-//   }
-// } 
+    std::cout << pol << "\t" << ant << ": " << startTimes[pol][ant] << std::endl;
+    for(int freqInd=0; freqInd < nf; freqInd++){
+      ffts[pol][ant][freqInd].real(thisFft[freqInd].re);
+      ffts[pol][ant][freqInd].imag(thisFft[freqInd].im);
+      std::cout << thisFft[freqInd] << " ";
+    }
+    std::cout << std::endl << std::endl;    
+
+  }
+} 
 
 
 // Allow functions to take UsefulAnitaEvent and/or FilteredAnitaEvent.
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* usefulEvent,
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* fEv,
 						       AnitaPol::AnitaPol_t pol){
 
 
@@ -191,7 +213,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* usefu
   std::vector<Double_t> earliestStart(NUM_POL, 100); // ns
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 
-    grs[pol][ant] = usefulEvent->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
+    grs[pol][ant] = fEv->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
 
     if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
       for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
@@ -226,18 +248,18 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* usefu
     TString name, title;
     TString name2, title2;
     if(pol==AnitaPol::kHorizontal){
-      name = TString::Format("gr%dH_%u", ant, usefulEvent->eventNumber);
-      name2 = TString::Format("grInterp%dH_%u", ant, usefulEvent->eventNumber);
-      title = TString::Format("Antenna %d HPOL eventNumber %u", ant, usefulEvent->eventNumber);
+      name = TString::Format("gr%dH_%u", ant, fEv->eventNumber);
+      name2 = TString::Format("grInterp%dH_%u", ant, fEv->eventNumber);
+      title = TString::Format("Antenna %d HPOL eventNumber %u", ant, fEv->eventNumber);
       title2 = TString::Format("Antenna %d HPOL eventNumber %u (evenly resampled)",
-			       ant, usefulEvent->eventNumber);
+			       ant, fEv->eventNumber);
     }
     else if(pol==AnitaPol::kVertical){
-      name = TString::Format("gr%dV_%u", ant, usefulEvent->eventNumber);
-      name2 = TString::Format("grInterp%dV_%u", ant, usefulEvent->eventNumber);
-      title = TString::Format("Antenna %d VPOL eventNumber %u", ant, usefulEvent->eventNumber);
+      name = TString::Format("gr%dV_%u", ant, fEv->eventNumber);
+      name2 = TString::Format("grInterp%dV_%u", ant, fEv->eventNumber);
+      title = TString::Format("Antenna %d VPOL eventNumber %u", ant, fEv->eventNumber);
       title2 = TString::Format("Antenna %d VPOL eventNumber %u (evenly resampled)",
-			       ant, usefulEvent->eventNumber);
+			       ant, fEv->eventNumber);
     }
     title += "; Time (ns); Voltage (mV)";
     grs[pol][ant]->SetName(name);
@@ -266,20 +288,20 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 
-void CrossCorrelator::correlateEvent(FilteredAnitaEvent* usefulEvent){
+void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    eventNumber[pol] = usefulEvent->eventNumber;    
-    correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol);
+    eventNumber[pol] = fEv->eventNumber;    
+    correlateEvent(fEv, (AnitaPol::AnitaPol_t)pol);
   }
 }
 
 
-void CrossCorrelator::correlateEvent(FilteredAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
+void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
-  getNormalizedInterpolatedTGraphs(usefulEvent, pol);
-  // getFftsAndStartTimes(usefulEvent, pol);
+  getFftsAndStartTimes(fEv, pol);  
+  getNormalizedInterpolatedTGraphs(fEv, pol);
   doFFTs(pol);  
   doAllCrossCorrelations(pol);
 

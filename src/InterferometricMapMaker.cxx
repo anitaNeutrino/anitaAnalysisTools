@@ -527,9 +527,6 @@ void InterferometricMapMaker::fillDeltaTLookup(){
 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 	    Double_t thetaWave = thetaWaves[thetaBin];
 	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-  	    // Int_t offset = TMath::Nint(deltaT/nominalSamplingDeltaT);
-  	    // deltaTs[pol][phiBin][thetaBin][combo] = deltaT; //offset;
-  	    // deltaTs[pol][combo][thetaBin][phiBin] = deltaT; //offset;
 	    Int_t offsetLow = floor(deltaT/cc->nominalSamplingDeltaT);
 	    offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
 	    // offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
@@ -775,11 +772,20 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
       }
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 
+	Double_t phiWave = phiWaveLookup[phiBin];
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
-	  Double_t c1 = cc->crossCorrelations[pol][combo][offsetLow];
-	  Double_t c2 = cc->crossCorrelations[pol][combo][offsetLow+1];
-	  Double_t cInterp = interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
+
+	  Double_t thetaWave = thetaWaves[thetaBin];
+	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
+	  // Double_t deltaT = getDeltaTExpected();
+	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
+	  
+	  Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt1s[combo], cc->comboToAnt2s[combo], phiWave, thetaWave);
+
+	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaT);
+ 	  // Double_t c1 = cc->crossCorrelations[pol][combo][offsetLow];
+	  // Double_t c2 = cc->crossCorrelations[pol][combo][offsetLow+1];
+	  // Double_t cInterp = interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;
 
 	  coarseMap[pol][phiBin][thetaBin] += cInterp;
 	}
@@ -1164,20 +1170,3 @@ TGraph* InterferometricMapMaker::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Do
   }
   return grCoherent;
 }
-
-
-
-
-
-
-
-// template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-// template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-
-// template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-// template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-
-
-// template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
-// template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
-
