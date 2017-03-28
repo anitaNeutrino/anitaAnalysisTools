@@ -27,7 +27,6 @@
 // ROOT things
 #include "TGraph.h"
 #include "TH2D.h"
-#include "TThread.h"
 #include "TROOT.h" // for gDirectory pointer?
 
 // standard c++ things
@@ -54,7 +53,6 @@
 
 // Offline reconstruction definitions
 #define NUM_COMBOS 336
-#define MAX_THREADS 8
 
 // Typical number of samples in waveform
 #define NUM_SAMPLES 260
@@ -144,30 +142,6 @@ public:
     kNumZoomModes
   };
 
-  /**
-   * @brief Container required to get threading to work inside a class, includes the thread index and the pointer to the class.
-   *
-   * All functions called by threads have to be static.
-   * So we write any functions which we want to be threaded as static member functions, which take a pointer to the class as the first argument (requires that pointer).
-   * We then use the thread index to figure out what portion of the work each thread should do.
-   */
-  struct threadArgs{
-    Long_t threadInd; //!< The thread index
-    CrossCorrelator* ptr; //!< Pointer to the CrossCorrelator
-  };
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   //--------------------------------------------------------------------------------------------------------
   // Public member functions
@@ -213,8 +187,8 @@ public:
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t& time, Double_t& value);
   void getMaxUpsampledCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
 
-  void doAllCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol);
-  void doUpsampledCrossCorrelationsThreaded(AnitaPol::AnitaPol_t pol, Int_t phiSector);
+  void doAllCrossCorrelations(AnitaPol::AnitaPol_t pol);
+  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);
 
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
@@ -388,25 +362,9 @@ private:
   // Private member variables
   //--------------------------------------------------------------------------------------------------------
 
-  Int_t numThreads;//!< Number of threads to use in threaded functions.
-
   ROOT::Math::Interpolator* corrInterp;//(tVec,corVec,ROOT::Math::Interpolation::kAKIMA_PERIODIC);
   std::vector<double> ccTimes;
   double ccMaxTime;
-
-
-  AnitaPol::AnitaPol_t threadPol; //!< Polarization to use in thread functions.
-  Int_t threadPeakIndex; //!< Which fine peak are we on
-  UInt_t threadL3TrigPattern; //!< l3TrigPattern to use in thread functions.
-  Int_t threadPhiSector; //!< phi-sector to use in thread functions.
-  std::vector<Double_t> threadImagePeak; //!< Store image peaks found by different threads.
-  std::vector<Double_t> threadPeakPhiDeg; //!< Store phi of image peaks found by different threads.
-  std::vector<Double_t> threadPeakThetaDeg; //!< Store theta of image peaks found by different threads.
-  std::vector<Double_t> threadImagePeakZoom; //!< Store image peaks found by different threads.
-  std::vector<Double_t> threadPeakPhiDegZoom; //!< Store phi of image peaks found by different threads.
-  std::vector<Double_t> threadPeakThetaDegZoom; //!< Store theta of image peaks found by different threads.
-  std::vector<Int_t> threadPeakPhiBinZoom; //!< Store phi bin of image peaks found by different threads.
-  std::vector<Int_t> threadPeakThetaBinZoom; //!< Store theta bin of image peaks found by different threads.
 
 
 
