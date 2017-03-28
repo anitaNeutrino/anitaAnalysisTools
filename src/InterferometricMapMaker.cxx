@@ -207,8 +207,8 @@ void InterferometricMapMaker::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t num
 
 
 
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
+// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
@@ -243,8 +243,8 @@ AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(NiceAnitaE
 
 
 
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void InterferometricMapMaker::reconstructEvent(NiceAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
+// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
 
   // reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
   // const int thisNumPeaks = MAX_NUM_PEAKS;
@@ -308,8 +308,8 @@ void InterferometricMapMaker::reconstructEvent(NiceAnitaEvent* usefulEvent, Usef
 
 
 
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void InterferometricMapMaker::reconstructEvent(NiceAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
+// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
@@ -1171,13 +1171,13 @@ TGraph* InterferometricMapMaker::makeCoherentWorker(AnitaPol::AnitaPol_t pol, Do
 
 
 
-template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+// template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+// template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
-template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
-template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+// template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
+// template AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks=MAX_NUM_PEAKS, Int_t numCoarsePeaks=MAX_NUM_PEAKS);
 
 
-template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
-template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
+// template void InterferometricMapMaker::reconstructEvent<UsefulAnitaEvent>(UsefulAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
+// template void InterferometricMapMaker::reconstructEvent<FilteredAnitaEvent>(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
 

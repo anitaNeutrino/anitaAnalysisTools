@@ -158,14 +158,31 @@ TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Doubl
 
 
 
+
+
+// void CrossCorrelator::getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+
+//   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    
+//     AnitaAnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+//     const int nf = wf->Nfreq();
+//     FFTWComplex* thisFft = wf->freq();
+
+//     for(int freqInd=0; freqInd < nf; freqInd++){
+//       ffts[pol][ant][freqInd] = thisFft[freqInd];
+//     }
+
+//     const TGraphAligned* grEven = wf->even();
+//     startTimes[pol][ant] = grEven->GetX()[0];
+    
+//   }
+// } 
+
+
 // Allow functions to take UsefulAnitaEvent and/or FilteredAnitaEvent.
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(NiceAnitaEvent* usefulEvent,
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* usefulEvent,
 						       AnitaPol::AnitaPol_t pol){
 
-  // now that MagicDisplay allows filtering on the fly, remove all lastEventNumber crap
-  // still want this somewhere, so put it here for now...
-  eventNumber[pol] = usefulEvent->eventNumber;
 
   // Delete any old waveforms (at start rather than end to leave in memory to be examined if need be)
   deleteAllWaveforms(pol);
@@ -249,21 +266,21 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent){
+void CrossCorrelator::correlateEvent(FilteredAnitaEvent* usefulEvent){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
+    eventNumber[pol] = usefulEvent->eventNumber;    
     correlateEvent(usefulEvent, (AnitaPol::AnitaPol_t)pol);
   }
 }
 
 
-template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-void CrossCorrelator::correlateEvent(NiceAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
+void CrossCorrelator::correlateEvent(FilteredAnitaEvent* usefulEvent, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
   getNormalizedInterpolatedTGraphs(usefulEvent, pol);
-  doFFTs(pol);
+  // getFftsAndStartTimes(usefulEvent, pol);
+  doFFTs(pol);  
   doAllCrossCorrelations(pol);
 
 }
@@ -522,24 +539,4 @@ TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t 
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
 
-
-
-
-
-
-
-
-// https://www.codeproject.com/Articles/3515/How-To-Organize-Template-Source-Code
-// http://stackoverflow.com/questions/115703/storing-c-template-function-definitions-in-a-cpp-file
-// and now I see why people hate template meta-programming...
-template void CrossCorrelator::getNormalizedInterpolatedTGraphs<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-template void CrossCorrelator::getNormalizedInterpolatedTGraphs<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-
-
-template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent);
-template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent);
-
-
-template void CrossCorrelator::correlateEvent<UsefulAnitaEvent>(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-template void CrossCorrelator::correlateEvent<FilteredAnitaEvent>(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 

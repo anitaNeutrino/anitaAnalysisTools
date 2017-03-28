@@ -4,18 +4,19 @@
 #include "FilterStrategy.h"
 
 /** 
- * Constructor, sets up some of the options for the analysis
- * 
+ * Constructor, sets up some of the options for the analysis 
+* 
  * @param run is the run to analyse
  * @param selection is the event selection to apply
  * @param blindStrat is the blinding strategy to use
  * @param division selects which subset of the run to do, goes from 0 -> numDivisions -1, default is 0.
  * @param numDivisions is the number of bits we're splitting the event into
  */
-AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::selection selection, BlindDataset::strategy blindStrat, int division, int numDivisions){
+AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::selection selection, FilterStrategy* filterStrat, BlindDataset::strategy blindStrat, int division, int numDivisions){
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
+  fFilterStrat = filterStrat;  
   fBlindStrat = blindStrat;
   fDivision = division;
   fNumDivisions = numDivisions;
@@ -28,6 +29,8 @@ AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::s
 
 
 
+
+
 /** 
  * Destructor
  * 
@@ -36,12 +39,18 @@ AnalysisFlow::~AnalysisFlow(){
 
   if(fData){
     delete fData;
+    fData = NULL;
   }
 
   if(fCrossCorr){
     delete fCrossCorr;
     fCrossCorr = NULL;
-  }  
+  }
+
+  if(fFilterStrat){
+    delete fFilterStrat;
+    fFilterStrat = NULL;
+  }
 
   if(fOutFile){
     fOutFile->Write();
@@ -176,8 +185,11 @@ void AnalysisFlow::doAnalysis(){
   }
 
   if(!fCrossCorr){
-    fCrossCorr = new CrossCorrelator();
+    fCrossCorr = new InterferometricMapMaker();
   }
+  // if(!fCrossCorr){
+  //   fCrossCorr = new CrossCorrelator();
+  // }
 
   if(!fOutFile){
     prepareOutputFiles();
@@ -193,7 +205,15 @@ void AnalysisFlow::doAnalysis(){
   const Long64_t numEntries = fLastEntry-fFirstEntry;
   ProgressBar p(numEntries);
 
-  FilterStrategy filterStrat(fOutFile);
+  if(fFilterStrat){
+    // this doesn't necessarily mean the output will be saved
+    // it will only be saved if operations were added with the optional enable_output bool = true
+    fFilterStrat->attachFile(fOutFile);
+  }
+  else{
+    // empty strategy does nothing
+    fFilterStrat = new FilterStrategy();
+  }
 
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
@@ -209,7 +229,7 @@ void AnalysisFlow::doAnalysis(){
       UsefulAnitaEvent* usefulEvent = fData->useful();
 
       
-      FilteredAnitaEvent filteredEvent(usefulEvent, &filterStrat, pat, header, false);
+      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
       eventSummary = new AnitaEventSummary(header, &usefulPat);
       fCrossCorr->reconstructEvent(&filteredEvent, usefulPat, eventSummary);

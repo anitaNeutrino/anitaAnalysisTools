@@ -13,8 +13,9 @@
 
 
 #include "BlindDataset.h"
-#include "CrossCorrelator.h"
+#include "InterferometricMapMaker.h"
 #include "TFile.h"
+#include "FilterStrategy.h"
 
 class AnalysisFlow {
 
@@ -29,8 +30,8 @@ public:
 
 
 
-  AnalysisFlow(const char* outFileBaseName, int run, selection selection, BlindDataset::strategy blindStrat=BlindDataset::kDefault, int theDivision=0, int theNumDivisions=1);
-  ~AnalysisFlow();
+  AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, BlindDataset::strategy blindStrat=BlindDataset::kDefault, int theDivision=0, int theNumDivisions=1);
+  ~AnalysisFlow();  
 
   void doAnalysis();  
   void prepareDataSet();
@@ -50,8 +51,10 @@ private:
   Long64_t fLastEntry;
 
 
-  CrossCorrelator* fCrossCorr;
-
+  // CrossCorrelator* fCrossCorr;
+  InterferometricMapMaker* fCrossCorr;  
+  FilterStrategy* fFilterStrat;
+  
   TString fOutFileBaseName;
   TFile* fOutFile;
   TTree* fSumTree;

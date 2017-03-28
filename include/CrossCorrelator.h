@@ -10,7 +10,7 @@
 #define CROSSCORRELATOR_H
 
 // Ryan things
-#include "UsefulAnitaEvent.h"
+// #include "UsefulAnitaEvent.h"
 #include "FilteredAnitaEvent.h"
 #include "AnalysisWaveform.h"
 #include "AnitaEventCalibrator.h"
@@ -87,19 +87,19 @@ public:
   void printInfo();
 
   // void getNormalizedInterpolatedTGraphs(UsefulAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void getNormalizedInterpolatedTGraphs(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
 
   TGraph* interpolateWithStartTimeAndZeroMean(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
   void doFFTs(AnitaPol::AnitaPol_t pol);
 
-  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void correlateEvent(NiceAnitaEvent* realEvent);
+  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void correlateEvent(FilteredAnitaEvent* realEvent);
 
-  template <class NiceAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
-  void correlateEvent(NiceAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  // template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
+  void correlateEvent(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t combo,Double_t& time, Double_t& value);
   void getMaxCorrelationTimeValue(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t& time, Double_t& value);
