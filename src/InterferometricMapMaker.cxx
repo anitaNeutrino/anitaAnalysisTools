@@ -238,7 +238,6 @@ AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(FilteredAn
 
 
 
-// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
 void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
 
   // reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
@@ -302,8 +301,6 @@ void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, 
 }
 
 
-
-// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
 void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
@@ -343,7 +340,7 @@ void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, 
 
 
 void InterferometricMapMaker::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
-					Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
+						Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
 
   if(peakIndex < MAX_NUM_PEAKS){
     value = coarseMapPeakValues[pol][peakIndex];
@@ -363,7 +360,7 @@ void InterferometricMapMaker::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t 
 
 
 void InterferometricMapMaker::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
-				      Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
+					      Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
 
   if(peakIndex < MAX_NUM_PEAKS){
     value = fineMapPeakValues[pol][peakIndex];
@@ -700,7 +697,7 @@ TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_
 }
 
 void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-				  Double_t& peakPhiDeg, Double_t& peakThetaDeg){
+					  Double_t& peakPhiDeg, Double_t& peakThetaDeg){
 
   imagePeak = -DBL_MAX;
   peakPhiDeg = -9999;
@@ -734,7 +731,7 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
       }
       for(Int_t phiBin = startPhiBin; phiBin < endPhiBin; phiBin++){
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, dtCache.dt(pol, combo, phiBin, thetaBin));	  
+	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, dtCache.coarseDt(pol, combo, phiBin, thetaBin));	  
 	  coarseMap[pol][phiBin][thetaBin] += cInterp;
 	}
       }
@@ -772,10 +769,10 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
 
 
 void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-				      Double_t zoomCenterPhiDeg,
-				      Double_t zoomCenterThetaDeg,
-				      Int_t peakIndex){
+					      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
+					      Double_t zoomCenterPhiDeg,
+					      Double_t zoomCenterThetaDeg,
+					      Int_t peakIndex){
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
   if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
@@ -799,15 +796,11 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
   cc->doUpsampledCrossCorrelations(pol, phiSector);
 
 
-
-  
-
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
 
   zoomPhiMin[pol] = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
   zoomThetaMin[pol] = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
-
 
   std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[phiSector];
 
@@ -820,7 +813,6 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     }
   }
 
-
   const Int_t offset = cc->numSamplesUpsampled/2;
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
@@ -828,19 +820,26 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
       continue;
     }
     int ant1 = cc->comboToAnt1s[combo];
-    int ant2 = cc->comboToAnt2s[combo];    
+    int ant2 = cc->comboToAnt2s[combo];
     for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
       Int_t zoomThetaInd = thetaZoomBase + thetaBin;
       // Double_t zoomThetaWave = zoomedThetaWaves[zoomThetaInd];
-      Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
-      Double_t dtFactor = dtFactors[zoomThetaInd];
+      // Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
+      Double_t partBA = dtCache.partBAsZoom[dtCache.partBAsIndex(pol, combo, zoomThetaInd)]; //)[pol][combo][zoomThetaInd];      
+      // Double_t dtFactor = dtFactors[zoomThetaInd];
+      Double_t dtFactor = dtCache.dtFactors[zoomThetaInd];      
 
       for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
 	// Double_t zoomPhiWave = zoomedPhiWaveLookup[zoomPhiInd];
-	
-	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
-	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+
+	int p21 = dtCache.part21sIndex(pol, combo, zoomPhiInd);
+	Double_t offsetLowDouble = dtFactor*(partBA - dtCache.part21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
+
+	// Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
+	// Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);	
+	// offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+	offsetLowDouble += kUseOffAxisDelay > 0 ? dtCache.offAxisDelaysDivided[p21] : 0;
 	
 	offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
 	offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;

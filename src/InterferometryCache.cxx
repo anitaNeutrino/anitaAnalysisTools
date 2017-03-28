@@ -74,7 +74,7 @@ void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapM
 
 void InterferometryCache::populateFineCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
 
-  std::cerr << "here" << std::endl;
+  // std::cerr << "here" << std::endl;
   
   Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
   Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
@@ -101,7 +101,7 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
   }
 
 
-  std::cerr << "here" << std::endl;
+  // std::cerr << "here" << std::endl;
   
   partBAsZoom.resize(AnitaPol::kNotAPol*numCombos*nFineBinsTheta);
   for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
@@ -117,7 +117,7 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
     }
   }
 
-  std::cerr << "here" << std::endl;  
+  // std::cerr << "here" << std::endl;  
 
   zoomedCosPartLookup.resize(AnitaPol::kNotAPol*NUM_SEAVEYS*nFineBinsPhi);
 
@@ -151,41 +151,15 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
 	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
 	Double_t offAxisDelay = mm->relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
 
-	// try{
-	offAxisDelays[part21sIndex(pol, combo, phiIndex)] = offAxisDelay;
-	// offAxisDelays.at(part21sIndex(pol, combo, phiIndex)) = offAxisDelay;	
-	// }
-	// catch(...){
-	//   std::cout << "offAxisDelays" << std::endl;
-	//   exit(0);
-	// }
-	// try{
-	offAxisDelaysDivided[part21sIndex(pol, combo, phiIndex)] = offAxisDelay/cc->correlationDeltaT;
-	// }
-	// catch(...){
-	//   std::cout << "offAxisDelaysDivided" << std::endl;
-	//   exit(0);
-	// }
-
-	// try{
-	part21sZoom[part21sIndex(pol, combo, phiIndex)] = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));
-	// part21sZoom.at(part21sIndex(pol, combo, phiIndex)) = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));	
-	// }
-	// catch(...){
-	//   std::cout << "part21sZoom" << std::endl;
-	//   exit(0);	  
-	// }
-
-	  
-	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
-	// offAxisDelaysDivided[pol][combo][phiIndex] = offAxisDelay/cc->correlationDeltaT;
-	// part21sZoom[pol][combo][phiIndex] = zoomedCosPartLookup[pol][ant2][phiIndex] - zoomedCosPartLookup[pol][ant1][phiIndex];
-
+	int p21 = part21sIndex(pol, combo, phiIndex);
+	offAxisDelays[p21] = offAxisDelay;
+	offAxisDelaysDivided[p21] = offAxisDelay/cc->correlationDeltaT;
+	part21sZoom[p21] = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));
       }
     }
   }
 
-  std::cout << "done" << std::endl;
+  // std::cout << "done" << std::endl;
 }
   
  

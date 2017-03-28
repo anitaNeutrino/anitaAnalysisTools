@@ -25,7 +25,7 @@ public:
     return ((pol*numCombos + combo)*nCoarseBinsPhi + phiBin)*nCoarseBinsTheta + thetaBin;
   }
 
-  inline double dt(int pol, int combo, int phiBin, int thetaBin){
+  inline double coarseDt(int pol, int combo, int phiBin, int thetaBin){
     return deltaTs[coarseIndex(pol, combo, phiBin, thetaBin)];
   }
 
@@ -41,6 +41,11 @@ public:
   inline int part21sIndex(int pol, int combo, int finePhiBin){
     return (pol*numCombos + combo)*nFineBinsPhi + finePhiBin;
   }
+
+  inline double fineDt(int pol, int combo, int phiBin, int thetaBin){
+    return 0;
+  }
+  
   
 private:
 
@@ -50,9 +55,9 @@ private:
   int numCombos;
   std::vector<double> deltaTs; ///!< This is for the coarsely binned map
 
-
   int nFineBinsPhi;
   int nFineBinsTheta;
+public:  
   std::vector<double> partBAsZoom; //[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   std::vector<double> part21sZoom; //[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
   // Double_t partBAsZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
