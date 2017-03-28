@@ -130,26 +130,16 @@ public:
     return h;
   }
   
-  InterferometricMap* getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
-			     Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-			     UShort_t l3TrigPattern=ALL_PHI_TRIGS);
+  InterferometricMap* getMap(AnitaPol::AnitaPol_t pol);
 
 
   TH2D* getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd=0);
 
-  void reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-		   Double_t& peakPhiDeg, Double_t& peakThetaDeg);
+  void reconstruct(AnitaPol::AnitaPol_t pol);
   void reconstructZoom(AnitaPol::AnitaPol_t pol,
 		       Double_t& imagePeak, Double_t& peakPhiDeg,
 		       Double_t& peakThetaDeg, Double_t zoomCenterPhiDeg=0, Double_t zoomCenterThetaDeg=0,
 		       Int_t peakIndex = 0);
-
-  InterferometricMap* makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-				      Double_t& peakPhiDeg, Double_t& peakThetaDeg);
-  InterferometricMap* makeGlobalImage(AnitaPol::AnitaPol_t pol);
-
-  InterferometricMap* makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-					 Double_t& peakThetaDeg, UShort_t l3TrigPattern);
 
   TH2D* makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
   			Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
@@ -171,10 +161,6 @@ public:
   // Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // std::vector<DeltaTCache> deltaTs[AnitaPol::kNotAPol];
 
-  Double_t coarseMap[AnitaPol::kNotAPol][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
-  Double_t partBAsZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
-  Double_t part21sZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
-
   Double_t fineMap[AnitaPol::kNotAPol][MAX_NUM_PEAKS][NUM_BINS_THETA_ZOOM][NUM_BINS_PHI_ZOOM]; //!< Internal storage for the finely binned map
   std::vector<Double_t> rArray[AnitaPol::kNotAPol]; //!< Vector of antenna radial positions
   std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
@@ -188,19 +174,9 @@ public:
   Double_t fineMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
   Double_t fineMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
-  Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
-  Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
-  Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
-  Double_t dtFactors[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta)/c/dt for zoomed image.
-  Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
-  Double_t zoomedCosPartLookup[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
-  Double_t offAxisDelays[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
-  Double_t offAxisDelaysDivided[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
-
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
   Int_t coherentDeltaPhi;
-
 
   Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
   Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)

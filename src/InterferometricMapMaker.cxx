@@ -68,151 +68,14 @@ void InterferometricMapMaker::initializeInternals(){
 
 
 
-
-
-
-// void InterferometricMapMaker::findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
-// 				     Double_t* phiDegs, Double_t* thetaDegs){
-
-//   // In this function I want to find numPeak peaks and set an exclusion zone around each peak
-//   // so that the next peak isn't just a neighbour of a true peak.
-
-//   if(numPeaks > MAX_NUM_PEAKS){
-//     // You can have numPeaks less than or requal MAX_NUM_PEAKS, but not greater than.
-//     std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
-// 	      << ". numPeaks = " << numPeaks << ", InterferometricMapMaker compiled with MAX_NUM_PEAKS  = "
-// 	      << MAX_NUM_PEAKS << ", setting numPeaks = " << MAX_NUM_PEAKS << std::endl;
-//     numPeaks = MAX_NUM_PEAKS;
-//   }
-
-//   // Set not crazy, but still debug visible values for peak values/location
-//   // Believe -DBL_MAX was causing me some while loop issues in RootTools::getDeltaAngleDeg(...)
-//   // which has an unrestricted while loop inside.
-//   for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
-//     peakValues[peakInd] = -999;
-//     phiDegs[peakInd] = -999;
-//     thetaDegs[peakInd] = -999;
-//   }
-
-//   // As we start, all regions are allowed.
-//   Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
-//   for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-//     for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-//       allowedBins[phiBin][thetaBin] = 1;
-//     }
-//   }
-
-
-  
-//   for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
-//     Int_t gotHere = 0;
-//     for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-//       for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-
-// 	if(allowedBins[phiBin][thetaBin] > 0){
-// 	  // then we are in an allowed region
-
-// 	  Double_t mapValue = coarseMap[pol][phiBin][thetaBin];
-// 	  if(mapValue > peakValues[peakInd]){
-// 	    // higher than the current highest map value
-
-// 	    gotHere = 1;
-// 	    // Time for something a little tricky to read...
-// 	    // I want to stop bins that are on the edge of allowed regions registering as peaks
-// 	    // if the bins just inside the disallowed regions are higher valued.
-// 	    // To ensure a local maxima so I am going to ensure that all neighbouring
-// 	    // bins are less than the current value.
-// 	    // Checking the 3x3 grid around the current bin (wrapping in phi).
-
-// 	    // Wrap phi edges
-// 	    Int_t lastPhiBin = phiBin != 0 ? phiBin - 1 : (NUM_BINS_PHI*NUM_PHI) - 1;
-// 	    Int_t nextPhiBin = phiBin != (NUM_BINS_PHI*NUM_PHI) - 1 ? phiBin + 1 : 0;
-
-
-// 	    // Is current bin higher than phi neighbours in same theta row?
-// 	    if(coarseMap[pol][lastPhiBin][thetaBin] < mapValue &&
-// 	       coarseMap[pol][nextPhiBin][thetaBin] < mapValue){
-
-// 	      gotHere = 2;
-// 	      // So far so good, now check theta neigbours
-// 	      // This doesn't wrap, so I will allow edge cases to pass as maxima
-// 	      Int_t nextThetaBin = thetaBin != (NUM_BINS_THETA) - 1 ? thetaBin+1 : thetaBin;
-// 	      Int_t lastThetaBin = thetaBin != 0 ? thetaBin-1 : thetaBin;
-
-// 	      // Check theta bins below
-// 	      gotHere = 3;
-// 	      if(thetaBin == 0 || (coarseMap[pol][lastPhiBin][lastThetaBin] < mapValue &&
-// 				   coarseMap[pol][phiBin][lastThetaBin] < mapValue &&
-// 				   coarseMap[pol][nextPhiBin][lastThetaBin] < mapValue)){
-
-// 		// Check theta bins above
-// 		gotHere = 4;
-// 		if(thetaBin == NUM_BINS_THETA-1 || (coarseMap[pol][lastPhiBin][nextThetaBin] < mapValue &&
-// 						    coarseMap[pol][phiBin][nextThetaBin] < mapValue &&
-// 						    coarseMap[pol][nextPhiBin][nextThetaBin] < mapValue)){
-
-// 		  // Okay okay okay... you're a local maxima, you can be my next peak.
-// 		  peakValues[peakInd] = coarseMap[pol][phiBin][thetaBin];
-// 		  // phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
-// 		  // thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
-// 		  phiDegs[peakInd] = InterferometricMap::getCoarseBinEdgesPhi()[phiBin];
-// 		  thetaDegs[peakInd] = InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
-// 		}
-// 	      }
-// 	    }
-// 	  }
-// 	}
-//       } // thetaBin
-//     } // phiBin
-
-//     // Still inside the peakInd loop
-
-//     // Here I set the exclusion zone around the peak bin.
-//     if(peakValues[peakInd] >= -999){ // Checks that a peak was found, probably unnecessary
-
-//       for(Int_t phiBin=0; phiBin<NUM_BINS_PHI*NUM_PHI; phiBin++){
-// 	// Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
-// 	Double_t phiDeg = InterferometricMap::getCoarseBinEdgesPhi()[phiBin];
-// 	Double_t absDeltaPhi = TMath::Abs(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg));
-// 	if(absDeltaPhi < PEAK_PHI_DEG_RANGE){
-
-// 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-
-// 	    // Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
-// 	    Double_t thetaDeg = InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
-// 	    Double_t absDeltaTheta = TMath::Abs(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg));
-// 	    if(absDeltaTheta < PEAK_THETA_DEG_RANGE){
-
-// 	      // Now this region in phi/theta is disallowed on the next loop through...
-// 	      allowedBins[phiBin][thetaBin] = 0;
-// 	    }
-// 	  }
-// 	}
-//       }
-//     }
-//     if(peakValues[peakInd] < 0){
-//       std::cerr << "Peak " << peakInd << " = " << peakValues[peakInd] << "\t" << gotHere << std::endl;
-//       for(int pi=0; pi <= peakInd; pi++){
-//     	std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
-//       }
-//     }
-//   }
-// }
-
-
-
-
-// template <class FilteredAnitaEvent> // needs eventNumber member and getGraph(int ant, AnitaPol::AnitaPol_t pol)
 AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
 
   for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
 
-    cc->correlateEvent(usefulEvent, pol);
+    cc->correlateEvent(usefulEvent, pol);    
 
-    reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);
-
-
+    reconstruct(pol);
     coarseMaps[pol]->findPeakValues(numCoarsePeaks, coarseMapPeakValues[pol],
 				    coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
 
@@ -309,7 +172,7 @@ void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, 
 
     cc->correlateEvent(usefulEvent, pol);
 
-    reconstruct(pol, coarseMapPeakValues[pol][0], coarseMapPeakPhiDegs[pol][0], coarseMapPeakThetaDegs[pol][0]);    
+    reconstruct(pol);
     coarseMaps[pol]->findPeakValues(numCoarsePeaks, coarseMapPeakValues[pol],
 				    coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
 
@@ -495,106 +358,13 @@ void InterferometricMapMaker::fillDeltaTLookup(){
   minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
   minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
-  for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
-    Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
-    Double_t thetaWave = -1*thetaWaveDeg*TMath::DegToRad();
-    zoomedThetaWaves[thetaIndex] = thetaWave;
-    zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
-    zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
-    dtFactors[thetaIndex] = zoomedCosThetaWaves[thetaIndex]/(SPEED_OF_LIGHT_NS*cc->correlationDeltaT);
-  }
-
-  for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
-    for(Int_t combo=0; combo < NUM_COMBOS; combo++){
-      Int_t ant1 = cc->comboToAnt1s.at(combo);
-      Int_t ant2 = cc->comboToAnt2s.at(combo);
-      for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
-	partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(zArray[pol].at(ant2)-zArray[pol].at(ant1));
-      }
-    }
-  }
-
-  for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
-    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
-	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
-	Double_t phiWave = phiDeg*TMath::DegToRad();
-	zoomedCosPartLookup[pol][ant][phiIndex] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
-      }
-    }
-
-    for(Int_t combo=0; combo < NUM_COMBOS; combo++){
-      Int_t ant1 = cc->comboToAnt1s.at(combo);
-      Int_t ant2 = cc->comboToAnt2s.at(combo);
-
-      for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
-	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
-	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
-	zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
-
-	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
-	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
-	Double_t offAxisDelay = relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
-	offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
-	offAxisDelaysDivided[pol][combo][phiIndex] = offAxisDelay/cc->correlationDeltaT;
-
-	part21sZoom[pol][combo][phiIndex] = zoomedCosPartLookup[pol][ant2][phiIndex] - zoomedCosPartLookup[pol][ant1][phiIndex];
-
-      }
-    }
-  }
 }
 
 
 
 
-InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
-						    Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-						    UShort_t l3TrigPattern){
-// TH2D* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Double_t& peakValue,
-// 				      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-// 				      UShort_t l3TrigPattern){
+InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol){
 
-  std::cout << pol << "\t" << coarseMaps[pol] << std::endl;
-
-  // Double_t phiMin = getBin0PhiDeg();
-  // Double_t phiMax = phiMin + DEGREES_IN_CIRCLE;
-  // Double_t thetaMin = MIN_THETA;
-  // Double_t thetaMax = MAX_THETA;
-
-  // TH2D* hImage = new TH2D(name, title,
-  // 			  NUM_BINS_PHI*NUM_PHI, phiMin, phiMax,
-  // 			  NUM_BINS_THETA, thetaMin, thetaMax);
-  // hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  // hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
-
-  // coarseMaps[pol]->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  // coarseMaps[pol]->GetYaxis()->SetTitle("Elevation (Degrees)");
-  
-  // peakValue = -2;
-  // peakPhiDeg = -9999;
-  // peakThetaDeg = -9999;
-
-  // for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
-  //   for(Int_t phiSector=0; phiSector<NUM_PHI; phiSector++){
-  //     Int_t doPhiSector = RootTools::getBit(phiSector, l3TrigPattern);
-  //     if(doPhiSector){
-  // 	for(Int_t phiBin = phiSector*NUM_BINS_PHI; phiBin < NUM_BINS_PHI*(phiSector+1); phiBin++){
-  // 	  coarseMaps[pol]->SetBinContent(phiBin+1, thetaBin+1, coarseMap[pol][phiBin][thetaBin]);
-  // 	  if(coarseMap[pol][phiBin][thetaBin] > peakValue){
-  // 	    peakValue = coarseMap[pol][phiBin][thetaBin];
-  // 	    peakPhiDeg = coarseMaps[pol]->GetXaxis()->GetBinLowEdge(phiBin+1);
-  // 	    peakThetaDeg = coarseMaps[pol]->GetYaxis()->GetBinLowEdge(thetaBin+1);
-  // 	  }
-  // 	}
-  //     }
-  //   }
-  // }
-
-  // InterferometricMap* h = coarseMaps[pol];
-  // name = pol == AnitaPol::kHorizontal ? "h0H" : "h0V";
-  // coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg());
-  // // return hImage;
   return coarseMaps[pol];
 }
 
@@ -637,25 +407,6 @@ TH2D* InterferometricMapMaker::getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakIn
 
 
 
-InterferometricMap* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-							     Double_t& peakThetaDeg){
-
-  return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg);
-}
-
-
-
-InterferometricMap* InterferometricMapMaker::makeGlobalImage(AnitaPol::AnitaPol_t pol){
-  Double_t imagePeak, peakPhiDeg, peakThetaDeg;
-  return makeGlobalImage(pol, imagePeak, peakPhiDeg, peakThetaDeg);
-}
-
-InterferometricMap* InterferometricMapMaker::makeTriggeredImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-								Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-								UShort_t l3TrigPattern){
-  return getMap(pol, imagePeak, peakPhiDeg, peakThetaDeg, l3TrigPattern);
-}
-
 TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol,
 				       Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg,
 				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
@@ -687,9 +438,7 @@ TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_
   return getZoomMap(pol);
 }
 
-void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-					  Double_t& peakPhiDeg, Double_t& peakThetaDeg){
-
+void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol){
 
   makerOwnsMap[pol] = false;
   if(!makerOwnsMap[pol] || coarseMaps[pol]==NULL)
@@ -703,7 +452,7 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
     title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
     title += " Map";
 
-    coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg()); // TODO BETTER CONSTRUCTOR
+    coarseMaps[pol] = new InterferometricMap(name, title);
   }  
   else{// if(makerOwnsMap[pol]){  {
     // I own the map so I can overwrite it  

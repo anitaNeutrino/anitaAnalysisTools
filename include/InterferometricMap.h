@@ -76,22 +76,17 @@ class InterferometricMap : public TH2D {
 public:
   InterferometricMap();
   InterferometricMap(TString name, TString title, Int_t nBinsPhi, Double_t phiMin, Double_t phiMax, Int_t nBinsTheta, Double_t minTheta, Double_t maxTheta);
-  InterferometricMap(TString name, TString title, Double_t phiMin); // constructor for coarse map, don't need extra info
+  InterferometricMap(TString name, TString title); // constructor for coarse map, don't need extra info
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
+  void findPeakValues(Int_t numPeaks, Double_t* peakValues, Double_t* phiDegs, Double_t* thetaDegs);
+
+  
   inline Int_t GetNbinsPhi(){return GetNbinsX();}
   inline Int_t GetNbinsTheta(){return GetNbinsY();}  
   inline TAxis* GetPhiAxis(){return GetXaxis();}
   inline TAxis* GetThetaAxis(){return GetYaxis();}  
-
-
-
-  // virtual void Draw(Option_t* opt=""){
-  //   TH2D::Draw(opt);
-  // }
-
-  void findPeakValues(Int_t numPeaks, Double_t* peakValues, Double_t* phiDegs, Double_t* thetaDegs);
 
   
   static const std::vector<Double_t>& getCoarseBinEdgesTheta();
@@ -103,6 +98,7 @@ public:
 protected:
   bool thetaAxisInSinTheta;
   void initializeInternals();
+  bool isZoomMap;
 
   Double_t imagePeak;
   Double_t peakPhiDeg;

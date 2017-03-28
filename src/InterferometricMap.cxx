@@ -143,8 +143,9 @@ InterferometricMap::InterferometricMap(TString name, TString title, Int_t nBinsP
 
 
 
-InterferometricMap::InterferometricMap(TString name, TString title, Double_t phiMin)
-  : TH2D(name, title, NUM_PHI*NUM_BINS_PHI, phiMin, phiMin+DEGREES_IN_CIRCLE, getCoarseBinEdgesTheta().size()-1, &getCoarseBinEdgesTheta()[0])
+InterferometricMap::InterferometricMap(TString name, TString title)
+  : TH2D(name, title, NUM_PHI*NUM_BINS_PHI, InterferometricMap::getBin0PhiDeg(), InterferometricMap::getBin0PhiDeg()+DEGREES_IN_CIRCLE,
+	 getCoarseBinEdgesTheta().size()-1, &getCoarseBinEdgesTheta()[0])
 {
   initializeInternals();
 }
