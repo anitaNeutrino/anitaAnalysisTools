@@ -85,7 +85,7 @@ const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesPhi(){
     // std::vector<Double_t> binEdges(nBinsTheta+1);
     coarseBinEdgesTheta.reserve(nBinsPhi+1);
     for(unsigned bp = 0; bp <= nBinsPhi; bp++){
-      Double_t thisPhi = dPhi*bp;
+      Double_t thisPhi = minPhi + dPhi*bp;
       coarseBinEdgesPhi.push_back(thisPhi);
     }
   }

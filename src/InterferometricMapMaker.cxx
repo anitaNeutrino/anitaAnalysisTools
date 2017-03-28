@@ -487,15 +487,15 @@ void InterferometricMapMaker::fillDeltaTLookup(){
     
   // Double_t phi0 = getBin0PhiDeg();
   // const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
- Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
- for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
-   Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
+ // Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
+ // for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
+ //   Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
   
   // Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
-  // // const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
-  // const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
-  // for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
-    // Double_t phiDeg = coarsePhiBinEdges.at(phiIndex);
+  const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
+  const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
+  for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
+    Double_t phiDeg = coarsePhiBinEdges.at(phiIndex);
     Double_t phiWave = TMath::DegToRad()*phiDeg;
     phiWaveLookup[phiIndex] = phiWave;
   }
