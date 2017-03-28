@@ -80,14 +80,19 @@ public:
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
-  Int_t GetNbinsPhi(){return GetNbinsX();}
-  Int_t GetNbinsTheta(){return GetNbinsY();}  
+  inline Int_t GetNbinsPhi(){return GetNbinsX();}
+  inline Int_t GetNbinsTheta(){return GetNbinsY();}  
+  inline TAxis* GetPhiAxis(){return GetXaxis();}
+  inline TAxis* GetThetaAxis(){return GetYaxis();}  
 
 
 
   // virtual void Draw(Option_t* opt=""){
   //   TH2D::Draw(opt);
   // }
+
+  void findPeakValues(Int_t numPeaks, Double_t* peakValues, Double_t* phiDegs, Double_t* thetaDegs);
+
   
   static const std::vector<Double_t>& getCoarseBinEdgesTheta();
   static const std::vector<Double_t>& getFineBinEdgesTheta();

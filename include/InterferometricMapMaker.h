@@ -90,8 +90,8 @@ public:
 
   void reconstructEvent(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary);
 
-  void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
-		      Double_t* phiDegs, Double_t* thetaDegs);
+  // void findPeakValues(AnitaPol::AnitaPol_t pol, Int_t numPeaks, Double_t* peakValues,
+  // 		      Double_t* phiDegs, Double_t* thetaDegs);
 
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
 			     Double_t phiWave, Double_t thetaWave);
