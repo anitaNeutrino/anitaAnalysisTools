@@ -76,6 +76,8 @@ public:
 
   static const std::vector<Double_t>& getCoarseBinEdgesTheta();
   static const std::vector<Double_t>& getFineBinEdgesTheta();
+  static const std::vector<Double_t>& getCoarseBinEdgesPhi();
+  
   static Double_t getBin0PhiDeg();
   
 protected:

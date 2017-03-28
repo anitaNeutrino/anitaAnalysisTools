@@ -487,20 +487,29 @@ void InterferometricMapMaker::fillDeltaTLookup(){
     
   // Double_t phi0 = getBin0PhiDeg();
   // const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
-  Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
-  for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
-    Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
+ Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
+ for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
+   Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
+  
+  // Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
+  // // const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
+  // const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
+  // for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
+    // Double_t phiDeg = coarsePhiBinEdges.at(phiIndex);
     Double_t phiWave = TMath::DegToRad()*phiDeg;
     phiWaveLookup[phiIndex] = phiWave;
   }
 
-  // const Double_t thetaBinSize = (Double_t(THETA_RANGE)/NUM_BINS_THETA);
-  // const Double_t thetaBinSize = (Double_t(MAX_THETA - MIN_THETA)/NUM_BINS_THETA);
-
+  // const std::vector<Double_t> coarseThetaBinEdges = InterferometricMap::getCoarseBinEdgesTheta();
+  // const int nCoarseBinsTheta = coarseThetaBinEdges.size()-1;
+  // for(Int_t thetaIndex=0; thetaIndex < nCoarseBinsTheta; thetaIndex++){
+ 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
-    // Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
     Double_t thetaWaveDeg = coarseMaps[0]->GetYaxis()->GetBinLowEdge(thetaIndex+1); 
     // Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
+  
+    // Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
+    // Double_t thetaWaveDeg = coarseThetaBinEdges.at(thetaIndex);
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
   }

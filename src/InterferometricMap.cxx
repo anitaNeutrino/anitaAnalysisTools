@@ -5,8 +5,12 @@
 #include <iostream>
 
 
+
+std::vector<Double_t> coarseBinEdgesPhi; // has size NUM_BINS_PHI+1
+std::vector<Double_t> fineBinEdgesPhi; // has size NUM_BINS_PHI_ZOOM_TOTAL+1
+
 std::vector<Double_t> coarseBinEdgesTheta; // has size NUM_BINS_THETA+1
-std::vector<Double_t> fineBinEdgesTheta; // has size N+1
+std::vector<Double_t> fineBinEdgesTheta; // has size NUM_BINS_THETA_ZOOM_TOTAL+1
 Double_t bin0PhiDeg = -9999;
 
 // static member function
@@ -67,6 +71,27 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
   }
   return fineBinEdgesTheta;
 }
+
+
+const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesPhi(){
+
+  if(coarseBinEdgesPhi.size()==0) // then not initialized so do it here...
+  {
+
+    // funk up the theta bin spacing...  
+    UInt_t nBinsPhi = NUM_BINS_PHI*NUM_PHI;
+    Double_t minPhi = getBin0PhiDeg();
+    Double_t dPhi = double(DEGREES_IN_CIRCLE)/nBinsPhi;
+    // std::vector<Double_t> binEdges(nBinsTheta+1);
+    coarseBinEdgesTheta.reserve(nBinsPhi+1);
+    for(unsigned bp = 0; bp <= nBinsPhi; bp++){
+      Double_t thisPhi = dPhi*bp;
+      coarseBinEdgesPhi.push_back(thisPhi);
+    }
+  }
+  return coarseBinEdgesPhi;
+}
+
 
 
 Double_t InterferometricMap::getBin0PhiDeg(){
