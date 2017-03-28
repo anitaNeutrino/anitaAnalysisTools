@@ -58,7 +58,7 @@
 #define NUM_SAMPLES 260
 #define UPSAMPLE_FACTOR 6
 #define NOMINAL_SAMPLING_DELTAT (1./2.6f)
-#define PAD_FACTOR 2
+#define PAD_FACTOR 1
 #define GET_NUM_FREQS(n)((n)/2+1)
 
 

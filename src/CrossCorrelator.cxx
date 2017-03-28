@@ -45,7 +45,7 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
     for(Int_t ant2=0; ant2 < NUM_SEAVEYS; ant2++){
       comboIndices[ant1][ant2] = -1;
     }
-  }
+  }  
 
   numCombos=0;
   for(Int_t ant1=0; ant1<NUM_SEAVEYS; ant1++){
@@ -162,6 +162,16 @@ TGraph* CrossCorrelator::interpolateWithStartTimeAndZeroMean(TGraph* grIn, Doubl
 
 Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
+  Int_t ant1 = comboToAnt1s[combo];
+  Int_t ant2 = comboToAnt2s[combo];
+  // std::cerr << ant1 << "\t" << ant2 << "\t" << deltaT << "\t";
+
+  deltaT += startTimes[pol][ant1];
+  deltaT -= startTimes[pol][ant2];  
+  // deltaT += startTimes[pol][ant2];
+  // deltaT -= startTimes[pol][ant1];  
+
+  // std::cerr << deltaT << std::endl;
   Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
   Double_t dt1 = offsetLow*nominalSamplingDeltaT;
   Double_t interpPrefactor = (deltaT - dt1)/nominalSamplingDeltaT;
@@ -172,6 +182,7 @@ Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t co
   Double_t cInterp = interpPrefactor*(c2 - c1) + c1;
   
   return cInterp;
+  // return c1;  
   
 }
 
@@ -180,22 +191,30 @@ Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t co
 void CrossCorrelator::getFftsAndStartTimes(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    interpRMS[pol][ant] = 1;
+    interpRMS2[pol][ant] = 1;    
 
     const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
     const TGraphAligned* grEven = wf->even();
     startTimes[pol][ant] = grEven->GetX()[0];
+
+    if(pol==AnitaPol::kHorizontal && (ant==16 || ant == 32)){
+      std::cout << "new\t" << pol << "\t" << ant << "\t" << grEven->GetX()[0] << std::endl;
+    }
     
 
     const int nf = wf->Nfreq();
     const FFTWComplex* thisFft = wf->freq();
 
-    std::cout << pol << "\t" << ant << ": " << startTimes[pol][ant] << std::endl;
+    // std::cout << pol << "\t" << ant << ": " << startTimes[pol][ant] << std::endl;
     for(int freqInd=0; freqInd < nf; freqInd++){
       ffts[pol][ant][freqInd].real(thisFft[freqInd].re);
       ffts[pol][ant][freqInd].imag(thisFft[freqInd].im);
-      std::cout << thisFft[freqInd] << " ";
+
+      
+      // std::cout << pol << "\t" << ant << "\t" << thisFft[freqInd].re << "\t" <<  ffts[pol][ant][freqInd].real() << "\t" << thisFft[freqInd].im << "\t" << ffts[pol][ant][freqInd].imag() << std::endl;
     }
-    std::cout << std::endl << std::endl;    
+    // std::cout << std::endl << std::endl;    
 
   }
 } 
@@ -214,6 +233,14 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* fEv,
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
 
     grs[pol][ant] = fEv->getGraph(ant, (AnitaPol::AnitaPol_t)pol);
+
+    if(pol==AnitaPol::kHorizontal && (ant==16 || ant == 32)){
+      std::cout << "old\t" << pol << "\t" << ant << "\t" << grs[pol][ant]->GetX()[0] << std::endl;
+    }
+
+    // const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+    
+    // grs[pol][ant] = (TGraph*) wf->even();
 
     if(multiplyTopRingByMinusOne > 0 && ant < NUM_PHI){ // top ring
       for(int samp=0; samp < grs[pol][ant]->GetN(); samp++){
@@ -300,9 +327,11 @@ void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv){
 void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
-  getFftsAndStartTimes(fEv, pol);  
+  getFftsAndStartTimes(fEv, pol);
   getNormalizedInterpolatedTGraphs(fEv, pol);
-  doFFTs(pol);  
+  // doFFTs(pol);  
+  
+  // std::cout << "here" << std::endl;
   doAllCrossCorrelations(pol);
 
 }

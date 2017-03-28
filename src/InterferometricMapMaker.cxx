@@ -781,6 +781,7 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
 	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
 	  
 	  Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt1s[combo], cc->comboToAnt2s[combo], phiWave, thetaWave);
+	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt2s[combo], cc->comboToAnt1s[combo], phiWave, thetaWave);	  
 
 	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaT);
  	  // Double_t c1 = cc->crossCorrelations[pol][combo][offsetLow];

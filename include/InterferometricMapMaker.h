@@ -214,10 +214,10 @@ public:
   TString zoomModeNames[kNumZoomModes];//!< Maps text to the zoomMode_t enum, used for histogram names/titles.
   
   
+  CrossCorrelator* cc;
   
 private:
   void initializeVariables();
-  CrossCorrelator* cc;
 
   
 };
