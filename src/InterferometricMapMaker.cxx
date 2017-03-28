@@ -490,7 +490,10 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
 void InterferometricMapMaker::fillDeltaTLookup(){
 
   dtCache.populateCache(cc, this);
+  dtCache.populateFineCache(cc, this);  
+  std::cout << "done populate fine cache" << std::endl;
 
+  
   minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
   minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 

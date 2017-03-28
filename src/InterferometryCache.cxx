@@ -1,5 +1,4 @@
 #include "InterferometryCache.h"
-#include "AnitaConventions.h"
 #include "CrossCorrelator.h"
 #include "InterferometricMapMaker.h"
 
@@ -66,6 +65,127 @@ void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapM
       }
     }
   }
+}
+
+
+
+
+
+
+void InterferometryCache::populateFineCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
+
+  std::cerr << "here" << std::endl;
+  
+  Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
+  Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
+
+  nFineBinsPhi = NUM_BINS_PHI_ZOOM_TOTAL;
+  nFineBinsTheta = NUM_BINS_THETA_ZOOM_TOTAL;
+  
+  zoomedPhiWaveLookup.resize(nFineBinsPhi);  
+
+  
+  zoomedThetaWaves.resize(nFineBinsTheta);
+  zoomedTanThetaWaves.resize(nFineBinsTheta);
+  zoomedCosThetaWaves.resize(nFineBinsTheta);
+
+  dtFactors.resize(nFineBinsTheta);
+  
+  for(unsigned thetaIndex=0; thetaIndex < zoomedThetaWaves.size(); thetaIndex++){
+    Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
+    Double_t thetaWave = -1*thetaWaveDeg*TMath::DegToRad();
+    zoomedThetaWaves[thetaIndex] = thetaWave;
+    zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
+    zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
+    dtFactors[thetaIndex] = zoomedCosThetaWaves[thetaIndex]/(SPEED_OF_LIGHT_NS*cc->correlationDeltaT);
+  }
+
+
+  std::cerr << "here" << std::endl;
+  
+  partBAsZoom.resize(AnitaPol::kNotAPol*numCombos*nFineBinsTheta);
+  for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
+    for(Int_t combo=0; combo < NUM_COMBOS; combo++){
+      Int_t ant1 = cc->comboToAnt1s.at(combo);
+      Int_t ant2 = cc->comboToAnt2s.at(combo);
+      for(Int_t thetaIndex=0; thetaIndex < nFineBinsTheta; thetaIndex++){
+	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(zArray[pol].at(ant2)-zArray[pol].at(ant1));
+	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(mm->zArray[pol].at(ant2)-mm->zArray[pol].at(ant1));		
+	partBAsZoom[partBAsIndex(pol, combo, thetaIndex)] = zoomedTanThetaWaves[thetaIndex]*(mm->zArray[pol].at(ant2)-mm->zArray[pol].at(ant1));
+	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(mm->zArray[pol].at(ant2)-mm->zArray[pol].at(ant1));
+      }
+    }
+  }
+
+  std::cerr << "here" << std::endl;  
+
+  zoomedCosPartLookup.resize(AnitaPol::kNotAPol*NUM_SEAVEYS*nFineBinsPhi);
+
+         offAxisDelays.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);
+  offAxisDelaysDivided.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);  
+           part21sZoom.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);  
+
+
+  for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
+    for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
+      for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
+	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+	Double_t phiWave = phiDeg*TMath::DegToRad();
+	// zoomedCosPartLookup[pol][ant][phiIndex] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
+	// std::cout << pol << "\t" << ant << "\t" << phiIndex << "\t" << zoomedCosPartIndex(pol, ant, phiIndex) << std::endl;
+	zoomedCosPartLookup.at(zoomedCosPartIndex(pol, ant, phiIndex)) = mm->rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*mm->phiArrayDeg[pol].at(ant));
+      }
+    }
+
+    for(Int_t combo=0; combo < NUM_COMBOS; combo++){
+      Int_t ant1 = cc->comboToAnt1s.at(combo);
+      Int_t ant2 = cc->comboToAnt2s.at(combo);
+
+      for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
+	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
+	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+	// zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
+	zoomedPhiWaveLookup.at(phiIndex) = phiDeg*TMath::DegToRad();	
+
+	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
+	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
+	Double_t offAxisDelay = mm->relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
+
+	// try{
+	offAxisDelays[part21sIndex(pol, combo, phiIndex)] = offAxisDelay;
+	// offAxisDelays.at(part21sIndex(pol, combo, phiIndex)) = offAxisDelay;	
+	// }
+	// catch(...){
+	//   std::cout << "offAxisDelays" << std::endl;
+	//   exit(0);
+	// }
+	// try{
+	offAxisDelaysDivided[part21sIndex(pol, combo, phiIndex)] = offAxisDelay/cc->correlationDeltaT;
+	// }
+	// catch(...){
+	//   std::cout << "offAxisDelaysDivided" << std::endl;
+	//   exit(0);
+	// }
+
+	// try{
+	part21sZoom[part21sIndex(pol, combo, phiIndex)] = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));
+	// part21sZoom.at(part21sIndex(pol, combo, phiIndex)) = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));	
+	// }
+	// catch(...){
+	//   std::cout << "part21sZoom" << std::endl;
+	//   exit(0);	  
+	// }
+
+	  
+	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
+	// offAxisDelaysDivided[pol][combo][phiIndex] = offAxisDelay/cc->correlationDeltaT;
+	// part21sZoom[pol][combo][phiIndex] = zoomedCosPartLookup[pol][ant2][phiIndex] - zoomedCosPartLookup[pol][ant1][phiIndex];
+
+      }
+    }
+  }
+
+  std::cout << "done" << std::endl;
 }
   
  
