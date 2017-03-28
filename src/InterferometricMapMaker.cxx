@@ -484,14 +484,6 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
 void InterferometricMapMaker::fillDeltaTLookup(){
 
   // here we go...
-    
-  // Double_t phi0 = getBin0PhiDeg();
-  // const Double_t phiBinSize = Double_t(PHI_RANGE)/NUM_BINS_PHI;
- // Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
- // for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI*NUM_PHI; phiIndex++){
- //   Double_t phiDeg = coarseMaps[0]->GetXaxis()->GetBinLowEdge(phiIndex+1);
-  
-  // Double_t phi0 = coarseMaps[0]->GetXaxis()->GetBinLowEdge(1);
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
   const int nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
   for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
@@ -504,13 +496,6 @@ void InterferometricMapMaker::fillDeltaTLookup(){
   const int nCoarseBinsTheta = coarseThetaBinEdges.size()-1;
   for(Int_t thetaIndex=0; thetaIndex < nCoarseBinsTheta; thetaIndex++){
     Double_t thetaWaveDeg = coarseThetaBinEdges.at(thetaIndex); 
-
-    // for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA; thetaIndex++){
-    //   Double_t thetaWaveDeg = coarseMaps[0]->GetYaxis()->GetBinLowEdge(thetaIndex+1); 
-    // Double_t thetaWaveDeg = (thetaIndex-NUM_BINS_THETA/2)*thetaBinSize;
-  
-    // Double_t thetaWaveDeg = MIN_THETA + thetaIndex*thetaBinSize;
-
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
   }
@@ -530,16 +515,17 @@ void InterferometricMapMaker::fillDeltaTLookup(){
 
 	  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 	    Double_t thetaWave = thetaWaves[thetaBin];
-	    Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
-	    Int_t offsetLow = floor(deltaT/cc->nominalSamplingDeltaT);
-	    offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
+	    // Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	    deltaTs[pol][combo][phiBin][thetaBin] = getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	    // Int_t offsetLow = floor(deltaT/cc->nominalSamplingDeltaT);
+	    // offsetLows[pol][combo][phiBin][thetaBin] = offsetLow;
 	    // offsetLows[pol][phiBin][combo][thetaBin] = offsetLow;
-	    Double_t dt1 = offsetLow*cc->nominalSamplingDeltaT;
-	    interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/cc->nominalSamplingDeltaT;
+	    // Double_t dt1 = offsetLow*cc->nominalSamplingDeltaT;
+	    // interpPreFactors[pol][combo][phiBin][thetaBin] = (deltaT - dt1)/cc->nominalSamplingDeltaT;	    
 	    // interpPreFactors[pol][phiBin][combo][thetaBin] = (deltaT - dt1)/nominalSamplingDeltaT;
 
 	    // Here we account for the fact that we are now time ordering the correlations
-	    offsetLows[pol][combo][phiBin][thetaBin]+=cc->numSamples/2;
+	    // offsetLows[pol][combo][phiBin][thetaBin]+=cc->numSamples/2;
 	    // offsetLows[pol][phiBin][combo][thetaBin]+=numSamples/2;
 	  }
   	}
@@ -793,15 +779,16 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol, Double_t& im
 	Double_t phiWave = phiWaveLookup[phiBin];
 	for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA; thetaBin++){
 
-	  Double_t thetaWave = thetaWaves[thetaBin];
+	  // Double_t thetaWave = thetaWaves[thetaBin];
 	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
 	  // Double_t deltaT = getDeltaTExpected();
 	  // Int_t offsetLow = offsetLows[pol][combo][phiBin][thetaBin];
 	  
-	  Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt1s[combo], cc->comboToAnt2s[combo], phiWave, thetaWave);
-	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt2s[combo], cc->comboToAnt1s[combo], phiWave, thetaWave);	  
+	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt1s[combo], cc->comboToAnt2s[combo], phiWave, thetaWave);
+	  // Double_t deltaT = getDeltaTExpected(pol, cc->comboToAnt2s[combo], cc->comboToAnt1s[combo], phiWave, thetaWave);
+	  
 
-	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaT);
+	  Double_t cInterp = cc->getCrossCorrelation(pol, combo, deltaTs[pol][combo][phiBin][thetaBin]);
  	  // Double_t c1 = cc->crossCorrelations[pol][combo][offsetLow];
 	  // Double_t c2 = cc->crossCorrelations[pol][combo][offsetLow+1];
 	  // Double_t cInterp = interpPreFactors[pol][combo][phiBin][thetaBin]*(c2 - c1) + c1;

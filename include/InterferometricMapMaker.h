@@ -175,8 +175,9 @@ public:
 
   UInt_t eventNumber[AnitaPol::kNotAPol];
 
-  Double_t interpPreFactors[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
-  Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  // Double_t interpPreFactors[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
+  Double_t deltaTs[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
+  // Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // std::vector<DeltaTCache> deltaTs[AnitaPol::kNotAPol];
 
   Double_t coarseMap[AnitaPol::kNotAPol][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
