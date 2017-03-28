@@ -1,9 +1,8 @@
-
-
 #ifndef INTERFEROMETRIC_MAP_MAKER_H
 #define INTERFEROMETRIC_MAP_MAKER_H
 
 #include "AnitaEventReconstructor.h"
+#include "InterferometricMap.h"
 #include "CrossCorrelator.h"
 
 #define DEGREES_IN_CIRCLE 360
@@ -17,14 +16,6 @@
 // #define NUM_BINS_PHI 15
 // #define THETA_RANGE 150
 // #define PHI_RANGE 22.5
-
-// #define NUM_BINS_THETA 60
-#define NUM_BINS_THETA 35
-#define NUM_BINS_PHI 9
-// #define THETA_RANGE 150
-#define MIN_THETA -55
-#define MAX_THETA 35
-#define PHI_RANGE 22.5
 
 
 // #define NUM_BINS_THETA_ZOOM 200
@@ -55,7 +46,16 @@
 
 
 
+class DeltaTCache {
 
+  Double_t* operator[](int phiBin){return &vals[NUM_BINS_THETA*phiBin];}
+  
+private:
+  // Double_t vals[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
+  Double_t vals[NUM_BINS_PHI*NUM_PHI*NUM_BINS_THETA];    
+  
+  
+};
 
 
 /** 
@@ -173,7 +173,7 @@ public:
 
   Double_t interpPreFactors[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
-
+  // std::vector<DeltaTCache> deltaTs[AnitaPol::kNotAPol];
 
   Double_t coarseMap[AnitaPol::kNotAPol][NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA]; //!< Internal storage for the coarsely binned map
   Double_t partBAsZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
@@ -191,7 +191,6 @@ public:
   Double_t fineMapPeakValues[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
   Double_t fineMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
   Double_t fineMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
-
 
   Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
   Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
@@ -225,6 +224,11 @@ public:
 private:
   void initializeVariables();
 
+  // The axes of the interferometric maps store the uneven bins in theta (degrees)
+  // these will replace the internal map storage...
+  // we will imply some pointer ownership scheme with these.
+  // I delete them if the event number changes and they've not been returned. You delete them otherwise...  
+  std::vector<InterferometricMap*> coarseMaps; // these guys do the whole 360 az, and defined elevation...
   
 };
 

@@ -1,4 +1,6 @@
 #include "InterferometricMapMaker.h"
+#include "InterferometricMap.h"
+
 
 
 InterferometricMapMaker::InterferometricMapMaker(){
@@ -19,7 +21,8 @@ void InterferometricMapMaker::process(const FilteredAnitaEvent * ev, UsefulAdu5P
 
 void InterferometricMapMaker::initializeInternals(){
 
-  cc = new CrossCorrelator();    
+  cc = new CrossCorrelator();
+
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
