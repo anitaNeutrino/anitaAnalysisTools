@@ -594,7 +594,7 @@ void InterferometricMapMaker::fillDeltaTLookup(){
       for(Int_t phiIndex=0; phiIndex < NUM_BINS_PHI_ZOOM_TOTAL; phiIndex++){
 	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
 	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
-	zoomedPhiWaveLookup[phiIndex] = phiIndex*ZOOM_BIN_SIZE_PHI;
+	zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
 
 	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
 	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
@@ -895,23 +895,41 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     }
   }
 
+
   const Int_t offset = cc->numSamplesUpsampled/2;
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
     if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
       continue;
     }
+    int ant1 = cc->comboToAnt1s[combo];
+    int ant2 = cc->comboToAnt2s[combo];    
     for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
       Int_t zoomThetaInd = thetaZoomBase + thetaBin;
+      // Double_t zoomThetaWave = zoomedThetaWaves[zoomThetaInd];
       Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
-      // Double_t dtFactor = zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
       Double_t dtFactor = dtFactors[zoomThetaInd];
+
       for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
 	Int_t zoomPhiInd = phiZoomBase + phiBin;
+	// Double_t zoomPhiWave = zoomedPhiWaveLookup[zoomPhiInd];
+	
 	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
 	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+
+	
+	offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
+	offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
+	
+
 	// hack for floor()
 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
+	// Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, zoomPhiWave, zoomThetaWave);
+
+	// Int_t offsetLow = floor(deltaT/cc->correlationDeltaT);
+	// offsetLow += offset;
+
+	// deltaT -= offsetLow*cc->correlationDeltaT;
 
 	Double_t deltaT = (offsetLowDouble - offsetLow);
 	offsetLow += offset;
@@ -919,10 +937,44 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 	Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 	Double_t cInterp = deltaT*(c2 - c1) + c1;
 
+	// std::cout << pol << "\t" << peakIndex << "\t"
+	// 	  << thetaBin << "\t" << phiBin << "\t"
+	// 	  << zoomThetaWave << "\t" << zoomPhiWave << "\t"
+	// 	  << deltaT << "\t" << c1 << std::endl;
+	// fineMap[pol][peakIndex][thetaBin][phiBin] += c1;
 	fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
       }
     }
   }
+  
+  // const Int_t offset = cc->numSamplesUpsampled/2;
+  // for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+  //   Int_t combo = combosToUse->at(comboInd);
+  //   if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
+  //     continue;
+  //   }
+  //   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+  //     Int_t zoomThetaInd = thetaZoomBase + thetaBin;
+  //     Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
+  //     // Double_t dtFactor = zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
+  //     Double_t dtFactor = dtFactors[zoomThetaInd];
+  //     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+  // 	Int_t zoomPhiInd = phiZoomBase + phiBin;
+  // 	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
+  // 	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+  // 	// hack for floor()
+  // 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
+
+  // 	Double_t deltaT = (offsetLowDouble - offsetLow);
+  // 	offsetLow += offset;
+  // 	Double_t c1 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow];
+  // 	Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
+  // 	Double_t cInterp = deltaT*(c2 - c1) + c1;
+
+  // 	fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
+  //     }
+  //   }
+  // }
 
   Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
   // absorb the removed inverse FFT normalization
@@ -936,6 +988,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
       fineMap[pol][peakIndex][thetaBin][phiBin] /= normFactor;
+      // std::cout << pol << "\t" << thetaBin << "\t" << phiBin << "\t" << fineMap[pol][peakIndex][thetaBin][phiBin]  << std::endl;
 
       if(fineMap[pol][peakIndex][thetaBin][phiBin] > imagePeak){	
 	imagePeak = fineMap[pol][peakIndex][thetaBin][phiBin];
