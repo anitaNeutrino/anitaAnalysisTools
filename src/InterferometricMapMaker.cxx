@@ -13,7 +13,7 @@ InterferometricMapMaker::~InterferometricMapMaker(){
 }
 
 void InterferometricMapMaker::process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary) const{
-  std::cout << "Blanks for now... " << ev << "\t" << pat << "\t" << summary << std::endl;
+  std::cout << "Blank for now... " << ev << "\t" << pat << "\t" << summary << std::endl;
 }
 
 
@@ -32,10 +32,8 @@ void InterferometricMapMaker::initializeInternals(){
     }
   }
 
-  aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg(); //phiArrayDeg[0].at(0);
-
-  coarseMaps[AnitaPol::kHorizontal] = new InterferometricMap("h0H", "h0H", getBin0PhiDeg());
-  coarseMaps[AnitaPol::kVertical] = new InterferometricMap("h0V", "h0V", getBin0PhiDeg());
+  coarseMaps[AnitaPol::kHorizontal] = new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
+  coarseMaps[AnitaPol::kVertical] = new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
   
   fillDeltaTLookup();
 
@@ -66,19 +64,6 @@ void InterferometricMapMaker::initializeInternals(){
 }
 
 
-
-
-Double_t InterferometricMapMaker::getBin0PhiDeg(){
-
-  Double_t phi0 = -aftForeOffset;
-  if(phi0 < -DEGREES_IN_CIRCLE/2){
-    phi0+=DEGREES_IN_CIRCLE;
-  }
-  else if(phi0 >= DEGREES_IN_CIRCLE/2){
-    phi0-=DEGREES_IN_CIRCLE;
-  }
-  return phi0 - PHI_RANGE/2;
-}
 
 
 
@@ -556,7 +541,7 @@ void InterferometricMapMaker::fillDeltaTLookup(){
   // minPhiDegZoom = -59.25;
   // minThetaDegZoom = -THETA_RANGE/2 - THETA_RANGE_ZOOM/2;
   minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
-  minPhiDegZoom = getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
+  minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
   for(Int_t thetaIndex=0; thetaIndex < NUM_BINS_THETA_ZOOM_TOTAL; thetaIndex++){
     Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
@@ -666,7 +651,7 @@ InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol, Do
 
   InterferometricMap* h = coarseMaps[pol];
   name = pol == AnitaPol::kHorizontal ? "h0H" : "h0V";
-  coarseMaps[pol] = new InterferometricMap(name, title, getBin0PhiDeg());
+  coarseMaps[pol] = new InterferometricMap(name, title, InterferometricMap::getBin0PhiDeg());
   // return hImage;
   return h;
 }
@@ -866,7 +851,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     return;
   }
 
-  Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, getBin0PhiDeg());
+  Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, InterferometricMap::getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);

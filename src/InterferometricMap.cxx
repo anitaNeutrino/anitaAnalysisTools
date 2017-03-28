@@ -7,6 +7,7 @@
 
 std::vector<Double_t> coarseBinEdgesTheta; // has size NUM_BINS_THETA+1
 std::vector<Double_t> fineBinEdgesTheta; // has size N+1
+Double_t bin0PhiDeg = -9999;
 
 // static member function
 const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesTheta(){
@@ -68,10 +69,24 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
 }
 
 
+Double_t InterferometricMap::getBin0PhiDeg(){
 
+  if(bin0PhiDeg == -9999){
 
-
-
+    AnitaGeomTool* geom = AnitaGeomTool::Instance();
+    Double_t aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg();
+    
+    Double_t phi0 = -aftForeOffset;
+    if(phi0 < -DEGREES_IN_CIRCLE/2){
+      phi0+=DEGREES_IN_CIRCLE;
+    }
+    else if(phi0 >= DEGREES_IN_CIRCLE/2){
+      phi0-=DEGREES_IN_CIRCLE;
+    }
+    bin0PhiDeg = phi0 - PHI_RANGE/2;
+  }
+  return bin0PhiDeg;
+}
 
 
 

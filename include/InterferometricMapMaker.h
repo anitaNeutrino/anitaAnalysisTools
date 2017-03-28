@@ -213,7 +213,6 @@ public:
   Int_t coherentDeltaPhi;
 
 
-  Double_t aftForeOffset; //!< From AnitaGeomTool, defines the location of the antennas relative to the axis of the heading.
   Double_t minThetaDegZoom; //!< Minimum possible zoomed theta (Degrees)
   Double_t minPhiDegZoom; //!< Minimum possible zoomed phi (Degrees)
   Double_t zoomPhiMin[AnitaPol::kNotAPol]; //!< For the current map
