@@ -20,7 +20,7 @@ InterferometryCache::InterferometryCache(CrossCorrelator* cc, InterferometricMap
 
 void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
 
-  numCombos = cc->numCombos;  
+  numCombos = cc->numCombos;
 
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
   nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
@@ -36,7 +36,7 @@ void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapM
     phiWaveLookup[phiIndex] = phiWave;
   }
 
-  std::vector<Double_t> thetaWaves(nCoarseBinsTheta);  
+  std::vector<Double_t> thetaWaves(nCoarseBinsTheta);
 
   for(Int_t thetaIndex=0; thetaIndex < nCoarseBinsTheta; thetaIndex++){
     Double_t thetaWaveDeg = coarseThetaBinEdges.at(thetaIndex); 
@@ -76,23 +76,42 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
 
   // std::cerr << "here" << std::endl;
   
-  Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
-  Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
+  // Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
+  // Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
-  nFineBinsPhi = NUM_BINS_PHI_ZOOM_TOTAL;
-  nFineBinsTheta = NUM_BINS_THETA_ZOOM_TOTAL;
   
-  zoomedPhiWaveLookup.resize(nFineBinsPhi);  
 
+  // Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
+  // Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
+
+  std::vector<double> fineBinsTheta = InterferometricMap::getFineBinEdgesTheta();
+  std::vector<double> fineBinsPhi = InterferometricMap::getFineBinEdgesPhi();  
+
+  Double_t minThetaDegZoom = fineBinsTheta.at(0);
+  Double_t minPhiDegZoom = fineBinsPhi.at(0);
+  
+  nFineBinsTheta = fineBinsTheta.size() - 1;
+  nFineBinsPhi = fineBinsPhi.size() - 1;
+  
+
+  // reserve cache and populate with 0s
+  zoomedPhiWaveLookup.resize(nFineBinsPhi);
+  for(unsigned phiIndex=0; phiIndex < zoomedPhiWaveLookup.size(); phiIndex++){
+    Double_t phiDeg = fineBinsPhi.at(phiIndex);
+    // Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+    // zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
+    zoomedPhiWaveLookup.at(phiIndex) = phiDeg*TMath::DegToRad();
+  }
   
   zoomedThetaWaves.resize(nFineBinsTheta);
   zoomedTanThetaWaves.resize(nFineBinsTheta);
   zoomedCosThetaWaves.resize(nFineBinsTheta);
-
   dtFactors.resize(nFineBinsTheta);
   
+
   for(unsigned thetaIndex=0; thetaIndex < zoomedThetaWaves.size(); thetaIndex++){
-    Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
+    // Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
+    Double_t thetaWaveDeg = fineBinsTheta.at(thetaIndex);
     Double_t thetaWave = -1*thetaWaveDeg*TMath::DegToRad();
     zoomedThetaWaves[thetaIndex] = thetaWave;
     zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
@@ -129,7 +148,8 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
   for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
       for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
-	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+	// Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+	Double_t phiDeg = fineBinsPhi.at(phiIndex);
 	Double_t phiWave = phiDeg*TMath::DegToRad();
 	// zoomedCosPartLookup[pol][ant][phiIndex] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
 	// std::cout << pol << "\t" << ant << "\t" << phiIndex << "\t" << zoomedCosPartIndex(pol, ant, phiIndex) << std::endl;
@@ -143,10 +163,7 @@ void InterferometryCache::populateFineCache(CrossCorrelator* cc, Interferometric
 
       for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
 	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
-	Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
-	// zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
-	zoomedPhiWaveLookup.at(phiIndex) = phiDeg*TMath::DegToRad();	
-
+	Double_t phiDeg = fineBinsPhi.at(phiIndex);
 	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
 	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
 	Double_t offAxisDelay = mm->relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
