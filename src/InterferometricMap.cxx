@@ -130,7 +130,7 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesPhi(){
 
     // funk up the theta bin spacing...  
     UInt_t nBinsPhi = NUM_BINS_PHI_ZOOM_TOTAL;
-    Double_t minPhi = getBin0PhiDeg();
+    Double_t minPhi = getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
     Double_t dPhi = double(DEGREES_IN_CIRCLE)/nBinsPhi;
     // std::vector<Double_t> binEdges(nBinsTheta+1);
     fineBinEdgesTheta.reserve(nBinsPhi+1);
