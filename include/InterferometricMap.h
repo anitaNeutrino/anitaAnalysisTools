@@ -74,9 +74,8 @@ class CrossCorrelator;
 class InterferometricMap : public TH2D {
 
 public:
-  InterferometricMap();
-  InterferometricMap(TString name, TString title, Int_t nBinsPhi, Double_t phiMin, Double_t phiMax, Int_t nBinsTheta, Double_t minTheta, Double_t maxTheta);
-  InterferometricMap(TString name, TString title); // constructor for coarse map, don't need extra info
+  InterferometricMap(TString name="hInterf", TString title="Default Constructor"); //!< Coarse map constructor (also default constructor for ROOT)
+  InterferometricMap(TString name, TString title, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
@@ -88,10 +87,10 @@ public:
   inline TAxis* GetPhiAxis(){return GetXaxis();}
   inline TAxis* GetThetaAxis(){return GetYaxis();}  
 
-  
   static const std::vector<Double_t>& getCoarseBinEdgesTheta();
   static const std::vector<Double_t>& getFineBinEdgesTheta();
   static const std::vector<Double_t>& getCoarseBinEdgesPhi();
+  static const std::vector<Double_t>& getFineBinEdgesPhi();  
   
   static Double_t getBin0PhiDeg();
   
@@ -99,6 +98,9 @@ protected:
   bool thetaAxisInSinTheta;
   void initializeInternals();
   bool isZoomMap;
+
+  // Get the appropriate bin edges for the zoom map
+  void getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex); 
 
   Double_t imagePeak;
   Double_t peakPhiDeg;
