@@ -14,12 +14,14 @@ class CrossCorrelator;
  */
 class InterferometryCache {
 
+  friend class InterferometricMap;
+
 public:
   InterferometryCache();
-  InterferometryCache(CrossCorrelator* cc, InterferometricMapMaker* mm);
-  void populateCache(CrossCorrelator* cc, InterferometricMapMaker* mm);
-  void populateFineCache(CrossCorrelator* cc, InterferometricMapMaker* mm);
+  InterferometryCache(CrossCorrelator* cc, const InterferometricMapMaker* mm);
 
+  void init(CrossCorrelator* cc, const InterferometricMapMaker* mm, bool forceCacheRecalculation = false);
+  
   // pretty please inline
   inline int coarseIndex(int pol, int combo, int phiBin, int thetaBin){  
     return ((pol*numCombos + combo)*nCoarseBinsPhi + phiBin)*nCoarseBinsTheta + thetaBin;
@@ -42,14 +44,13 @@ public:
     return (pol*numCombos + combo)*nFineBinsPhi + finePhiBin;
   }
 
-  inline double fineDt(int pol, int combo, int phiBin, int thetaBin){
-    return 0;
-  }
-  
-
   int kUseOffAxisDelay;
-private:
+private:  
 
+
+  void populateCache(CrossCorrelator* cc, const InterferometricMapMaker* mm);
+  void populateFineCache(CrossCorrelator* cc, const InterferometricMapMaker* mm);
+  bool initialized;
   
   int nCoarseBinsPhi;
   int nCoarseBinsTheta;  
@@ -58,12 +59,13 @@ private:
 
   int nFineBinsPhi;
   int nFineBinsTheta;
-public:  
+
+  
+  // these represent the quite complicated caching of finely mapped dts so they scale well as the number of possible fine bins increases
+  // I should give them accessor variables and make them private... but for now...
+
   std::vector<double> partBAsZoom; //[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
   std::vector<double> part21sZoom; //[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
-  // Double_t partBAsZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_THETA_ZOOM_TOTAL]; //!< Yet more geometric caching
-  // Double_t part21sZoom[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Yet more geometric caching
-  
   std::vector<double> zoomedThetaWaves; // NUM_BINS_PHI_ZOOM_TOTAL
   std::vector<double> zoomedTanThetaWaves; // NUM_BINS_THETA_ZOOM_TOTAL
   std::vector<double> zoomedCosThetaWaves; // NUM_BINS_THETA_ZOOM_TOTAL
@@ -71,19 +73,7 @@ public:
   std::vector<double> zoomedPhiWaveLookup; //[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
   std::vector<double> zoomedCosPartLookup; // [AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
   std::vector<double> offAxisDelays; //[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
-  std::vector<double> offAxisDelaysDivided; // [AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
-
-  
-  // Double_t zoomedThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached theta for zoomed image.
-  // Double_t zoomedTanThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached tan(theta) for zoomed image.
-  // Double_t zoomedCosThetaWaves[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta) for zoomed image.
-  // Double_t dtFactors[NUM_BINS_THETA_ZOOM_TOTAL]; //!< Cached cos(theta)/c/dt for zoomed image.
-  // Double_t zoomedPhiWaveLookup[NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached phi for zoomed image.
-  // Double_t zoomedCosPartLookup[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Cached part of the deltaT calculation.
-  // Double_t offAxisDelays[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays for fine binned images.
-  // Double_t offAxisDelaysDivided[AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner loop of an image making function.
-  
-  
+  std::vector<double> offAxisDelaysDivided; // [AnitaPol::kNotAPol][NUM_COMBOS][NUM_BINS_PHI_ZOOM_TOTAL]; //!< Off-axis delays divided such to remove an operation from the inner   
 };
 
 

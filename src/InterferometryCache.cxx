@@ -3,13 +3,15 @@
 #include "InterferometricMapMaker.h"
 
 InterferometryCache::InterferometryCache(){
+  initialized = false;
   numCombos = 0;
   nCoarseBinsPhi = 0;
   nCoarseBinsTheta = 0;
 }
 
 
-InterferometryCache::InterferometryCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
+InterferometryCache::InterferometryCache(CrossCorrelator* cc, const InterferometricMapMaker* mm){
+  initialized = false;
   numCombos = 0;
   nCoarseBinsPhi = 0;
   nCoarseBinsTheta = 0;
@@ -18,8 +20,16 @@ InterferometryCache::InterferometryCache(CrossCorrelator* cc, InterferometricMap
 }
 
 
+void InterferometryCache::init(CrossCorrelator* cc, const InterferometricMapMaker* mm, bool forceCacheRecalculation){
+  if(!initialized || forceCacheRecalculation){
+    populateCache(cc, mm);
+    populateFineCache(cc, mm);
+  }
+  initialized = true;
+}
 
-void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
+
+void InterferometryCache::populateCache(CrossCorrelator* cc, const InterferometricMapMaker* mm){
 
 
   kUseOffAxisDelay = mm->kUseOffAxisDelay;
@@ -76,7 +86,7 @@ void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapM
 
 
 
-void InterferometryCache::populateFineCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
+void InterferometryCache::populateFineCache(CrossCorrelator* cc, const InterferometricMapMaker* mm){
 
   // std::cerr << "here" << std::endl;
   

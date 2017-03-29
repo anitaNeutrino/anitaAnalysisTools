@@ -64,6 +64,8 @@
 
 
 #include "TH2D.h"
+#include "TGraph.h"
+#include <map>
 
 class InterferometryCache;
 class CrossCorrelator;
@@ -72,8 +74,8 @@ class CrossCorrelator;
 class InterferometricMap : public TH2D {
 
 public:
-  InterferometricMap(TString name="hInterf", TString title="Default Constructor"); //!< Coarse map constructor (also default constructor for ROOT)
-  InterferometricMap(TString name, TString title, Int_t phiSector, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
+  InterferometricMap(); //!< Coarse map constructor (also default constructor for ROOT)
+  InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
@@ -92,16 +94,34 @@ public:
   
   static Double_t getBin0PhiDeg();
   
+
+  TGraph& getPeakPointGraph(); // for plotting
+  TGraph& getEdgeBoxGraph(); // for plotting
+
+  bool isAZoomMap(){return isZoomMap;}
+  Int_t getPeakPhiSector(){return peakPhiSector;}
+
 protected:
+
+  TGraph& findOrMakeGraph(TString name);
+  
+  // name and title
+  AnitaPol::AnitaPol_t pol;
+  UInt_t eventNumber;    
+  void setNameAndTitle(); // once we have the eventNumber/polarization
+  void setDefaultName(); // before then...
+  
+  
   bool thetaAxisInSinTheta;
   void initializeInternals();
 
   // doing the zoomed in maps requires knowing a little more information
   // isZoomMap = false, and all other = -1 if doing a coarse map
   bool isZoomMap;
-  int zoomPhiSector;
+  int peakPhiSector;
   int minThetaBin;
   int minPhiBin;
+  int peakIndex;  // for name and title of zoomed map only
   
   // Get the appropriate bin edges for the zoom map
   void getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex); 
@@ -110,6 +130,7 @@ protected:
   Double_t peakPhiDeg;
   Double_t peakThetaDeg;
 
+  std::map<TString, TGraph> grs;
 
   ClassDef(InterferometricMap, 1)
 };

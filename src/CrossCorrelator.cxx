@@ -103,7 +103,7 @@ Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t co
 
 
 
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* fEv,
+void CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* fEv,
 						       AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
@@ -157,19 +157,20 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 
-void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv){
+void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
-    eventNumber[pol] = fEv->eventNumber;    
     correlateEvent(fEv, (AnitaPol::AnitaPol_t)pol);
   }
 }
 
 
-void CrossCorrelator::correlateEvent(FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
   // getFftsAndStartTimes(fEv, pol);
+  eventNumber[pol] = fEv->eventNumber;
+  
   getNormalizedInterpolatedTGraphs(fEv, pol);
   doFFTs(pol);  
   

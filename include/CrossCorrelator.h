@@ -71,8 +71,8 @@ public:
   CrossCorrelator();
   ~CrossCorrelator();
 
-  void correlateEvent(FilteredAnitaEvent* realEvent);
-  void correlateEvent(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  void correlateEvent(const FilteredAnitaEvent* realEvent);
+  void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
   void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
 
@@ -85,12 +85,12 @@ public:
   Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
   void initializeVariables();
-  void getNormalizedInterpolatedTGraphs(FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+  void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
   void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
   void doFFTs(AnitaPol::AnitaPol_t pol);
   void doCrossCorrelations(AnitaPol::AnitaPol_t pol);
 
-
+  
   Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
   void fillCombosToUse();
   void do5PhiSectorCombinatorics();

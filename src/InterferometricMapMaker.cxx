@@ -8,21 +8,207 @@ InterferometricMapMaker::InterferometricMapMaker(){
 }
 
 InterferometricMapMaker::~InterferometricMapMaker(){
-  if(cc){
+
+  if(spawnedCrossCorrelator && cc){
     delete cc;
   }
 }
 
-void InterferometricMapMaker::process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary) const{
-  std::cout << "Blank for now... " << ev << "\t" << pat << "\t" << summary << std::endl;
+
+
+// mostly for MagicDisplay integration
+void InterferometricMapMaker::drawSummary(TPad* sumPad, AnitaPol::AnitaPol_t pol){  
+
+  const int numColsForNow = 5;
+  EColor peakColors[numColsForNow] = {kMagenta, EColor(kViolet+10), kCyan, kGreen, kOrange};
+  
+  // just draws the maps in memory...
+  Double_t xlow, ylow, xup, yup;
+
+  if(sumPad==NULL){
+    UInt_t eventNumber = cc->eventNumber[pol];
+    TString canName = TString::Format("can%u", eventNumber);
+    TString polSuffix = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
+    canName += polSuffix;
+    TString canTitle = TString::Format("Event %u - ", eventNumber) + polSuffix;
+    sumPad = new TCanvas(canName);
+  }
+  sumPad->Clear();
+  
+  int padInd = 0;
+  TString subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
+  xlow = 0, ylow = 0.75, xup = 1, yup = 1, sumPad->cd();
+  TPad* coarsePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  padInd++;
+  coarsePad->Draw();
+  coarsePad->cd();
+
+  InterferometricMap* hCoarse = coarseMaps[pol];
+  if(hCoarse){
+    hCoarse->Draw("colz");
+    hCoarse->SetTitleSize(0.01);
+    hCoarse->GetXaxis()->SetTitleSize(0.01);
+    hCoarse->GetYaxis()->SetTitleSize(0.01);        
+  }
+
+  // std::vector<TGraph> grPeaks;
+  
+  subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
+  xlow = 0, ylow = 0.5, xup = 1, yup = 0.75, sumPad->cd();
+  TPad* finePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  padInd++;
+  finePad->Draw();
+
+  const int nFine = fineMaps[pol].size();
+  for(int peakInd = 0; peakInd < (int)fineMaps[pol].size(); peakInd++){
+    xlow = double(peakInd)/nFine, ylow = 0, xup = double(peakInd+1)/nFine, yup = 1, finePad->cd();
+    subPadName = TString::Format("%s_%d", gPad->GetName(), peakInd);    
+    TPad* fineSubPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup); //, peakColors[peakInd]);
+    fineSubPad->Draw();
+    fineSubPad->cd();
+
+    std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
+    if(it!=fineMaps[pol].end()){
+      InterferometricMap* h = it->second;
+      if(h){
+	h->SetTitleSize(0.01);
+	h->GetXaxis()->SetTitleSize(0.01);
+	h->GetYaxis()->SetTitleSize(0.01);        
+	
+	h->Draw("colz");
+	TGraph& gr = h->getPeakPointGraph();
+	gr.Draw("psame");
+
+	TGraph& gr2 = h->getEdgeBoxGraph();
+	gr2.Draw("lsame");
+	
+	gr.SetMarkerColor(peakColors[peakInd]);
+	gr.SetMarkerStyle(8); // dot
+	gr2.SetLineColor(peakColors[peakInd]);
+	
+	coarsePad->cd();
+	gr.Draw("psame");
+	gr2.Draw("lsame");	
+      }
+    }
+  }
+}
+
+
+void InterferometricMapMaker::process(const FilteredAnitaEvent * usefulEvent, UsefulAdu5Pat* usefulPat ,AnitaEventSummary * eventSummary) const{
+
+
+  if(!cc){
+    cc = new CrossCorrelator();
+    spawnedCrossCorrelator = true;
+    std::cout << "here" << "\t" << spawnedCrossCorrelator << std::endl;
+    dtCache.init(cc, this);    
+  }
+
+  
+  const int thisNumPeaks = 3;
+
+  eventSummary->eventNumber = usefulEvent->eventNumber;
+
+  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+
+    
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+
+    cc->correlateEvent(usefulEvent, pol);
+
+    // do the coarsely grained reconstruction
+    reconstruct(pol);
+
+    std::vector<Double_t> coarseMapPeakValues;
+    std::vector<Double_t> coarseMapPeakPhiDegs;
+    std::vector<Double_t> coarseMapPeakThetaDegs;    
+    coarseMaps[pol]->findPeakValues(thisNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
+
+    eventSummary->nPeaks[pol] = thisNumPeaks;
+    
+    
+    for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
+      reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
+
+      std::vector<Double_t> fineMapPeakValues;
+      std::vector<Double_t> fineMapPeakPhiDegs;
+      std::vector<Double_t> fineMapPeakThetaDegs;
+
+      std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
+      InterferometricMap* h = NULL;
+      if(it!=fineMaps[pol].end()){
+	h = it->second;
+      }
+      else{
+	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
+      }
+      h->findPeakValues(1, fineMapPeakValues, fineMapPeakPhiDegs, fineMapPeakThetaDegs);
+
+      eventSummary->peak[pol][peakInd].phi = fineMapPeakPhiDegs.at(0);
+      eventSummary->peak[pol][peakInd].theta = fineMapPeakThetaDegs.at(0);
+
+      // fill in difference between rough and fine
+      eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
+      eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseMapPeakThetaDegs.at(peakInd);
+
+      
+      // Double_t minY = 0;
+      // TGraph* grZ0 = makeUpsampledCoherentlySummedWaveform(pol,
+      // 							   eventSummary->peak[pol][peakInd].phi,
+      // 							   eventSummary->peak[pol][peakInd].theta,
+      // 							   coherentDeltaPhi,
+      // 							   eventSummary->peak[pol][peakInd].snr);
+
+      // TGraph* grZ0Hilbert = FFTtools::getHilbertEnvelope(grZ0);
+
+      // RootTools::getMaxMin(grZ0Hilbert, eventSummary->coherent[pol][peakInd].peakHilbert, minY);
+
+      // delete grZ0;
+      // delete grZ0Hilbert;
+
+      // Double_t phiWave = eventSummary->peak[pol][peakInd].phi*TMath::DegToRad();
+      // Double_t thetaWave = -1*eventSummary->peak[pol][peakInd].theta*TMath::DegToRad();
+      // Double_t sourceLat, sourceLon, sourceAlt;
+      // int success = usefulPat.getSourceLonAndLatAtAlt(phiWave, thetaWave,
+      // 						      sourceLon, sourceLat, sourceAlt);
+
+      if(usefulPat != NULL){
+      
+	Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
+	Double_t thetaWave = -1*TMath::DegToRad()*eventSummary->peak[pol][peakInd].theta;
+
+	// *   Returns 0 if never hits the ground, even with maximum adjustment
+	// *   Returns 1 if hits the ground with no adjustment
+	// *   Returns 2 if it hits the ground with adjustment      
+	int success = usefulPat->traceBackToContinent(phiWave, thetaWave, 
+						      &eventSummary->peak[pol][peakInd].latitude,
+						      &eventSummary->peak[pol][peakInd].longitude,
+						      &eventSummary->peak[pol][peakInd].altitude,
+						      &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
+
+	if(success==0){
+	  eventSummary->peak[pol][peakInd].latitude = -9999;
+	  eventSummary->peak[pol][peakInd].longitude = -9999;
+	  eventSummary->peak[pol][peakInd].altitude = -9999;
+	  eventSummary->peak[pol][peakInd].distanceToSource = -9999;
+	}
+	else{
+	  eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat->getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
+														      eventSummary->peak[pol][peakInd].longitude,
+														      eventSummary->peak[pol][peakInd].altitude);	
+	}
+      }
+    }
+  }
 }
 
 
 
 void InterferometricMapMaker::initializeInternals(){
 
-  cc = new CrossCorrelator();
-
+  cc = NULL;
+  spawnedCrossCorrelator = false;
   
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
@@ -37,214 +223,18 @@ void InterferometricMapMaker::initializeInternals(){
   coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
 
   kUseOffAxisDelay = 1;  
-  fillDeltaTLookup();
-
-  for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
-    eventNumber[pol] = 0;    
-    for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){
-      // coarseMapPeakValues[pol][peakInd] = -9999;
-      // coarseMapPeakPhiDegs[pol][peakInd] = -9999;
-      // coarseMapPeakThetaDegs[pol][peakInd] = -9999;
-
-      fineMapPeakValues[pol][peakInd] = -9999;
-      fineMapPeakPhiDegs[pol][peakInd] = -9999;
-      fineMapPeakThetaDegs[pol][peakInd] = -9999;
-    }
-  }
-
-  mapModeNames[kGlobal] = "Global";
-  mapModeNames[kTriggered] = "Triggered";
-  zoomModeNames[kZoomedOut] = "";
-  zoomModeNames[kZoomedIn] = "Zoom";
-
-
   maxDPhiDeg = 0;
   coherentDeltaPhi = 0;
-
-
 }
 
 
 
 
 
-AnitaPol::AnitaPol_t InterferometricMapMaker::reconstructEventPeakPol(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
-
-  for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
-
-    cc->correlateEvent(usefulEvent, pol);    
-
-    reconstruct(pol);
-    coarseMaps[pol]->findPeakValues(numCoarsePeaks, coarseMapPeakValues[pol],
-				    coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
-
-  }
-  AnitaPol::AnitaPol_t peakPol = AnitaPol::kVertical;
-  if(coarseMapPeakValues[AnitaPol::kHorizontal][0] > coarseMapPeakValues[AnitaPol::kVertical][0]){
-    peakPol = AnitaPol::kHorizontal;
-  }
-
-
-  if(numFinePeaks > 0 && numFinePeaks <= numCoarsePeaks){
-    for(Int_t peakInd=numFinePeaks-1; peakInd >= 0; peakInd--){
-
-      reconstructZoom(peakPol, fineMapPeakValues[peakPol][peakInd],
-		      fineMapPeakPhiDegs[peakPol][peakInd], fineMapPeakThetaDegs[peakPol][peakInd],
-		      coarseMapPeakPhiDegs[peakPol][peakInd], coarseMapPeakThetaDegs[peakPol][peakInd],
-		      peakInd);
-    }
-  }
-  return peakPol;
-}
 
 
 
-
-void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, UsefulAdu5Pat& usefulPat, AnitaEventSummary* eventSummary){
-
-  // reconstructEvent(usefulEvent, MAX_NUM_PEAKS, MAX_NUM_PEAKS);
-  // const int thisNumPeaks = MAX_NUM_PEAKS;
-  const int thisNumPeaks = 1;
-  reconstructEvent(usefulEvent, thisNumPeaks, thisNumPeaks);
-
-  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-
-    for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
-
-      Double_t coarsePeak, coarsePhi, coarseTheta;
-      getCoarsePeakInfo(pol, peakInd, coarsePeak, coarsePhi, coarseTheta);
-
-      getFinePeakInfo(pol, peakInd,
-		      eventSummary->peak[pol][peakInd].value,
-		      eventSummary->peak[pol][peakInd].phi,
-		      eventSummary->peak[pol][peakInd].theta);
-
-      // std::cout << eventSummary->eventNumber << "\t" << eventSummary->peak[pol][peakInd].value << "\t" << eventSummary->peak[pol][peakInd].phi << "\t" << eventSummary->peak[pol][peakInd].theta << std::endl;
-
-      eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarsePhi;
-      eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseTheta;
-
-
-      Double_t minY = 0;
-      TGraph* grZ0 = makeUpsampledCoherentlySummedWaveform(pol,
-							   eventSummary->peak[pol][peakInd].phi,
-							   eventSummary->peak[pol][peakInd].theta,
-							   coherentDeltaPhi,
-							   eventSummary->peak[pol][peakInd].snr);
-
-      TGraph* grZ0Hilbert = FFTtools::getHilbertEnvelope(grZ0);
-
-      RootTools::getMaxMin(grZ0Hilbert, eventSummary->coherent[pol][peakInd].peakHilbert, minY);
-
-      delete grZ0;
-      delete grZ0Hilbert;
-
-      Double_t phiWave = eventSummary->peak[pol][peakInd].phi*TMath::DegToRad();
-      Double_t thetaWave = -1*eventSummary->peak[pol][peakInd].theta*TMath::DegToRad();
-      Double_t sourceLat, sourceLon, sourceAlt;
-      int success = usefulPat.getSourceLonAndLatAtAlt(phiWave, thetaWave,
-						      sourceLon, sourceLat, sourceAlt);
-
-      if(success==1){
-	eventSummary->peak[pol][peakInd].latitude = sourceLat;
-	eventSummary->peak[pol][peakInd].longitude = sourceLon;
-	eventSummary->peak[pol][peakInd].altitude = sourceAlt;
-	eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat.getTriggerTimeNsFromSource(sourceLat, sourceLon, sourceAlt);
-      }
-      else{
-	eventSummary->peak[pol][peakInd].latitude = -9999;
-	eventSummary->peak[pol][peakInd].longitude = -9999;
-	eventSummary->peak[pol][peakInd].altitude = -9999;
-	eventSummary->peak[pol][peakInd].distanceToSource = -9999;
-      }
-    }
-  }
-}
-
-
-void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, Int_t numFinePeaks ,Int_t numCoarsePeaks){
-  
-  for(Int_t polInd = AnitaPol::kHorizontal; polInd < AnitaPol::kNotAPol; polInd++){
-    eventNumber[polInd] = usefulEvent->eventNumber;
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t)polInd;
-
-    cc->correlateEvent(usefulEvent, pol);
-
-    reconstruct(pol);
-    coarseMaps[pol]->findPeakValues(numCoarsePeaks, coarseMapPeakValues[pol],
-				    coarseMapPeakPhiDegs[pol], coarseMapPeakThetaDegs[pol]);
-
-    if(numFinePeaks > 0 && numFinePeaks <= numCoarsePeaks){
-      for(Int_t peakInd=numFinePeaks-1; peakInd >= 0; peakInd--){
-
-	// std::cerr << peakInd << "\t" << numFinePeaks << "\t" << numCoarsePeaks << "\t"
-	// 	  << coarseMapPeakPhiDegs[pol][peakInd] << "\t" << coarseMapPeakThetaDegs[pol][peakInd]
-	// 	  << std::endl;
-
-
-	// reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
-	// 		fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
-	// 		0, 0,
-	// 		peakInd);
-
-	reconstructZoom(pol, fineMapPeakValues[pol][peakInd],
-			fineMapPeakPhiDegs[pol][peakInd], fineMapPeakThetaDegs[pol][peakInd],
-			coarseMapPeakPhiDegs[pol][peakInd], coarseMapPeakThetaDegs[pol][peakInd],
-			peakInd);
-
-	// std::cerr << fineMapPeakValues[pol][peakInd] << "\t" << fineMapPeakPhiDegs[pol][peakInd] << "\t"
-	// 	  << fineMapPeakThetaDegs[pol][peakInd] << std::endl << std::endl;
-      }
-    }
-  }
-}
-
-
-
-void InterferometricMapMaker::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
-						Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
-
-  if(peakIndex < coarseMapPeakValues[pol].size()){
-    value = coarseMapPeakValues[pol][peakIndex];
-    phiDeg = coarseMapPeakPhiDegs[pol][peakIndex];
-    thetaDeg = coarseMapPeakThetaDegs[pol][peakIndex];
-  }
-  else{
-    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << "."
- 	      << "Requested peak info with index too large. peakIndex = "
-	      << peakIndex << ", only have = " << coarseMapPeakValues[pol].size() << "." << std::endl;
-    value = -999;
-    phiDeg = -999;
-    thetaDeg = -999;
-  }
-}
-
-
-
-void InterferometricMapMaker::getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
-					      Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
-
-  if(peakIndex < MAX_NUM_PEAKS){
-    value = fineMapPeakValues[pol][peakIndex];
-    phiDeg = fineMapPeakPhiDegs[pol][peakIndex];
-    thetaDeg = fineMapPeakThetaDegs[pol][peakIndex];
-  }
-  else{
-    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << "."
- 	      << "Requested peak info with index too large. peakIndex = "
-	      << peakIndex << ", MAX_NUM_PEAKS = " << MAX_NUM_PEAKS << "." << std::endl;
-    value = -999;
-    phiDeg = -999;
-    thetaDeg = -999;
-  }
-}
-
-
-
-
-Double_t InterferometricMapMaker::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) {
+Double_t InterferometricMapMaker::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) const {
 
 
   // These are the numbers from Linda's fits...
@@ -272,7 +262,7 @@ Double_t InterferometricMapMaker::singleAntennaOffAxisDelay(Double_t deltaPhiDeg
 				      2.77815e-08,  0.00000e+00, -8.29351e-12,  0.00000e+00,
 				      1.15064e-15,  0.00000e+00, -7.71170e-20,  0.00000e+00,
 				      1.99661e-24};
-
+  
   // Sum up the powers in off boresight angle.
   Double_t offBoresightDelay = 0;
   for(int power=0; power < numPowers; power++){
@@ -283,7 +273,7 @@ Double_t InterferometricMapMaker::singleAntennaOffAxisDelay(Double_t deltaPhiDeg
 }
 
 Double_t InterferometricMapMaker::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
-					       Double_t phiDeg) {
+					       Double_t phiDeg) const {
 
   Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant1), phiDeg);
   Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiDeg);
@@ -306,7 +296,7 @@ Double_t InterferometricMapMaker::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol,
 }
 
 
-Double_t InterferometricMapMaker::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave){
+Double_t InterferometricMapMaker::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave) const{
 
   // Double_t tanThetaW = tan(thetaWave);
   Double_t tanThetaW = tan(-1*thetaWave);
@@ -337,7 +327,11 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
     }
   }
 
-  fillDeltaTLookup();
+  if(!cc){
+    cc = new CrossCorrelator();
+    spawnedCrossCorrelator = true;
+  }
+  dtCache.init(cc, this, true);
   geom->usePhotogrammetryNumbers(0);
 
 }
@@ -348,57 +342,33 @@ void InterferometricMapMaker::insertPhotogrammetryGeometry(){
 
 
 
-void InterferometricMapMaker::fillDeltaTLookup(){
-
-  dtCache.populateCache(cc, this);
-  dtCache.populateFineCache(cc, this);  
-  std::cout << "done populate fine cache" << std::endl;
-
-  
-  minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
-  minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
-
-}
-
-
-
-
 InterferometricMap* InterferometricMapMaker::getMap(AnitaPol::AnitaPol_t pol){
-
-  return coarseMaps[pol];
+  InterferometricMap* h = coarseMaps[pol];
+  coarseMaps[pol] = NULL;
+  return h;
 }
 
 
 
 
 
-TH2D* InterferometricMapMaker::getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakInd){
+InterferometricMap* InterferometricMapMaker::getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd){
 
-  TString name = "hZoom";
-  name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
-  name += TString::Format("%u", eventNumber[pol]);
+  InterferometricMap* h = NULL;
 
-  TString title = TString::Format("Event %u ", eventNumber[pol]);
-  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
-  title += " Zoomed In";
-  title += " Map";
-
-  // Here I'm hacking my socks off to make the map elevation = -1*theta,
-  // where theta is the internal class representation of the vertical angle
-  TH2D* hImage = new TH2D(name, title,
-			  NUM_BINS_PHI_ZOOM, zoomPhiMin[pol], zoomPhiMin[pol] + PHI_RANGE_ZOOM,
-			  NUM_BINS_THETA_ZOOM, zoomThetaMin[pol], zoomThetaMin[pol] + THETA_RANGE_ZOOM);
-
-  hImage->GetXaxis()->SetTitle("Azimuth (Degrees)");
-  hImage->GetYaxis()->SetTitle("Elevation (Degrees)");
-
-  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-      hImage->SetBinContent(phiBin+1, thetaBin+1, fineMap[pol][peakInd][thetaBin][phiBin]);
-    }
+  std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find((int)peakInd);
+  if(it!=fineMaps[pol].end()){
+    // could still be null though!
+    h = it->second;
+    it->second = NULL;
   }
 
-  return hImage;
+  if(h==NULL){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find fineMap with pol " << pol 
+	      << " for peakInd = " << peakInd << " about to return NULL." << std::endl;
+  }
+
+  return h;
 }
 
 
@@ -407,55 +377,18 @@ TH2D* InterferometricMapMaker::getZoomMap(AnitaPol::AnitaPol_t pol, Int_t peakIn
 
 
 
-TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol,
-				       Double_t& imagePeak, Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
 
-  reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  zoomCenterPhiDeg, zoomCenterThetaDeg);
-  return getZoomMap(pol);
+void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol) const{
 
-}
-
-TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, Double_t& imagePeak, Double_t& peakPhiDeg,
-				       Double_t& peakThetaDeg, UShort_t l3TrigPattern,
-				       Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg){
-  reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  zoomCenterPhiDeg, zoomCenterThetaDeg);
-  return getZoomMap(pol);
-
-}
-
-
-TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_t l3TrigPattern,
-				       Double_t zoomCenterPhiDeg,Double_t zoomCenterThetaDeg){
-
-  Double_t imagePeak, peakPhiDeg, peakThetaDeg;
-  // return makeZoomedImage(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-  // 			 l3TrigPattern, zoomCenterPhiDeg, zoomCenterThetaDeg);
-  reconstructZoom(pol, imagePeak, peakPhiDeg, peakThetaDeg,
-		  zoomCenterPhiDeg, zoomCenterThetaDeg);
-  return getZoomMap(pol);
-}
-
-void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol){
-
-  makerOwnsCoarseMap[pol] = false;
-  if(!makerOwnsCoarseMap[pol] || coarseMaps[pol]==NULL)
+  if(coarseMaps[pol]==NULL)
   {
+    // std::cerr << "new coarse map " << pol << std::endl;
     // I don't own the map or there isn't one, so I'll make a new one
-    TString name = "h";
-    name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
-    name += TString::Format("%u", eventNumber[pol]);
-
-    TString title = TString::Format("Event %u ", eventNumber[pol]);
-    title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
-    title += " Map";
-
-    coarseMaps[pol] = new InterferometricMap(name, title);
+    coarseMaps[pol] = new InterferometricMap();
   }  
-  else{// if(makerOwnsCoarseMap[pol]){  {
-    // I own the map so I can overwrite it  
+  else{// I own the map so I can overwrite it to avoid allocating memory
+    // std::cerr << "old coarse map " << pol << std::endl;
+
     for(int phiBin=1; phiBin<=coarseMaps[pol]->GetNbinsPhi(); phiBin++){
       for(int thetaBin=1; thetaBin<=coarseMaps[pol]->GetNbinsTheta(); thetaBin++){
 	coarseMaps[pol]->SetBinContent(phiBin, thetaBin, 0);	
@@ -467,11 +400,7 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol){
 }
 
 
-void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t& imagePeak,
-					      Double_t& peakPhiDeg, Double_t& peakThetaDeg,
-					      Double_t zoomCenterPhiDeg,
-					      Double_t zoomCenterThetaDeg,
-					      Int_t peakIndex){
+void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg) const{
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
   if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
@@ -481,170 +410,40 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 	      << ". zoomCenterPhiDeg = " << zoomCenterPhiDeg
 	      << " and zoomCenterThetaDeg = " << zoomCenterThetaDeg
 	      << " ...these values look suspicious so I'm skipping this reconstruction."
-	      << " eventNumber = " << eventNumber[pol] << std::endl;
-    imagePeak = -9999;
-    peakPhiDeg = -9999;
-    peakThetaDeg = -9999;
+	      << " eventNumber = " << cc->eventNumber[pol] << std::endl;
     return;
   }
-
-  std::cout << "in map maker kUseOffAxisDelay " << kUseOffAxisDelay << std::endl << std::endl;  
 
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, InterferometricMap::getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);
-  cc->doUpsampledCrossCorrelations(pol, phiSector);
 
-  UInt_t peakInd = fineMaps[pol].size();
-  TString name = "hFine";
-  name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
-  name += TString::Format("%u_%u", peakInd, eventNumber[pol]);
+  InterferometricMap* h = new InterferometricMap(peakIndex, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
+  h->Fill(pol, cc, &dtCache);  
 
-  TString title = TString::Format("Event %u ", eventNumber[pol]);
-  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
-  title += TString::Format(" Zoom Map - Peak %u", peakInd);
-
-  InterferometricMap* h = new InterferometricMap(name, title, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
-  fineMaps[pol].push_back(h);
-  h->Fill(pol, cc, &dtCache);
-
-
+  // std::cout << h->GetName() << std::endl;
   
-  zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
-  zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
-
-  zoomPhiMin[pol] = zoomCenterPhiDeg - PHI_RANGE_ZOOM/2;
-  zoomThetaMin[pol] = zoomCenterThetaDeg - THETA_RANGE_ZOOM/2;
-
-  std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[phiSector];
-
-  Int_t phiZoomBase = TMath::Nint((zoomPhiMin[pol] - minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
-  Int_t thetaZoomBase = TMath::Nint((zoomThetaMin[pol] - minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
-
-  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-      
-      fineMap[pol][peakIndex][thetaBin][phiBin]=0;
-    }
+  std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakIndex);
+  if(it!=fineMaps[pol].end() && it->second != NULL){
+    // std::cerr << "trying to delete... " << it->first << "\t" << it->second << std::endl;
+    delete it->second;
+    fineMaps[pol].erase (it);
+    // delete it->second;
+    // it->second = NULL;
   }
 
-  std::cout << "outside map I got " << thetaZoomBase << " and " << phiZoomBase << std::endl;  
-  const Int_t offset = cc->numSamplesUpsampled/2;
-  for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-    Int_t combo = combosToUse->at(comboInd);
-    if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
-      continue;
-    }
-    int ant1 = cc->comboToAnt1s[combo];
-    int ant2 = cc->comboToAnt2s[combo];
-    for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-      Int_t zoomThetaInd = thetaZoomBase + thetaBin;
-      // Double_t zoomThetaWave = zoomedThetaWaves[zoomThetaInd];
-      // Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
-      Double_t partBA = dtCache.partBAsZoom[dtCache.partBAsIndex(pol, combo, zoomThetaInd)]; //)[pol][combo][zoomThetaInd];      
-      // Double_t dtFactor = dtFactors[zoomThetaInd];
-      Double_t dtFactor = dtCache.dtFactors[zoomThetaInd];      
-
-      for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-	Int_t zoomPhiInd = phiZoomBase + phiBin;
-	// Double_t zoomPhiWave = zoomedPhiWaveLookup[zoomPhiInd];
-
-	int p21 = dtCache.part21sIndex(pol, combo, zoomPhiInd);
-	Double_t offsetLowDouble = dtFactor*(partBA - dtCache.part21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
-
-	// Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
-	// Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);	
-	// offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
-	offsetLowDouble += kUseOffAxisDelay > 0 ? dtCache.offAxisDelaysDivided[p21] : 0;
-	
-	
-	offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
-	offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
-	
-
-	// hack for floor()
-	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
-	// Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, zoomPhiWave, zoomThetaWave);
-
-	// Int_t offsetLow = floor(deltaT/cc->correlationDeltaT);
-	// offsetLow += offset;
-
-	// deltaT -= offsetLow*cc->correlationDeltaT;
-
-	Double_t deltaT = (offsetLowDouble - offsetLow);
-	offsetLow += offset;
-	Double_t c1 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow];
-	Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
-	Double_t cInterp = deltaT*(c2 - c1) + c1;
-
-	  if(thetaBin==0 && phiBin == 0 && comboInd==0){
-	    std::cout << "outside I got " << "\t" << p21 << "\t" << offsetLowDouble << "\t" << cInterp << std::endl;
-	  }
-	
-	// std::cout << pol << "\t" << peakIndex << "\t"
-	// 	  << thetaBin << "\t" << phiBin << "\t"
-	// 	  << zoomThetaWave << "\t" << zoomPhiWave << "\t"
-	// 	  << deltaT << "\t" << c1 << std::endl;
-	// fineMap[pol][peakIndex][thetaBin][phiBin] += c1;
-	fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
-      }
-    }
-  }
-  
-  // const Int_t offset = cc->numSamplesUpsampled/2;
-  // for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-  //   Int_t combo = combosToUse->at(comboInd);
-  //   if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
-  //     continue;
-  //   }
-  //   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-  //     Int_t zoomThetaInd = thetaZoomBase + thetaBin;
-  //     Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
-  //     // Double_t dtFactor = zoomedCosThetaWaves[zoomThetaInd]/SPEED_OF_LIGHT_NS;
-  //     Double_t dtFactor = dtFactors[zoomThetaInd];
-  //     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-  // 	Int_t zoomPhiInd = phiZoomBase + phiBin;
-  // 	Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
-  // 	offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
-  // 	// hack for floor()
-  // 	Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
-
-  // 	Double_t deltaT = (offsetLowDouble - offsetLow);
-  // 	offsetLow += offset;
-  // 	Double_t c1 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow];
-  // 	Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
-  // 	Double_t cInterp = deltaT*(c2 - c1) + c1;
-
-  // 	fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
-  //     }
-  //   }
+  // for(it=fineMaps[pol].begin(); it!=fineMaps[pol].end(); ++it){
+  //   std::cout << "the fineMaps[ " << pol << "] contains " << it->first << "\t" << it->second << std::endl;
   // }
 
-  Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
-  // absorb the removed inverse FFT normalization
-  normFactor*=(cc->numSamples*cc->numSamples);
-
-  // set peak finding variables
-  imagePeak = -DBL_MAX;
-  Int_t peakPhiBin = -1;
-  Int_t peakThetaBin = -1;
+  fineMaps[pol][peakIndex] = h;
   
-  for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
-    for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
-      fineMap[pol][peakIndex][thetaBin][phiBin] /= normFactor;
-      // std::cout << pol << "\t" << thetaBin << "\t" << phiBin << "\t" << fineMap[pol][peakIndex][thetaBin][phiBin]  << std::endl;
+  // for(it=fineMaps[pol].begin(); it!=fineMaps[pol].end(); ++it){
+  //   std::cout << "the fineMaps[ " << pol << "] contains " << it->first << "\t" << it->second << std::endl;
+  // }
 
-      if(fineMap[pol][peakIndex][thetaBin][phiBin] > imagePeak){	
-	imagePeak = fineMap[pol][peakIndex][thetaBin][phiBin];
-	peakPhiBin = phiBin;
-	peakThetaBin = thetaBin;
-      }
-    }
-  }
 
-  peakPhiDeg = zoomPhiMin[pol] + peakPhiBin*ZOOM_BIN_SIZE_PHI;
-  peakThetaDeg = zoomThetaMin[pol] + peakThetaBin*ZOOM_BIN_SIZE_THETA;
 }
 
 
@@ -702,6 +501,49 @@ Int_t InterferometricMapMaker::directlyInsertGeometry(TString pathToLindasFile, 
   }
 
   return 0;
+}
+
+
+AnalysisWaveform* coherentlySum(InterferometricMap* h, Double_t thetaDeg, Double_t phiDeg){
+  return NULL;
+}
+
+
+
+AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts){
+  
+  if(waves.size() < 2){    
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum.. about to return NULL" << std::endl;
+    return NULL;
+  }  
+  else if(waves.size() != dts.size()){    
+    const char* action = dts.size() < waves.size() ? "padding" : "trimming";
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")"
+	      << action << " dts..." << std::endl;
+    while(waves.size() != dts.size()){
+      if(dts.size() < waves.size()){
+	dts.push_back(0);
+      }
+      else{
+	dts.pop_back();	
+      }
+    }
+  }
+
+  AnalysisWaveform* coherentWave = new AnalysisWaveform((*waves[0]));
+  TGraphAligned* grCoherent = coherentWave->updateUneven();
+  for(UInt_t i=1; 1 < waves.size(); i++){
+    for(int samp=0; samp < grCoherent->GetN(); samp++){
+      double t = grCoherent->GetX()[samp];
+      grCoherent->GetY()[samp] += waves[i]->evalEven(t);
+    };    
+  }
+
+  for(int samp=0; samp < grCoherent->GetN(); samp++){
+    grCoherent->GetY()[samp]/=waves.size();
+  };    
+
+  return coherentWave;
 }
 
 
