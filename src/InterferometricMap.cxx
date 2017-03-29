@@ -521,35 +521,35 @@ void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdge
   // get last below
   lowIndex = -1;
   for(unsigned i=0; i < binEdges.size(); i++){
-    if(fabs(binEdges.at(i) - lowVal) < minDiff){
-      minDiff = fabs(binEdges.at(i) - lowVal);
-      lowIndex = i;
-    }
-    
-    // if(binEdges.at(i) < lowVal){
+    // if(fabs(binEdges.at(i) - lowVal) < minDiff){
+    //   minDiff = fabs(binEdges.at(i) - lowVal);
     //   lowIndex = i;
     // }
-    // else{
-    //   break;
-    // }
+    
+    if(binEdges.at(i) < lowVal){
+      lowIndex = i;
+    }
+    else{
+      break;
+    }
   }
 
-  if(binEdges.at(0) == fineBinEdgesPhi.at(0)){
-    highIndex = lowIndex + NUM_BINS_PHI_ZOOM;
-  }
-  else{
-    highIndex = lowIndex + NUM_BINS_THETA_ZOOM;
-  }
-  // highIndex = binEdges.size() - 1;
-  // // get last phi above
-  // for(int i=binEdges.size()-1; i >= 0; i--){
-  //   if(binEdges.at(i) > highVal){
-  //     highIndex = i;
-  //   }
-  //   else{
-  //     break;
-  //   }
+  // if(binEdges.at(0) == fineBinEdgesPhi.at(0)){
+  //   highIndex = lowIndex + NUM_BINS_PHI_ZOOM;
   // }
+  // else{
+  //   highIndex = lowIndex + NUM_BINS_THETA_ZOOM;
+  // }
+  highIndex = binEdges.size() - 1;
+  // get last phi above
+  for(int i=binEdges.size()-1; i >= 0; i--){
+    if(binEdges.at(i) > highVal){
+      highIndex = i;
+    }
+    else{
+      break;
+    }
+  }
 
   // lowIndex = TMath::Nint((lowVal - binEdges.at(0))/ZOOM_BIN_SIZE_PHI);
   // highIndex = lowVal + NUM_BINS_PHI_ZOOM + 1;
