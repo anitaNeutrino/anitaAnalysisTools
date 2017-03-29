@@ -60,8 +60,9 @@ public:
   void reconstruct(AnitaPol::AnitaPol_t pol) const;
   void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg) const;
 
-  AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts);
-
+  AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) const;
+  AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h) const;
+    
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
 
@@ -70,26 +71,26 @@ public:
   std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
 
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
-  Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
-  Int_t coherentDeltaPhi;
+  Int_t coherentDeltaPhi; //!< +- Number of neighbouring phi-sectors in the coherently summed wave
 
-  
-  mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
-  mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
   
 private:
   void initializeVariables();
 
+  // deletes maps left in memory next time process() is called
+  // if getMap() or getZoomMap() is called, sets internal pointer to NULL
+  // and it is the user's responsbiliy to delete
+  mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
+  mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
+
+  // lazily generates CrossCorrelator when process() is called
+  // (plan to add attachment function for external cross correlator)
+  // if spawns one, sets the bool to true and deletes the cross correlator in destructor
   mutable CrossCorrelator* cc;  
   mutable bool spawnedCrossCorrelator;
   
-  // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay
+  // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
   mutable InterferometryCache dtCache;
-  // The axes of the interferometric maps store the uneven bins in theta (degrees)
-  // these will replace the internal map storage...
-  // we will imply some pointer ownership scheme with these.
-  // I delete them if the event number changes and they've not been returned. You delete them otherwise...  
-
   
 };
 

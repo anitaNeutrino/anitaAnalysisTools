@@ -223,8 +223,7 @@ void InterferometricMapMaker::initializeInternals(){
   coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
 
   kUseOffAxisDelay = 1;  
-  maxDPhiDeg = 0;
-  coherentDeltaPhi = 0;
+  coherentDeltaPhi = 1; // +/- this many phi-sectors when coherently summing waves
 }
 
 
@@ -504,13 +503,71 @@ Int_t InterferometricMapMaker::directlyInsertGeometry(TString pathToLindasFile, 
 }
 
 
-AnalysisWaveform* coherentlySum(InterferometricMap* h, Double_t thetaDeg, Double_t phiDeg){
-  return NULL;
+AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h) const{
+
+  Int_t peakPhiSector = h->getPeakPhiSector();
+  AnitaPol::AnitaPol_t pol = h->getPol();
+
+  Int_t biggest = -1;
+  Double_t largestPeakToPeak = 0;
+  std::vector<Int_t> ants;
+  for(int deltaPhiSect=-coherentDeltaPhi; deltaPhiSect <= coherentDeltaPhi; deltaPhiSect++){
+
+    Int_t phiSector = peakPhiSector + deltaPhiSect;
+    phiSector = phiSector < 0        ? phiSector + NUM_PHI : phiSector;
+    phiSector = phiSector >= NUM_PHI ? phiSector - NUM_PHI : phiSector;
+    
+    for(int ring = 0; ring < AnitaRing::kNotARing; ring++){
+      int ant = AnitaGeomTool::getAntFromPhiRing(phiSector, AnitaRing::AnitaRing_t(ring));
+      ants.push_back(ant);
+      
+      const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+      const TGraphAligned* gr = wf->even();
+
+      Double_t vMax, vMin, tMax, tMin;
+      RootTools::getLocalMaxToMin((TGraph *)gr, vMax, vMin, tMax, tMin);
+
+      if(vMax - vMin > largestPeakToPeak){
+	largestPeakToPeak = vMax - vMin;
+	biggest = ant;
+      }
+    }
+  }
+
+  // now we've found the channel with the biggest peak-to-peak
+  // coherently sum the waves with this channel first
+  std::vector<const AnalysisWaveform*> waves;
+  waves.push_back(fEv->getFilteredGraph(biggest, pol));
+  for(unsigned i=0; i < ants.size(); i++){
+    if(ants[i] != biggest){
+      waves.push_back(fEv->getFilteredGraph(ants[i], pol));
+      std::cout << waves.size() << "\t" << ants[i] << std::endl;
+    }
+  }
+
+  Double_t ip, phiDeg, thetaDeg;
+  h->getPeakInfo(ip, phiDeg, thetaDeg);
+  Double_t phiWave = phiDeg*TMath::DegToRad();
+  Double_t thetaWave = thetaDeg*TMath::DegToRad();  
+    
+  std::vector<Double_t> dts(1, 0); // 0 offset for biggest antenna
+
+  for(unsigned i=0; i < ants.size(); i++){
+    if(ants[i]!=biggest){
+    
+      Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);
+      dts.push_back(dt);
+      std::cout << dts.size() << "\t" << ants[i] << std::endl;      
+    }    
+  }
+					   
+  
+  return coherentlySum(waves, dts);
 }
 
 
 
-AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts){
+AnalysisWaveform* InterferometricMapMaker::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) const{
   
   if(waves.size() < 2){    
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum.. about to return NULL" << std::endl;

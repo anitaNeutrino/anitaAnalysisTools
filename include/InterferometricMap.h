@@ -79,27 +79,21 @@ public:
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
-  void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs);
+  void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const;
+  void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = imagePeak, phiDeg = peakPhiDeg, thetaDeg = peakThetaDeg;}
 
   
-  inline Int_t GetNbinsPhi(){return GetNbinsX();}
-  inline Int_t GetNbinsTheta(){return GetNbinsY();}  
-  inline TAxis* GetPhiAxis(){return GetXaxis();}
-  inline TAxis* GetThetaAxis(){return GetYaxis();}  
-
-  static const std::vector<Double_t>& getCoarseBinEdgesTheta();
-  static const std::vector<Double_t>& getFineBinEdgesTheta();
-  static const std::vector<Double_t>& getCoarseBinEdgesPhi();
-  static const std::vector<Double_t>& getFineBinEdgesPhi();  
-  
-  static Double_t getBin0PhiDeg();
-  
+  inline Int_t GetNbinsPhi() const {return GetNbinsX();}
+  inline Int_t GetNbinsTheta() const {return GetNbinsY();}  
+  inline const TAxis* GetPhiAxis() const {return GetXaxis();}
+  inline const TAxis* GetThetaAxis() const {return GetYaxis();}  
 
   TGraph& getPeakPointGraph(); // for plotting
   TGraph& getEdgeBoxGraph(); // for plotting
 
-  bool isAZoomMap(){return isZoomMap;}
-  Int_t getPeakPhiSector(){return peakPhiSector;}
+  bool isAZoomMap() const {return isZoomMap;}
+  Int_t getPeakPhiSector() const {return peakPhiSector;}
+  AnitaPol::AnitaPol_t getPol() const {return pol;}  
 
 protected:
 
@@ -132,7 +126,18 @@ protected:
 
   std::map<TString, TGraph> grs;
 
-  ClassDef(InterferometricMap, 1)
+  ClassDef(InterferometricMap, 1);
+
+  // static members, may end up elsewhere at some point
+public:
+  static const std::vector<Double_t>& getCoarseBinEdgesTheta();
+  static const std::vector<Double_t>& getFineBinEdgesTheta();
+  static const std::vector<Double_t>& getCoarseBinEdgesPhi();
+  static const std::vector<Double_t>& getFineBinEdgesPhi();  
+  
+  static Double_t getBin0PhiDeg();
+  
+     
 };
 
 

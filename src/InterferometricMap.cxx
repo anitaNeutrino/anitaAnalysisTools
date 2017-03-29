@@ -414,7 +414,7 @@ void InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrelator* cc, 
 
 
 
-void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs){
+void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const{
 
   
   // In this function I want to find numPeak peaks and set an exclusion zone around each peak
@@ -628,8 +628,8 @@ TGraph& InterferometricMap::getPeakPointGraph(){
 TGraph& InterferometricMap::getEdgeBoxGraph(){
 
   TGraph& gr = findOrMakeGraph("grEdgeBox");
-  TAxis* phiAxis = GetPhiAxis();
-  TAxis* thetaAxis = GetThetaAxis();  
+  const TAxis* phiAxis = GetPhiAxis();
+  const TAxis* thetaAxis = GetThetaAxis();  
   // left->right across bottom edge
   for(int phiBin=1; phiBin <= GetNbinsPhi()+1; phiBin++){
     gr.SetPoint(gr.GetN(), phiAxis->GetBinLowEdge(phiBin), thetaAxis->GetBinLowEdge(1));
