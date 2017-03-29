@@ -131,7 +131,9 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesPhi(){
     // funk up the theta bin spacing...  
     UInt_t nBinsPhi = NUM_BINS_PHI_ZOOM_TOTAL;
     Double_t minPhi = getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
-    Double_t dPhi = double(DEGREES_IN_CIRCLE)/nBinsPhi;
+    // need some extra degrees here to account for the fact that you might get a coarse peak
+    // on the edge of a map, therefore the fine peak might extend off the left/right edge 
+    Double_t dPhi = double(DEGREES_IN_CIRCLE + PHI_RANGE_ZOOM)/nBinsPhi;
     // std::vector<Double_t> binEdges(nBinsTheta+1);
     fineBinEdgesTheta.reserve(nBinsPhi+1);
     for(unsigned bp = 0; bp <= nBinsPhi; bp++){
@@ -172,26 +174,30 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesPhi(){
 
 
 
-InterferometricMap::InterferometricMap(TString name, TString title, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
+InterferometricMap::InterferometricMap(TString name, TString title, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
   : TH2D(name, title, 1, 0, 1, 1, 0, 1) // minimal allocation as we will have to reallocate
 {
   isZoomMap = true;
-
+  zoomPhiSector = phiSector;
   Double_t minPhiDesired = zoomCentrePhi - phiRange/2;
   Double_t maxPhiDesired = zoomCentrePhi + phiRange/2;
   const std::vector<double> fineBinsPhi = InterferometricMap::getFineBinEdgesPhi();
-  int minPhiBin, maxPhiBin;
+  // int minPhiBin, maxPhiBin;
+  minPhiBin = -1;
+  int maxPhiBin = -1;  
   getIndicesOfEdgeBins(fineBinsPhi, minPhiDesired, maxPhiDesired, minPhiBin, maxPhiBin);
 
 
   Double_t minThetaDesired = zoomCentreTheta - thetaRange/2;
   Double_t maxThetaDesired = zoomCentreTheta + thetaRange/2;
   const std::vector<double> fineBinsTheta = InterferometricMap::getFineBinEdgesTheta();
-  int minThetaBin, maxThetaBin;
+  // int minThetaBin, maxThetaBin;
+  minThetaBin = -1;
+  int maxThetaBin = -1;
   getIndicesOfEdgeBins(fineBinsTheta, minThetaDesired, maxThetaDesired, minThetaBin, maxThetaBin);
   
   SetBins(maxPhiBin - minPhiBin, &fineBinsPhi[minPhiBin], maxThetaBin - minThetaBin, &fineBinsTheta[minThetaBin]); // changes also errors array (if any)  
-  
+  Reset();
   initializeInternals();
 }
 
@@ -203,6 +209,9 @@ InterferometricMap::InterferometricMap(TString name, TString title)
 	 getCoarseBinEdgesTheta().size()-1, &getCoarseBinEdgesTheta()[0])
 {
   isZoomMap = false;
+  zoomPhiSector = -1;
+  minPhiBin = -1;
+  minThetaBin = -1;
   initializeInternals();
 }
 
@@ -210,7 +219,11 @@ InterferometricMap::InterferometricMap(TString name, TString title)
 
 void InterferometricMap::Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache){
 
-
+  // for(int bx=1; bx <= GetNbinsX(); bx++){
+  // for(int bx=1; bx <= GetNbinsX(); bx++){
+    
+  // }
+  
   if(!isZoomMap){
     std::vector<Int_t>* combosToUse = NULL;
     Int_t binsPerPhiSector = GetNbinsPhi()/NUM_PHI;
@@ -255,6 +268,105 @@ void InterferometricMap::Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, Int
       }
     }
   }
+
+  else{    
+    std::cout << "inside map I got " << minThetaBin << " and " << minPhiBin << std::endl;
+    
+    cc->doUpsampledCrossCorrelations(pol, zoomPhiSector);
+    
+    std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[zoomPhiSector];
+
+    const Int_t offset = cc->numSamplesUpsampled/2;
+    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
+      Int_t combo = combosToUse->at(comboInd);
+      if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
+	continue;
+      }
+      int ant1 = cc->comboToAnt1s[combo];
+      int ant2 = cc->comboToAnt2s[combo];
+      // for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
+      for(Int_t thetaBin = 0; thetaBin < GetNbinsTheta(); thetaBin++){	
+	Int_t zoomThetaInd = minThetaBin + thetaBin;
+	// Double_t zoomThetaWave = zoomedThetaWaves[zoomThetaInd];
+	// Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
+	Double_t partBA = dtCache->partBAsZoom[dtCache->partBAsIndex(pol, combo, zoomThetaInd)]; //)[pol][combo][zoomThetaInd];      
+	// Double_t dtFactor = dtFactors[zoomThetaInd];
+	Double_t dtFactor = dtCache->dtFactors[zoomThetaInd];
+
+	// for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+	for(Int_t phiBin = 0; phiBin < GetNbinsPhi(); phiBin++){
+	  Int_t zoomPhiInd = minPhiBin + phiBin;
+	  // Double_t zoomPhiWave = zoomedPhiWaveLookup[zoomPhiInd];
+
+	  int p21 = dtCache->part21sIndex(pol, combo, zoomPhiInd);
+	  Double_t offsetLowDouble = dtFactor*(partBA - dtCache->part21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
+
+	  // Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
+	  // Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);	
+	  // offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
+	  // offsetLowDouble += dtCache->kUseOffAxisDelay > 0 ? dtCache->offAxisDelaysDivided[p21] : 0;
+	  offsetLowDouble += dtCache->kUseOffAxisDelay > 0 ? dtCache->offAxisDelaysDivided[p21] : 0;	  
+	
+	  offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
+	  offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
+	
+
+	  // hack for floor()
+	  Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
+	  // Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, zoomPhiWave, zoomThetaWave);
+
+	  // Int_t offsetLow = floor(deltaT/cc->correlationDeltaT);
+	  // offsetLow += offset;
+
+	  // deltaT -= offsetLow*cc->correlationDeltaT;
+
+	  Double_t deltaT = (offsetLowDouble - offsetLow);
+	  offsetLow += offset;
+	  Double_t c1 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow];
+	  Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
+	  Double_t cInterp = deltaT*(c2 - c1) + c1;
+
+	  
+	  if(thetaBin==0 && phiBin == 0 && comboInd==0){
+	    std::cout << "inside I got " << "\t" << p21 << "\t" << offsetLowDouble << "\t" << cInterp << std::endl;	    
+	  }
+
+	  // std::cout << pol << "\t" << peakIndex << "\t"
+	  // 	  << thetaBin << "\t" << phiBin << "\t"
+	  // 	  << zoomThetaWave << "\t" << zoomPhiWave << "\t"
+	  // 	  << deltaT << "\t" << c1 << std::endl;
+	  // fineMap[pol][peakIndex][thetaBin][phiBin] += c1;
+	  Int_t bin = (thetaBin+1)*(GetNbinsPhi()+2) + phiBin+1;
+	  AddBinContent(bin, cInterp);
+	  fEntries++;
+	  // fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
+	}
+      }
+    }
+
+    Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+    // absorb the removed inverse FFT normalization
+    normFactor*=(cc->numSamples*cc->numSamples);
+
+    // set peak finding variables
+    imagePeak = -DBL_MAX;
+  
+    for(Int_t thetaBin = 0; thetaBin < GetNbinsTheta(); thetaBin++){
+      for(Int_t phiBin = 0; phiBin < GetNbinsPhi(); phiBin++){
+	Double_t val = GetBinContent(phiBin+1, thetaBin+1);
+	val /= normFactor;
+	SetBinContent(phiBin+1, thetaBin+1, val);
+	if(val > imagePeak){	
+	  imagePeak = val;
+	  peakPhiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
+	  peakThetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);	  
+	}
+      }
+    }
+
+    
+  }
+  
 }
 
 
@@ -403,25 +515,69 @@ void InterferometricMap::initializeInternals(){
 
 void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex){
 
+
+  double minDiff = 1e9;
+  
   // get last below
   lowIndex = -1;
   for(unsigned i=0; i < binEdges.size(); i++){
-    if(binEdges.at(i) < lowVal){
+    if(fabs(binEdges.at(i) - lowVal) < minDiff){
+      minDiff = fabs(binEdges.at(i) - lowVal);
       lowIndex = i;
     }
-    else{
-      break;
-    }
+    
+    // if(binEdges.at(i) < lowVal){
+    //   lowIndex = i;
+    // }
+    // else{
+    //   break;
+    // }
   }
 
-  highIndex = binEdges.size() - 1;
-  // get last phi above
-  for(int i=binEdges.size()-1; i >= 0; i--){
-    if(binEdges.at(i) > highVal){
-      highIndex = i;
-    }
-    else{
-      break;
-    }
+  if(binEdges.at(0) == fineBinEdgesPhi.at(0)){
+    highIndex = lowIndex + NUM_BINS_PHI_ZOOM;
   }
+  else{
+    highIndex = lowIndex + NUM_BINS_THETA_ZOOM;
+  }
+  // highIndex = binEdges.size() - 1;
+  // // get last phi above
+  // for(int i=binEdges.size()-1; i >= 0; i--){
+  //   if(binEdges.at(i) > highVal){
+  //     highIndex = i;
+  //   }
+  //   else{
+  //     break;
+  //   }
+  // }
+
+  // lowIndex = TMath::Nint((lowVal - binEdges.at(0))/ZOOM_BIN_SIZE_PHI);
+  // highIndex = lowVal + NUM_BINS_PHI_ZOOM + 1;
+  
+  // Int_t phiZoomBase = TMath::Nint((zoomPhiMin[pol] - minPhiDegZoom)/ZOOM_BIN_SIZE_PHI);
+  // Int_t thetaZoomBase = TMath::Nint((zoomThetaMin[pol] - minThetaDegZoom)/ZOOM_BIN_SIZE_THETA);
+  
+
+  // get last below
+  // lowIndex = -1;
+  // for(unsigned i=0; i < binEdges.size(); i++){
+  //   if(binEdges.at(i) < lowVal){
+  //     lowIndex = i;
+  //   }
+  //   else{
+  //     break;
+  //   }
+  // }
+
+  // highIndex = binEdges.size() - 1;
+  // // get last phi above
+  // for(int i=binEdges.size()-1; i >= 0; i--){
+  //   if(binEdges.at(i) > highVal){
+  //     highIndex = i;
+  //   }
+  //   else{
+  //     break;
+  //   }
+  // }
+  
 }

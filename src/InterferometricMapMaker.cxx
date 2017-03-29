@@ -35,7 +35,8 @@ void InterferometricMapMaker::initializeInternals(){
 
   coarseMaps[AnitaPol::kHorizontal] = NULL;//new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
   coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
-  
+
+  kUseOffAxisDelay = 1;  
   fillDeltaTLookup();
 
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
@@ -58,7 +59,6 @@ void InterferometricMapMaker::initializeInternals(){
 
 
   maxDPhiDeg = 0;
-  kUseOffAxisDelay = 1;
   coherentDeltaPhi = 0;
 
 
@@ -488,6 +488,8 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     return;
   }
 
+  std::cout << "in map maker kUseOffAxisDelay " << kUseOffAxisDelay << std::endl << std::endl;  
+
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, InterferometricMap::getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 
@@ -503,7 +505,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
   title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
   title += TString::Format(" Zoom Map - Peak %u", peakInd);
 
-  InterferometricMap* h = new InterferometricMap(name, title, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
+  InterferometricMap* h = new InterferometricMap(name, title, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
   fineMaps[pol].push_back(h);
   h->Fill(pol, cc, &dtCache);
 
@@ -527,6 +529,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     }
   }
 
+  std::cout << "outside map I got " << thetaZoomBase << " and " << phiZoomBase << std::endl;  
   const Int_t offset = cc->numSamplesUpsampled/2;
   for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
     Int_t combo = combosToUse->at(comboInd);
@@ -555,6 +558,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 	// offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
 	offsetLowDouble += kUseOffAxisDelay > 0 ? dtCache.offAxisDelaysDivided[p21] : 0;
 	
+	
 	offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
 	offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
 	
@@ -574,6 +578,10 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 	Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 	Double_t cInterp = deltaT*(c2 - c1) + c1;
 
+	  if(thetaBin==0 && phiBin == 0 && comboInd==0){
+	    std::cout << "outside I got " << "\t" << p21 << "\t" << offsetLowDouble << "\t" << cInterp << std::endl;
+	  }
+	
 	// std::cout << pol << "\t" << peakIndex << "\t"
 	// 	  << thetaBin << "\t" << phiBin << "\t"
 	// 	  << zoomThetaWave << "\t" << zoomPhiWave << "\t"
@@ -694,20 +702,6 @@ Int_t InterferometricMapMaker::directlyInsertGeometry(TString pathToLindasFile, 
   }
 
   return 0;
-}
-
-Int_t InterferometricMapMaker::getPhiSectorOfAntennaClosestToPhiDeg(AnitaPol::AnitaPol_t pol, Double_t phiDeg){
-  Int_t phiSectorOfPeak = -1;
-  Double_t bestDeltaPhiOfPeakToAnt = DEGREES_IN_CIRCLE;
-  for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    Double_t phiOfAnt = phiArrayDeg[pol].at(ant);
-    Double_t deltaPhiOfPeakToAnt = TMath::Abs(RootTools::getDeltaAngleDeg(phiOfAnt, phiDeg));
-    if(deltaPhiOfPeakToAnt < bestDeltaPhiOfPeakToAnt){
-      bestDeltaPhiOfPeakToAnt = deltaPhiOfPeakToAnt;
-      phiSectorOfPeak = (ant % NUM_PHI);
-    }
-  }
-  return phiSectorOfPeak;
 }
 
 

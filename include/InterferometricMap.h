@@ -73,7 +73,7 @@ class InterferometricMap : public TH2D {
 
 public:
   InterferometricMap(TString name="hInterf", TString title="Default Constructor"); //!< Coarse map constructor (also default constructor for ROOT)
-  InterferometricMap(TString name, TString title, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
+  InterferometricMap(TString name, TString title, Int_t phiSector, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
@@ -95,14 +95,21 @@ public:
 protected:
   bool thetaAxisInSinTheta;
   void initializeInternals();
-  bool isZoomMap;
 
+  // doing the zoomed in maps requires knowing a little more information
+  // isZoomMap = false, and all other = -1 if doing a coarse map
+  bool isZoomMap;
+  int zoomPhiSector;
+  int minThetaBin;
+  int minPhiBin;
+  
   // Get the appropriate bin edges for the zoom map
   void getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex); 
 
   Double_t imagePeak;
   Double_t peakPhiDeg;
-  Double_t peakThetaDeg;  
+  Double_t peakThetaDeg;
+
 
   ClassDef(InterferometricMap, 1)
 };

@@ -14,14 +14,18 @@ InterferometryCache::InterferometryCache(CrossCorrelator* cc, InterferometricMap
   nCoarseBinsPhi = 0;
   nCoarseBinsTheta = 0;
   populateCache(cc, mm);
+  populateFineCache(cc, mm);  
 }
 
 
 
 void InterferometryCache::populateCache(CrossCorrelator* cc, InterferometricMapMaker* mm){
 
-  numCombos = cc->numCombos;
 
+  kUseOffAxisDelay = mm->kUseOffAxisDelay;
+  std::cout << "in cache kUseOffAxisDelay " << kUseOffAxisDelay << std::endl;
+  numCombos = cc->numCombos;
+  
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
   nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
 

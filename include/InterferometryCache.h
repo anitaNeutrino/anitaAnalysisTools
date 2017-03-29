@@ -46,10 +46,11 @@ public:
     return 0;
   }
   
-  
+
+  int kUseOffAxisDelay;
 private:
 
-
+  
   int nCoarseBinsPhi;
   int nCoarseBinsTheta;  
   int numCombos;
