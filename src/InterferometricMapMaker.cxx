@@ -41,9 +41,9 @@ void InterferometricMapMaker::initializeInternals(){
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     eventNumber[pol] = 0;    
     for(Int_t peakInd=0; peakInd < MAX_NUM_PEAKS; peakInd++){
-      coarseMapPeakValues[pol][peakInd] = -9999;
-      coarseMapPeakPhiDegs[pol][peakInd] = -9999;
-      coarseMapPeakThetaDegs[pol][peakInd] = -9999;
+      // coarseMapPeakValues[pol][peakInd] = -9999;
+      // coarseMapPeakPhiDegs[pol][peakInd] = -9999;
+      // coarseMapPeakThetaDegs[pol][peakInd] = -9999;
 
       fineMapPeakValues[pol][peakInd] = -9999;
       fineMapPeakPhiDegs[pol][peakInd] = -9999;
@@ -206,7 +206,7 @@ void InterferometricMapMaker::reconstructEvent(FilteredAnitaEvent* usefulEvent, 
 void InterferometricMapMaker::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex,
 						Double_t& value, Double_t& phiDeg, Double_t& thetaDeg){
 
-  if(peakIndex < MAX_NUM_PEAKS){
+  if(peakIndex < coarseMapPeakValues[pol].size()){
     value = coarseMapPeakValues[pol][peakIndex];
     phiDeg = coarseMapPeakPhiDegs[pol][peakIndex];
     thetaDeg = coarseMapPeakThetaDegs[pol][peakIndex];
@@ -214,7 +214,7 @@ void InterferometricMapMaker::getCoarsePeakInfo(AnitaPol::AnitaPol_t pol, Int_t 
   else{
     std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__ << "."
  	      << "Requested peak info with index too large. peakIndex = "
-	      << peakIndex << ", MAX_NUM_PEAKS = " << MAX_NUM_PEAKS << "." << std::endl;
+	      << peakIndex << ", only have = " << coarseMapPeakValues[pol].size() << "." << std::endl;
     value = -999;
     phiDeg = -999;
     thetaDeg = -999;
@@ -488,7 +488,6 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
     return;
   }
 
-  
   Double_t deltaPhiDegPhi0 = RootTools::getDeltaAngleDeg(zoomCenterPhiDeg, InterferometricMap::getBin0PhiDeg());
   deltaPhiDegPhi0 = deltaPhiDegPhi0 < 0 ? deltaPhiDegPhi0 + DEGREES_IN_CIRCLE : deltaPhiDegPhi0;
 

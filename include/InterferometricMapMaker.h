@@ -6,43 +6,6 @@
 #include "InterferometryCache.h"
 #include "CrossCorrelator.h"
 
-#define DEGREES_IN_CIRCLE 360
-
-#define MAX_NUM_PEAKS 5
-#define PEAK_PHI_DEG_RANGE 10
-#define PEAK_THETA_DEG_RANGE 10
-
-// Image definitions
-// #define NUM_BINS_THETA 100
-// #define NUM_BINS_PHI 15
-// #define THETA_RANGE 150
-// #define PHI_RANGE 22.5
-
-
-// #define NUM_BINS_THETA_ZOOM 200
-// #define NUM_BINS_PHI_ZOOM 200
-// #define ZOOM_BINS_PER_DEGREE_PHI 20
-// #define ZOOM_BINS_PER_DEGREE_THETA 20
-
-// #define NUM_BINS_THETA_ZOOM 100
-// #define NUM_BINS_PHI_ZOOM 200
-// #define ZOOM_BINS_PER_DEGREE_PHI 20
-// #define ZOOM_BINS_PER_DEGREE_THETA 20
-
-#define NUM_BINS_THETA_ZOOM 40
-#define NUM_BINS_PHI_ZOOM 40
-#define ZOOM_BINS_PER_DEGREE_PHI 4
-#define ZOOM_BINS_PER_DEGREE_THETA 4
-
-#define ZOOM_BIN_SIZE_PHI (1./ZOOM_BINS_PER_DEGREE_PHI)
-#define ZOOM_BIN_SIZE_THETA (1./ZOOM_BINS_PER_DEGREE_THETA)
-#define THETA_RANGE_ZOOM (NUM_BINS_THETA_ZOOM*ZOOM_BIN_SIZE_THETA)
-#define PHI_RANGE_ZOOM (NUM_BINS_PHI_ZOOM*ZOOM_BIN_SIZE_PHI)
-
-#define NUM_BINS_PHI_ZOOM_TOTAL (DEGREES_IN_CIRCLE*ZOOM_BINS_PER_DEGREE_PHI + NUM_BINS_PHI_ZOOM)
-#define NUM_BINS_THETA_ZOOM_TOTAL ((MAX_THETA - MIN_THETA)*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
-
-#define ALL_PHI_TRIGS 0xffff
 
 
 
@@ -122,13 +85,6 @@ public:
 			 Double_t& phiDeg, Double_t& thetaDeg);
   void getFinePeakInfo(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t& value,
 		       Double_t& phiDeg, Double_t& thetaDeg);
-
-
-  InterferometricMap* getInterferometricMap(AnitaPol::AnitaPol_t pol){
-    InterferometricMap* h = coarseMaps[pol];
-    coarseMaps[pol] = NULL;
-    return h;
-  }
   
   InterferometricMap* getMap(AnitaPol::AnitaPol_t pol);
 
@@ -157,7 +113,7 @@ public:
   UInt_t eventNumber[AnitaPol::kNotAPol];
 
   // Double_t interpPreFactors[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
-  Double_t deltaTs[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
+  // Double_t deltaTs[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples  
   // Int_t offsetLows[AnitaPol::kNotAPol][NUM_COMBOS][NUM_PHI*NUM_BINS_PHI][NUM_BINS_THETA]; //!< The interpolation factor for neighbouring samples
   // std::vector<DeltaTCache> deltaTs[AnitaPol::kNotAPol];
 
@@ -166,14 +122,18 @@ public:
   std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
 
-  Double_t coarseMapPeakValues[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
-  Double_t coarseMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t coarseMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
+  std::vector<Double_t> coarseMapPeakValues[AnitaPol::kNotAPol];
+  std::vector<Double_t> coarseMapPeakPhiDegs[AnitaPol::kNotAPol];
+  std::vector<Double_t> coarseMapPeakThetaDegs[AnitaPol::kNotAPol];
 
-  Double_t fineMapPeakValues[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak of the interally stored map
-  Double_t fineMapPeakPhiDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak phi (degrees) of the interally stored map
-  Double_t fineMapPeakThetaDegs[AnitaPol::kNotAPol][MAX_NUM_PEAKS]; //!< Stores the peak theta (degrees) of the interally stored map
 
+  Double_t fineMapPeakValues[AnitaPol::kNotAPol][5];
+  Double_t fineMapPeakPhiDegs[AnitaPol::kNotAPol][5];
+  Double_t fineMapPeakThetaDegs[AnitaPol::kNotAPol][5];
+  // std::vector<Double_t> fineMapPeakValues[AnitaPol::kNotAPol];
+  // std::vector<Double_t> fineMapPeakPhiDegs[AnitaPol::kNotAPol];
+  // std::vector<Double_t> fineMapPeakThetaDegs[AnitaPol::kNotAPol];
+  
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Double_t maxDPhiDeg; //!< Variable for testing how wide an off axis angle is used in reconstruction
   Int_t coherentDeltaPhi;

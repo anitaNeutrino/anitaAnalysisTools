@@ -261,35 +261,32 @@ void InterferometricMap::Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, Int
 
 
 
-void InterferometricMap::findPeakValues(Int_t numPeaks, Double_t* peakValues,Double_t* phiDegs, Double_t* thetaDegs){
+void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs){
 
+  
   // In this function I want to find numPeak peaks and set an exclusion zone around each peak
   // so that the next peak isn't just a close neighbour of a true peak.
-
-  if(numPeaks > MAX_NUM_PEAKS){
-    // You can have numPeaks less than or requal MAX_NUM_PEAKS, but not greater than.
-    std::cerr << "Warning in "<< __PRETTY_FUNCTION__ << " in " << __FILE__
-	      << ". numPeaks = " << numPeaks << ", InterferometricMapMaker compiled with MAX_NUM_PEAKS  = "
-	      << MAX_NUM_PEAKS << ", setting numPeaks = " << MAX_NUM_PEAKS << std::endl;
-    numPeaks = MAX_NUM_PEAKS;
-  }
-
 
   // Set not crazy, but still debug visible values for peak values/location
   // -DBL_MAX was causing me some while loop issues in RootTools::getDeltaAngleDeg(...)
   // which has an unrestricted while loop inside.
-  for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
-    peakValues[peakInd] = -999;
-    phiDegs[peakInd] = -999;
-    thetaDegs[peakInd] = -999;
-  }
 
+  peakValues.clear();
+  phiDegs.clear();
+  thetaDegs.clear();
+  
+  peakValues.resize(numPeaks, -999);
+  phiDegs.resize(numPeaks, -999);
+  thetaDegs.resize(numPeaks, -999);
+
+  
   // As we start, all regions are allowed.
   // Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
   // Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
   int nTheta = GetNbinsTheta();
   int nPhi = GetNbinsTheta();  
   std::vector<short> allowedBins(nPhi*nTheta, 1);
+
   
   for(Int_t peakInd=0; peakInd < numPeaks; peakInd++){
     Int_t gotHere = 0;

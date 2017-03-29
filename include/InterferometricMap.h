@@ -59,8 +59,6 @@
 #define NUM_BINS_PHI_ZOOM_TOTAL (DEGREES_IN_CIRCLE*ZOOM_BINS_PER_DEGREE_PHI + NUM_BINS_PHI_ZOOM)
 #define NUM_BINS_THETA_ZOOM_TOTAL ((MAX_THETA - MIN_THETA)*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
 
-#define ALL_PHI_TRIGS 0xffff
-
 #include "AnitaConventions.h"
 
 
@@ -79,7 +77,7 @@ public:
 
 
   void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
-  void findPeakValues(Int_t numPeaks, Double_t* peakValues, Double_t* phiDegs, Double_t* thetaDegs);
+  void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs);
 
   
   inline Int_t GetNbinsPhi(){return GetNbinsX();}
