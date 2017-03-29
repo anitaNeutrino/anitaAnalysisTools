@@ -44,7 +44,7 @@ const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesTheta(){
 
   if(coarseBinEdgesTheta.size()==0) // then not initialized so do it here...
   {
-
+    
     // funk up the theta bin spacing...  
     UInt_t nBinsTheta = NUM_BINS_THETA;
     Double_t minTheta = MIN_THETA;
@@ -73,6 +73,7 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
 
   if(fineBinEdgesTheta.size()==0) // then not initialized so do it here...
   {
+
     // funk up the theta bin spacing...  
     UInt_t nBinsTheta = NUM_BINS_THETA_ZOOM_TOTAL;
     Double_t minTheta = MIN_THETA - THETA_RANGE_ZOOM/2;
@@ -80,17 +81,21 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
     // Double_t maxTheta = MAX_THETA;
   
     // calculate the bin spaces in sin(theta)
-    Double_t sinThetaMin = sin(minTheta*TMath::DegToRad());
-    Double_t sinThetaMax = sin(maxTheta*TMath::DegToRad());
-    Double_t sinThetaRange = sinThetaMax - sinThetaMin;
-    Double_t dSinTheta = sinThetaRange/nBinsTheta;
+    // Double_t sinThetaMin = sin(minTheta*TMath::DegToRad());
+    // Double_t sinThetaMax = sin(maxTheta*TMath::DegToRad());
+    // Double_t sinThetaRange = sinThetaMax - sinThetaMin;
+    // Double_t dSinTheta = sinThetaRange/nBinsTheta;
 
+
+    Double_t dTheta = (maxTheta - minTheta) / nBinsTheta;
     // std::vector<Double_t> binEdges(nBinsTheta+1);
     fineBinEdgesTheta.reserve(nBinsTheta+1);
     for(unsigned bt = 0; bt <= nBinsTheta; bt++){
-      Double_t thisSinTheta = sinThetaMin + bt*dSinTheta;
-      Double_t thisTheta = TMath::RadToDeg()*TMath::ASin(thisSinTheta);
-      // coarseBinEdgesTheta.at(bt) = thisTheta;
+      // Double_t thisSinTheta = sinThetaMin + bt*dSinTheta;
+      // Double_t thisTheta = TMath::RadToDeg()*TMath::ASin(thisSinTheta);
+      // Double_t thisSinTheta = sinThetaMin + bt*dSinTheta;
+      
+      double thisTheta = minTheta + bt*dTheta;
       fineBinEdgesTheta.push_back(thisTheta);
     }
   }
