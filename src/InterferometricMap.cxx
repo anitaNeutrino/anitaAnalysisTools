@@ -396,7 +396,7 @@ void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& p
 
 
 void InterferometricMap::initializeInternals(){
-  bool thetaAngleInSinTheta = true;
+  thetaAxisInSinTheta = true;
 }
 
 

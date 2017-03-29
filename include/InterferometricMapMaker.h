@@ -148,6 +148,9 @@ public:
   
   
   CrossCorrelator* cc;
+
+  std::vector<InterferometricMap*> fineMaps[AnitaPol::kNotAPol];
+  std::vector<bool> makerOwnsFineMaps[AnitaPol::kNotAPol];
   
 private:
   void initializeVariables();
@@ -162,7 +165,8 @@ private:
   // I delete them if the event number changes and they've not been returned. You delete them otherwise...  
 
   InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
-  bool makerOwnsMap[AnitaPol::kNotAPol];  
+  bool makerOwnsCoarseMap[AnitaPol::kNotAPol];
+
   
 };
 

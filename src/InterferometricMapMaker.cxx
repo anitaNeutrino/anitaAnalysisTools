@@ -440,8 +440,8 @@ TH2D* InterferometricMapMaker::makeZoomedImage(AnitaPol::AnitaPol_t pol, UShort_
 
 void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol){
 
-  makerOwnsMap[pol] = false;
-  if(!makerOwnsMap[pol] || coarseMaps[pol]==NULL)
+  makerOwnsCoarseMap[pol] = false;
+  if(!makerOwnsCoarseMap[pol] || coarseMaps[pol]==NULL)
   {
     // I don't own the map or there isn't one, so I'll make a new one
     TString name = "h";
@@ -454,7 +454,7 @@ void InterferometricMapMaker::reconstruct(AnitaPol::AnitaPol_t pol){
 
     coarseMaps[pol] = new InterferometricMap(name, title);
   }  
-  else{// if(makerOwnsMap[pol]){  {
+  else{// if(makerOwnsCoarseMap[pol]){  {
     // I own the map so I can overwrite it  
     for(int phiBin=1; phiBin<=coarseMaps[pol]->GetNbinsPhi(); phiBin++){
       for(int thetaBin=1; thetaBin<=coarseMaps[pol]->GetNbinsTheta(); thetaBin++){
@@ -494,7 +494,21 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);
   cc->doUpsampledCrossCorrelations(pol, phiSector);
 
+  UInt_t peakInd = fineMaps[pol].size();
+  TString name = "hFine";
+  name += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
+  name += TString::Format("%u_%u", peakInd, eventNumber[pol]);
 
+  TString title = TString::Format("Event %u ", eventNumber[pol]);
+  title += (pol == AnitaPol::kVertical ? "VPOL" : "HPOL");
+  title += TString::Format(" Zoom Map - Peak %u", peakInd);
+
+  InterferometricMap* h = new InterferometricMap(name, title, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
+  fineMaps[pol].push_back(h);
+  h->Fill(pol, cc, &dtCache);
+
+
+  
   zoomCenterPhiDeg = (TMath::Nint(zoomCenterPhiDeg/ZOOM_BIN_SIZE_PHI))*ZOOM_BIN_SIZE_PHI;
   zoomCenterThetaDeg = (TMath::Nint(zoomCenterThetaDeg/ZOOM_BIN_SIZE_THETA))*ZOOM_BIN_SIZE_THETA;
 
@@ -508,6 +522,7 @@ void InterferometricMapMaker::reconstructZoom(AnitaPol::AnitaPol_t pol, Double_t
 
   for(Int_t thetaBin = 0; thetaBin < NUM_BINS_THETA_ZOOM; thetaBin++){
     for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
+      
       fineMap[pol][peakIndex][thetaBin][phiBin]=0;
     }
   }
