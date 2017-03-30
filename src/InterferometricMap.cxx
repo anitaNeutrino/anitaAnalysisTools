@@ -563,7 +563,7 @@ void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdge
   // double minDiff = 1e9;
   
   // get last below
-  lowIndex = -1;
+  lowIndex = 0;
   for(unsigned i=0; i < binEdges.size(); i++){
     // if(fabs(binEdges.at(i) - lowVal) < minDiff){
     //   minDiff = fabs(binEdges.at(i) - lowVal);
@@ -577,7 +577,7 @@ void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdge
       break;
     }
   }
-
+  
   // if(binEdges.at(0) == fineBinEdgesPhi.at(0)){
   //   highIndex = lowIndex + NUM_BINS_PHI_ZOOM;
   // }
