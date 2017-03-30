@@ -136,9 +136,10 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
 	// don't want to be able to edit it by accident so copy it...
 	const TGraphAligned* gr = coherentWave->even();
 	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
-	summaryGraphs[pol].push_back(gr2);
 
 	gr2->SetFillColor(0);
+	gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+	// std::cout << gr2 << "\t" << pol << "\t" << peakInd << "\t" << gr2->IsOnHeap() << std::endl;
 	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
 	gr2->SetTitle(title);
 	gr2->SetLineColor(peakColors[peakInd]);
@@ -154,14 +155,14 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
       std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
     }
   }
-  TLegend* lCoherent = coherentPad->BuildLegend();
-  lCoherent->Draw();
+  // TLegend* lCoherent = coherentPad->BuildLegend();
+  // lCoherent->Draw();
   
 }
 
 
 void InterferometricMapMaker::process(const FilteredAnitaEvent * usefulEvent, UsefulAdu5Pat* usefulPat ,AnitaEventSummary * eventSummary) const{
-
+  
 
   if(!cc){
     cc = new CrossCorrelator();
@@ -610,13 +611,22 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEven
       const TGraphAligned* gr = wf->even();
 
       Double_t vMax, vMin, tMax, tMin;
-      RootTools::getLocalMaxToMin((TGraph *)gr, vMax, vMin, tMax, tMin);
+      RootTools::getLocalMaxToMin((TGraph *)gr, vMax, tMax, vMin, tMin);
 
       if(vMax - vMin > largestPeakToPeak){
 	largestPeakToPeak = vMax - vMin;
 	biggest = ant;
       }
+      else if(largestPeakToPeak <= 0){
+	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the waveform max/min aren't sensible?" << std::endl;
+	std::cerr << vMax << "\t" << vMin << "\t" << tMax << "\t" << tMin << std::endl;
+      }
     }
+  }
+
+  if(biggest < 0 || biggest >= NUM_SEAVEYS){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", I couldn't find a waveform where vMax - vMin > 0. "
+	      << "Something's wrong, and I'm probably about to vomit a stack trace all over your terminal..." << std::endl;
   }
 
   // now we've found the channel with the biggest peak-to-peak

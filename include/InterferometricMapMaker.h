@@ -73,11 +73,8 @@ public:
 
   Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
   Int_t coherentDeltaPhi; //!< +- Number of neighbouring phi-sectors in the coherently summed wave
-
   
 private:
-  void initializeVariables();
-  void deleteSummaryGraphs(AnitaPol::AnitaPol_t pol);
 
   // deletes maps left in memory next time process() is called
   // if getMap() or getZoomMap() is called, sets internal pointer to NULL
