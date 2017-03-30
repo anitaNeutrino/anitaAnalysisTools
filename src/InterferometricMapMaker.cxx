@@ -121,7 +121,7 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
     while(drawnFineMaps.size() > 0){
       drawnFineMaps.pop_back();
     }
-    std::cout << polMax << "\t" << polMin << std::endl;
+    // std::cout << polMax << "\t" << polMin << std::endl;
   }
   
 

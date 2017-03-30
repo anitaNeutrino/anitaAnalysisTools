@@ -437,7 +437,7 @@ void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& p
   // Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
   // Int_t allowedBins[NUM_BINS_PHI*NUM_PHI][NUM_BINS_THETA];
   int nTheta = GetNbinsTheta();
-  int nPhi = GetNbinsTheta();  
+  int nPhi = GetNbinsPhi();  
   std::vector<short> allowedBins(nPhi*nTheta, 1);
 
   

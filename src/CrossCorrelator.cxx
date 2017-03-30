@@ -145,11 +145,34 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, fVolts[pol][ant], ffts[pol][ant]);
-    // renormalizeFourierDomain(pol, ant); 
+    renormalizeFourierDomain(pol, ant); 
   }
 }
 
 
+
+void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
+
+  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
+  Double_t sumOfVSquared = 0;
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = ffts[pol][ant][freqInd].real();
+    Double_t im = ffts[pol][ant][freqInd].imag();
+    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
+    sumOfVSquared += factor*(re*re + im*im);
+  }
+
+  Double_t timeDomainVSquared = sumOfVSquared/(numSamples*numSamples/2);
+  Double_t norm = TMath::Sqrt(timeDomainVSquared);
+
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = ffts[pol][ant][freqInd].real();
+    Double_t im = ffts[pol][ant][freqInd].imag();
+
+    ffts[pol][ant][freqInd].real(re/norm);
+    ffts[pol][ant][freqInd].imag(im/norm);
+  }
+}
 
 
 
