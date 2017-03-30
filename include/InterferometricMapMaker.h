@@ -76,9 +76,11 @@ public:
   
 private:
 
-  // deletes maps left in memory next time process() is called
-  // if getMap() or getZoomMap() is called, sets internal pointer to NULL
-  // and it is the user's responsbiliy to delete
+  // silly that thse all have to be mutable... I blame Cosmin (or am I just too lazy to change the base class?)
+  
+  // I delete maps left in memory next time process() is called
+  // if getMap() or getZoomMap() is called ,I set the internal pointer to NULL
+  // and it is the user's responsbility to delete
   mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
   mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
   mutable std::map<Int_t, AnalysisWaveform*> coherent[AnitaPol::kNotAPol]; // 
@@ -90,9 +92,6 @@ private:
   
   // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
   mutable InterferometryCache dtCache;
-
-  std::list<TGraphAligned*> summaryGraphs[AnitaPol::kNotAPol]; // for MagicDisplay, old ones delete when drawSummary called.
-  
 };
 
 

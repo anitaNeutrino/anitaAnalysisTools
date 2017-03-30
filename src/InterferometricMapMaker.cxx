@@ -12,22 +12,8 @@ InterferometricMapMaker::~InterferometricMapMaker(){
   if(spawnedCrossCorrelator && cc){
     delete cc;
   }
-
-  deleteSummaryGraphs(AnitaPol::kHorizontal);
-  deleteSummaryGraphs(AnitaPol::kVertical);  
   
 }
-
-
-void InterferometricMapMaker::deleteSummaryGraphs(AnitaPol::AnitaPol_t pol){
-
-  while(summaryGraphs[pol].size() > 0){
-    TGraphAligned* gr = summaryGraphs[pol].back();
-    delete gr;
-    summaryGraphs[pol].pop_back();
-  }
-}
-
 
 
 
@@ -35,10 +21,9 @@ void InterferometricMapMaker::deleteSummaryGraphs(AnitaPol::AnitaPol_t pol){
 // mostly for MagicDisplay integration
 void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t pol){
 
-  deleteSummaryGraphs(pol);
-
   const int numColsForNow = 5;
   EColor peakColors[numColsForNow] = {kMagenta, EColor(kViolet+10), kCyan, kGreen, kOrange};
+  
   
   // just draws the maps in memory...
   Double_t xlow, ylow, xup, yup;
@@ -66,7 +51,7 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
     hCoarse->Draw("colz");
     hCoarse->SetTitleSize(0.01);
     hCoarse->GetXaxis()->SetTitleSize(0.01);
-    hCoarse->GetYaxis()->SetTitleSize(0.01);        
+    hCoarse->GetYaxis()->SetTitleSize(0.01);
   }
 
   // std::vector<TGraph> grPeaks;
@@ -77,6 +62,9 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
   padInd++;
   finePad->Draw();
 
+
+  std::list<InterferometricMap*> drawnFineMaps;
+  
   const int nFine = fineMaps[pol].size();
   for(int peakInd = 0; peakInd < nFine; peakInd++){
     xlow = double(peakInd)/nFine, ylow = 0, xup = double(peakInd+1)/nFine, yup = 1, finePad->cd();
@@ -92,8 +80,11 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
 	h->SetTitleSize(0.01);
 	h->GetXaxis()->SetTitleSize(0.01);
 	h->GetYaxis()->SetTitleSize(0.01);        
+
+	h->Draw("col");
+	drawnFineMaps.push_back(h);
+
 	
-	h->Draw("colz");
 	TGraph& gr = h->getPeakPointGraph();
 	gr.Draw("psame");
 
@@ -111,8 +102,28 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
     }
   }
 
-
-
+  if(drawnFineMaps.size() > 0){
+    std::list<InterferometricMap*>::iterator it = drawnFineMaps.begin();
+    Double_t polMax = -1e9;
+    Double_t polMin = 1e9;    
+    for(; it!=drawnFineMaps.end(); ++it){
+      polMax = (*it)->GetMaximum() > polMax ? (*it)->GetMaximum() : polMax;
+      polMin = (*it)->GetMinimum() < polMin ? (*it)->GetMinimum() : polMin;      
+    }
+    for(it=drawnFineMaps.begin(); it!=drawnFineMaps.end(); ++it){
+      (*it)->SetMaximum(polMax);
+      (*it)->SetMinimum(polMin);
+    }
+    if(hCoarse){
+      hCoarse->SetMaximum(polMax);
+      // hCoarse->SetMinimum(polMin);      
+    }
+    while(drawnFineMaps.size() > 0){
+      drawnFineMaps.pop_back();
+    }
+    std::cout << polMax << "\t" << polMin << std::endl;
+  }
+  
 
   subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
   xlow = 0, ylow = 0.25, xup = 1, yup = 0.5, summaryPad->cd();
