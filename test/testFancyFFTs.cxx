@@ -21,7 +21,7 @@
 
 #include <fftw3.h>
 
-using namespace AIM;
+using namespace Acclaim;
 
 double sum(int n, double* x){
   double sum = 0;

@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 
-using namespace AIM;
+using namespace Acclaim;
 
 int main(){
   
