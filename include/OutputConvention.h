@@ -22,38 +22,42 @@
 #include <algorithm>
 
 
-/**
- * @class OutputConvention
- * @brief A class to systematically name files produced by my analysis programs.
- *
- * Uses the program name, arguments, date, and time.
-*/
-class OutputConvention{
 
-public:
+namespace Acclaim
+{
 
-  OutputConvention(int argcIn, char* argvIn[]);
+  /**
+   * @class OutputConvention
+   * @brief A class to systematically name files produced by my analysis programs.
+   *
+   * Uses the program name, arguments, date, and time.
+   */
+  class OutputConvention{
 
-  TString getOutputFileName(TString ext="");
-  TString getOutputDir();
-  TFile* makeFile(); //!< Create the new output file with proper name
+  public:
 
-  static TFile* getFile(TString fileNameWithWildcards); //!< Opens matching file with the most recent suffix
+    OutputConvention(int argcIn, char* argvIn[]);
 
-private:
-  int argc; //!< The argc from the main program
-  char** argv; //!< The argv from the main program
-  TDatime dateTime; //!< The dateTime type containing the date/time.
-  TString outputDir; //!< TString contining the output directory.
-  TString dateTimeSuffix; //!< TString contining the fileName suffix extracted from the date/time.
-  TString outFileName; ///!< The output total file output name.
+    TString getOutputFileName(TString ext="");
+    TString getOutputDir();
+    TFile* makeFile(); //!< Create the new output file with proper name
 
-  TString getDateTimeSuffix();
+    static TFile* getFile(TString fileNameWithWildcards); //!< Opens matching file with the most recent suffix
+
+  private:
+    int argc; //!< The argc from the main program
+    char** argv; //!< The argv from the main program
+    TDatime dateTime; //!< The dateTime type containing the date/time.
+    TString outputDir; //!< TString contining the output directory.
+    TString dateTimeSuffix; //!< TString contining the fileName suffix extracted from the date/time.
+    TString outFileName; ///!< The output total file output name.
+
+    TString getDateTimeSuffix();
 
 
-};
+  };
 
 
-
+}
 
 #endif

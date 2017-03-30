@@ -12,7 +12,7 @@
  * @param division selects which subset of the run to do, goes from 0 -> numDivisions -1, default is 0.
  * @param numDivisions is the number of bits we're splitting the event into
  */
-AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::selection selection, FilterStrategy* filterStrat, BlindDataset::strategy blindStrat, int division, int numDivisions){
+Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, BlindDataset::strategy blindStrat, int division, int numDivisions){
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
@@ -23,7 +23,7 @@ AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::s
   fRun = run;
 
   fData = NULL;
-  fCrossCorr = NULL;
+  fReco = NULL;
   fOutFile = NULL;
 }
 
@@ -35,16 +35,16 @@ AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::s
  * Destructor
  * 
  */
-AnalysisFlow::~AnalysisFlow(){
+Acclaim::AnalysisFlow::~AnalysisFlow(){
 
   if(fData){
     delete fData;
     fData = NULL;
   }
 
-  if(fCrossCorr){
-    delete fCrossCorr;
-    fCrossCorr = NULL;
+  if(fReco){
+    delete fReco;
+    fReco = NULL;
   }
 
   if(fFilterStrat){
@@ -66,7 +66,7 @@ AnalysisFlow::~AnalysisFlow(){
  * Create the data set.
  * 
  */
-void AnalysisFlow::prepareDataSet(){
+void Acclaim::AnalysisFlow::prepareDataSet(){
 
   if(fData==NULL){
     bool doDecimated = fSelection == kDecimated ? true : false;
@@ -91,7 +91,7 @@ void AnalysisFlow::prepareDataSet(){
 /** 
  * Coax the OutputConvention class into making an appropriately named output file/
  */
-void AnalysisFlow::prepareOutputFiles(){
+void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
   if(fOutFile==NULL){
@@ -138,7 +138,7 @@ void AnalysisFlow::prepareOutputFiles(){
  * 
  * @return true is event satisfies selection criteria, false otherwise
  */
-Bool_t AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
+Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
 
   Bool_t doEvent = false;
 
@@ -178,17 +178,17 @@ Bool_t AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* u
 /** 
  * Does the main analysis loop
  */
-void AnalysisFlow::doAnalysis(){
+void Acclaim::AnalysisFlow::doAnalysis(){
     
   if(!fData){
     prepareDataSet();
   }
 
-  if(!fCrossCorr){
-    fCrossCorr = new InterferometricMapMaker();
+  if(!fReco){
+    fReco = new AnalysisReco();
   }
-  // if(!fCrossCorr){
-  //   fCrossCorr = new CrossCorrelator();
+  // if(!fReco){
+  //   fReco = new CrossCorrelator();
   // }
 
   if(!fOutFile){
@@ -232,7 +232,8 @@ void AnalysisFlow::doAnalysis(){
       FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
       eventSummary = new AnitaEventSummary(header, &usefulPat);
-      fCrossCorr->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+      // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+      fReco->process(&filteredEvent, &usefulPat, eventSummary);
 
       fSumTree->Fill();
       delete eventSummary;

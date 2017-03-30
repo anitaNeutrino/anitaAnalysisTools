@@ -6,8 +6,12 @@
              Just for fun.
 *************************************************************************************************************** */
 
+
 #include "OutputConvention.h"
 #include <unistd.h>
+
+
+using namespace Acclaim;
 
 int main(int argc, char* argv[]){
   

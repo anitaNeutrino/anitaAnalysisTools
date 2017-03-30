@@ -9,7 +9,7 @@
  *
  * Inserts default names for internal parameters and NULL pointers for avePowSpecs
  */
-AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(){
+Acclaim::AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(){
 
   fName = "AnitaAveragePowerSpectrum";
   fTitle = "Anita Average Power Spectrum";
@@ -33,7 +33,7 @@ AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(){
  * @param name is the name of the AnitaAveragePowerSpectrum
  * @param title is the title of the AnitaAveragePowerSpectrum
  */
-AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(TString name, TString title){
+Acclaim::AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(TString name, TString title){
 
   // Record initialization options for contained AveragePowerSpectra
   fName = name;
@@ -51,7 +51,7 @@ AnitaAveragePowerSpectrum::AnitaAveragePowerSpectrum(TString name, TString title
 /**
  * @brief Destructor
  */
-AnitaAveragePowerSpectrum::~AnitaAveragePowerSpectrum(){
+Acclaim::AnitaAveragePowerSpectrum::~AnitaAveragePowerSpectrum(){
   deleteAllAvePowSpecs();
 }
 
@@ -63,7 +63,7 @@ AnitaAveragePowerSpectrum::~AnitaAveragePowerSpectrum(){
 /**
  * @brief Deletes all non-NULL interal pointers.
  */
-void AnitaAveragePowerSpectrum::deleteAllAvePowSpecs(){
+void Acclaim::AnitaAveragePowerSpectrum::deleteAllAvePowSpecs(){
   // Delete all non-null internals
   for(Int_t polInd = 0; polInd < AnitaPol::kNotAPol; polInd++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
@@ -86,7 +86,7 @@ void AnitaAveragePowerSpectrum::deleteAllAvePowSpecs(){
  *
  * Names each interal AveragePowerSpectrums with the fName plus polarization / antenna number suffix.
  */
-void AnitaAveragePowerSpectrum::initAllAvePowSpecs(){
+void Acclaim::AnitaAveragePowerSpectrum::initAllAvePowSpecs(){
   // Initialize the power spectra from options recorded in constructor
   
   for(Int_t polInd = 0; polInd < AnitaPol::kNotAPol; polInd++){
@@ -113,7 +113,7 @@ void AnitaAveragePowerSpectrum::initAllAvePowSpecs(){
  * @param pol is polarization of interest.
  * @param ant is the antenna of interest.
  */
-AveragePowerSpectrum* AnitaAveragePowerSpectrum::get(AnitaPol::AnitaPol_t pol, Int_t ant){
+Acclaim::AveragePowerSpectrum* Acclaim::AnitaAveragePowerSpectrum::get(AnitaPol::AnitaPol_t pol, Int_t ant){
   // Getter function with array size checks
   AveragePowerSpectrum* avePowSpecPtr = NULL;
   if(ant >= 0 && ant < NUM_SEAVEYS){
@@ -134,7 +134,7 @@ AveragePowerSpectrum* AnitaAveragePowerSpectrum::get(AnitaPol::AnitaPol_t pol, I
  * @param ant is the antenna of interest.
  * @param gr is the waveform TGraph.
  */
-void AnitaAveragePowerSpectrum::add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph* gr){
+void Acclaim::AnitaAveragePowerSpectrum::add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph* gr){
   // Wrapper for adding waveform to particular channels power spectrum
   AveragePowerSpectrum* avePowSpecPtr = get(pol, ant);
   avePowSpecPtr->add(gr);
@@ -148,7 +148,7 @@ void AnitaAveragePowerSpectrum::add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph*
 /**
  * @brief Deletes and reinitializes all internal AveragePowerSpectrums.
  */
-void AnitaAveragePowerSpectrum::reset(){
+void Acclaim::AnitaAveragePowerSpectrum::reset(){
   // Function to delete and reinitialize all contained AveragePowerSpectra
   deleteAllAvePowSpecs();
   initAllAvePowSpecs();
@@ -168,7 +168,7 @@ void AnitaAveragePowerSpectrum::reset(){
  *
  * NUM_PHI (16) seems like enough to examine at once.
  */
-TMultiGraph* AnitaAveragePowerSpectrum::drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring){
+TMultiGraph* Acclaim::AnitaAveragePowerSpectrum::drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring){
   TMultiGraph* mg = new TMultiGraph();
 
   TString grTitle = TString::Format("%s PSDs", fTitle.Data());

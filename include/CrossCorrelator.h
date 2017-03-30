@@ -53,90 +53,93 @@
 #define PAD_FACTOR 2
 #define GET_NUM_FREQS(n)((n)/2+1)
 
+namespace Acclaim
+{
+
+  /**
+   * @class CrossCorrelator
+   * @brief A class to take in UsefulAnitaEvents or FiteredAnitaEvents and get interferometric maps with a single function.
+   *
+   */
+  class CrossCorrelator{
+
+  public:
+
+    //--------------------------------------------------------------------------------------------------------
+    // Public member functions
+    //--------------------------------------------------------------------------------------------------------
+
+    CrossCorrelator();
+    ~CrossCorrelator();
+
+    void correlateEvent(const FilteredAnitaEvent* realEvent);
+    void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+
+    void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
+
+    TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
+    TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
+    TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
+					   Int_t ant1, Int_t ant2);
 
 
-/**
- * @class CrossCorrelator
- * @brief A class to take in UsefulAnitaEvents or FiteredAnitaEvents and get interferometric maps with a single function.
- *
- */
-class CrossCorrelator{
+    Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
-public:
-
-  //--------------------------------------------------------------------------------------------------------
-  // Public member functions
-  //--------------------------------------------------------------------------------------------------------
-
-  CrossCorrelator();
-  ~CrossCorrelator();
-
-  void correlateEvent(const FilteredAnitaEvent* realEvent);
-  void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-
-  void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
-
-  TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
-  TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
-  TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
-					 Int_t ant1, Int_t ant2);
-
-
-  Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
-
-  void initializeVariables();
-  void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
-  void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
-  void doFFTs(AnitaPol::AnitaPol_t pol);
-  void doCrossCorrelations(AnitaPol::AnitaPol_t pol);
+    void initializeVariables();
+    void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+    void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
+    void doFFTs(AnitaPol::AnitaPol_t pol);
+    void doCrossCorrelations(AnitaPol::AnitaPol_t pol);
 
   
-  Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
-  void fillCombosToUse();
-  void do5PhiSectorCombinatorics();
+    Bool_t useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect);
+    void fillCombosToUse();
+    void do5PhiSectorCombinatorics();
 
-  Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
-
-
+    Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
 
 
-  //--------------------------------------------------------------------------------------------------------
-  // Public member variables
-  //--------------------------------------------------------------------------------------------------------
 
-  std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMP*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
-  Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR]; //!< Cross correlations.
-  Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
+
+    //--------------------------------------------------------------------------------------------------------
+    // Public member variables
+    //--------------------------------------------------------------------------------------------------------
+
+    std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMP*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
+    Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR]; //!< Cross correlations.
+    Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
   
-  Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_SAMP*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
-  Double_t startTimes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_SAMP*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
+    Double_t startTimes[AnitaPol::kNotAPol][NUM_SEAVEYS];
   
-  Double_t interpRMS[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
-  Double_t interpRMS2[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
-  Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
+    Double_t interpRMS[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
+    Double_t interpRMS2[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs with extra zero padding.
+    Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
-  UInt_t eventNumber[AnitaPol::kNotAPol]; //!< For tracking event number
-  Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
-  Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
-  Int_t numSamples; //!< Number of samples in waveform after padding.
-  Int_t numSamplesUpsampled; //!< Number of samples in waveform after padding and up sampling.
-  Int_t numCombos; //!< Number of possible antenna pairs, counted during initialization. Should equal NUM_COMBOS.
+    UInt_t eventNumber[AnitaPol::kNotAPol]; //!< For tracking event number
+    Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
+    Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
+    Int_t numSamples; //!< Number of samples in waveform after padding.
+    Int_t numSamplesUpsampled; //!< Number of samples in waveform after padding and up sampling.
+    Int_t numCombos; //!< Number of possible antenna pairs, counted during initialization. Should equal NUM_COMBOS.
 
-  std::vector<Int_t> comboToAnt1s; //!< Vector mapping combo index to ant1.
-  std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
-  std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
-
-
-  Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
-  Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
-  Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
-
-private:
-
-  //--------------------------------------------------------------------------------------------------------
-  // Private member variables
-  //--------------------------------------------------------------------------------------------------------
+    std::vector<Int_t> comboToAnt1s; //!< Vector mapping combo index to ant1.
+    std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
+    std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
 
 
-};
+    Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
+    Int_t kOnlyThisCombo; //!< For debugging, only fill histograms with one particular antenna pair.
+    Int_t kDeltaPhiSect; //!< Specifies how many phi-sectors around peak use in reconstruction.
+
+  private:
+
+    //--------------------------------------------------------------------------------------------------------
+    // Private member variables
+    //--------------------------------------------------------------------------------------------------------
+
+
+  };
+}
+
 #endif

@@ -4,24 +4,24 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class CrossCorrelator+;
-#pragma link C++ class CrossCorrelator::SimpleNotch+;
-#pragma link C++ class FancyTTreeInterpolator+;
-#pragma link C++ namespace RootTools+;
-#pragma link C++ namespace FancyFFTs+;
-#pragma link C++ class ProgressBar+;
-#pragma link C++ class AveragePowerSpectrum+;
-#pragma link C++ class AnitaAveragePowerSpectrum+;
-#pragma link C++ class AntarcticaMapPlotter+;
-#pragma link C++ class AnalysisCuts+;
-#pragma link C++ enum AnalysisCuts::Status_t;
-#pragma link C++ class AnitaClusterer+;
-#pragma link C++ class AnitaClusterer::Point+;
-#pragma link C++ class AnitaClusterer::Cluster+;
-#pragma link C++ class ClusteredAnitaEvent+;
+#pragma link C++ namespace AIM+;
+#pragma link C++ class Acclaim::CrossCorrelator+;
+#pragma link C++ class Acclaim::FancyTTreeInterpolator+;
+#pragma link C++ namespace Acclaim::RootTools+;
+#pragma link C++ namespace Acclaim::FancyFFTs+;
+#pragma link C++ class Acclaim::ProgressBar+;
+#pragma link C++ class Acclaim::AveragePowerSpectrum+;
+#pragma link C++ class Acclaim::AnitaAveragePowerSpectrum+;
+#pragma link C++ class Acclaim::AntarcticaMapPlotter+;
+#pragma link C++ class Acclaim::AnalysisCuts+;
+#pragma link C++ enum Acclaim::AnalysisCuts::Status_t;
+#pragma link C++ class Acclaim::AnitaClusterer+;
+#pragma link C++ class Acclaim::AnitaClusterer::Point+;
+#pragma link C++ class Acclaim::AnitaClusterer::Cluster+;
+#pragma link C++ class Acclaim::ClusteredAnitaEvent+;
 
-#pragma link C++ class RayleighInfo+;
-#pragma link C++ class RiceInfo+;
-#pragma link C++ class InterferometricMap+;
+#pragma link C++ class Acclaim::RayleighInfo+;
+#pragma link C++ class Acclaim::RiceInfo+;
+#pragma link C++ class Acclaim::InterferometricMap+;
 
 #endif

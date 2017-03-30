@@ -8,6 +8,7 @@
 //#include "UsefulAdu5Pat.h"
 #include "TGraph.h"
 
+using namespace AIM;
 
 int main(){
 

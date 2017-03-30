@@ -21,43 +21,44 @@
 #include "RawAnitaHeader.h"
 
 //#define NUM_FREQS ((NUM_SAMPLES/2) + 1)
+namespace Acclaim
+{
+
+  /**
+   * @class FourierBuffer
+   * @brief A class to hold fourier domain representations in memory
+   */
+  class FourierBuffer {
+
+  public:
+
+    explicit FourierBuffer(Int_t timeScaleSeconds=60);
+
+    size_t add(const RawAnitaHeader* header, const AnalysisWaveform& wave);
+
+    TH1D* getRayleighDistribution(Int_t freqBin);
+    TH1D* fillRayleighInfo(Int_t freqBin, RayleighInfo* info);
+    TH1D* fillRiceInfo(Int_t freqBin, RiceInfo* info);  
+
+  private:
 
 
-/**
- * @class FourierBuffer
- * @brief A class to hold fourier domain representations in memory
-*/
-class FourierBuffer {
+    Int_t removeOld();
 
-public:
+    std::list<std::vector<FFTWComplex> > freqVecs;
+    std::list<UInt_t> eventNumbers;
+    std::list<Int_t> runs;  
+    std::list<Double_t> realTimesNs;
 
-  explicit FourierBuffer(Int_t timeScaleSeconds=60);
-
-  size_t add(const RawAnitaHeader* header, const AnalysisWaveform& wave);
-
-  TH1D* getRayleighDistribution(Int_t freqBin);
-  TH1D* fillRayleighInfo(Int_t freqBin, RayleighInfo* info);
-  TH1D* fillRiceInfo(Int_t freqBin, RiceInfo* info);  
-
-private:
-
-
-  Int_t removeOld();
-
-  std::list<std::vector<FFTWComplex> > freqVecs;
-  std::list<UInt_t> eventNumbers;
-  std::list<Int_t> runs;  
-  std::list<Double_t> realTimesNs;
-
-  Int_t timeScale;
+    Int_t timeScale;
 
 
 
 
 
-};
+  };
 
-
+}
 
 
 

@@ -1,5 +1,5 @@
 #include "InterferometricMap.h"
-#include "InterferometricMapMaker.h" // for the geometric definitions
+#include "AnalysisReco.h" // for the geometric definitions
 #include "InterferometryCache.h"
 
 #include "TAxis.h"
@@ -7,7 +7,7 @@
 #include <iostream>
 #include "TString.h"
 
-ClassImp(InterferometricMap)
+ClassImp(Acclaim::InterferometricMap)
 
 std::vector<Double_t> coarseBinEdgesPhi; // has size NUM_BINS_PHI+1
 std::vector<Double_t> fineBinEdgesPhi; // has size NUM_BINS_PHI_ZOOM_TOTAL+1
@@ -18,7 +18,7 @@ Double_t bin0PhiDeg = -9999;
 
 
 
-Double_t InterferometricMap::getBin0PhiDeg(){
+Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
 
   if(bin0PhiDeg == -9999){
 
@@ -41,7 +41,7 @@ Double_t InterferometricMap::getBin0PhiDeg(){
 
 
 // static member function
-const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesTheta(){
+const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesTheta(){
 
   if(coarseBinEdgesTheta.size()==0) // then not initialized so do it here...
   {
@@ -70,7 +70,7 @@ const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesTheta(){
 }
 
 
-const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
+const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesTheta(){
 
   if(fineBinEdgesTheta.size()==0) // then not initialized so do it here...
   {
@@ -104,7 +104,7 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesTheta(){
 }
 
 
-const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesPhi(){
+const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesPhi(){
 
   if(coarseBinEdgesPhi.size()==0) // then not initialized so do it here...
   {
@@ -124,7 +124,7 @@ const std::vector<Double_t>& InterferometricMap::getCoarseBinEdgesPhi(){
 }
 
 
-const std::vector<Double_t>& InterferometricMap::getFineBinEdgesPhi(){
+const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesPhi(){
 
   if(fineBinEdgesPhi.size()==0) // then not initialized so do it here...
   {
@@ -148,7 +148,7 @@ const std::vector<Double_t>& InterferometricMap::getFineBinEdgesPhi(){
 
 
 
-void InterferometricMap::setDefaultName(){
+void Acclaim::InterferometricMap::setDefaultName(){
 
   static unsigned defaultCounter = 0;
   fName = TString::Format("hDefault%u", defaultCounter);
@@ -156,7 +156,7 @@ void InterferometricMap::setDefaultName(){
 }
 
 
-void InterferometricMap::setNameAndTitle(){
+void Acclaim::InterferometricMap::setNameAndTitle(){
 
 
   if(isZoomMap){
@@ -194,14 +194,14 @@ void InterferometricMap::setNameAndTitle(){
 
 
 
-InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
+Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
 {
   isZoomMap = true;
   peakPhiSector = phiSector;
   peakIndex = peakInd;
   Double_t minPhiDesired = zoomCentrePhi - phiRange/2;
   Double_t maxPhiDesired = zoomCentrePhi + phiRange/2;
-  const std::vector<double> fineBinsPhi = InterferometricMap::getFineBinEdgesPhi();
+  const std::vector<double> fineBinsPhi = Acclaim::InterferometricMap::getFineBinEdgesPhi();
   // int minPhiBin, maxPhiBin;
   minPhiBin = -1;
   int maxPhiBin = -1;  
@@ -211,7 +211,7 @@ InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t 
   
   Double_t minThetaDesired = zoomCentreTheta - thetaRange/2;
   Double_t maxThetaDesired = zoomCentreTheta + thetaRange/2;
-  const std::vector<double> fineBinsTheta = InterferometricMap::getFineBinEdgesTheta();
+  const std::vector<double> fineBinsTheta = Acclaim::InterferometricMap::getFineBinEdgesTheta();
   // int minThetaBin, maxThetaBin;
   minThetaBin = -1;
   int maxThetaBin = -1;
@@ -228,15 +228,15 @@ InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t 
 
 
 
- InterferometricMap::InterferometricMap(){
+ Acclaim::InterferometricMap::InterferometricMap(){
   isZoomMap = false;
   peakPhiSector = -1;
   minPhiBin = -1;
   minThetaBin = -1;
   peakIndex = -1;
 
-  const std::vector<double> coarseBinsPhi = InterferometricMap::getCoarseBinEdgesPhi();
-  const std::vector<double> coarseBinsTheta = InterferometricMap::getCoarseBinEdgesTheta();
+  const std::vector<double> coarseBinsPhi = Acclaim::InterferometricMap::getCoarseBinEdgesPhi();
+  const std::vector<double> coarseBinsTheta = Acclaim::InterferometricMap::getCoarseBinEdgesTheta();
   SetBins(coarseBinsPhi.size()-1, &coarseBinsPhi[0], coarseBinsTheta.size()-1, &coarseBinsTheta[0]);
 
   initializeInternals();
@@ -245,7 +245,7 @@ InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t 
 
 
 
-void InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrelator* cc, InterferometryCache* dtCache){
+void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrelator* cc, InterferometryCache* dtCache){
 
   pol = thePol;
   eventNumber = cc->eventNumber[pol];
@@ -414,7 +414,7 @@ void InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrelator* cc, 
 
 
 
-void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const{
+void Acclaim::InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const{
 
   
   // In this function I want to find numPeak peaks and set an exclusion zone around each peak
@@ -498,7 +498,7 @@ void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& p
 		  // thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
 		  phiDegs[peakInd] = GetPhiAxis()->GetBinLowEdge(phiBin+1);
 		  thetaDegs[peakInd] = GetThetaAxis()->GetBinLowEdge(thetaBin+1);		  
-		  // thetaDegs[peakInd] = InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
+		  // thetaDegs[peakInd] = Acclaim::InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
 		}
 	      }
 	    }
@@ -548,7 +548,7 @@ void InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Double_t>& p
 
 
 
-void InterferometricMap::initializeInternals(){
+void Acclaim::InterferometricMap::initializeInternals(){
   thetaAxisInSinTheta = true;
   pol = AnitaPol::kNotAPol;
   eventNumber = 0;
@@ -557,7 +557,7 @@ void InterferometricMap::initializeInternals(){
 
 
 
-void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex){
+void Acclaim::InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex){
 
 
   // double minDiff = 1e9;
@@ -600,7 +600,7 @@ void InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>& binEdge
 
 
 
-TGraph& InterferometricMap::findOrMakeGraph(TString name){
+TGraph& Acclaim::InterferometricMap::findOrMakeGraph(TString name){
 
   std::map<TString, TGraph>::iterator it = grs.find(name);
   if(it!=grs.end()){
@@ -615,7 +615,7 @@ TGraph& InterferometricMap::findOrMakeGraph(TString name){
 }
 
 
-TGraph& InterferometricMap::getPeakPointGraph(){
+TGraph& Acclaim::InterferometricMap::getPeakPointGraph(){
 
   TGraph& gr = findOrMakeGraph("grPeak");
   if(gr.GetN()==0){
@@ -625,7 +625,7 @@ TGraph& InterferometricMap::getPeakPointGraph(){
   
 }
 
-TGraph& InterferometricMap::getEdgeBoxGraph(){
+TGraph& Acclaim::InterferometricMap::getEdgeBoxGraph(){
 
   TGraph& gr = findOrMakeGraph("grEdgeBox");
   const TAxis* phiAxis = GetPhiAxis();

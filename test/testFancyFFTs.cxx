@@ -21,6 +21,8 @@
 
 #include <fftw3.h>
 
+using namespace AIM;
+
 double sum(int n, double* x){
   double sum = 0;
   for(int i=0; i<n; i++){

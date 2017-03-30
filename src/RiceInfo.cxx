@@ -1,8 +1,8 @@
 #include "RiceInfo.h"
 
-ClassImp(RiceInfo)
+ClassImp(Acclaim::RiceInfo)
 
-RiceInfo::RiceInfo(){
+Acclaim::RiceInfo::RiceInfo(){
 
   riceFitNorm = 0;
   riceFitAmp = 0;

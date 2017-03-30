@@ -1,16 +1,16 @@
 #include "CrossCorrelator.h"
 
-CrossCorrelator::CrossCorrelator(){
+Acclaim::CrossCorrelator::CrossCorrelator(){
   initializeVariables();
 }
 
 
-CrossCorrelator::~CrossCorrelator(){
+Acclaim::CrossCorrelator::~CrossCorrelator(){
 }
 
 
 
-void CrossCorrelator::initializeVariables(){
+void Acclaim::CrossCorrelator::initializeVariables(){
 
   kDeltaPhiSect = 2;
   multiplyTopRingByMinusOne = 0;
@@ -35,7 +35,7 @@ void CrossCorrelator::initializeVariables(){
 }
 
 
-void CrossCorrelator::do5PhiSectorCombinatorics(){
+void Acclaim::CrossCorrelator::do5PhiSectorCombinatorics(){
   // For checking later...
   for(Int_t ant1=0; ant1 < NUM_SEAVEYS; ant1++){
     for(Int_t ant2=0; ant2 < NUM_SEAVEYS; ant2++){
@@ -75,7 +75,7 @@ void CrossCorrelator::do5PhiSectorCombinatorics(){
 
 
 
-Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
+Double_t Acclaim::CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
 
   Int_t ant1 = comboToAnt1s[combo];
   Int_t ant2 = comboToAnt2s[combo];
@@ -103,7 +103,7 @@ Double_t CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t co
 
 
 
-void CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* fEv,
+void Acclaim::CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* fEv,
 						       AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
@@ -141,7 +141,7 @@ void CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent*
 
 
 
-void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
+void Acclaim::CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
   for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
     FancyFFTs::doFFT(numSamples, fVolts[pol][ant], ffts[pol][ant]);
@@ -151,7 +151,7 @@ void CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 
-void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
+void Acclaim::CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
 
   const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
   Double_t sumOfVSquared = 0;
@@ -180,7 +180,7 @@ void CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t a
 
 
 
-void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
+void Acclaim::CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
 
   for(Int_t pol = AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
     correlateEvent(fEv, (AnitaPol::AnitaPol_t)pol);
@@ -188,7 +188,7 @@ void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
 }
 
 
-void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+void Acclaim::CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
   // getFftsAndStartTimes(fEv, pol);
@@ -202,7 +202,7 @@ void CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::An
 
 }
 
-void CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
+void Acclaim::CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
 
   // Set variable for use in threads
 
@@ -236,7 +236,7 @@ void CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
 }
 
 
-void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
+void Acclaim::CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
 
 
   const std::vector<Int_t>* combosToUse = &combosToUseGlobal[phiSector];
@@ -275,7 +275,7 @@ void CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int
 
 
 
-Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
+Bool_t Acclaim::CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t deltaPhiSect){
 
   // I want to be able to choose whether or not require one of the antennas to be the phi-sector
   // of interest or just to have both in range of deltaPhiSect.
@@ -305,7 +305,7 @@ Bool_t CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSector, Int_t 
 }
 
 
-void CrossCorrelator::fillCombosToUse(){
+void Acclaim::CrossCorrelator::fillCombosToUse(){
 
   for(Int_t phiSector = 0; phiSector<NUM_PHI; phiSector++){
     if(combosToUseGlobal[phiSector].size() == 0){
@@ -323,7 +323,7 @@ void CrossCorrelator::fillCombosToUse(){
 
 
 
-Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol,
+Double_t Acclaim::CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol,
 								   Int_t combo, Double_t deltaT){
 
   Int_t offsetLow = floor(deltaT/correlationDeltaT);
@@ -351,7 +351,7 @@ Double_t CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::Ani
 
 
 
-TGraph* CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
+TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
 							Int_t ant1, Int_t ant2){
   // Primarily for debugging, put cross correlations in a TGraph
 
@@ -398,12 +398,12 @@ TGraph* CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol
   return gr;
 }
 
-TGraph* CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
+TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
   // Primarily for debugging, put cross correlations in a TGraph
   return getCrossCorrelationGraphWorker(numSamples, pol, ant1, ant2);
 }
 
-TGraph* CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
+TGraph* Acclaim::CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
 

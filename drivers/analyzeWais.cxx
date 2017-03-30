@@ -1,6 +1,7 @@
 #include "AnalysisFlow.h"
 
 
+using namespace Acclaim;
 
 int main(int argc, char* argv[]){
 

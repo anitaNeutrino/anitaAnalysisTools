@@ -1,6 +1,6 @@
 #include "AveragePowerSpectrum.h"
 
-ClassImp(AveragePowerSpectrum);
+ClassImp(Acclaim::AveragePowerSpectrum);
 
 
 
@@ -12,7 +12,7 @@ ClassImp(AveragePowerSpectrum);
  *
  * For ROOT, Don't use this
  */
-AveragePowerSpectrum::AveragePowerSpectrum(){
+Acclaim::AveragePowerSpectrum::AveragePowerSpectrum(){
   // Don't use this.
   for(Int_t freqInd=0; freqInd<NUM_FREQS; freqInd++){  
     hRayleighs[freqInd] = NULL;
@@ -31,7 +31,7 @@ AveragePowerSpectrum::AveragePowerSpectrum(){
  * @param name is the name you want to give this average power spectrum (e.g. channel).
  * @param title is the title you want to give this average power spectrum, since we inherit from TNamed.
  */
-AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
+Acclaim::AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
 
 
   deltaFMHz = 1e3/(NOMINAL_SAMPLING_DELTAT*NUM_SAMP);
@@ -96,7 +96,7 @@ AveragePowerSpectrum::AveragePowerSpectrum(TString name, TString title){
 /**
  * @brief Destructor
  */
-AveragePowerSpectrum::~AveragePowerSpectrum(){
+Acclaim::AveragePowerSpectrum::~AveragePowerSpectrum(){
   deleteRayleighDistributions();
 }
 
@@ -107,7 +107,7 @@ AveragePowerSpectrum::~AveragePowerSpectrum(){
 /**
  * @brief Generates the text that defines the Rayleigh function for TF1.
  */
-TString AveragePowerSpectrum::getRayleighFunctionText(){
+TString Acclaim::AveragePowerSpectrum::getRayleighFunctionText(){
   return "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 }
 
@@ -123,7 +123,7 @@ TString AveragePowerSpectrum::getRayleighFunctionText(){
  * @param xMin is the low edge of the fit range.
  * @param xMax is the high edge of the fit range.
  */
-TF1* AveragePowerSpectrum::makeRayleighFunction(TString name, Double_t xMin, Double_t xMax){
+TF1* Acclaim::AveragePowerSpectrum::makeRayleighFunction(TString name, Double_t xMin, Double_t xMax){
   TF1* fRay = new TF1(name, getRayleighFunctionText(), xMin, xMax);
   return fRay;
 }
@@ -138,7 +138,7 @@ TF1* AveragePowerSpectrum::makeRayleighFunction(TString name, Double_t xMin, Dou
  *
  * @param gr is a TGraph containing the voltage/time waveform
  */
-void AveragePowerSpectrum::getEventRayleighAmplitudes(TGraph* gr){
+void Acclaim::AveragePowerSpectrum::getEventRayleighAmplitudes(TGraph* gr){
 
   Double_t* ps = FancyFFTs::getPowerSpectrum(NUM_SAMP, gr->GetY(),
 					     NOMINAL_SAMPLING_DELTAT, FancyFFTs::kSum);
@@ -166,7 +166,7 @@ void AveragePowerSpectrum::getEventRayleighAmplitudes(TGraph* gr){
  *
  * This function stores the average power spectrum and rayleigh amplitudes in interal memory.
  */
-size_t AveragePowerSpectrum::add(TGraph* gr){
+size_t Acclaim::AveragePowerSpectrum::add(TGraph* gr){
 
   // Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), 1e-3*deltaT, FancyFFTs::kPowSpecDensity);
   // Double_t* ps = FancyFFTs::getPowerSpectrum(numSamples, gr->GetY(), deltaT, FancyFFTs::kPowSpecDensity);
@@ -236,7 +236,7 @@ size_t AveragePowerSpectrum::add(TGraph* gr){
  *
  * @param rebinFactor is the factor to reduce the number of bins in the histogram by.
  */
-void AveragePowerSpectrum::rebinAllRayleighHistograms(Int_t rebinFactor){
+void Acclaim::AveragePowerSpectrum::rebinAllRayleighHistograms(Int_t rebinFactor){
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
     TH1D* h = hRayleighs[freqInd];
     h->Rebin(rebinFactor);
@@ -254,7 +254,7 @@ void AveragePowerSpectrum::rebinAllRayleighHistograms(Int_t rebinFactor){
  * @param freqMHz is the chosen frequency in MHz.
  * @return pointer to the stored Rayleigh distribution histogram.
  */
-TH1D* AveragePowerSpectrum::getRayleighHistogramFromFrequencyMHz(Double_t freqMHz){
+TH1D* Acclaim::AveragePowerSpectrum::getRayleighHistogramFromFrequencyMHz(Double_t freqMHz){
 
   Int_t bestFreqInd=0;
   Double_t bestFreqDiff = DBL_MAX;
@@ -279,7 +279,7 @@ TH1D* AveragePowerSpectrum::getRayleighHistogramFromFrequencyMHz(Double_t freqMH
  * @param freqInd is the index of the frequency bin.
  * @return pointer to the stored Rayleigh distribution histogram.
  */
-TH1D* AveragePowerSpectrum::getRayleighHistogram(Int_t freqInd){
+TH1D* Acclaim::AveragePowerSpectrum::getRayleighHistogram(Int_t freqInd){
   return hRayleighs[freqInd];
 }
 
@@ -294,7 +294,7 @@ TH1D* AveragePowerSpectrum::getRayleighHistogram(Int_t freqInd){
  * @param freqInd is the index of the frequency bin.
  * @return pointer to the stored Rayleigh distribution histogram fit.
  */
-TF1* AveragePowerSpectrum::getRayleighHistogramFit(Int_t freqInd){
+TF1* Acclaim::AveragePowerSpectrum::getRayleighHistogramFit(Int_t freqInd){
   TH1D* h = hRayleighs[freqInd];
   TString funcName = TString::Format("fit_%d", freqInd);
   TF1* f = (TF1*) h->FindObject(funcName);
@@ -312,7 +312,7 @@ TF1* AveragePowerSpectrum::getRayleighHistogramFit(Int_t freqInd){
  *
  * @return pointer to the new TH2D.
  */
-TH2D* AveragePowerSpectrum::makeRayleigh2DHistogram(){
+TH2D* Acclaim::AveragePowerSpectrum::makeRayleigh2DHistogram(){
 
   Double_t maxVal = 0;
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
@@ -359,7 +359,7 @@ TH2D* AveragePowerSpectrum::makeRayleigh2DHistogram(){
 /**
  * @brief Fits all the Rayeligh distributions
  */
-void AveragePowerSpectrum::fitAllRayleighHistograms(){
+void Acclaim::AveragePowerSpectrum::fitAllRayleighHistograms(){
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
     fitRayleighHistogram(freqInd);
   }
@@ -374,7 +374,7 @@ void AveragePowerSpectrum::fitAllRayleighHistograms(){
 /**
  * @brief Fits all the Rayeligh distributions, but only up to the peak bin.
  */
-void AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdge(){
+void Acclaim::AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdge(){
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
     fitRayleighHistogramRisingEdge(freqInd);
   }
@@ -388,7 +388,7 @@ void AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdge(){
 /**
  * @brief Fits all the Rayeligh distributions, as far as the bin which is half the value of the peak bin.
  */
-void AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdgeAndHalfFallingEdge(){
+void Acclaim::AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdgeAndHalfFallingEdge(){
   for(Int_t freqInd=0; freqInd < NUM_FREQS; freqInd++){
     fitRayleighHistogramRisingEdgeAndHalfFallingEdge(freqInd);
   }
@@ -407,7 +407,7 @@ void AveragePowerSpectrum::fitAllRayleighHistogramsRisingEdgeAndHalfFallingEdge(
  *
  * Limits on the fit come from the histogram.
  */
-TF1* AveragePowerSpectrum::constructFitFromAmplitude(Int_t freqInd, Double_t amplitude){
+TF1* Acclaim::AveragePowerSpectrum::constructFitFromAmplitude(Int_t freqInd, Double_t amplitude){
 
   TH1D* h = getRayleighHistogram(freqInd);
   TString fitName = TString::Format("fit_%d_%lf", freqInd, amplitude);
@@ -431,7 +431,7 @@ TF1* AveragePowerSpectrum::constructFitFromAmplitude(Int_t freqInd, Double_t amp
  * Limits on the fit come from the histogram.
  * The amplitude comes from the stored internal numbers.
  */
-TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitude(Int_t freqInd){
+TF1* Acclaim::AveragePowerSpectrum::constructFitFromRayleighAmplitude(Int_t freqInd){
   return constructFitFromAmplitude(freqInd, rayleighAmplitudes[freqInd]);
 }
 
@@ -449,7 +449,7 @@ TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitude(Int_t freqInd){
  * Limits on the fit come from the histogram.
  * The amplitude comes from the stored internal numbers.
  */
-TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdge(Int_t freqInd){
+TF1* Acclaim::AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdge(Int_t freqInd){
   return constructFitFromAmplitude(freqInd, rayleighAmplitudesRisingEdge[freqInd]);
 }
 
@@ -467,7 +467,7 @@ TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdge(Int_t fre
  * Limits on the fit come from the histogram.
  * The amplitude comes from the stored internal numbers.
  */
-TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdgeAndHalfFalling(Int_t freqInd){
+TF1* Acclaim::AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdgeAndHalfFalling(Int_t freqInd){
   return constructFitFromAmplitude(freqInd, rayleighAmplitudesRisingEdgeAndHalfFalling[freqInd]);
 }
 
@@ -481,7 +481,7 @@ TF1* AveragePowerSpectrum::constructFitFromRayleighAmplitudeRisingEdgeAndHalfFal
  *
  * @param freqInd is the bin of the frequency bin.
  */
-void AveragePowerSpectrum::fitRayleighHistogram(Int_t freqInd){
+void Acclaim::AveragePowerSpectrum::fitRayleighHistogram(Int_t freqInd){
   // std::cout << __PRETTY_FUNCTION__ << std::endl;
   
   TH1D* h = getRayleighHistogram(freqInd);
@@ -505,7 +505,7 @@ void AveragePowerSpectrum::fitRayleighHistogram(Int_t freqInd){
  *
  * @param freqInd is the bin of the frequency bin.
  */
-void AveragePowerSpectrum::fitRayleighHistogramRisingEdge(Int_t freqInd){
+void Acclaim::AveragePowerSpectrum::fitRayleighHistogramRisingEdge(Int_t freqInd){
   // std::cout << __PRETTY_FUNCTION__ << std::endl;
 
   TH1D* h = getRayleighHistogram(freqInd);
@@ -531,7 +531,7 @@ void AveragePowerSpectrum::fitRayleighHistogramRisingEdge(Int_t freqInd){
  *
  * @param freqInd is the bin of the frequency bin.
  */
-void AveragePowerSpectrum::fitRayleighHistogramRisingEdgeAndHalfFallingEdge(Int_t freqInd){
+void Acclaim::AveragePowerSpectrum::fitRayleighHistogramRisingEdgeAndHalfFallingEdge(Int_t freqInd){
   // std::cout << __PRETTY_FUNCTION__ << std::endl;
 
   TH1D* h = getRayleighHistogram(freqInd);
@@ -575,7 +575,7 @@ void AveragePowerSpectrum::fitRayleighHistogramRisingEdgeAndHalfFallingEdge(Int_
  * @param rChiSquaresFullRange is a pointer to stored chi square, over the whole range even if this is larger than the fitted range.
  * @param rNdfFullRange is a pointer to stored NDF, over the whole range even if this is larger than the fitted range.
  */
-void AveragePowerSpectrum::fitRayleighHistogramOverRange(Int_t freqInd, Double_t xLowVal, Double_t xHighVal,
+void Acclaim::AveragePowerSpectrum::fitRayleighHistogramOverRange(Int_t freqInd, Double_t xLowVal, Double_t xHighVal,
 							 Double_t* rAmplitudes,
 							 Double_t* rChiSquares,
 							 Int_t* rNdf,
@@ -635,7 +635,7 @@ void AveragePowerSpectrum::fitRayleighHistogramOverRange(Int_t freqInd, Double_t
 /**
  * @brief Deletes all the Rayleigh histograms
  */
-void AveragePowerSpectrum::deleteRayleighDistributions(){
+void Acclaim::AveragePowerSpectrum::deleteRayleighDistributions(){
   for(int freqInd=0; freqInd < NUM_FREQS; freqInd++){
     if(hRayleighs[freqInd]!=NULL){
       delete hRayleighs[freqInd];
@@ -652,7 +652,7 @@ void AveragePowerSpectrum::deleteRayleighDistributions(){
 /**
  * @brief Creates a TGraph of the average power spectrum
  */
-TGraph* AveragePowerSpectrum::makeAvePowSpecTGraph(){
+TGraph* Acclaim::AveragePowerSpectrum::makeAvePowSpecTGraph(){
 
   TString name = TString::Format("gr_%s", GetName());
   TString title = TString::Format("%s", GetTitle());
@@ -690,7 +690,7 @@ TGraph* AveragePowerSpectrum::makeAvePowSpecTGraph(){
 /**
  * @brief Creates a TGraph of the average power spectrum with a dB scale.
  */
-TGraph* AveragePowerSpectrum::makeAvePowSpecTGraph_dB(){
+TGraph* Acclaim::AveragePowerSpectrum::makeAvePowSpecTGraph_dB(){
   
   TGraph* gr = makeAvePowSpecTGraph();
   TString name = TString::Format("%s_dB", gr->GetName());

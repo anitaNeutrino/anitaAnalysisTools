@@ -1,10 +1,10 @@
 #include "DataQualityMonitor.h"
 
-DataQualityMonitor::DataQualityMonitor(){
+Acclaim::DataQualityMonitor::DataQualityMonitor(){
 
 }
 
-DataQualityMonitor::DataQualityMonitor(TChain* c){
+Acclaim::DataQualityMonitor::DataQualityMonitor(TChain* c){
 
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
@@ -20,7 +20,7 @@ DataQualityMonitor::DataQualityMonitor(TChain* c){
 }
 
 
-void DataQualityMonitor::setBranches(TChain* c){
+void Acclaim::DataQualityMonitor::setBranches(TChain* c){
   dataQualityChain = c; 
   dataQualityChain->SetBranchAddress("maxAbsSecondDeriv", &maxAbsSecondDeriv[0][0]);
   dataQualityChain->SetBranchAddress("maxVolts", &maxVolts[0][0]);
@@ -32,13 +32,13 @@ void DataQualityMonitor::setBranches(TChain* c){
   saturationVolts = 1500;  
 }
 
-DataQualityMonitor::~DataQualityMonitor(){
+Acclaim::DataQualityMonitor::~DataQualityMonitor(){
   
 }
 
 
 
-Int_t DataQualityMonitor::processEntry(Long64_t entry, UInt_t eventNumberCheck){
+Int_t Acclaim::DataQualityMonitor::processEntry(Long64_t entry, UInt_t eventNumberCheck){
 
   // std::cerr << dataQualityChain->GetEntry(entry) << std::endl;
   dataQualityChain->GetEntry(entry);

@@ -5,7 +5,7 @@
 const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
 
-FourierBuffer::FourierBuffer(Int_t timeScaleSeconds){
+Acclaim::FourierBuffer::FourierBuffer(Int_t timeScaleSeconds){
   timeScale = timeScaleSeconds;
 }
 
@@ -13,7 +13,7 @@ FourierBuffer::FourierBuffer(Int_t timeScaleSeconds){
 
 
 
-size_t FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform& wave){
+size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform& wave){
 
   // std::vector<FFTWComplex> tempFreqs(wave.freq(), wave.freq()+NUM_FREQS);
 
@@ -51,7 +51,7 @@ size_t FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform& 
 
 
 
-Int_t FourierBuffer::removeOld(){
+Int_t Acclaim::FourierBuffer::removeOld(){
 
   Int_t nPopped = 0;
   if(realTimesNs.size() > 0){
@@ -76,7 +76,7 @@ Int_t FourierBuffer::removeOld(){
 
 
 
-TH1D* FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info){
+TH1D* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info){
 
   TH1D* hRay = getRayleighDistribution(freqBin);
   TString fName = TString::Format("fRay%d", freqBin);
@@ -128,7 +128,7 @@ TH1D* FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info){
 
 
 
-TH1D* FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
+TH1D* Acclaim::FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
 
   TH1D* hRay = fillRayleighInfo(freqBin, info);
 
@@ -169,7 +169,7 @@ TH1D* FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
 
 
 
-TH1D* FourierBuffer::getRayleighDistribution(Int_t freqBin){
+TH1D* Acclaim::FourierBuffer::getRayleighDistribution(Int_t freqBin){
 
 
 
