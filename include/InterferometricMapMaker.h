@@ -83,7 +83,8 @@ private:
   // and it is the user's responsbility to delete
   mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
   mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
-  mutable std::map<Int_t, AnalysisWaveform*> coherent[AnitaPol::kNotAPol]; // 
+  mutable std::map<Int_t, AnalysisWaveform*> coherent[AnitaPol::kNotAPol]; //
+  mutable AnitaEventSummary summary; //   
   // lazily generates CrossCorrelator when process() is called
   // (plan to add attachment function for external cross correlator)
   // if spawns one, sets the bool to true and deletes the cross correlator in destructor
