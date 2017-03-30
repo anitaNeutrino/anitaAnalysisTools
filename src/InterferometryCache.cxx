@@ -33,7 +33,7 @@ void InterferometryCache::populateCache(CrossCorrelator* cc, const Interferometr
 
 
   kUseOffAxisDelay = mm->kUseOffAxisDelay;
-  std::cout << "in cache kUseOffAxisDelay " << kUseOffAxisDelay << std::endl;
+  // std::cout << "in cache kUseOffAxisDelay " << kUseOffAxisDelay << std::endl;
   numCombos = cc->numCombos;
   
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();

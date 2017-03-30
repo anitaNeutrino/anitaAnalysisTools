@@ -12,12 +12,30 @@ InterferometricMapMaker::~InterferometricMapMaker(){
   if(spawnedCrossCorrelator && cc){
     delete cc;
   }
+
+  deleteSummaryGraphs(AnitaPol::kHorizontal);
+  deleteSummaryGraphs(AnitaPol::kVertical);  
+  
+}
+
+
+void InterferometricMapMaker::deleteSummaryGraphs(AnitaPol::AnitaPol_t pol){
+
+  while(summaryGraphs[pol].size() > 0){
+    TGraphAligned* gr = summaryGraphs[pol].back();
+    delete gr;
+    summaryGraphs[pol].pop_back();
+  }
 }
 
 
 
+
+
 // mostly for MagicDisplay integration
-void InterferometricMapMaker::drawSummary(TPad* sumPad, AnitaPol::AnitaPol_t pol){  
+void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t pol){
+
+  deleteSummaryGraphs(pol);
 
   const int numColsForNow = 5;
   EColor peakColors[numColsForNow] = {kMagenta, EColor(kViolet+10), kCyan, kGreen, kOrange};
@@ -25,19 +43,19 @@ void InterferometricMapMaker::drawSummary(TPad* sumPad, AnitaPol::AnitaPol_t pol
   // just draws the maps in memory...
   Double_t xlow, ylow, xup, yup;
 
-  if(sumPad==NULL){
+  if(summaryPad==NULL){
     UInt_t eventNumber = cc->eventNumber[pol];
     TString canName = TString::Format("can%u", eventNumber);
     TString polSuffix = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
     canName += polSuffix;
     TString canTitle = TString::Format("Event %u - ", eventNumber) + polSuffix;
-    sumPad = new TCanvas(canName);
+    summaryPad = new TCanvas(canName);
   }
-  sumPad->Clear();
+  summaryPad->Clear();
   
   int padInd = 0;
   TString subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
-  xlow = 0, ylow = 0.75, xup = 1, yup = 1, sumPad->cd();
+  xlow = 0, ylow = 0.75, xup = 1, yup = 1, summaryPad->cd();
   TPad* coarsePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
   padInd++;
   coarsePad->Draw();
@@ -54,13 +72,13 @@ void InterferometricMapMaker::drawSummary(TPad* sumPad, AnitaPol::AnitaPol_t pol
   // std::vector<TGraph> grPeaks;
   
   subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
-  xlow = 0, ylow = 0.5, xup = 1, yup = 0.75, sumPad->cd();
+  xlow = 0, ylow = 0.5, xup = 1, yup = 0.75, summaryPad->cd();
   TPad* finePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
   padInd++;
   finePad->Draw();
 
   const int nFine = fineMaps[pol].size();
-  for(int peakInd = 0; peakInd < (int)fineMaps[pol].size(); peakInd++){
+  for(int peakInd = 0; peakInd < nFine; peakInd++){
     xlow = double(peakInd)/nFine, ylow = 0, xup = double(peakInd+1)/nFine, yup = 1, finePad->cd();
     subPadName = TString::Format("%s_%d", gPad->GetName(), peakInd);    
     TPad* fineSubPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup); //, peakColors[peakInd]);
@@ -92,6 +110,53 @@ void InterferometricMapMaker::drawSummary(TPad* sumPad, AnitaPol::AnitaPol_t pol
       }
     }
   }
+
+
+
+
+  subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
+  xlow = 0, ylow = 0.25, xup = 1, yup = 0.5, summaryPad->cd();
+  TPad* coherentPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  padInd++;
+  coherentPad->Draw();
+  coherentPad->cd();
+  
+  const int nCoherent = coherent[pol].size(); // should be the same as nFinePeaks
+  bool drawnAxis = false;
+  std::cout << nCoherent << "\t" << pol << "\t" << coherent[pol].size() << std::endl;
+  for(int peakInd = 0; peakInd < (int)nCoherent; peakInd++){
+    
+    std::map<Int_t, AnalysisWaveform*>::iterator it = coherent[pol].find(peakInd);
+    if(it!=coherent[pol].end()){
+      AnalysisWaveform* coherentWave = it->second;
+      if(coherentWave){
+	const char* opt = !drawnAxis ? "al" : "lsame";
+	drawnAxis = true;
+
+	// don't want to be able to edit it by accident so copy it...
+	const TGraphAligned* gr = coherentWave->even();
+	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
+	summaryGraphs[pol].push_back(gr2);
+
+	gr2->SetFillColor(0);
+	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
+	gr2->SetTitle(title);
+	gr2->SetLineColor(peakColors[peakInd]);
+	gr2->Draw(opt);
+
+	// std::cout << "here \t" << summaryGraphs.size() << std::endl;
+      }
+      else{
+	std::cerr << "missing coherent pointer?\t" << pol << "\t" << peakInd << std::endl;
+      }
+    }
+    else{
+      std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
+    }
+  }
+  TLegend* lCoherent = coherentPad->BuildLegend();
+  lCoherent->Draw();
+  
 }
 
 
@@ -101,7 +166,7 @@ void InterferometricMapMaker::process(const FilteredAnitaEvent * usefulEvent, Us
   if(!cc){
     cc = new CrossCorrelator();
     spawnedCrossCorrelator = true;
-    std::cout << "here" << "\t" << spawnedCrossCorrelator << std::endl;
+    // std::cout << "here" << "\t" << spawnedCrossCorrelator << std::endl;
     dtCache.init(cc, this);    
   }
 
@@ -131,10 +196,6 @@ void InterferometricMapMaker::process(const FilteredAnitaEvent * usefulEvent, Us
     for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
-      std::vector<Double_t> fineMapPeakValues;
-      std::vector<Double_t> fineMapPeakPhiDegs;
-      std::vector<Double_t> fineMapPeakThetaDegs;
-
       std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
       InterferometricMap* h = NULL;
       if(it!=fineMaps[pol].end()){
@@ -143,15 +204,39 @@ void InterferometricMapMaker::process(const FilteredAnitaEvent * usefulEvent, Us
       else{
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
       }
-      h->findPeakValues(1, fineMapPeakValues, fineMapPeakPhiDegs, fineMapPeakThetaDegs);
 
-      eventSummary->peak[pol][peakInd].phi = fineMapPeakPhiDegs.at(0);
-      eventSummary->peak[pol][peakInd].theta = fineMapPeakThetaDegs.at(0);
+      h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);      
 
       // fill in difference between rough and fine
       eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
       eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseMapPeakThetaDegs.at(peakInd);
 
+      // based on Cosmin's comments in AnitaAnalysisSummary.h
+      eventSummary->peak[pol][peakInd].phi_separation = peakInd == 0 ? 1000 : RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
+      
+      // AnalysisWaveform* coherent = coherentlySum(usefulEvent, h);
+
+
+      AnalysisWaveform* coherentWave = coherentlySum(usefulEvent, h);
+      
+      std::map<Int_t, AnalysisWaveform*>::iterator it2 = coherent[pol].find(peakInd);
+      if(it2!=coherent[pol].end()){
+	if(it2->second != NULL){
+	  delete it2->second;
+	}
+      }
+      coherent[pol][peakInd] = coherentWave;
+
+      const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
+      eventSummary->coherent[pol][peakInd].peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
+
+      // Double_t snr; ///Signal to Noise of waveform 
+      // Double_t peakHilbert; /// peak of hilbert envelope
+      // Double_t peakVal;  /// peak value
+      // Double_t xPolPeakVal;  // Peak of xpol trace
+      // Double_t xPolPeakHilbert;  // Peak of xpol hilbert Envelope
+      
+      
       
       // Double_t minY = 0;
       // TGraph* grZ0 = makeUpsampledCoherentlySummedWaveform(pol,
@@ -541,7 +626,7 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEven
   for(unsigned i=0; i < ants.size(); i++){
     if(ants[i] != biggest){
       waves.push_back(fEv->getFilteredGraph(ants[i], pol));
-      std::cout << waves.size() << "\t" << ants[i] << std::endl;
+      // std::cout << waves.size() << "\t" << ants[i] << std::endl;
     }
   }
 
@@ -557,11 +642,11 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEven
     
       Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);
       dts.push_back(dt);
-      std::cout << dts.size() << "\t" << ants[i] << std::endl;      
+      // std::cout << dts.size() << "\t" << ants[i] << std::endl;      
     }    
   }
 					   
-  
+  // std::cerr << "return " << __PRETTY_FUNCTION__ << std::endl;
   return coherentlySum(waves, dts);
 }
 
@@ -587,19 +672,25 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(std::vector<const Analy
     }
   }
 
+  // std::cerr << "here 1\t"  << dts.size() << "\t" << waves.size() << std::endl;
   AnalysisWaveform* coherentWave = new AnalysisWaveform((*waves[0]));
-  TGraphAligned* grCoherent = coherentWave->updateUneven();
-  for(UInt_t i=1; 1 < waves.size(); i++){
+  // std::cerr << "here 2\t"  << coherentWave << std::endl;  
+  
+  TGraphAligned* grCoherent = coherentWave->updateEven();
+  for(UInt_t i=1; i < waves.size(); i++){
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
       grCoherent->GetY()[samp] += waves[i]->evalEven(t);
     };    
   }
 
+  // std::cerr << "here 3\t"  << grCoherent << std::endl;    
+
   for(int samp=0; samp < grCoherent->GetN(); samp++){
     grCoherent->GetY()[samp]/=waves.size();
   };    
 
+  // std::cerr << "return " << __PRETTY_FUNCTION__ << "\t" << coherentWave << std::endl;  
   return coherentWave;
 }
 
