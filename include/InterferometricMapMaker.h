@@ -92,6 +92,9 @@ private:
   
   // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
   mutable InterferometryCache dtCache;
+
+  TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix); ///!< Helper function for drawSummary
+  
 };
 
 

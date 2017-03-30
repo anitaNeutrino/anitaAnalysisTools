@@ -18,15 +18,43 @@ InterferometricMapMaker::~InterferometricMapMaker(){
 
 
 
-// mostly for MagicDisplay integration
+/** 
+ * Helper function for drawSummary
+ * draws a new TPad inside the parent TPad (cds into it too) with 
+ * @param parentPad the pad to draw inside of
+ * @param xlow is relative to parent pad
+ * @param ylow is relative to parent pad
+ * @param xup is relative to parent pad
+ * @param yup is relative to parent pad
+ * @param suffix is the suffix to append to the pad name
+ * 
+ * @return the new subPad
+ */
+TPad* InterferometricMapMaker::makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix){
+
+  parentPad->cd(); // go into parent pad (assume it's drawn, would that matter?)
+  TString subPadName = TString::Format("%s_%s", parentPad->GetName(), suffix.Data());
+  TPad* subPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  subPad->Draw();
+  subPad->cd();
+  return subPad;
+}
+
+
+
+/** 
+ * Function for MagicDisplay
+ * 
+ * @param summaryPad is the pad if it already exists (makes a new Canvas if passed NULL)
+ * @param pol is the polarization to draw
+ */
 void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t pol){
 
   const int numColsForNow = 5;
-  EColor peakColors[numColsForNow] = {kMagenta, EColor(kViolet+10), kCyan, kGreen, kOrange};
+  EColor peakColors[numColsForNow] = {kBlack, EColor(kViolet+10), kMagenta};
   
   
-  // just draws the maps in memory...
-  Double_t xlow, ylow, xup, yup;
+
 
   if(summaryPad==NULL){
     UInt_t eventNumber = cc->eventNumber[pol];
@@ -38,41 +66,29 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
   }
   summaryPad->Clear();
   
-  int padInd = 0;
-  TString subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
-  xlow = 0, ylow = 0.75, xup = 1, yup = 1, summaryPad->cd();
-  TPad* coarsePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
-  padInd++;
-  coarsePad->Draw();
-  coarsePad->cd();
 
+  TPad* coarseMapPad = makeSubPad(summaryPad, 0, 0.8, 1, 1, TString::Format("%d_coarse", (int)pol));
   InterferometricMap* hCoarse = coarseMaps[pol];
   if(hCoarse){
     hCoarse->Draw("colz");
-    hCoarse->SetTitleSize(0.01);
-    hCoarse->GetXaxis()->SetTitleSize(0.01);
-    hCoarse->GetYaxis()->SetTitleSize(0.01);
+    hCoarse->SetTitleSize(0.1);
+    hCoarse->GetXaxis()->SetTitleSize(0.1);
+    hCoarse->GetYaxis()->SetTitleSize(0.1);
+    hCoarse->GetZaxis()->SetTitleSize(0.1);    
   }
 
   // std::vector<TGraph> grPeaks;
-  
-  subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
-  xlow = 0, ylow = 0.5, xup = 1, yup = 0.75, summaryPad->cd();
-  TPad* finePad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
-  padInd++;
-  finePad->Draw();
 
+  TPad* finePeaksAndCoherent = makeSubPad(summaryPad, 0, 0.5, 1, 0.8, "peaks");
 
   std::list<InterferometricMap*> drawnFineMaps;
   
   const int nFine = fineMaps[pol].size();
   for(int peakInd = 0; peakInd < nFine; peakInd++){
-    xlow = double(peakInd)/nFine, ylow = 0, xup = double(peakInd+1)/nFine, yup = 1, finePad->cd();
-    subPadName = TString::Format("%s_%d", gPad->GetName(), peakInd);    
-    TPad* fineSubPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup); //, peakColors[peakInd]);
-    fineSubPad->Draw();
-    fineSubPad->cd();
-
+    double yUp = 1 - double(peakInd)/nFine;
+    double yLow = yUp - double(1)/nFine;    
+    TPad* finePeak = makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
+    
     std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
     if(it!=fineMaps[pol].end()){
       InterferometricMap* h = it->second;
@@ -89,17 +105,74 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
 	gr.Draw("psame");
 
 	TGraph& gr2 = h->getEdgeBoxGraph();
+
 	gr2.Draw("lsame");
-	
 	gr.SetMarkerColor(peakColors[peakInd]);
 	gr.SetMarkerStyle(8); // dot
 	gr2.SetLineColor(peakColors[peakInd]);
+	gr2.SetLineWidth(3);
 	
-	coarsePad->cd();
+
+	
+	
+	coarseMapPad->cd();
+	TGraph* gr3 = (TGraph*) gr2.Clone();
+	gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
+	
+	gr3->SetLineWidth(1);
 	gr.Draw("psame");
-	gr2.Draw("lsame");	
+	gr3->Draw("lsame");	
       }
     }
+
+    TPad* coherentPad    = makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
+    TPad* coherentFftPad = makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
+
+    std::map<Int_t, AnalysisWaveform*>::iterator it2 = coherent[pol].find(peakInd);
+    if(it2!=coherent[pol].end()){
+      AnalysisWaveform* coherentWave = it2->second;
+      if(coherentWave){
+	
+	const char* opt = "al";
+
+	// don't want to be able to edit it by accident so copy it...
+	const TGraphAligned* gr = coherentWave->even();
+	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
+
+	gr2->SetFillColor(0);
+	gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+	// std::cout << gr2 << "\t" << pol << "\t" << peakInd << "\t" << gr2->IsOnHeap() << std::endl;
+	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
+	gr2->SetTitle(title);
+	gr2->SetLineColor(peakColors[peakInd]);
+
+	coherentPad->cd();	
+	gr2->Draw(opt);
+
+
+	
+	const TGraphAligned* grPower = coherentWave->powerdB();
+	TGraphAligned* grPower2 = (TGraphAligned*) grPower->Clone();
+	grPower2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+	title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
+	grPower2->SetTitle(title);
+	grPower2->SetLineColor(peakColors[peakInd]);
+
+	coherentFftPad->cd();
+	grPower2->Draw(opt);
+
+	// std::cout << "here \t" << summaryGraphs.size() << std::endl;
+      }
+      else{
+	std::cerr << "missing coherent pointer?\t" << pol << "\t" << peakInd << std::endl;
+      }
+    }
+    else{
+      std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
+    }
+
+
+    
   }
 
   if(drawnFineMaps.size() > 0){
@@ -125,47 +198,47 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
   }
   
 
-  subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
-  xlow = 0, ylow = 0.25, xup = 1, yup = 0.5, summaryPad->cd();
-  TPad* coherentPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
-  padInd++;
-  coherentPad->Draw();
-  coherentPad->cd();
+  // subPadName = TString::Format("analysisToolsSummaryPad_%d_%d", (int)pol, padInd);
+  // xlow = 0, ylow = 0.25, xup = 1, yup = 0.5, summaryPad->cd();
+  // TPad* coherentPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  // padInd++;
+  // coherentPad->Draw();
+  // coherentPad->cd();
   
-  const int nCoherent = coherent[pol].size(); // should be the same as nFinePeaks
-  bool drawnAxis = false;
-  // std::cout << nCoherent << "\t" << pol << "\t" << coherent[pol].size() << std::endl;
-  for(int peakInd = 0; peakInd < (int)nCoherent; peakInd++){
+  // const int nCoherent = coherent[pol].size(); // should be the same as nFinePeaks
+  // bool drawnAxis = false;
+  // // std::cout << nCoherent << "\t" << pol << "\t" << coherent[pol].size() << std::endl;
+  // for(int peakInd = 0; peakInd < (int)nCoherent; peakInd++){
     
-    std::map<Int_t, AnalysisWaveform*>::iterator it = coherent[pol].find(peakInd);
-    if(it!=coherent[pol].end()){
-      AnalysisWaveform* coherentWave = it->second;
-      if(coherentWave){
-	const char* opt = !drawnAxis ? "al" : "lsame";
-	drawnAxis = true;
+  //   std::map<Int_t, AnalysisWaveform*>::iterator it = coherent[pol].find(peakInd);
+  //   if(it!=coherent[pol].end()){
+  //     AnalysisWaveform* coherentWave = it->second;
+  //     if(coherentWave){
+  // 	const char* opt = !drawnAxis ? "al" : "lsame";
+  // 	drawnAxis = true;
 
-	// don't want to be able to edit it by accident so copy it...
-	const TGraphAligned* gr = coherentWave->even();
-	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
+  // 	// don't want to be able to edit it by accident so copy it...
+  // 	const TGraphAligned* gr = coherentWave->even();
+  // 	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
 
-	gr2->SetFillColor(0);
-	gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-	// std::cout << gr2 << "\t" << pol << "\t" << peakInd << "\t" << gr2->IsOnHeap() << std::endl;
-	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
-	gr2->SetTitle(title);
-	gr2->SetLineColor(peakColors[peakInd]);
-	gr2->Draw(opt);
+  // 	gr2->SetFillColor(0);
+  // 	gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+  // 	// std::cout << gr2 << "\t" << pol << "\t" << peakInd << "\t" << gr2->IsOnHeap() << std::endl;
+  // 	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
+  // 	gr2->SetTitle(title);
+  // 	gr2->SetLineColor(peakColors[peakInd]);
+  // 	gr2->Draw(opt);
 
-	// std::cout << "here \t" << summaryGraphs.size() << std::endl;
-      }
-      else{
-	std::cerr << "missing coherent pointer?\t" << pol << "\t" << peakInd << std::endl;
-      }
-    }
-    else{
-      std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
-    }
-  }
+  // 	// std::cout << "here \t" << summaryGraphs.size() << std::endl;
+  //     }
+  //     else{
+  // 	std::cerr << "missing coherent pointer?\t" << pol << "\t" << peakInd << std::endl;
+  //     }
+  //   }
+  //   else{
+  //     std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
+  //   }
+  // }
   // TLegend* lCoherent = coherentPad->BuildLegend();
   // lCoherent->Draw();
   
