@@ -123,7 +123,7 @@ void InterferometricMapMaker::drawSummary(TPad* summaryPad, AnitaPol::AnitaPol_t
   
   const int nCoherent = coherent[pol].size(); // should be the same as nFinePeaks
   bool drawnAxis = false;
-  std::cout << nCoherent << "\t" << pol << "\t" << coherent[pol].size() << std::endl;
+  // std::cout << nCoherent << "\t" << pol << "\t" << coherent[pol].size() << std::endl;
   for(int peakInd = 0; peakInd < (int)nCoherent; peakInd++){
     
     std::map<Int_t, AnalysisWaveform*>::iterator it = coherent[pol].find(peakInd);
@@ -640,7 +640,7 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEven
   for(unsigned i=0; i < ants.size(); i++){
     if(ants[i]!=biggest){
     
-      Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);
+      Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);      
       dts.push_back(dt);
       // std::cout << dts.size() << "\t" << ants[i] << std::endl;      
     }    
@@ -654,13 +654,13 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(const FilteredAnitaEven
 
 AnalysisWaveform* InterferometricMapMaker::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) const{
   
-  if(waves.size() < 2){    
+  if(waves.size() < 1){    
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum.. about to return NULL" << std::endl;
     return NULL;
   }  
   else if(waves.size() != dts.size()){    
     const char* action = dts.size() < waves.size() ? "padding" : "trimming";
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")"
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
 	      << action << " dts..." << std::endl;
     while(waves.size() != dts.size()){
       if(dts.size() < waves.size()){
@@ -680,7 +680,7 @@ AnalysisWaveform* InterferometricMapMaker::coherentlySum(std::vector<const Analy
   for(UInt_t i=1; i < waves.size(); i++){
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
-      grCoherent->GetY()[samp] += waves[i]->evalEven(t);
+      grCoherent->GetY()[samp] += waves[i]->evalEven(t + dts[i]);
     };    
   }
 
