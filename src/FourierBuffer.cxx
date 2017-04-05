@@ -28,7 +28,7 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
 
   if(df <= 0){
-    df = grPower->GetY()[1] - grPower->GetY()[0];
+    df = grPower->GetX()[1] - grPower->GetX()[0];
   }
 
 
