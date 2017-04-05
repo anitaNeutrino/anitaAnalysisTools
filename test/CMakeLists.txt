@@ -1,28 +1,14 @@
-add_executable (testAveragePowerSpectrum testAveragePowerSpectrum.cxx)
-target_link_libraries (testAveragePowerSpectrum LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testAveragePowerSpectrum DESTINATION ${UTIL_BIN_DIR})
+
+set(BINARIES testAveragePowerSpectrum testFancyFFTs testFancyTTreeInterpolator testOutputConvention testProgressBar)
 
 
+foreach(binary ${BINARIES})
+  MESSAGE(STATUS "Process file: ${binary}")
+  add_executable (${binary} ${binary}.cxx)
+  target_link_libraries (${binary} LINK_PUBLIC AnitaAnalysisTools AnitaEvent )
+  
+endforeach(binary)
+set(testBinDir ${UTIL_BIN_DIR}/Acclaim/test)
+install(DIRECTORY DESTINATION ${testBinDir})
+install(TARGETS ${BINARIES} DESTINATION ${testBinDir})
 
-
-add_executable (testFancyFFTs testFancyFFTs.cxx)
-target_link_libraries (testFancyFFTs LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testFancyFFTs DESTINATION ${UTIL_BIN_DIR})
-
-
-
-add_executable (testFancyTTreeInterpolator testFancyTTreeInterpolator.cxx)
-target_link_libraries (testFancyTTreeInterpolator LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testFancyTTreeInterpolator DESTINATION ${UTIL_BIN_DIR})
-
-
-
-add_executable (testOutputConvention testOutputConvention.cxx)
-target_link_libraries (testOutputConvention LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testOutputConvention DESTINATION ${UTIL_BIN_DIR})
-
-
-
-add_executable (testProgressBar testProgressBar.cxx)
-target_link_libraries (testProgressBar LINK_PUBLIC AnitaAnalysisTools AnitaEvent )  
-install (TARGETS testProgressBar DESTINATION ${UTIL_BIN_DIR})

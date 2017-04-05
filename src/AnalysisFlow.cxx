@@ -22,6 +22,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fNumDivisions = numDivisions;
   fRun = run;
 
+  fSumTree = NULL;
   fData = NULL;
   fReco = NULL;
   fOutFile = NULL;
@@ -104,7 +105,7 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     fakeArgv.push_back((char*) fOutFileBaseName.Data());
     TString runStr = TString::Format("%d", fRun);
     fakeArgv.push_back((char*) runStr.Data());
-
+    
 
     if(fNumDivisions > 1){
       
@@ -121,9 +122,16 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     }
     Int_t fakeArgc = (Int_t) fakeArgv.size();
 
+    // std::cout << fakeArgc << ", " << &fakeArgv[0] << std::endl;
+    // for(int i=0; i < fakeArgc; i++){
+    //   std::cout << "\t:" << i << ", " << fakeArgv[i] << std::endl;    
+    // }
+
     OutputConvention oc(fakeArgc, &fakeArgv[0]);
 
-    fOutFile = oc.makeFile();  
+    fOutFile = oc.makeFile();
+
+    // std::cout << fOutFile << "\t" << fOutFile->GetName() << std::endl;
   }  
   
 }
@@ -187,9 +195,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
   if(!fReco){
     fReco = new AnalysisReco();
   }
-  // if(!fReco){
-  //   fReco = new CrossCorrelator();
-  // }
 
   if(!fOutFile){
     prepareOutputFiles();
@@ -198,7 +203,7 @@ void Acclaim::AnalysisFlow::doAnalysis(){
   if(!fSumTree){
     fSumTree = new TTree("sumTree", "Tree of AnitaEventSummaries");
   }
-  
+
   AnitaEventSummary* eventSummary = NULL;
   fSumTree->Branch("sum", &eventSummary);
 
@@ -209,6 +214,8 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     // this doesn't necessarily mean the output will be saved
     // it will only be saved if operations were added with the optional enable_output bool = true
     fFilterStrat->attachFile(fOutFile);
+
+    
   }
   else{
     // empty strategy does nothing
@@ -228,7 +235,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     
       UsefulAnitaEvent* usefulEvent = fData->useful();
 
-      
       FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
       eventSummary = new AnitaEventSummary(header, &usefulPat);
@@ -242,4 +248,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     
     p.inc(entry, numEntries);
   }
+
+  delete fFilterStrat;
 }  
