@@ -20,41 +20,51 @@
 #include <vector>
 #include "RawAnitaHeader.h"
 
-//#define NUM_FREQS ((NUM_SAMPLES/2) + 1)
 namespace Acclaim
 {
 
   /**
    * @class FourierBuffer
-   * @brief A class to hold fourier domain representations in memory
+   * @brief A class to hold frequency domain info in memory
+   * I've removed the mag/phase info for now as it's probably a bit gratuitous
    */
   class FourierBuffer {
 
   public:
 
-    explicit FourierBuffer(Int_t timeScaleSeconds=60);
+    explicit FourierBuffer(Double_t timeScaleSeconds=60, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
 
     size_t add(const RawAnitaHeader* header, const AnalysisWaveform& wave);
 
-    TH1D* getRayleighDistribution(Int_t freqBin);
-    TH1D* fillRayleighInfo(Int_t freqBin, RayleighInfo* info);
-    TH1D* fillRiceInfo(Int_t freqBin, RiceInfo* info);  
+    TH1D* getRayleighDistribution(Int_t freqBin) const;
+    TH1D* fillRayleighInfo(Int_t freqBin, RayleighInfo* info) const;
+    TH1D* fillRiceInfo(Int_t freqBin, RiceInfo* info) const;
+    TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
+    TGraphAligned* getAvePowSpec(double timeRange = -1) const;
+
+    void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
+      ant = theAnt;
+      pol = thePol;
+    }
 
   private:
 
-
     Int_t removeOld();
 
-    std::list<std::vector<FFTWComplex> > freqVecs;
+    Int_t ant;
+    AnitaPol::AnitaPol_t pol;
+    
+    // std::list<std::vector<FFTWComplex> > freqVecs;
+    std::list<std::vector<double> > powerRingBuffer;    
     std::list<UInt_t> eventNumbers;
     std::list<Int_t> runs;  
     std::list<Double_t> realTimesNs;
 
-    Int_t timeScale;
+    std::vector<double> sumPower;
+    Double_t timeScale;
 
 
-
-
+    double df;
 
   };
 

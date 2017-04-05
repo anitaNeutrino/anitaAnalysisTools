@@ -5,27 +5,47 @@
 const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t timeScaleSeconds){
+Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
   timeScale = timeScaleSeconds;
+  ant = theAnt;
+  pol = thePol;
+  df = -1;
 }
-
-
-
 
 
 size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform& wave){
 
-  // std::vector<FFTWComplex> tempFreqs(wave.freq(), wave.freq()+NUM_FREQS);
-
-
   // for old compilers, push back compy of emptry vector for speed.
-  freqVecs.push_back(std::vector<FFTWComplex>());
+  powerRingBuffer.push_back(std::vector<double>());
 
   // then get reference to vector in the list
-  std::vector<FFTWComplex>& freqVec = freqVecs.back();
+  std::vector<double>& freqVec = powerRingBuffer.back();
 
   // copy frequencies into vector
-  freqVec.assign(wave.freq(), wave.freq()+wave.Nfreq());
+  // freqVec.assign(wave.freq(), wave.freq()+wave.Nfreq());
+  const TGraphAligned* grPower = wave.power();
+  // std::cout << grPower << "\t" << grPower->GetN() << std::endl;
+  freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
+
+  if(df <= 0){
+    df = grPower->GetY()[1] - grPower->GetY()[0];
+  }
+
+
+  if(sumPower.size()==0){
+    for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
+      sumPower.push_back(grPower->GetY()[freqInd]);
+    }
+  }
+  else{
+    for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
+      sumPower.at(freqInd) += grPower->GetY()[freqInd];
+    }
+  }
+
+  if(grPower->GetN() != (int)sumPower.size()){
+    std::cerr << "??????????????" << std::endl;
+  }
 
 
   // (wave.freq(), wave.freq()+wave.Nfreq());
@@ -63,7 +83,12 @@ Int_t Acclaim::FourierBuffer::removeOld(){
       realTimesNs.pop_front();
       eventNumbers.pop_front();
       runs.pop_front();
-      freqVecs.pop_front();
+      std::vector<double>& removeThisPower = powerRingBuffer.front();
+      for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
+	sumPower.at(freqInd) -= removeThisPower.at(freqInd);
+      }
+      powerRingBuffer.pop_front();
+      // freqVecs.pop_front();
       nPopped++;
     }
   }
@@ -76,7 +101,7 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
 
 
-TH1D* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info){
+TH1D* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info) const{
 
   TH1D* hRay = getRayleighDistribution(freqBin);
   TString fName = TString::Format("fRay%d", freqBin);
@@ -93,9 +118,10 @@ TH1D* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info
   info->firstEventNumber = eventNumbers.front();  
   info->firstRealTimeNs = realTimesNs.front();  
 
-
-  FFTWComplex val = freqVecs.back().at(freqBin);
-  info->eventAmp = TMath::Sqrt(val.re*val.re + val.im*val.im);
+  // FFTWComplex val = freqVecs.back().at(freqBin);  
+  // info->eventAmp = TMath::Sqrt(val.re*val.re + val.im*val.im);
+  double powerBin = powerRingBuffer.back().at(freqBin);
+  info->eventAmp = TMath::Sqrt(powerBin);  
   
   // Fill histogram related histogram info
   info->nBins = hRay->GetNbinsX();  
@@ -128,7 +154,7 @@ TH1D* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info
 
 
 
-TH1D* Acclaim::FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
+TH1D* Acclaim::FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info) const{
 
   TH1D* hRay = fillRayleighInfo(freqBin, info);
 
@@ -169,7 +195,7 @@ TH1D* Acclaim::FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info){
 
 
 
-TH1D* Acclaim::FourierBuffer::getRayleighDistribution(Int_t freqBin){
+TH1D* Acclaim::FourierBuffer::getRayleighDistribution(Int_t freqBin) const{
 
 
 
@@ -177,12 +203,16 @@ TH1D* Acclaim::FourierBuffer::getRayleighDistribution(Int_t freqBin){
 
   double meanAmp = 0;
   int count = 0;
-  std::list<std::vector<FFTWComplex> >::iterator it;
-  for(it = freqVecs.begin(); it!=freqVecs.end(); ++it){
+  // std::list<std::vector<FFTWComplex> >::iterator it;
+  // for(it = freqVecs.begin(); it!=freqVecs.end(); ++it){  
+  std::list<std::vector<double> >::const_iterator it;  
+  for(it = powerRingBuffer.begin(); it!=powerRingBuffer.end(); ++it){
 
-    std::vector<FFTWComplex>& freqVec = (*it);
-
-    Double_t absSq = freqVec.at(freqBin).re*freqVec.at(freqBin).re + freqVec.at(freqBin).im*freqVec.at(freqBin).im;
+    // std::vector<FFTWComplex>& freqVec = (*it);
+    const std::vector<double>& power = (*it);    
+    
+    // Double_t absSq = freqVec.at(freqBin).re*freqVec.at(freqBin).re + freqVec.at(freqBin).im*freqVec.at(freqBin).im;
+    Double_t absSq = power.at(freqBin);
     Double_t abs = TMath::Sqrt(absSq);
 
     // could add some logic to exclude outliers?
@@ -221,19 +251,71 @@ TH1D* Acclaim::FourierBuffer::getRayleighDistribution(Int_t freqBin){
   hRayleigh->Sumw2();
 
 
-  // std::list<std::vector<FFTWComplex> >::iterator it;
-  for(it = freqVecs.begin(); it!=freqVecs.end(); ++it){
+  for(it = powerRingBuffer.begin(); it!=powerRingBuffer.end(); ++it){
 
-    std::vector<FFTWComplex>& freqVec = (*it);
+    // std::vector<FFTWComplex>& freqVec = (*it);
+    const std::vector<double>& power = (*it);    
 
-    Double_t absSq = freqVec.at(freqBin).re*freqVec.at(freqBin).re + freqVec.at(freqBin).im*freqVec.at(freqBin).im;
+    // Double_t absSq = freqVec.at(freqBin).re*freqVec.at(freqBin).re + freqVec.at(freqBin).im*freqVec.at(freqBin).im;
+    Double_t absSq = power.at(freqBin);
     Double_t abs = TMath::Sqrt(absSq);
 
     hRayleigh->Fill(abs);
 
     // std::cout << abs << std::endl;
   }
+  // for(it = freqVecs.begin(); it!=freqVecs.end(); ++it){
+
+  //   std::vector<FFTWComplex>& freqVec = (*it);
+
+  //   Double_t absSq = freqVec.at(freqBin).re*freqVec.at(freqBin).re + freqVec.at(freqBin).im*freqVec.at(freqBin).im;
+  //   Double_t abs = TMath::Sqrt(absSq);
+
+  //   hRayleigh->Fill(abs);
+
+  //   // std::cout << abs << std::endl;
+  // }
 
   return hRayleigh;
 
+}
+
+
+TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec_dB(double thisTimeRange) const{
+  
+  TGraphAligned* gr = getAvePowSpec(thisTimeRange);
+  gr->dBize();
+  return gr;
+}
+
+
+TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(double thisTimeRange) const{
+
+  // set default value (which is the whole range of the fourier buffer)
+  thisTimeRange = thisTimeRange < 0 ? timeScale : thisTimeRange;
+
+  int n = sumPower.size();
+
+  TGraphAligned* gr = new TGraphAligned(n);
+  
+  TString name;
+  TString title;  
+  if(ant < 0){
+    name = TString::Format("grAvePowSpec_%u_%u", eventNumbers.front(), eventNumbers.back());
+    title = TString::Format("Average Power Spectrum event %u - %u (unknown channel)", eventNumbers.front(), eventNumbers.back());    
+  }
+  else{
+    const char* polName = AnitaPol::kHorizontal ? "HPol" : "VPol";
+    name = TString::Format("grAvePowSpec_%d_%s_%u_%u", ant, polName, eventNumbers.front(), eventNumbers.back());
+    title = TString::Format("Average Power Spectrum %d %s event %u - %u", ant, polName, eventNumbers.front(), eventNumbers.back());        
+  }
+  gr->SetName(name);
+  gr->SetTitle(title);
+  
+
+  for(unsigned freqInd=0; freqInd < sumPower.size(); freqInd++){
+    gr->SetPoint(freqInd, freqInd*df, sumPower.at(freqInd));
+  }
+
+  return gr;
 }
