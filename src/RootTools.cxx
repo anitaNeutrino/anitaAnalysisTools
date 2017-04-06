@@ -1033,7 +1033,7 @@ void Acclaim::RootTools::writeTGraph(TGraph* gr, TString name){
  * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
 
-void Acclaim::RootTools::getLocalMaxToMin(TGraph* gr,
+void Acclaim::RootTools::getLocalMaxToMin(const TGraph* gr,
 				 Double_t& maxY, Double_t& maxX,
 				 Double_t& minY, Double_t& minX){
   getLocalMaxToMinWithinLimits(gr, maxY, maxX, minY, minX, gr->GetX()[0], gr->GetX()[gr->GetN()-1]);
@@ -1057,7 +1057,7 @@ void Acclaim::RootTools::getLocalMaxToMin(TGraph* gr,
  * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
 
-void Acclaim::RootTools::getLocalMaxToMinWithinLimits(TGraph* gr,
+void Acclaim::RootTools::getLocalMaxToMinWithinLimits(const TGraph* gr,
 					     Double_t& maxY, Double_t& maxX,
 					     Double_t& minY, Double_t& minX,
 					     Double_t lowerLimit, Double_t upperLimit){

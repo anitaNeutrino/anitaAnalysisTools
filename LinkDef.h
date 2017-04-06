@@ -4,8 +4,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace AIM+;
-#pragma link C++ class Acclaim::CrossCorrelator+;
+#pragma link C++ namespace Acclaim;
 #pragma link C++ class Acclaim::FancyTTreeInterpolator+;
 #pragma link C++ namespace Acclaim::RootTools+;
 #pragma link C++ namespace Acclaim::FancyFFTs+;
@@ -23,5 +22,9 @@
 #pragma link C++ class Acclaim::RayleighInfo+;
 #pragma link C++ class Acclaim::RiceInfo+;
 #pragma link C++ class Acclaim::InterferometricMap+;
+
+#pragma link C++ class Acclaim::QualityCut+;
+#pragma link C++ class Acclaim::SurfSaturationCut+;
+#pragma link C++ class Acclaim::SelfTriggeredBlastCut+;
 
 #endif

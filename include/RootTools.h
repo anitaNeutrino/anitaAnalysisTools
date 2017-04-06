@@ -69,10 +69,10 @@ namespace Acclaim
     void getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX,
 			       Double_t& minY, Double_t& minX,
 			       Double_t lowerLimit, Double_t upperLimit);
-    void getLocalMaxToMin(TGraph* gr,
+    void getLocalMaxToMin(const TGraph* gr,
 			  Double_t& maxY, Double_t& maxX,
 			  Double_t& minY, Double_t& minX);
-    void getLocalMaxToMinWithinLimits(TGraph* gr,
+    void getLocalMaxToMinWithinLimits(const TGraph* gr,
 				      Double_t& maxY, Double_t& maxX,
 				      Double_t& minY, Double_t& minX,
 				      Double_t lowerLimit, Double_t upperLimit);
