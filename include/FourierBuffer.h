@@ -13,16 +13,16 @@
 
 #include "RayleighInfo.h"
 #include "RiceInfo.h"
-
 #include "TH1D.h"
 #include <complex>
 #include <list>
 #include <vector>
 #include "RawAnitaHeader.h"
 
-namespace Acclaim
-{
+class TSpectrum;
 
+namespace Acclaim
+{  
   /**
    * @class FourierBuffer
    * @brief A class to hold frequency domain info in memory
@@ -32,7 +32,8 @@ namespace Acclaim
 
   public:
 
-    explicit FourierBuffer(Double_t timeScaleSeconds=60, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
+    explicit FourierBuffer(Double_t timeScaleSeconds=10, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
+    virtual ~FourierBuffer();
 
     size_t add(const RawAnitaHeader* header, const AnalysisWaveform& wave);
 
@@ -41,6 +42,8 @@ namespace Acclaim
     TH1D* fillRiceInfo(Int_t freqBin, RiceInfo* info) const;
     TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
     TGraphAligned* getAvePowSpec(double timeRange = -1) const;
+    TGraphAligned* getBackground_dB(double timeRange = -1) const;
+    TGraphAligned* getBackground(double timeRange = -1) const;
 
     void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
       ant = theAnt;
@@ -65,7 +68,8 @@ namespace Acclaim
 
 
     double df;
-
+    mutable TSpectrum* spectrum; // to estimate the background
+    
   };
 
 }

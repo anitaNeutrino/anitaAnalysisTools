@@ -1,41 +1,52 @@
 #include "FourierBuffer.h"
 #include "TMath.h"
 #include "FFTWComplex.h"
+#include "TSpectrum.h"
 
 const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
+
+
 
 Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
   timeScale = timeScaleSeconds;
   ant = theAnt;
   pol = thePol;
   df = -1;
+
+  // will initialize this dynamically to get around this no-copy-constructor bullshit
+  spectrum = NULL; 
 }
+
+
+Acclaim::FourierBuffer::~FourierBuffer(){
+  if(spectrum){
+    delete spectrum;
+    spectrum = NULL;
+  }
+}
+
 
 
 size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform& wave){
 
   // for old compilers, push back compy of emptry vector for speed.
-  powerRingBuffer.push_back(std::vector<double>());
+  powerRingBuffer.push_back(std::vector<double>(0));
 
-  // then get reference to vector in the list
+  // then get reference that vector in the list
   std::vector<double>& freqVec = powerRingBuffer.back();
 
   // copy frequencies into vector
-  // freqVec.assign(wave.freq(), wave.freq()+wave.Nfreq());
   const TGraphAligned* grPower = wave.power();
-  // std::cout << grPower << "\t" << grPower->GetN() << std::endl;
   freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
 
+  // dynamically assign deltaF variable
   if(df <= 0){
     df = grPower->GetX()[1] - grPower->GetX()[0];
   }
 
-
   if(sumPower.size()==0){
-    for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
-      sumPower.push_back(grPower->GetY()[freqInd]);
-    }
+    sumPower.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
   }
   else{
     for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
@@ -44,14 +55,9 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   }
 
   if(grPower->GetN() != (int)sumPower.size()){
-    std::cerr << "??????????????" << std::endl;
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unexpected waveform size" << std::endl;
   }
 
-
-  // (wave.freq(), wave.freq()+wave.Nfreq());
-  // std::cout << wave.Nfreq() << "\t" << tempFreqs.size() << std::endl;
-  // std::cout << wave.Nfreq() << "\t" << tempFreqs.size() << std::endl;
-  // std::cout << "\t" << freqVec.size() << "\t" << wave.Nfreq() << std::endl;
   eventNumbers.push_back(header->eventNumber);
   runs.push_back(header->run);
 
@@ -60,11 +66,7 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   realTimesNs.push_back(realTime);
 
   
-  // std::cout << freqVecs.size() << "\t" << eventNumbers.size() << "\t" << runs.size() << "\t" << realTimesNs.size() << std::endl;
   removeOld();
-  // std::cout << freqVecs.size() << "\t" << eventNumbers.size() << "\t" << runs.size() << "\t" << realTimesNs.size() << std::endl;
-
-  // std::cout << std::endl;
   
   return eventNumbers.size();
 }
@@ -79,7 +81,6 @@ Int_t Acclaim::FourierBuffer::removeOld(){
     Double_t mostRecentTime = realTimesNs.back();
 
     while(mostRecentTime - realTimesNs.front() > timeScale){
-      // std::cout << realTimes.size() << "\t" << mostRecentTime <<  "\t" << realTimes.front() << "\t" << mostRecentTime - realTimes.front() << "\t" << timeScale << std::endl;
       realTimesNs.pop_front();
       eventNumbers.pop_front();
       runs.pop_front();
@@ -88,7 +89,6 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 	sumPower.at(freqInd) -= removeThisPower.at(freqInd);
       }
       powerRingBuffer.pop_front();
-      // freqVecs.pop_front();
       nPopped++;
     }
   }
@@ -294,9 +294,9 @@ TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(double thisTimeRange) const
   // set default value (which is the whole range of the fourier buffer)
   thisTimeRange = thisTimeRange < 0 ? timeScale : thisTimeRange;
 
-  int n = sumPower.size();
+  int nEvents = eventNumbers.size();
 
-  TGraphAligned* gr = new TGraphAligned(n);
+  TGraphAligned* gr = new TGraphAligned(sumPower.size());
   
   TString name;
   TString title;  
@@ -314,8 +314,34 @@ TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(double thisTimeRange) const
   
 
   for(unsigned freqInd=0; freqInd < sumPower.size(); freqInd++){
-    gr->SetPoint(freqInd, freqInd*df, sumPower.at(freqInd));
+    gr->SetPoint(freqInd, freqInd*df, sumPower.at(freqInd)/nEvents);
   }
+
+  return gr;
+}
+
+
+
+TGraphAligned* Acclaim::FourierBuffer::getBackground_dB(double thisTimeRange) const{
+  
+  TGraphAligned* gr = getBackground(thisTimeRange);
+  gr->dBize();
+  return gr;
+}
+
+
+TGraphAligned* Acclaim::FourierBuffer::getBackground(double thisTimeRange) const{
+
+  TGraphAligned* gr = getAvePowSpec(thisTimeRange);
+
+  if(!spectrum){
+    spectrum = new TSpectrum();
+  }
+
+  spectrum->Background(gr->GetY(),gr->GetN(),
+		       6,TSpectrum::kBackDecreasingWindow,
+		       TSpectrum::kBackOrder2,kFALSE,
+		       TSpectrum::kBackSmoothing3,kFALSE);
 
   return gr;
 }

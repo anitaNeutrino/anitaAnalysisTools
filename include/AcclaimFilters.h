@@ -14,13 +14,15 @@
 #include "FilterStrategy.h"
 #include "FilterOperation.h" // contains the filter operation syntax we must adhere to
 #include "TString.h"
-
+#include "TRandom3.h"
 #include <map>
 
+class TGraphAligned;
 
 namespace Acclaim
 {
-  
+  class FourierBuffer;
+
   namespace Filters
   {
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
@@ -53,6 +55,40 @@ namespace Acclaim
       virtual void process(FilteredAnitaEvent* fe);
   
     };
+
+
+
+
+
+
+    class SpikeSuppressor : public UniformFilterOperation {
+    protected:
+      double fSpikeThresh_dB;
+      double fTimeScale;
+      TRandom3 fRandy;
+      TString fDescription;
+      std::vector<std::vector<FourierBuffer> > fourierBuffers;
+
+      TGraphAligned suppressSpikes(const TGraphAligned* grPower);
+      TGraphAligned suppressSpikes(const TGraphAligned* grPower, const TGraphAligned* grBackground);      
+      double interpolate_dB(double x, double xLow, double xHigh, double yLow, double yHigh);
+      
+    public:
+      void setSeed(UInt_t seed){fRandy.SetSeed(seed);}
+      
+      SpikeSuppressor(double spikeThresh_dB, double timeScale);
+
+      virtual const char * tag () const {return "SpikeSuppressor";};
+      virtual const char * description () const {return fDescription.Data();}
+      virtual void processOne(AnalysisWaveform* wave);
+      virtual void process(FilteredAnitaEvent* fEv);
+
+
+      
+    };
+
+    
+    
   }
 }
 
