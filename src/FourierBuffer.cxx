@@ -338,10 +338,28 @@ TGraphAligned* Acclaim::FourierBuffer::getBackground(double thisTimeRange) const
     spectrum = new TSpectrum();
   }
 
+  // at some point this changed from doubles to floats, not added a new method, changed...
+  // git blames Lorenzo Moneta... 
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
+
   spectrum->Background(gr->GetY(),gr->GetN(),
-		       6,TSpectrum::kBackDecreasingWindow,
-		       TSpectrum::kBackOrder2,kFALSE,
-		       TSpectrum::kBackSmoothing3,kFALSE);
+                      6,TSpectrum::kBackDecreasingWindow,
+                      TSpectrum::kBackOrder2,kFALSE,
+                      TSpectrum::kBackSmoothing3,kFALSE);
+#else
+  std::vector<float> tempFloats(gr->GetN(), 0);
+  for(int i=0; i < gr->GetN(); i++){
+    tempFloats[i] = gr->GetY()[i];
+  }
+  spectrum->Background(&tempFloats[0],gr->GetN(),
+                      6,TSpectrum::kBackDecreasingWindow,
+                      TSpectrum::kBackOrder2,kFALSE,
+                      TSpectrum::kBackSmoothing3,kFALSE);
+  for(int i=0; i < gr->GetN(); i++){
+    gr->GetY()[i] = tempFloats[i];
+  }
+#endif
+  
 
   return gr;
 }

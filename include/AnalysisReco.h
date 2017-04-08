@@ -5,7 +5,7 @@
 #include "InterferometricMap.h"
 #include "InterferometryCache.h"
 #include "CrossCorrelator.h"
-
+#include <list>
 
 namespace Acclaim
 {
