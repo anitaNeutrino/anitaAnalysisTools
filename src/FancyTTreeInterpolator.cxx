@@ -14,7 +14,7 @@
  * Does not presume to own t.
  * If t s deleted out from under it, this class will fall over.
  */
-FancyTTreeInterpolator::FancyTTreeInterpolator(TTree* t, TString xAxisText){
+Acclaim::FancyTTreeInterpolator::FancyTTreeInterpolator(TTree* t, TString xAxisText){
   /* Do use this constructor */
   fXAxisText = xAxisText;
   fTree = t;
@@ -43,7 +43,7 @@ FancyTTreeInterpolator::FancyTTreeInterpolator(TTree* t, TString xAxisText){
  *
  * Deletes interally stored TGraphs.
  */
-FancyTTreeInterpolator::~FancyTTreeInterpolator(){
+Acclaim::FancyTTreeInterpolator::~FancyTTreeInterpolator(){
   std::map<TString, TGraph*> ::iterator i;
   for(i=fStringToGraph.begin(); i!=fStringToGraph.end(); ++i){
     delete (*i).second;
@@ -61,7 +61,7 @@ FancyTTreeInterpolator::~FancyTTreeInterpolator(){
  * @param drawText is the text to pass to fTree::Draw();
  * @returns a pointer to the created, sorted TGraph.
  */
-TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText){
+TGraph* Acclaim::FancyTTreeInterpolator::makeSortedTGraph(TString drawText){
   return makeSortedTGraph(drawText, "", 0);
 }
 
@@ -76,7 +76,7 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText){
  * @param cutString defines the cuts to padd to fTree->Draw();
  * @returns a pointer to the created, sorted TGraph.
  */
-TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString){
+TGraph* Acclaim::FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString){
   return makeSortedTGraph(drawText, cutString, 0);
 }
 
@@ -95,7 +95,7 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutSt
  * For example if you want to interpolate between 359 and 1 degrees, these will be unwrapped as  259, 361.
  * These values can then be interpolated between correctly.
  */
-TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, Double_t wrapValue){
+TGraph* Acclaim::FancyTTreeInterpolator::makeSortedTGraph(TString drawText, Double_t wrapValue){
   return makeSortedTGraph(drawText, "", wrapValue);
 }
 
@@ -115,14 +115,14 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, Double_t wrap
  * For example if you want to interpolate between 359 and 1 degrees, these will be unwrapped as  259, 361.
  * These values can then be interpolated between correctly.
  */
-TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString, Double_t wrapValue){
+TGraph* Acclaim::FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutString, Double_t wrapValue){
   /*
     This function:
        Uses TTree::Draw to select the data.
        Sorts it using TMath::Sort.
        Returns the graph.
        Note: This does not add it to the std::map of graphs that this class uses for storage.
-             To create a graph and add it to the std::map use FancyTTreeInterpolator::add.
+             To create a graph and add it to the std::map use Acclaim::FancyTTreeInterpolator::add.
   */
   
   // Draw
@@ -180,7 +180,7 @@ TGraph* FancyTTreeInterpolator::makeSortedTGraph(TString drawText, TString cutSt
  *
  * @param yAxisText is defines the y-axis of the TGraph, drawn against fXaxisText
  */
-void FancyTTreeInterpolator::add(TString yAxisText){
+void Acclaim::FancyTTreeInterpolator::add(TString yAxisText){
   add(yAxisText, "", 0);
 }
 
@@ -194,7 +194,7 @@ void FancyTTreeInterpolator::add(TString yAxisText){
  * @param yAxisText is defines the y-axis of the TGraph, drawn against fXaxisText
  * @param cutString defines the cuts to padd to fTree->Draw();
  */
-void FancyTTreeInterpolator::add(TString yAxisText, TString cutString){
+void Acclaim::FancyTTreeInterpolator::add(TString yAxisText, TString cutString){
   add(yAxisText, cutString, 0);
 }
 
@@ -209,7 +209,7 @@ void FancyTTreeInterpolator::add(TString yAxisText, TString cutString){
  * @param yAxisText is defines the y-axis of the TGraph, drawn against fXaxisText
  * @param wrapValue value to unwrap around. e.g. 360 for rotations in degrees.
  */
-void FancyTTreeInterpolator::add(TString yAxisText, Double_t wrapValue){
+void Acclaim::FancyTTreeInterpolator::add(TString yAxisText, Double_t wrapValue){
   add(yAxisText, "", wrapValue);
 }
 
@@ -225,7 +225,7 @@ void FancyTTreeInterpolator::add(TString yAxisText, Double_t wrapValue){
  * @param cutString defines the cuts to padd to fTree->Draw();
  * @param wrapValue value to unwrap around. e.g. 360 for rotations in degrees.
  */
-void FancyTTreeInterpolator::add(TString yAxisText, TString cutString, Double_t wrapValue){
+void Acclaim::FancyTTreeInterpolator::add(TString yAxisText, TString cutString, Double_t wrapValue){
   TString drawText = yAxisText + ":" + fXAxisText;
   TGraph* gr = makeSortedTGraph(drawText, cutString, wrapValue);
   fStringToGraph[yAxisText] = gr;
@@ -243,7 +243,7 @@ void FancyTTreeInterpolator::add(TString yAxisText, TString cutString, Double_t 
  * @param yAxisText is defines the y-axis of the TGraph, drawn against fXaxisText
  * @return A pointer to accessed TGraph, returns NULL if no match is found.
  */
-TGraph* FancyTTreeInterpolator::get(TString yAxisText){
+TGraph* Acclaim::FancyTTreeInterpolator::get(TString yAxisText){
   /* Use this to access a graph you've made with the add function */
 
   if(fStringToGraph.count(yAxisText)==0){
@@ -270,7 +270,7 @@ TGraph* FancyTTreeInterpolator::get(TString yAxisText){
  * @param xAxisValue is the value of the fXaxisText branch to interpolate the yAxisText branch variable at.
  * @return the interpolated value.
  */
-Double_t FancyTTreeInterpolator::interp(TString yAxisText, Double_t xAxisValue){
+Double_t Acclaim::FancyTTreeInterpolator::interp(TString yAxisText, Double_t xAxisValue){
   /* This function handles the getting of values from the appropriate TGraph */
 
   TGraph* gr = get(yAxisText);

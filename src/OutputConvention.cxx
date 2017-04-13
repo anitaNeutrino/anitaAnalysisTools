@@ -11,7 +11,7 @@
  * @param argcIn should be the main executable's argc value.
  * @param argvIn should be the main executable's argv value.
  */
-OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
+Acclaim::OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
   dateTime = TDatime();
   argc = argcIn;
   argv = argvIn;
@@ -32,7 +32,7 @@ OutputConvention::OutputConvention(int argcIn, char* argvIn[]){
  * @param ext is an optional parameter file extension you want (e.g. .txt, .root, .csv), if none is given then .root is used.
  * @return the output file name
  */
-TString OutputConvention::getOutputFileName(TString ext){
+TString Acclaim::OutputConvention::getOutputFileName(TString ext){
 
   if(outFileName==""){
 
@@ -86,7 +86,7 @@ TString OutputConvention::getOutputFileName(TString ext){
  *
  * @return the newly created makefile or NULL if there was a problem.
  */
-TFile* OutputConvention::makeFile(){
+TFile* Acclaim::OutputConvention::makeFile(){
   TString outFileName = getOutputFileName();
   TFile* outFile = new TFile(outFileName, "recreate");
   if(outFile->IsZombie()){
@@ -106,7 +106,7 @@ TFile* OutputConvention::makeFile(){
  *
  * @return the suffix for the file name, based on the date and time.
  */
-TString OutputConvention::getDateTimeSuffix(){
+TString Acclaim::OutputConvention::getDateTimeSuffix(){
   if(dateTimeSuffix==""){
     // dateTimeSuffix = TString::Format("_%d-%d-%d_%d-%d-%d",
     // 				     dateTime.GetYear(),
@@ -171,7 +171,7 @@ TString OutputConvention::getDateTimeSuffix(){
  *
  * @return The output dir.
  */
-TString OutputConvention::getOutputDir(){
+TString Acclaim::OutputConvention::getOutputDir(){
 
   outputDir = "";
   const char* outputDirPoss = getenv("OUTPUT_DIR");
@@ -195,7 +195,7 @@ TString OutputConvention::getOutputDir(){
  * Sorts all matching files into increasing order of fileName.
  * If the files have my standard date suffix attached to them, then this should correspond to the most recent file.
  */
-TFile* OutputConvention::getFile(TString fileNameWithWildcards){
+TFile* Acclaim::OutputConvention::getFile(TString fileNameWithWildcards){
   // This might be my favourite little bit of stand alone code.
 
   TFile* theFile = NULL;

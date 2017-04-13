@@ -17,39 +17,42 @@
 #include "TStyle.h"
 
 
-/**
- * @class AnitaAveragePowerSpectrum
- * @brief Essentially a wrapper around a whole payload of AveragePowerSpectrum.
- * 
- * I used to write these into TTrees, but the way the data was packed made access so slow that now I don't.
- * However, this class is still used in some spectral analysis code in some places.
-*/
-class AnitaAveragePowerSpectrum : public TNamed {
+namespace Acclaim
+{
 
-public:
+  /**
+   * @class AnitaAveragePowerSpectrum
+   * @brief Essentially a wrapper around a whole payload of AveragePowerSpectrum.
+   * 
+   * I used to write these into TTrees, but the way the data was packed made access so slow that now I don't.
+   * However, this class is still used in some spectral analysis code in some places.
+   */
+  class AnitaAveragePowerSpectrum : public TNamed {
 
-  // Copied from AveragePowerSpectrum.h
-  AnitaAveragePowerSpectrum();
-  AnitaAveragePowerSpectrum(TString name, TString title);
-  ~AnitaAveragePowerSpectrum();
+  public:
+
+    // Copied from AveragePowerSpectrum.h
+    AnitaAveragePowerSpectrum();
+    AnitaAveragePowerSpectrum(TString name, TString title);
+    ~AnitaAveragePowerSpectrum();
   
-  AveragePowerSpectrum* get(AnitaPol::AnitaPol_t pol, Int_t ant);
-  void add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph* gr);
-  void reset();
+    AveragePowerSpectrum* get(AnitaPol::AnitaPol_t pol, Int_t ant);
+    void add(AnitaPol::AnitaPol_t pol, Int_t ant, TGraph* gr);
+    void reset();
 
-  // Produce summary information
-  TMultiGraph* drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring);
+    // Produce summary information
+    TMultiGraph* drawSpectralSummary(AnitaPol::AnitaPol_t pol, AnitaRing::AnitaRing_t ring);
   
-private:
-  AveragePowerSpectrum* avePowSpecs[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< A payload's worth of AveragePowerSpectrum
-  void initAllAvePowSpecs();
-  void deleteAllAvePowSpecs();
+  private:
+    AveragePowerSpectrum* avePowSpecs[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< A payload's worth of AveragePowerSpectrum
+    void initAllAvePowSpecs();
+    void deleteAllAvePowSpecs();
   
-  ClassDef(AnitaAveragePowerSpectrum, 9);
-};
+    ClassDef(AnitaAveragePowerSpectrum, 9);
+  };
 
   
-
+}
 
 
 #endif

@@ -10,7 +10,7 @@
 
 
 
-Int_t ProgressBar::progState = 0;
+Int_t Acclaim::ProgressBar::progState = 0;
 
 
 
@@ -18,7 +18,7 @@ Int_t ProgressBar::progState = 0;
 /**
  * @brief Default constructor - don't use this
 */
-ProgressBar::ProgressBar(){
+Acclaim::ProgressBar::ProgressBar(){
   std::cerr << "Assuming 100 events in ProgressBar" << std::endl;
   maxEntry = 100;
   counter = 0;
@@ -37,7 +37,7 @@ ProgressBar::ProgressBar(){
  * @brief Useful constructor - do use this one.
  * @param maxEntryInit is the number of events you want to loop over
 */
-ProgressBar::ProgressBar(Long64_t maxEntryInit){
+Acclaim::ProgressBar::ProgressBar(Long64_t maxEntryInit){
   maxEntry = maxEntryInit;
   counter = 0;
   percentage = 0;
@@ -54,7 +54,7 @@ ProgressBar::ProgressBar(Long64_t maxEntryInit){
 /**
  * @brief Increment operator, use when you have completed one iteration of the main loop
 */
-void ProgressBar::operator++(int){
+void Acclaim::ProgressBar::operator++(int){
 
   if(percentage>=100) return;
   
@@ -124,10 +124,10 @@ void ProgressBar::operator++(int){
  * @param entry is a reference to the loop varible, assumed to start at 0.
  * @param numEntries is the maximum entry, assumed that the loop condition is entry < numEntries
  */
-void ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
+void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
 
   if(setHandler==0){
-    signal (SIGINT, ProgressBar::mainLoopSigintHandle);
+    signal (SIGINT, Acclaim::ProgressBar::mainLoopSigintHandle);
     setHandler = 1;
   }
 
@@ -147,7 +147,7 @@ void ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
 /**
  * @brief For debugging, prints state of internal variables
 */
-void ProgressBar::status(){
+void Acclaim::ProgressBar::status(){
   std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
 }
 
@@ -162,6 +162,6 @@ void ProgressBar::status(){
  * 
  * @param param is the signal, I presume
  */
-void ProgressBar::mainLoopSigintHandle(int param){
+void Acclaim::ProgressBar::mainLoopSigintHandle(int param){
   progState = param;
 }

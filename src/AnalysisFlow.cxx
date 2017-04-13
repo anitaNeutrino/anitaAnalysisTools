@@ -4,27 +4,31 @@
 #include "FilterStrategy.h"
 
 /** 
- * Constructor, sets up some of the options for the analysis
- * 
+ * Constructor, sets up some of the options for the analysis 
+* 
  * @param run is the run to analyse
  * @param selection is the event selection to apply
  * @param blindStrat is the blinding strategy to use
  * @param division selects which subset of the run to do, goes from 0 -> numDivisions -1, default is 0.
  * @param numDivisions is the number of bits we're splitting the event into
  */
-AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::selection selection, BlindDataset::strategy blindStrat, int division, int numDivisions){
+Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, BlindDataset::strategy blindStrat, int division, int numDivisions){
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
+  fFilterStrat = filterStrat;  
   fBlindStrat = blindStrat;
   fDivision = division;
   fNumDivisions = numDivisions;
   fRun = run;
 
+  fSumTree = NULL;
   fData = NULL;
-  fCrossCorr = NULL;
+  fReco = NULL;
   fOutFile = NULL;
 }
+
+
 
 
 
@@ -32,16 +36,22 @@ AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, AnalysisFlow::s
  * Destructor
  * 
  */
-AnalysisFlow::~AnalysisFlow(){
+Acclaim::AnalysisFlow::~AnalysisFlow(){
 
   if(fData){
     delete fData;
+    fData = NULL;
   }
 
-  if(fCrossCorr){
-    delete fCrossCorr;
-    fCrossCorr = NULL;
-  }  
+  if(fReco){
+    delete fReco;
+    fReco = NULL;
+  }
+
+  if(fFilterStrat){
+    delete fFilterStrat;
+    fFilterStrat = NULL;
+  }
 
   if(fOutFile){
     fOutFile->Write();
@@ -57,7 +67,7 @@ AnalysisFlow::~AnalysisFlow(){
  * Create the data set.
  * 
  */
-void AnalysisFlow::prepareDataSet(){
+void Acclaim::AnalysisFlow::prepareDataSet(){
 
   if(fData==NULL){
     bool doDecimated = fSelection == kDecimated ? true : false;
@@ -82,7 +92,7 @@ void AnalysisFlow::prepareDataSet(){
 /** 
  * Coax the OutputConvention class into making an appropriately named output file/
  */
-void AnalysisFlow::prepareOutputFiles(){
+void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
   if(fOutFile==NULL){
@@ -95,7 +105,7 @@ void AnalysisFlow::prepareOutputFiles(){
     fakeArgv.push_back((char*) fOutFileBaseName.Data());
     TString runStr = TString::Format("%d", fRun);
     fakeArgv.push_back((char*) runStr.Data());
-
+    
 
     if(fNumDivisions > 1){
       
@@ -112,9 +122,16 @@ void AnalysisFlow::prepareOutputFiles(){
     }
     Int_t fakeArgc = (Int_t) fakeArgv.size();
 
+    // std::cout << fakeArgc << ", " << &fakeArgv[0] << std::endl;
+    // for(int i=0; i < fakeArgc; i++){
+    //   std::cout << "\t:" << i << ", " << fakeArgv[i] << std::endl;    
+    // }
+
     OutputConvention oc(fakeArgc, &fakeArgv[0]);
 
-    fOutFile = oc.makeFile();  
+    fOutFile = oc.makeFile();
+
+    // std::cout << fOutFile << "\t" << fOutFile->GetName() << std::endl;
   }  
   
 }
@@ -129,7 +146,7 @@ void AnalysisFlow::prepareOutputFiles(){
  * 
  * @return true is event satisfies selection criteria, false otherwise
  */
-Bool_t AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
+Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
 
   Bool_t doEvent = false;
 
@@ -169,14 +186,14 @@ Bool_t AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* u
 /** 
  * Does the main analysis loop
  */
-void AnalysisFlow::doAnalysis(){
+void Acclaim::AnalysisFlow::doAnalysis(){
     
   if(!fData){
     prepareDataSet();
   }
 
-  if(!fCrossCorr){
-    fCrossCorr = new CrossCorrelator();
+  if(!fReco){
+    fReco = new AnalysisReco();
   }
 
   if(!fOutFile){
@@ -186,14 +203,24 @@ void AnalysisFlow::doAnalysis(){
   if(!fSumTree){
     fSumTree = new TTree("sumTree", "Tree of AnitaEventSummaries");
   }
-  
+
   AnitaEventSummary* eventSummary = NULL;
   fSumTree->Branch("sum", &eventSummary);
 
   const Long64_t numEntries = fLastEntry-fFirstEntry;
   ProgressBar p(numEntries);
 
-  FilterStrategy filterStrat(fOutFile);
+  if(fFilterStrat){
+    // this doesn't necessarily mean the output will be saved
+    // it will only be saved if operations were added with the optional enable_output bool = true
+    fFilterStrat->attachFile(fOutFile);
+
+    
+  }
+  else{
+    // empty strategy does nothing
+    fFilterStrat = new FilterStrategy();
+  }
 
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
@@ -208,11 +235,11 @@ void AnalysisFlow::doAnalysis(){
     
       UsefulAnitaEvent* usefulEvent = fData->useful();
 
-      
-      FilteredAnitaEvent filteredEvent(usefulEvent, &filterStrat, pat, header, false);
+      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
       eventSummary = new AnitaEventSummary(header, &usefulPat);
-      fCrossCorr->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+      // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+      fReco->process(&filteredEvent, &usefulPat, eventSummary);
 
       fSumTree->Fill();
       delete eventSummary;
@@ -221,4 +248,6 @@ void AnalysisFlow::doAnalysis(){
     
     p.inc(entry, numEntries);
   }
+
+  delete fFilterStrat;
 }  

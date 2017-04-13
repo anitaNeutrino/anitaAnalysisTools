@@ -9,6 +9,9 @@
 #include "ProgressBar.h"
 #include <unistd.h>
 
+
+using namespace Acclaim;
+
 int main(){
   
   ProgressBar progress(100);

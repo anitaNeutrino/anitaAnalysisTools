@@ -28,38 +28,41 @@
 #include <exception>
 #include <stdexcept>
 
+namespace Acclaim
+{
 
-/**
- * @class FancyTTreeInterpolator
- * @brief A class to interpolate sparse, but continuous data in a TTree. 
- * 
- * This was developed with adu5Pat variables like heading in mind.
- * Not really necessary once full flight data is recovered.
-*/
-class FancyTTreeInterpolator{
+  /**
+   * @class FancyTTreeInterpolator
+   * @brief A class to interpolate sparse, but continuous data in a TTree. 
+   * 
+   * This was developed with adu5Pat variables like heading in mind.
+   * Not really necessary once full flight data is recovered.
+   */
+  class FancyTTreeInterpolator{
 
-public:
-  FancyTTreeInterpolator(TTree* t, TString xAxisText);
-  ~FancyTTreeInterpolator();
+  public:
+    FancyTTreeInterpolator(TTree* t, TString xAxisText);
+    ~FancyTTreeInterpolator();
 
-  void add(TString yAxisText);
-  void add(TString yAxisText, TString cut);
-  void add(TString yAxisText, Double_t wrapValue);
-  void add(TString yAxisText, TString cut, Double_t wrapValue);
-  Double_t interp(TString yAxisText, Double_t xAxisValue);
-  TGraph* get(TString yAxisText);
-  TGraph* makeSortedTGraph(TString yAxisText);
-  TGraph* makeSortedTGraph(TString yAxisText, TString cutString);
-  TGraph* makeSortedTGraph(TString yAxisText, Double_t wrapValue);
-  TGraph* makeSortedTGraph(TString yAxisText, TString cutString, Double_t wrapValue);
+    void add(TString yAxisText);
+    void add(TString yAxisText, TString cut);
+    void add(TString yAxisText, Double_t wrapValue);
+    void add(TString yAxisText, TString cut, Double_t wrapValue);
+    Double_t interp(TString yAxisText, Double_t xAxisValue);
+    TGraph* get(TString yAxisText);
+    TGraph* makeSortedTGraph(TString yAxisText);
+    TGraph* makeSortedTGraph(TString yAxisText, TString cutString);
+    TGraph* makeSortedTGraph(TString yAxisText, Double_t wrapValue);
+    TGraph* makeSortedTGraph(TString yAxisText, TString cutString, Double_t wrapValue);
 
-  TTree* fTree; //!< TTree with which the intepolater was initialized.
-  TString fXAxisText; //!< Branch name with which the intepolater was initialized.
-  std::map<TString,TGraph*> fStringToGraph; //!< Internally stored TGraphs, accessed by TTree branch name.
-  std::map<TString, Double_t> fStringToWrapValue; //!< Internally stored wrapValues, accessed by TTree branch name.
-  Double_t fXmin; //!< Stored x-axis lower limit.
-  Double_t fXmax; //!< Stored x-axis lower limit.
+    TTree* fTree; //!< TTree with which the intepolater was initialized.
+    TString fXAxisText; //!< Branch name with which the intepolater was initialized.
+    std::map<TString,TGraph*> fStringToGraph; //!< Internally stored TGraphs, accessed by TTree branch name.
+    std::map<TString, Double_t> fStringToWrapValue; //!< Internally stored wrapValues, accessed by TTree branch name.
+    Double_t fXmin; //!< Stored x-axis lower limit.
+    Double_t fXmax; //!< Stored x-axis lower limit.
   
-};
+  };
+}
 
 #endif //FANCYTTREESORTERANDINTERPOLATOR_H

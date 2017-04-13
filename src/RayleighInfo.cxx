@@ -1,8 +1,8 @@
 #include "RayleighInfo.h"
 
-ClassImp(RayleighInfo)
+ClassImp(Acclaim::RayleighInfo)
 
-RayleighInfo::RayleighInfo(){
+Acclaim::RayleighInfo::RayleighInfo(){
 
   run = 0;
   eventNumber = 0;
@@ -23,6 +23,6 @@ RayleighInfo::RayleighInfo(){
 
 }
 
-TH1D* RayleighInfo::makeHistogram(){
+TH1D* Acclaim::RayleighInfo::makeHistogram(){
   return NULL;
 }

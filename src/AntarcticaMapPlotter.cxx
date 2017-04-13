@@ -1,12 +1,12 @@
 #include "AntarcticaMapPlotter.h"
 
-ClassImp(AntarcticaMapPlotter);
+ClassImp(Acclaim::AntarcticaMapPlotter);
 
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Constructor
 */
-AntarcticaMapPlotter::AntarcticaMapPlotter(){
+Acclaim::AntarcticaMapPlotter::AntarcticaMapPlotter(){
   initializeInternals();
 }
 
@@ -20,7 +20,7 @@ AntarcticaMapPlotter::AntarcticaMapPlotter(){
  * @param nBinsX is the number of bins on the x-axis
  * @param nBinsY is the number of bins on the y-axis
 */
-AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
+Acclaim::AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
   initializeInternals();
   fName = name;
   fTitle = title;
@@ -39,7 +39,7 @@ AntarcticaMapPlotter::AntarcticaMapPlotter(TString name, TString title, Int_t nB
  *
  * Deletes all internal hists and TGraphs, like a good destructor should.
 */
-AntarcticaMapPlotter::~AntarcticaMapPlotter(){
+Acclaim::AntarcticaMapPlotter::~AntarcticaMapPlotter(){
   std::map<TString, TH2D*>::iterator histItr;
   for(histItr=hists.begin(); histItr != hists.end(); ++histItr){
     delete histItr->second;
@@ -59,7 +59,7 @@ AntarcticaMapPlotter::~AntarcticaMapPlotter(){
  * @param x is the internal histogram variable x
  * @param y is the internal histogram variable y
 */
-void AntarcticaMapPlotter::initializeInternals(){
+void Acclaim::AntarcticaMapPlotter::initializeInternals(){
   /* The numbers in this function also come from Matt Mottram or Ryan */
 
   // This image taken from http://earthobservatory.nasa.gov/IOTD/view.php?id=6087
@@ -119,7 +119,7 @@ void AntarcticaMapPlotter::initializeInternals(){
  * @param x is the internal histogram variable x
  * @param y is the internal histogram variable y
 */
-void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y){
+void Acclaim::AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longitude,Double_t &x, Double_t &y){
   /* This function, which really does all the hard work, was made either by Matt Mottram or Ryan */
 
   // Negative longitude is west
@@ -154,7 +154,7 @@ void AntarcticaMapPlotter::getRelXYFromLatLong(Double_t latitude, Double_t longi
  * @param weight is the weight to fill with, by default=1.
  * @return the corresponding global bin number which has its content incremented by 1 (copied from TH2).
 */
-Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t weight){
+Int_t Acclaim::AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t weight){
 
   if(!hCurrent){
     std::cerr << "Warning in " << __FILE__ << ", no histogram was created!" << std::endl;
@@ -173,7 +173,7 @@ Int_t AntarcticaMapPlotter::Fill(Double_t latitude, Double_t longitude, Double_t
 /**
  * @brief Draws the canvas, image and histogram
 */
-TCanvas* AntarcticaMapPlotter::DrawHist(TString opt){
+TCanvas* Acclaim::AntarcticaMapPlotter::DrawHist(TString opt){
 
   TString canName = TString::Format("can%s", hCurrent->GetName());
   TString canTitle = TString::Format("Canvas of %s", hCurrent->GetTitle());
@@ -200,7 +200,7 @@ TCanvas* AntarcticaMapPlotter::DrawHist(TString opt){
 /**
  * @brief Draws the canvas, image and histogram
 */
-void AntarcticaMapPlotter::DrawTGraph(TString opt){
+void Acclaim::AntarcticaMapPlotter::DrawTGraph(TString opt){
 
   if(opt.Contains("same")==false){
     TString canName = TString::Format("can%s", grCurrent->GetName());
@@ -233,7 +233,7 @@ void AntarcticaMapPlotter::DrawTGraph(TString opt){
  * @brief Sets the current histogram pointer* @a hCurrent.
  * @returns 0 on failure (TH2D with name not in* @a hists) and 1 on success.
 */
-Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
+Int_t Acclaim::AntarcticaMapPlotter::setCurrentHistogram(TString name){
 
   std::map<TString, TH2D*>::iterator histItr = hists.find(name);
   Int_t successState = 0;
@@ -262,7 +262,7 @@ Int_t AntarcticaMapPlotter::setCurrentHistogram(TString name){
  *
  * @returns the current histogram
 */
-TH2D* AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
+TH2D* Acclaim::AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
 
   if(setCurrentHistogram(name)==0){
     TH2D* theHist = new TH2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
@@ -292,7 +292,7 @@ TH2D* AntarcticaMapPlotter::addHistogram(TString name, TString title, Int_t nBin
  * @param nBinsX is the number of bins on the x-axis
  * @param nBinsY is the number of bins on the y-axis
 */
-void AntarcticaMapPlotter::addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
+void Acclaim::AntarcticaMapPlotter::addProfile(TString name, TString title, Int_t nBinsX, Int_t nBinsY){
 
   if(setCurrentHistogram(name)==0){
     TProfile2D* theProf = new TProfile2D(name, title, nBinsX, 0, 1, nBinsY, 0, 1);
@@ -319,7 +319,7 @@ void AntarcticaMapPlotter::addProfile(TString name, TString title, Int_t nBinsX,
  * @param latitudes is a pointer to an array of latitude values
  * @param longitudes is a pointer to an array of longitude values
 */
-void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
+void Acclaim::AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
 				     Double_t* latitudes, Double_t* longitudes){
 
   if(setCurrentTGraph(name)==0){
@@ -356,7 +356,7 @@ void AntarcticaMapPlotter::addTGraph(TString name, TString title, Int_t n,
  * @brief Sets the current histrogram pointer* @a hCurrent.
  * @return 0 on failure (TGraph with name not in* @a grs) and 1 on success.
 */
-Int_t AntarcticaMapPlotter::setCurrentTGraph(TString name){
+Int_t Acclaim::AntarcticaMapPlotter::setCurrentTGraph(TString name){
 
   std::map<TString, TGraph*>::iterator grItr = grs.find(name);
   Int_t successState = 0;
@@ -381,7 +381,7 @@ Int_t AntarcticaMapPlotter::setCurrentTGraph(TString name){
  * @brief Return pointer to current TGraph
  * @return pointer to current TGraph
 */
-TGraph* AntarcticaMapPlotter::getCurrentTGraph(){
+TGraph* Acclaim::AntarcticaMapPlotter::getCurrentTGraph(){
   return grCurrent;
 }
 
@@ -395,6 +395,6 @@ TGraph* AntarcticaMapPlotter::getCurrentTGraph(){
  * @brief Return pointer to current histogram
  * @return pointer to current histogram
 */
-TH2D* AntarcticaMapPlotter::getCurrentHistogram(){
+TH2D* Acclaim::AntarcticaMapPlotter::getCurrentHistogram(){
   return hCurrent;
 }

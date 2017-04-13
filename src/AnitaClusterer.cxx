@@ -1,7 +1,7 @@
 #include "AnitaClusterer.h"
 
 
-AnitaClusterer::AnitaClusterer(Int_t nClusters, Int_t numIterations, Int_t approxNumPoints){
+Acclaim::AnitaClusterer::AnitaClusterer(Int_t nClusters, Int_t numIterations, Int_t approxNumPoints){
 
   numIter = numIterations;
   numClusters = nClusters;
@@ -54,7 +54,7 @@ inline void prettyPrintConvert(const int n, const double* array){
 
 
 // utility function hopefully this one gets inlined
-inline Double_t getDistSq(const AnitaClusterer::Point& point, const AnitaClusterer::Cluster& cluster){
+inline Double_t getDistSq(const Acclaim::AnitaClusterer::Point& point, const Acclaim::AnitaClusterer::Cluster& cluster){
   Double_t d2=0;
   for(int dim=0; dim < nDim; dim++){
     Double_t d = cluster.centre[dim] - point.centre[dim];
@@ -65,7 +65,7 @@ inline Double_t getDistSq(const AnitaClusterer::Point& point, const AnitaCluster
 
 
 // utility function hopefully this one gets inlined
-inline Double_t getDistSq(AnitaClusterer::Cluster& cluster1, const AnitaClusterer::Cluster& cluster2){
+inline Double_t getDistSq(Acclaim::AnitaClusterer::Cluster& cluster1, const Acclaim::AnitaClusterer::Cluster& cluster2){
   Double_t d2=0;
   for(int dim=0; dim < nDim; dim++){
     Double_t d = cluster1.centre[dim] - cluster2.centre[dim];
@@ -77,7 +77,7 @@ inline Double_t getDistSq(AnitaClusterer::Cluster& cluster1, const AnitaClustere
 
 
 
-inline void getDeltaThetaDegDeltaPhiDegCluster(const AnitaClusterer::Point& point, const AnitaClusterer::Cluster& cluster, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
+inline void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::AnitaClusterer::Point& point, const Acclaim::AnitaClusterer::Cluster& cluster, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
   Double_t thetaWave, phiWave;
   usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude,cluster.altitude,
@@ -86,7 +86,7 @@ inline void getDeltaThetaDegDeltaPhiDegCluster(const AnitaClusterer::Point& poin
   Double_t phiDeg = TMath::RadToDeg()*phiWave;
 
   deltaThetaDeg = (thetaDeg - point.thetaDeg);
-  deltaPhiDeg = RootTools::getDeltaAngleDeg(phiDeg, point.phiDeg);
+  deltaPhiDeg = Acclaim::RootTools::getDeltaAngleDeg(phiDeg, point.phiDeg);
 }
 
 
@@ -94,7 +94,7 @@ inline void getDeltaThetaDegDeltaPhiDegCluster(const AnitaClusterer::Point& poin
 
 
 
-inline void getDeltaThetaDegDeltaPhiDegCluster(const AnitaClusterer::Point& point, const AnitaClusterer::Cluster& cluster, const Adu5Pat* pat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
+inline void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::AnitaClusterer::Point& point, const Acclaim::AnitaClusterer::Cluster& cluster, const Adu5Pat* pat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
   UsefulAdu5Pat usefulPat(pat);
 
@@ -107,7 +107,7 @@ inline void getDeltaThetaDegDeltaPhiDegCluster(const AnitaClusterer::Point& poin
 
 
 
-inline Double_t getAngDistSq(const AnitaClusterer::Point& point, const AnitaClusterer::Cluster& cluster, const Adu5Pat* pat){
+inline Double_t getAngDistSq(const Acclaim::AnitaClusterer::Point& point, const Acclaim::AnitaClusterer::Cluster& cluster, const Adu5Pat* pat){
 
   Double_t deltaThetaDeg, deltaPhiDeg;
   getDeltaThetaDegDeltaPhiDegCluster(point, cluster, pat, deltaThetaDeg, deltaPhiDeg);
@@ -121,7 +121,7 @@ inline Double_t getAngDistSq(const AnitaClusterer::Point& point, const AnitaClus
   return angSq;
 }
 
-inline Double_t getAngDistSq(const AnitaClusterer::Point& point, const AnitaClusterer::Cluster& cluster, UsefulAdu5Pat& usefulPat){
+inline Double_t getAngDistSq(const Acclaim::AnitaClusterer::Point& point, const Acclaim::AnitaClusterer::Cluster& cluster, UsefulAdu5Pat& usefulPat){
 
   Double_t deltaThetaDeg, deltaPhiDeg;
   getDeltaThetaDegDeltaPhiDegCluster(point, cluster, usefulPat, deltaThetaDeg, deltaPhiDeg);
@@ -141,7 +141,7 @@ inline Double_t getAngDistSq(const AnitaClusterer::Point& point, const AnitaClus
 
 
 
-Double_t AnitaClusterer::getSumOfMcWeights(){
+Double_t Acclaim::AnitaClusterer::getSumOfMcWeights(){
   Double_t sumOfWeights = 0;
   for(int pointInd=0; pointInd < (int)mcpoints.size(); pointInd++){
     sumOfWeights += mcpoints.at(pointInd).weight;
@@ -151,7 +151,7 @@ Double_t AnitaClusterer::getSumOfMcWeights(){
 
 
 
-Int_t AnitaClusterer::histogramUnclusteredEvents(Int_t& globalMaxBin){
+Int_t Acclaim::AnitaClusterer::histogramUnclusteredEvents(Int_t& globalMaxBin){
 
   Int_t addClusterIter =  hUnclustereds.size();
   TString name = TString::Format("hUnclustered%d", addClusterIter);
@@ -181,7 +181,7 @@ Int_t AnitaClusterer::histogramUnclusteredEvents(Int_t& globalMaxBin){
 
 
 
-void AnitaClusterer::recursivelyAddClusters(Int_t minBinContent){
+void Acclaim::AnitaClusterer::recursivelyAddClusters(Int_t minBinContent){
 
   if(doneDefaultAssignment==false){
     assignEventsToDefaultClusters();
@@ -243,7 +243,7 @@ void AnitaClusterer::recursivelyAddClusters(Int_t minBinContent){
 
 
 
-void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
+void Acclaim::AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 
   for(int i=0; i < maxRetestClusterSize; i++){
     numIsolatedSmallClusters.at(i) = 0;
@@ -333,7 +333,7 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 
 
 
-void AnitaClusterer::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd){
+void Acclaim::AnitaClusterer::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd){
   Point& point = isMC==0 ? points.at(pointInd) : mcpoints.at(pointInd);
   Adu5Pat* pat = isMC==0 ? pats.at(pointInd)   : mcpats.at(pointInd);
   Cluster& cluster = clusters.at(clusterInd);
@@ -371,7 +371,7 @@ void AnitaClusterer::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC
 
 
 
-void AnitaClusterer::assignMCPointsToClusters(){
+void Acclaim::AnitaClusterer::assignMCPointsToClusters(){
 
   const int isMC = 1;
   Double_t numSinglets = 0;
@@ -397,7 +397,7 @@ void AnitaClusterer::assignMCPointsToClusters(){
 
 
 
-size_t AnitaClusterer::addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
+size_t Acclaim::AnitaClusterer::addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
 
   mcpoints.push_back(MCPoint(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol, weight, energy));
   mceventNumbers.push_back(eventNumber);
@@ -412,7 +412,7 @@ size_t AnitaClusterer::addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t long
 
 
 
-size_t AnitaClusterer::addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol){
+size_t Acclaim::AnitaClusterer::addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol){
 
   points.push_back(Point(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol));
   eventNumbers.push_back(eventNumber);
@@ -425,7 +425,7 @@ size_t AnitaClusterer::addPoint(Adu5Pat* pat, Double_t latitude, Double_t longit
 
 
 
-void AnitaClusterer::assignEventsToDefaultClusters(){
+void Acclaim::AnitaClusterer::assignEventsToDefaultClusters(){
   ProgressBar p(numClusters);
   const int isMC = 0;
     for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
@@ -445,7 +445,7 @@ void AnitaClusterer::initializeEmptyBaseList(){
 }
 
 
-void AnitaClusterer::initializeBaseList(){
+void Acclaim::AnitaClusterer::initializeBaseList(){
 
   numClusters = (int) BaseList::getNumBases();
   std::cout << "Initializing base list..." << std::endl;
@@ -460,7 +460,7 @@ void AnitaClusterer::initializeBaseList(){
 
 
 
-void AnitaClusterer::resetClusters(){
+void Acclaim::AnitaClusterer::resetClusters(){
 
   for(int pointInd=0; pointInd < (int) points.size(); pointInd++){
     points.at(pointInd).ll = DBL_MAX;
@@ -521,7 +521,7 @@ void AnitaClusterer::resetClusters(){
 
 
 
-TGraph* AnitaClusterer::makeClusterSummaryTGraph(Int_t clusterInd){
+TGraph* Acclaim::AnitaClusterer::makeClusterSummaryTGraph(Int_t clusterInd){
 
   TGraph* gr = NULL;
   if(clusterInd >= 0 && clusterInd < numClusters){
@@ -556,7 +556,7 @@ TGraph* AnitaClusterer::makeClusterSummaryTGraph(Int_t clusterInd){
 
 
 
-TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
+TTree* Acclaim::AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
 
   fOut->cd();
 

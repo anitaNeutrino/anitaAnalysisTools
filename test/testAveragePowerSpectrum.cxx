@@ -22,6 +22,8 @@
 #include <UsefulAnitaEvent.h>
 #include <CalibratedAnitaEvent.h>
 
+using namespace Acclaim;
+
 void testAveragePowerSpectrum();
 
 int main(){
