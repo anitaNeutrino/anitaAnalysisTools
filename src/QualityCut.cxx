@@ -29,16 +29,19 @@ Acclaim::SurfSaturationCut::SurfSaturationCut(){
     
 
 
-void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
+// void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
+void Acclaim::SurfSaturationCut::apply(UsefulAnitaEvent* useful){  
 
   maxVolts = 0;
   minVolts = 0;
   for(int pol=0; pol <AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      const AnalysisWaveform* wave = fEv->getRawGraph(ant, (AnitaPol::AnitaPol_t) pol);
-      const TGraphAligned* gr = wave->uneven();
-      double maxThisChan = TMath::MaxElement(gr->GetN(), gr->GetY());
-      double minThisChan = TMath::MinElement(gr->GetN(), gr->GetY());
+      const int chanIndex = AnitaGeomTool::getChanIndexFromAntPol(ant, (AnitaPol::AnitaPol_t) pol);
+      double* volts = useful->fVolts[chanIndex];
+      int n = useful->fNumPoints[chanIndex];
+      
+      double maxThisChan = TMath::MaxElement(n, volts);
+      double minThisChan = TMath::MinElement(n, volts);
 
       if(maxThisChan > maxVolts){
 	maxVolts = maxThisChan;
@@ -94,7 +97,8 @@ Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
 
 
 
-void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){
+void Acclaim::SelfTriggeredBlastCut::apply(UsefulAnitaEvent* useful){
+// void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
@@ -114,12 +118,13 @@ void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){
       int topAnt = phi;
       int bottomAnt = 2*NUM_PHI + phi;
 	
-      const AnalysisWaveform* waveTop = fEv->getRawGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
-      const TGraphAligned* grTop = waveTop->uneven();
-
-
-      const AnalysisWaveform* waveBottom = fEv->getRawGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
-      const TGraphAligned* grBottom = waveBottom->uneven();
+      TGraph* grTop = useful->getGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
+      TGraph* grBottom = useful->getGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
+      
+      // const AnalysisWaveform* waveTop = fEv->getRawGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
+      // const TGraphAligned* grTop = waveTop->uneven();
+      // const AnalysisWaveform* waveBottom = fEv->getRawGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
+      // const TGraphAligned* grBottom = waveBottom->uneven();
 
       Double_t maxYTop, maxXTop, minYTop, minXTop;
       RootTools::getLocalMaxToMin((const TGraph*)grTop, maxYTop, maxXTop, minYTop, minXTop);
@@ -127,13 +132,16 @@ void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){
       Double_t maxYBottom, maxXBottom, minYBottom, minXBottom;
       RootTools::getLocalMaxToMin((const TGraph*) grBottom, maxYBottom, maxXBottom, minYBottom, minXBottom);
 
+      delete grTop;
+      delete grBottom;
+      
       double ratio = (maxYBottom - minYBottom)/(maxYTop - minYTop);
 
       if(ratio > maxRatio){
 	maxRatio = ratio;
 	maxRatioPhi = phi;
 	maxRatioPol = (AnitaPol::AnitaPol_t) pol;
-      }	  
+      }	
     }	
   }
 

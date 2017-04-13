@@ -2,6 +2,7 @@
 #include "OutputConvention.h"
 #include "ProgressBar.h"
 #include "FilterStrategy.h"
+#include "QualityCut.h"
 
 /** 
  * Constructor, sets up some of the options for the analysis 
@@ -226,28 +227,39 @@ void Acclaim::AnalysisFlow::doAnalysis(){
 
     fData->getEntry(entry);
     RawAnitaHeader* header = fData->header();
-    Adu5Pat* pat = fData->gps();
-    UsefulAdu5Pat usefulPat(pat);
+    UsefulAnitaEvent* usefulEvent = fData->useful();
 
-    Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
 
-    if(selectedEvent){
+    SurfSaturationCut ssc;
+    ssc.apply(usefulEvent);
+
+    SelfTriggeredBlastCut stbc;
+    stbc.apply(usefulEvent);
+
+    // don't proces events failing quality cuts (will muck up rolling averages)
+    if(ssc.eventPassesCut && stbc.eventPassesCut){
     
-      UsefulAnitaEvent* usefulEvent = fData->useful();
+      Adu5Pat* pat = fData->gps();
+      UsefulAdu5Pat usefulPat(pat);
 
       FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
-      eventSummary = new AnitaEventSummary(header, &usefulPat);
-      // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
-      fReco->process(&filteredEvent, &usefulPat, eventSummary);
 
-      fSumTree->Fill();
-      delete eventSummary;
-      eventSummary = NULL;
+      // since we now have rolling averages make sure the filter strategy is processed before deciding whether or not to reconstruct 
+      Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
+
+      if(selectedEvent){
+	eventSummary = new AnitaEventSummary(header, &usefulPat);
+	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+	fReco->process(&filteredEvent, &usefulPat, eventSummary);
+
+	fSumTree->Fill();
+	delete eventSummary;
+	eventSummary = NULL;
+      }
     }
     
     p.inc(entry, numEntries);
   }
 
-  delete fFilterStrat;
 }  

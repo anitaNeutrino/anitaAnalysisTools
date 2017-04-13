@@ -19,7 +19,7 @@ Acclaim::AnalysisReco::~AnalysisReco(){
 
 
 
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * usefulEvent, UsefulAdu5Pat* usefulPat ,AnitaEventSummary * eventSummary) const{
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat ,AnitaEventSummary * eventSummary) const{
   
 
   if(!cc){
@@ -32,14 +32,14 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * usefulEvent, Usef
   
   const int thisNumPeaks = 3;
 
-  eventSummary->eventNumber = usefulEvent->eventNumber;
+  eventSummary->eventNumber = fEv->getHeader()->eventNumber;
 
   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
 
     
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
-    cc->correlateEvent(usefulEvent, pol);
+    cc->correlateEvent(fEv, pol);
 
     // do the coarsely grained reconstruction
     reconstruct(pol);
@@ -73,10 +73,10 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * usefulEvent, Usef
       // based on Cosmin's comments in AnitaAnalysisSummary.h
       eventSummary->peak[pol][peakInd].phi_separation = peakInd == 0 ? 1000 : RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
       
-      // AnalysisWaveform* coherent = coherentlySum(usefulEvent, h);
+      // AnalysisWaveform* coherent = coherentlySum(fEv, h);
 
 
-      AnalysisWaveform* coherentWave = coherentlySum(usefulEvent, h);
+      AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
       
       std::map<Int_t, AnalysisWaveform*>::iterator it2 = coherent[pol].find(peakInd);
       if(it2!=coherent[pol].end()){

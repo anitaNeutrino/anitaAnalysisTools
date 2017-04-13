@@ -192,7 +192,7 @@ void Acclaim::CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, Ani
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
   // getFftsAndStartTimes(fEv, pol);
-  eventNumber[pol] = fEv->eventNumber;
+  eventNumber[pol] = fEv->getHeader()->eventNumber;
   
   getNormalizedInterpolatedTGraphs(fEv, pol);
   doFFTs(pol);  
