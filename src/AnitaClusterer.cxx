@@ -131,7 +131,7 @@ inline Double_t getAngDistSq(const AnitaClusterer::Point& point, const AnitaClus
   Double_t dPhiSq = deltaPhiDeg/point.sigmaPhiDeg;
 
   Double_t angSq =  dThetaSq*dThetaSq + dPhiSq*dPhiSq;
-
+  
   return angSq;
 }
 
@@ -231,7 +231,9 @@ void AnitaClusterer::recursivelyAddClusters(Int_t minBinContent){
     // std::cout << counter << "\t" << maxBinVal << "\t" << clusters.back().latitude << "\t"
     // 	      << clusters.back().longitude << "\t" << hUnclustereds.back()->Integral() << std::endl;
 
+    // std::cout << hUnclustereds.size() << " " << counter << " " << minBinContent << std::endl;
 
+      
     // if(hUnclustereds.size() < 10){
     recursivelyAddClusters(minBinContent);
     // }
@@ -296,6 +298,7 @@ void AnitaClusterer::findClosestPointToClustersOfSizeOne(){
 	    clusters.at(points.at(minPointInd).inCluster).numEvents++;
 	    cluster.numEvents--;
 	    points.at(pointInd).inCluster = points.at(minPointInd).inCluster;
+	    points.at(pointInd).secondClosestCluster = points.at(minPointInd).secondClosestCluster;
 	  }
 	}
       }
@@ -338,14 +341,15 @@ void AnitaClusterer::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC
   UsefulAdu5Pat usefulPat(pat);
 
   Double_t distM = usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
-
+  
   if(distM < maxDistCluster){ // are we even close?
 
     Double_t ll = getAngDistSq(point, cluster, usefulPat);
-
+    
     if(ll < llCut){
-
+	  
       if(ll < point.ll){
+
 	point.secondClosestCluster = point.inCluster;
 	point.llSecondBest = point.ll;
 
@@ -360,6 +364,7 @@ void AnitaClusterer::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC
 	}
       }
     }
+    
   }
 }
 
@@ -433,6 +438,11 @@ void AnitaClusterer::assignEventsToDefaultClusters(){
 }
 
 
+void AnitaClusterer::initializeEmptyBaseList(){
+  numClusters=0;
+  BaseList::makeEmptyBaseList();
+  initialized=true;
+}
 
 
 void AnitaClusterer::initializeBaseList(){
@@ -459,7 +469,6 @@ void AnitaClusterer::resetClusters(){
     points.at(pointInd).secondClosestCluster = -1;
   }
 
-
   for(int pointInd=0; pointInd < (int) mcpoints.size(); pointInd++){
     mcpoints.at(pointInd).ll = DBL_MAX;
     mcpoints.at(pointInd).llSecondBest = DBL_MAX;
@@ -468,11 +477,11 @@ void AnitaClusterer::resetClusters(){
   }
 
   const int numBases = BaseList::getNumBases();
-  while((int) clusters.size() >= numBases){
+  while((int) clusters.size() >= numBases && numBases>0){
     clusters.pop_back();
   }
+  
   numClusters = clusters.size();
-
   for(int clusterInd=0; clusterInd < (int) numClusters; clusterInd++){
     clusters.at(clusterInd).numEvents = 0;
   }
@@ -550,6 +559,7 @@ TGraph* AnitaClusterer::makeClusterSummaryTGraph(Int_t clusterInd){
 TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
 
   fOut->cd();
+
   TTree* clusterTree = new TTree("clusterTree", "Tree of clustered ANITA events");
   fSignalBox->cd();
   TTree* clusterTreeHidden = new TTree("clusterTreeHidden", "Tree of clustered hidden ANITA events");
@@ -559,6 +569,7 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
 
   clusterTreeHidden->Branch("clusteredEvent", &clusteredEvent);
 
+  //  std::cout << "Num points " << (Int_t)points.size() << std::endl;
   // AnitaGeomTool* geom = AnitaGeomTool::Instance();
   const int numBases = BaseList::getNumBases();
 
@@ -571,7 +582,6 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
     Int_t clusterInd = points.at(pointInd).inCluster;
     clusteredEvent->inCluster = clusterInd;
     clusteredEvent->isBase = 0;
-
     if(clusterInd >= 0){
       clusteredEvent->eventNumber = eventNumbers.at(pointInd);
       clusteredEvent->run = runs.at(pointInd);
@@ -596,7 +606,6 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
       clusteredEvent->isMC = 0;
       clusteredEvent->weight = 1;
 
-
       const Cluster& cluster = clusters.at(clusterInd);
 
       clusteredEvent->isBase = clusterInd < numBases ? 1 : 0;
@@ -613,22 +622,24 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
       // clusteredEvent->distanceToClusterCentroid = TMath::Sqrt(getDistSq(point, cluster));
       // clusteredEvent->distanceToClusterCentroid = get(point, cluster));
       clusteredEvent->minusTwoLogLikelihood = getAngDistSq(point, cluster, pats.at(pointInd));
+
       UsefulAdu5Pat usefulPat(pats.at(pointInd));
       clusteredEvent->distanceToClusterCentroid = usefulPat.getDistanceFromSource(cluster.latitude, \
 										  cluster.longitude, \
 										  cluster.altitude);
       clusteredEvent->numEventsInCluster = cluster.numEvents;
 
-
-      if(clusteredEvent->secondClosestCluster >= 0){
+      if ( clusteredEvent->secondClosestCluster>=(int)clusters.size() ||  clusteredEvent->secondClosestCluster>=(int)points.size()  ){
+	//	std::cout <<  "Second closest cluster problem? " << clusteredEvent->secondClosestCluster<< " " << clusterInd << " " << pointInd << " " << (int)clusters.size()  << " " << points.size() << std::endl;
+      } else    if(clusteredEvent->secondClosestCluster >= 0){
+	
 	const Cluster& cluster2 = clusters.at(clusteredEvent->secondClosestCluster);
-
-
+	
 	clusteredEvent->distanceToClusterCentroidSecondBest = usefulPat.getDistanceFromSource(cluster2.latitude, \
 											      cluster2.longitude, \
 											      cluster2.altitude);
       }
-
+    
       clusteredEvent->numIterations = numIter;
 
       clusteredEvent->numClusters = numClusters;
@@ -636,6 +647,7 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
     }
     else{
       std::cerr << "clusterInd = " << clusterInd << ". ";
+      std::cerr << "pointInd = " << pointInd << ". ";
       std::cerr << "This shouldn't be possible!" << std::endl;
     }
 
@@ -645,7 +657,6 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
        clusters.at(clusteredEvent->inCluster).numPointsWithinMinLL == 0){
       // the box of goodies
       clusterTreeHidden->Fill();
-
     }
     else{
       clusterTree->Fill();
@@ -654,8 +665,6 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
 
     delete clusteredEvent;
   }
-
-
 
 
   for(Int_t pointInd=0; pointInd < (Int_t)mcpoints.size(); pointInd++){
@@ -690,7 +699,7 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
     clusteredEvent->inCluster = clusterInd;
     clusteredEvent->isBase = 0;
 
-    if(clusterInd >= 0){
+    if(clusterInd >= 0  && clusterInd<(int)clusters.size() ){
       const Cluster& cluster = clusters.at(clusterInd);
 
       clusteredEvent->isBase = clusterInd < numBases ? 1 : 0;
@@ -708,7 +717,9 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
       // clusteredEvent->distanceToClusterCentroid = TMath::Sqrt(getDistSq(point, cluster));
       // clusteredEvent->distanceToClusterCentroid = get(point, cluster));
       clusteredEvent->minusTwoLogLikelihood = getAngDistSq(point, cluster, mcpats.at(pointInd));
+
       UsefulAdu5Pat usefulPat(mcpats.at(pointInd));
+
       clusteredEvent->distanceToClusterCentroid = usefulPat.getDistanceFromSource(cluster.latitude, \
 										  cluster.longitude, \
 										  cluster.altitude);
@@ -729,9 +740,12 @@ TTree* AnitaClusterer::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
       clusteredEvent->numIterations = numIter;
     }
     clusterTree->Fill();
+    
     delete clusteredEvent;
+    
   }
 
+  
   clusterTreeHidden->Write();
   fSignalBox->Write();
   fSignalBox->Close();

@@ -279,6 +279,7 @@ public:
 
 
   void initializeBaseList();
+  void initializeEmptyBaseList();
 
   Int_t getNumClusters(){
     return numClusters;
