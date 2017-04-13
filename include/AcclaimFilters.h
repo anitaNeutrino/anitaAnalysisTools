@@ -77,7 +77,7 @@ namespace Acclaim
 	std::cerr << "Error in " << __PRETTY_FUNCTION__ << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
       }
       virtual void process(FilteredAnitaEvent* fEv);
-      void drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol, int freqBin) const;
+      void drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol) const;
       
       
     };

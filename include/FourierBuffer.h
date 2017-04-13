@@ -33,17 +33,15 @@ namespace Acclaim
    */
   class FourierBuffer {
 
+    friend class RayleighHist;
   public:
 
     virtual ~FourierBuffer();
     explicit FourierBuffer(Double_t timeScaleSeconds=10, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
 
     size_t add(const RawAnitaHeader* header, const AnalysisWaveform* wave);
-
-    const RayleighHist* getRayleighDistribution(Int_t freqBin) const {return hRays.at(freqBin);}
-    // const RayleighHist* fillRayleighInfo(Int_t freqBin, RayleighInfo* info) const;
-    // const RayleighHist* fillRiceInfo(Int_t freqBin, RiceInfo* info) const;
-
+    
+    const RayleighHist* getRayleighDistribution(Int_t freqBin=-1) const {return hRays.at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
     TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
     TGraphAligned* getAvePowSpec(double timeRange = -1) const;
     TGraphAligned* getBackground_dB(double timeRange = -1) const;
@@ -51,9 +49,9 @@ namespace Acclaim
 
     void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
       ant = theAnt;
-      pol = thePol;
+      pol = thePol;      
     }
-
+    
   private:
     Int_t removeOld();
     void initVectors(int n);
@@ -65,7 +63,6 @@ namespace Acclaim
     std::list<Int_t> runs;
     std::list<Double_t> realTimesNs;
 
-    TF1* fRay;
     std::vector<double> sumPower;
     std::vector<RayleighHist*> hRays;
     std::vector<double> sumAmps;
@@ -75,6 +72,8 @@ namespace Acclaim
     double df;
     mutable TSpectrum* spectrum; // to estimate the background
     bool doneVectorInit;
+    int fDrawFreqBin;
+    TF1* fRay;
   };
 }
 

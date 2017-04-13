@@ -3,26 +3,24 @@
 #include "FFTWComplex.h"
 #include "TSpectrum.h"
 #include "RayleighHist.h"
+#include "TF1.h"
 
 const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
+
 
 Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
   timeScale = timeScaleSeconds;
   ant = theAnt;
   pol = thePol;
   df = -1;
+  fDrawFreqBin = 100; //26;
 
   // will initialize this dynamically to get around this no-copy-constructor bullshit
   spectrum = NULL;
 
-  TString fName = "fRay";
-  fName += ant >= 0 && pol < AnitaPol::kNotAPol ? TString::Format("_%d_%d", ant, pol) : "";
-
-  Double_t xMin = 0;
-  Double_t xMax = 1;
-
-  fRay = new TF1(fName, rayleighFuncText, xMin, xMax);
+  TString funcName = TString::Format("fRay_%d_%d", ant, pol);
+  fRay = new TF1(funcName, rayleighFuncText, 0, 1);
 
   doneVectorInit = false;
 }
@@ -37,8 +35,8 @@ void Acclaim::FourierBuffer::initVectors(int n){
   for(int freqBin=0; freqBin < n; freqBin++){
     TString name = TString::Format("hRayleigh");
     name += ant >= 0 && pol < AnitaPol::kNotAPol ? TString::Format("_%d_%d", ant, pol) : "";
-    name += TString::Format("_%d", TMath::Nint(1e3*df*freqBin));
-    hRays.at(freqBin) = new Acclaim::RayleighHist(name, name);
+    name += TString::Format("_%d", freqBin);
+    hRays.at(freqBin) = new Acclaim::RayleighHist(this, name, name);
   }
   doneVectorInit = true;
 }
@@ -50,12 +48,7 @@ Acclaim::FourierBuffer::~FourierBuffer(){
     delete spectrum;
     spectrum = NULL;
   }
-
-  if(fRay){
-    delete fRay;
-    fRay = NULL;
-  }
-
+  
   for(unsigned i=0; i < hRays.size(); i++){
     delete hRays.at(i);
     hRays.at(i) = NULL;
@@ -82,6 +75,9 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   }
   if(df <= 0){
     df = grPower->GetX()[1] - grPower->GetX()[0];
+    for(size_t freqBin=0; freqBin < hRays.size(); freqBin++){
+      hRays.at(freqBin)->freqMHz = df*1e3*freqBin;
+    }
   }
   
   eventNumbers.push_back(header->eventNumber);
@@ -131,6 +127,11 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   }
   
   removeOld();
+
+
+  for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
+    hRays.at(freqInd)->Fit();
+  }
   
   return eventNumbers.size();
 }
@@ -290,10 +291,11 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
 
 TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec_dB(double thisTimeRange) const{
-  
+
   TGraphAligned* gr = getAvePowSpec(thisTimeRange);
   gr->dBize();
   return gr;
+
 }
 
 
@@ -371,3 +373,4 @@ TGraphAligned* Acclaim::FourierBuffer::getBackground(double thisTimeRange) const
 
   return gr;
 }
+

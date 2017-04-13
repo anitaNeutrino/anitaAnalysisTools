@@ -441,7 +441,7 @@ void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
 }
 
 
-void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol, int freqBin) const{
+void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol) const{
 
   std::map<std::pair<int, AnitaPol::AnitaPol_t>, FourierBuffer>::const_iterator it;
   it = fbs.find(std::make_pair(ant, pol));
@@ -449,7 +449,7 @@ void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol
   if(it!=fbs.end()){
 
     const FourierBuffer& fb = it->second;
-    RayleighHist* h = (RayleighHist*) fb.getRayleighDistribution(freqBin);
+    RayleighHist* h = (RayleighHist*) fb.getRayleighDistribution();
     pad->cd();
     h->Draw();
   }

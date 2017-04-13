@@ -4,28 +4,40 @@
 #include "TH1D.h"
 
 
+class TF1;
+
 namespace Acclaim{
+  class FourierBuffer;
+
   class RayleighHist : public TH1D {
 
     friend class FourierBuffer;
+
   public:
-    RayleighHist(const char* name = "", const char* title = "");
-    virtual ~RayleighHist(){;}
+    RayleighHist(FourierBuffer* fb, const char* name = "", const char* title = "");
+    virtual ~RayleighHist();
 
     virtual int Fill(double amp, double sign=1);
+    virtual void Draw(Option_t* opt="");
 
     bool axisRangeOK(double meanAmp) const;
     void rebinAndEmptyHist(double meanAmp);
+    void Fit();
+
+    void SetFreqBinToDraw(Int_t freqBin); // *MENU*
     
   protected:
 
-    void init();
+    FourierBuffer* fParent;
+    TF1* fRay;    
     double fracOfEventsWanted;
     double maxOverFlowThresh;    
     Int_t risingEdgeBins;    
-
+    Int_t fDrawFreqBin;
+    double freqMHz;
     
-    ClassDef(RayleighHist, 1);
+    ClassDef(RayleighHist, 0);
+    
   };
 }
 #endif
