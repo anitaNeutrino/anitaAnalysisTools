@@ -438,7 +438,7 @@ void Acclaim::AnitaClusterer::assignEventsToDefaultClusters(){
 }
 
 
-void AnitaClusterer::initializeEmptyBaseList(){
+void Acclaim::AnitaClusterer::initializeEmptyBaseList(){
   numClusters=0;
   BaseList::makeEmptyBaseList();
   initialized=true;
