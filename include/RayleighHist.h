@@ -14,7 +14,7 @@ namespace Acclaim{
     friend class FourierBuffer;
 
   public:
-    RayleighHist(FourierBuffer* fb, const char* name = "", const char* title = "");
+    RayleighHist(FourierBuffer* fb=NULL, const char* name = "", const char* title = "");
     virtual ~RayleighHist();
 
     virtual int Fill(double amp, double sign=1);
@@ -25,6 +25,7 @@ namespace Acclaim{
     void Fit();
 
     void SetFreqBinToDraw(Int_t freqBin); // *MENU*
+    Int_t numEvents;
     
   protected:
 
@@ -35,7 +36,6 @@ namespace Acclaim{
     Int_t risingEdgeBins;    
     Int_t fDrawFreqBin;
     double freqMHz;
-    
     ClassDef(RayleighHist, 0);
     
   };

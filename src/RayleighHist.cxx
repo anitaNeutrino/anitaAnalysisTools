@@ -14,8 +14,9 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   fracOfEventsWanted = 0.99;
   risingEdgeBins = 4;
   maxOverFlowThresh = 0.9;
-  fRay = (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name));
-  // fRay = fParent->fRay;
+
+  fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
+  numEvents = 0;
 }
 
 Acclaim::RayleighHist::~RayleighHist(){
@@ -34,7 +35,7 @@ bool Acclaim::RayleighHist::axisRangeOK(double meanAmp) const{
   // assume I'm cutting all the serious crap before here (SURF saturation + self triggered blasts)
   // that means if we've got a lot of overflow we need to rebin.
   double overFlow = GetBinContent(GetNbinsX()+1);
-  double integralWithOverUnderFlow = Integral() + GetBinContent(0) + overFlow;
+  double integralWithOverUnderFlow = numEvents;
 
   // or it could be that the axis limits are too large...
   // I guess, let's rebin if all the samples are below some fraction of the total
@@ -68,6 +69,7 @@ void Acclaim::RayleighHist::rebinAndEmptyHist(double meanAmp){
     SetBinContent(bx, 0);
     SetBinError(bx, 0);
   }
+  numEvents = 0;
 }
 
 
@@ -77,12 +79,12 @@ int Acclaim::RayleighHist::Fill(double amp, double sign){
   // this allows this histogram to be used for a rolling average
 
   sign = sign >= 0 ? 1 : -1;
-
   int bx = TH1D::Fill(amp, sign);
   double n = GetBinContent(bx);
   SetBinError(bx, TMath::Sqrt(n));
+  numEvents += sign;
 
-  SetTitle(TString::Format("%4.1lf MHz - %d events in distribution", freqMHz, int(Integral() + GetBinContent(GetNbinsX()+1))));
+  // SetTitle(TString::Format("%4.1lf MHz - %d events in distribution", freqMHz, int(Integral() + GetBinContent(GetNbinsX()+1))));
 
   return bx;
 }
@@ -91,20 +93,18 @@ int Acclaim::RayleighHist::Fill(double amp, double sign){
 
 void Acclaim::RayleighHist::Fit(){
 
+  // double integralWithOverFlow = Integral(0, GetNbinsX()+1);
 
-
-  double integralWithOverFlow = Integral(0, GetNbinsX()+1);
-
-  if(integralWithOverFlow >= 50){
+  if(numEvents >= 50){
 
     double sum=0;
     for(int bx=0; bx <= GetNbinsX(); bx++){
       sum += GetXaxis()->GetBinCenter(bx)*GetBinContent(bx);
     }
-    double mean = sum/Integral();
+    double mean = sum/numEvents;
     
     double binWidth = GetBinWidth(1);
-    double rayFitNorm = integralWithOverFlow*binWidth;
+    double rayFitNorm = binWidth*double(numEvents);
     double rayGuessAmp = mean*TMath::Sqrt(2./TMath::Pi());
 
     Double_t xMin = GetBinLowEdge(1);
@@ -112,15 +112,31 @@ void Acclaim::RayleighHist::Fit(){
     fRay->SetRange(xMin, xMax);
     // Set fit params
     fRay->FixParameter(0, rayFitNorm);
-    // fRay->FixParameter(1, rayGuessAmp);
-    fRay->SetParameter(1, rayGuessAmp);
-    // fRay->SetParLimits(1, 0, 1e9); // essentially infinite  
-    fRay->SetParLimits(1, rayGuessAmp, rayGuessAmp); // fixed width
-    
-    TH1::Fit(fRay, "Q0");
+    fRay->FixParameter(1, rayGuessAmp);
+    // fRay->SetParLimits(1, rayGuessAmp, rayGuessAmp); // fixed width
+    // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width
+    // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width        
 
+    // TH1::Fit(fRay, "Q0");
+
+
+    double chiSquare=0;
+    int ndf = 0;
+    for(int bx=1; bx <= GetNbinsX(); bx++){
+      double y = GetBinContent(bx);
+
+      if(y > 0){
+	double x = GetXaxis()->GetBinCenter(bx);
+	double yR = fRay->Eval(x);
+	double yErr = GetBinError(bx);
+	double deltaY = (y - yR)/yErr;
+	chiSquare += deltaY*deltaY;
+	ndf++;
+      }
+    }
+    
     if(fName.Contains(TString::Format("%d", fParent->fDrawFreqBin))){
-      std::cout << fRay->GetName() << ":\t" << "rayGuessAmp = " << rayGuessAmp << "\tmean = " << mean << "\tintegral = " << Integral() << "\tintegral+of = " << integralWithOverFlow << "\tbinWidth = " << binWidth << "\t func eval at mean = " << fRay->Eval(mean) << std::endl;
+      std::cout << fRay->GetName() << ":\t" << "rayGuessAmp = " << rayGuessAmp << "\tmean = " << mean << "\tintegral = " << Integral() << "\tnumEvents = " << numEvents << "\tbinWidth = " << binWidth << "\t func eval at mean = " << fRay->Eval(mean) << std::endl;
     }
     
     // if(GetListOfFunctions()->GetEntries() > 0){      
