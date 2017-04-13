@@ -16,7 +16,9 @@
 #include "TString.h"
 #include "TRandom3.h"
 #include <map>
+#include <iostream>
 
+class TPad;
 class TGraphAligned;
 
 namespace Acclaim
@@ -52,11 +54,34 @@ namespace Acclaim
 	  v[ant] = fPowerRemovedByNotch[i][ant];
 	}
       }
-      virtual void process(FilteredAnitaEvent* fe);
-  
+      virtual void process(FilteredAnitaEvent* fe);  
     };
 
 
+
+    // just tracks the amplitudes of frequencies but doesn't do anything else
+    // probably to be inherited from...
+    class RayleighMonitor : public UniformFilterOperation {
+    protected:
+      double fTimeScale;
+      std::map<std::pair<Int_t, AnitaPol::AnitaPol_t>, FourierBuffer> fbs;
+      
+    public:
+      explicit RayleighMonitor(double timeScale);
+
+      virtual const char * tag () const {return "RayleighMonitor";};
+      virtual const char * description () const {return TString::Format("Tracks frequency bin amplitudes over %4.2lf seconds", fTimeScale);}
+      virtual void processOne(AnalysisWaveform* wave)
+      {
+	(void) wave;
+	std::cerr << "Error in " << __PRETTY_FUNCTION__ << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
+      }
+      virtual void process(FilteredAnitaEvent* fEv);
+      void drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol, int freqBin) const;
+      
+      
+    };
+    
 
 
 
@@ -86,6 +111,7 @@ namespace Acclaim
 
       
     };
+
 
     
     

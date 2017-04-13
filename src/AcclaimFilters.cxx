@@ -5,7 +5,8 @@
 #include "FourierBuffer.h"
 #include "FFTWComplex.h"
 #include <iostream>
-
+#include "TPad.h"
+#include "RayleighHist.h"
 
 /** 
  * This function adds my custom strategies to a map of TString to strategies...
@@ -23,8 +24,6 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   // Double_t widthMHz = 26;
   centreMHz = 370;
   Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
-  
-
 
 
   // then make the strategies
@@ -37,14 +36,16 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
 
-  FilterStrategy* spikeKiller = new FilterStrategy();
-  spikeKiller->addOperation(alfaFilter);
-  SpikeSuppressor* ss = new SpikeSuppressor(3, 10);
-  
-  spikeKiller->addOperation(ss, saveOutput);
-  filterStrats["SpikeSuppressor"] = spikeKiller;
+  // FilterStrategy* spikeKiller = new FilterStrategy();
+  // spikeKiller->addOperation(alfaFilter);
+  // SpikeSuppressor* ss = new SpikeSuppressor(3, 10);
+  // spikeKiller->addOperation(ss, saveOutput);
+  // filterStrats["SpikeSuppressor"] = spikeKiller;
 
-  
+  FilterStrategy* justRm = new FilterStrategy();
+  RayleighMonitor* rm = new RayleighMonitor(1);
+  justRm->addOperation(rm, saveOutput);
+  filterStrats["RayleighMonitor"] = justRm;
   
 }
 
@@ -150,6 +151,9 @@ void Acclaim::Filters::Notch::process(FilteredAnitaEvent * ev)
 
 
 
+
+
+
 Acclaim::Filters::SpikeSuppressor::SpikeSuppressor(double spikeThresh_dB, double timeScale) : fRandy(1234){
   fSpikeThresh_dB = spikeThresh_dB;
   fTimeScale = timeScale;
@@ -172,12 +176,12 @@ void Acclaim::Filters::SpikeSuppressor::processOne(AnalysisWaveform* wave){
 
 void Acclaim::Filters::SpikeSuppressor::process(FilteredAnitaEvent* fEv){
 
-  setSeed(fEv->eventNumber); // for deterministic randomness
+  setSeed(fEv->getHeader()->eventNumber); // for deterministic randomness
 
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       AnalysisWaveform* wave = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
-      fourierBuffers[pol][ant].add(fEv->getHeader(), (*wave));
+      fourierBuffers[pol][ant].add(fEv->getHeader(), wave);
 
       TGraphAligned* grAvePowSpec_dB = fourierBuffers[pol][ant].getAvePowSpec_dB();
 
@@ -378,5 +382,77 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 
 
-  
-    // std::cout << std::endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Acclaim::Filters::RayleighMonitor::RayleighMonitor(double timeScale){
+  fTimeScale = timeScale;
+
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      // should really be emplaced?
+      fbs[std::make_pair(ant, pol)] = FourierBuffer(timeScale, ant, pol);
+    }
+  }
+}
+
+
+
+
+void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
+
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+      // AnalysisWaveform* wf = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
+      const AnalysisWaveform* wf = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
+      
+      FourierBuffer& fb = fbs[std::make_pair(ant, pol)];
+      fb.add(fEv->getHeader(), wf);
+    }
+  }
+}
+
+
+void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol, int freqBin) const{
+
+  std::map<std::pair<int, AnitaPol::AnitaPol_t>, FourierBuffer>::const_iterator it;
+  it = fbs.find(std::make_pair(ant, pol));
+
+  if(it!=fbs.end()){
+
+    const FourierBuffer& fb = it->second;
+    RayleighHist* h = (RayleighHist*) fb.getRayleighDistribution(freqBin);
+    pad->cd();
+    h->Draw();
+  }
+}
+
+
