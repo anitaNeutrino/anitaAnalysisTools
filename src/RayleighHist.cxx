@@ -8,15 +8,17 @@ ClassImp(Acclaim::RayleighHist);
 
 
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
-				    const char* name, const char* title) : TH1D(name, title, 1, -1001, -1000){ // deliberately stupid initial binning
+				    const char* name, const char* title) : TH1D(name, title, 1, -1001, -1000), // deliberately stupid initial binning
+									   amplitudes(fb ? fb->bufferSize : 1000){ 
   fParent = fb;
   freqMHz = -9999;
   fracOfEventsWanted = 0.99;
   risingEdgeBins = 4;
   maxOverFlowThresh = 0.9;
-
+  
+  
+  
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
-  numEvents = 0;
 }
 
 Acclaim::RayleighHist::~RayleighHist(){
@@ -28,29 +30,32 @@ Acclaim::RayleighHist::~RayleighHist(){
 }
 
 
-
-
-bool Acclaim::RayleighHist::axisRangeOK(double meanAmp) const{
-
-  // assume I'm cutting all the serious crap before here (SURF saturation + self triggered blasts)
-  // that means if we've got a lot of overflow we need to rebin.
-  double overFlow = GetBinContent(GetNbinsX()+1);
-  double integralWithOverUnderFlow = numEvents;
-
-  // or it could be that the axis limits are too large...
-  // I guess, let's rebin if all the samples are below some fraction of the total
-  // but I'll sort that later
-  
-  if(overFlow/integralWithOverUnderFlow > maxOverFlowThresh){
-    return false;
-  }
-  else{
-    return true;
-  }
+void Acclaim::RayleighHist::guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& upperLimit, double& sigmaGuess, double fracOfEventsInsideMaxAmp){
+  upperLimit = meanAmp*TMath::Sqrt(-(4./TMath::Pi())*TMath::Log(1.0 - fracOfEventsInsideMaxAmp));
+  sigmaGuess = TMath::Sqrt(2./TMath::Pi())*meanAmp;
 }
 
 
-void Acclaim::RayleighHist::rebinAndEmptyHist(double meanAmp){
+bool Acclaim::RayleighHist::axisRangeOK() const{
+
+  const double fracOfEventsWanted = 0.99;
+  double mean = amplitudes.getMean();
+  double maxAmp, sigmaGuess;
+  guessMaxBinLimitAndSigmaFromMean(mean, maxAmp, sigmaGuess, fracOfEventsWanted);
+
+  // let's say, within 10% is OK?
+  double xup = GetBinLowEdge(GetNbinsX()+1);
+  if(xup/maxAmp > 0.9 && xup/maxAmp < 1.1){
+    return true;
+  }
+  else{
+    return false;
+  }
+  
+}
+
+
+void Acclaim::RayleighHist::rebinAndRefill(double meanAmp){
 
   const double fracOfEventsWanted = 0.99;
   const double desiredMaxAmp = meanAmp*TMath::Sqrt(-(4./TMath::Pi())*TMath::Log(1.0 - fracOfEventsWanted));
@@ -67,9 +72,19 @@ void Acclaim::RayleighHist::rebinAndEmptyHist(double meanAmp){
   // empty bins inc. overflow and underflow
   for(int bx = 0; bx <= GetNbinsX() + 1; bx++){
     SetBinContent(bx, 0);
-    SetBinError(bx, 0);
   }
-  numEvents = 0;
+
+  // set errors once at the end
+  for(RingBuffer::iterator it=amplitudes.begin(); it != amplitudes.end(); ++it){
+    double amp = (*it);
+    int bx = TH1D::FindBin(amp);
+    SetBinContent(bx, GetBinContent(bx)+1);
+  }
+  // set errors once at the end
+  for(int bx=1; bx <= GetNbinsX(); bx++){
+    SetBinError(bx, TMath::Sqrt(GetBinContent(bx)));
+  }
+  
 }
 
 
@@ -82,68 +97,71 @@ int Acclaim::RayleighHist::Fill(double amp, double sign){
   int bx = TH1D::Fill(amp, sign);
   double n = GetBinContent(bx);
   SetBinError(bx, TMath::Sqrt(n));
-  numEvents += sign;
-
-  // SetTitle(TString::Format("%4.1lf MHz - %d events in distribution", freqMHz, int(Integral() + GetBinContent(GetNbinsX()+1))));
 
   return bx;
 }
 
 
+int Acclaim::RayleighHist::add(double newAmp){
 
-void Acclaim::RayleighHist::Fit(){
+  // first we remove the old value, should be zero if unused
+  
+  bool needRemoveOld = amplitudes.numElements() == amplitudes.size();
+  
+  double oldAmp = amplitudes.insert(newAmp);
+
+  if(needRemoveOld){
+    Fill(oldAmp, -1); // remove old event from hist
+  }
+  Fill(newAmp);
+
+  numEvents = amplitudes.numElements();  
+
+  double mean = amplitudes.getMean();
+  if(!axisRangeOK()){
+    rebinAndRefill(mean);
+  }
+
+  return numEvents;
+}
+
+
+
+void Acclaim::RayleighHist::Eval(Double_t& chiSquare, Int_t& ndf){  
 
   // double integralWithOverFlow = Integral(0, GetNbinsX()+1);
 
-  if(numEvents >= 50){
-
-    double sum=0;
-    for(int bx=0; bx <= GetNbinsX(); bx++){
-      sum += GetXaxis()->GetBinCenter(bx)*GetBinContent(bx);
-    }
-    double mean = sum/numEvents;
     
-    double binWidth = GetBinWidth(1);
-    double rayFitNorm = binWidth*double(numEvents);
-    double rayGuessAmp = mean*TMath::Sqrt(2./TMath::Pi());
+  double binWidth = GetBinWidth(1);
+  double rayFitNorm = binWidth*numEvents;
+  double rayGuessAmp = amplitudes.getMean()*TMath::Sqrt(2./TMath::Pi());
 
-    Double_t xMin = GetBinLowEdge(1);
-    Double_t xMax = GetBinLowEdge(GetNbinsX()+1);
-    fRay->SetRange(xMin, xMax);
-    // Set fit params
-    fRay->FixParameter(0, rayFitNorm);
-    fRay->FixParameter(1, rayGuessAmp);
-    // fRay->SetParLimits(1, rayGuessAmp, rayGuessAmp); // fixed width
-    // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width
-    // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width        
+  Double_t xMin = GetBinLowEdge(1);
+  Double_t xMax = GetBinLowEdge(GetNbinsX()+1);
+  fRay->SetRange(xMin, xMax);
+  fRay->FixParameter(0, rayFitNorm);
+  fRay->FixParameter(1, rayGuessAmp);
+  // fRay->SetParLimits(1, rayGuessAmp, rayGuessAmp); // fixed width
+  // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width
+  // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width        
 
-    // TH1::Fit(fRay, "Q0");
+  // TH1::Fit(fRay, "Q0");
 
 
-    double chiSquare=0;
-    int ndf = 0;
-    for(int bx=1; bx <= GetNbinsX(); bx++){
-      double y = GetBinContent(bx);
+  chiSquare=0;
+  ndf = 0;
+  for(int bx=1; bx <= GetNbinsX(); bx++){
+    double y = GetBinContent(bx);
 
-      if(y > 0){
-	double x = GetXaxis()->GetBinCenter(bx);
-	double yR = fRay->Eval(x);
-	double yErr = GetBinError(bx);
-	double deltaY = (y - yR)/yErr;
-	chiSquare += deltaY*deltaY;
-	ndf++;
-      }
+    if(y > 0){
+      double x = GetXaxis()->GetBinCenter(bx);
+      double yR = fRay->Eval(x);
+      double yErr = GetBinError(bx);
+      double deltaY = (y - yR)/yErr;
+      chiSquare += deltaY*deltaY;
+      ndf++;
     }
-    
-    if(fName.Contains(TString::Format("%d", fParent->fDrawFreqBin))){
-      std::cout << fRay->GetName() << ":\t" << "rayGuessAmp = " << rayGuessAmp << "\tmean = " << mean << "\tintegral = " << Integral() << "\tnumEvents = " << numEvents << "\tbinWidth = " << binWidth << "\t func eval at mean = " << fRay->Eval(mean) << std::endl;
-    }
-    
-    // if(GetListOfFunctions()->GetEntries() > 0){      
-    //   std::cout << fRay << ":\t" << "\t" << GetListOfFunctions()->At(0) << "\t" << GetListOfFunctions()->At(0)->GetName() << std::endl;
-    //   GetListOfFunctions()->Print();
-    // }      
-  }  
+  }    
 }
 
 
@@ -160,3 +178,4 @@ void Acclaim::RayleighHist::Draw(Option_t* opt){
 void Acclaim::RayleighHist::SetFreqBinToDraw(Int_t freqBin){
   fParent->fDrawFreqBin = freqBin;
 }
+

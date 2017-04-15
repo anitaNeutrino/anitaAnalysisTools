@@ -37,22 +37,30 @@ namespace Acclaim
   public:
 
     virtual ~FourierBuffer();
-    explicit FourierBuffer(Double_t timeScaleSeconds=10, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
+    // explicit FourierBuffer(Double_t timeScaleSeconds=10, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
+    explicit FourierBuffer(Int_t theBufferSize=1000, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);    
 
     size_t add(const RawAnitaHeader* header, const AnalysisWaveform* wave);
     
     const RayleighHist* getRayleighDistribution(Int_t freqBin=-1) const {return hRays.at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
-    TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
-    TGraphAligned* getAvePowSpec(double timeRange = -1) const;
-    TGraphAligned* getBackground_dB(double timeRange = -1) const;
-    TGraphAligned* getBackground(double timeRange = -1) const;
+    // TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
+    // TGraphAligned* getAvePowSpec(double timeRange = -1) const;
+    // TGraphAligned* getBackground_dB(double timeRange = -1) const;
+    // TGraphAligned* getBackground(double timeRange = -1) const;
+    TGraphAligned* getAvePowSpec_dB(int lastNEvents = -1) const;
+    TGraphAligned* getAvePowSpec(int lastNEvents = -1) const;
+    TGraphAligned* getBackground_dB(int lastNEvents = -1) const;
+    TGraphAligned* getBackground(int lastNEvents = -1) const;
 
     void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
       ant = theAnt;
       pol = thePol;      
     }
+
+    TGraphAligned* getReducedChiSquaresOfRayelighDistributions() const;
     
   private:
+    Int_t bufferSize;
     Int_t removeOld();
     void initVectors(int n);
     Int_t ant;
@@ -67,6 +75,9 @@ namespace Acclaim
     std::vector<RayleighHist*> hRays;
     std::vector<double> sumAmps;
 
+    std::vector<double> chiSquares;
+    std::vector<int> ndfs;
+    
     Double_t timeScale;
 
     double df;

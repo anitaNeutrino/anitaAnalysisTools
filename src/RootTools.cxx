@@ -1502,3 +1502,29 @@ void Acclaim::RootTools::setBinLabelsFromLowEdge(TAxis* ax, const char* format){
   }
   ax->SetLabelOffset(0.01);
 }
+
+
+
+
+
+/** 
+ * Helper function for drawSummary
+ * draws a new TPad inside the parent TPad (cds into it too) with 
+ * @param parentPad the pad to draw inside of
+ * @param xlow is relative to parent pad
+ * @param ylow is relative to parent pad
+ * @param xup is relative to parent pad
+ * @param yup is relative to parent pad
+ * @param suffix is the suffix to append to the pad name
+ * 
+ * @return the new subPad
+ */
+TPad* Acclaim::RootTools::makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix){
+
+  parentPad->cd(); // go into parent pad (assume it's drawn, would that matter?)
+  TString subPadName = TString::Format("%s_%s", parentPad->GetName(), suffix.Data());
+  TPad* subPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
+  subPad->Draw();
+  subPad->cd();
+  return subPad;
+}

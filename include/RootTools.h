@@ -130,7 +130,7 @@ namespace Acclaim
     TCanvas* drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption);
     TString getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd);
 
-
+    TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix);
 
     UsefulAnitaEvent* makeGaussianEvent(UInt_t eventNumber);
 

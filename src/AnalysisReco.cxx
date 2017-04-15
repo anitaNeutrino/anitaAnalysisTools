@@ -548,27 +548,6 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
 
 
 
-/** 
- * Helper function for drawSummary
- * draws a new TPad inside the parent TPad (cds into it too) with 
- * @param parentPad the pad to draw inside of
- * @param xlow is relative to parent pad
- * @param ylow is relative to parent pad
- * @param xup is relative to parent pad
- * @param yup is relative to parent pad
- * @param suffix is the suffix to append to the pad name
- * 
- * @return the new subPad
- */
-TPad* Acclaim::AnalysisReco::makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix){
-
-  parentPad->cd(); // go into parent pad (assume it's drawn, would that matter?)
-  TString subPadName = TString::Format("%s_%s", parentPad->GetName(), suffix.Data());
-  TPad* subPad = new TPad(subPadName, subPadName, xlow, ylow, xup, yup);
-  subPad->Draw();
-  subPad->cd();
-  return subPad;
-}
 
 
 
@@ -598,7 +577,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   wholePad->Clear();
   
 
-  TPad* wholeTitlePad = makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
+  TPad* wholeTitlePad = RootTools::makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
   TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);  
   TString wholeTitleText; // = TString::Format(");
   wholeTitleText += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
@@ -608,7 +587,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   wholeTitle->SetLineWidth(0);
   wholeTitle->Draw();
   
-  TPad* coarseMapPad = makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
+  TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
   InterferometricMap* hCoarse = coarseMaps[pol];
   if(hCoarse){
     hCoarse->Draw("colz");
@@ -616,7 +595,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
   // std::vector<TGraph> grPeaks;
 
-  TPad* finePeaksAndCoherent = makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
+  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
 
   std::list<InterferometricMap*> drawnFineMaps;
   std::vector<TGraphAligned*> drawnCoherent;
@@ -626,7 +605,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   for(int peakInd = 0; peakInd < nFine; peakInd++){
     double yUp = 1 - double(peakInd)/nFine;
     double yLow = yUp - double(1)/nFine;    
-    TPad* finePeak = makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
+    TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
     
     std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
     if(it!=fineMaps[pol].end()){
@@ -664,8 +643,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       }
     }
 
-    TPad* coherentPad    = makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
-    TPad* coherentFftPad = makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
+    TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
+    TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
     std::map<Int_t, AnalysisWaveform*>::iterator it2 = coherent[pol].find(peakInd);
     if(it2!=coherent[pol].end()){
@@ -744,7 +723,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   }
 
 
-  TPad* textPad = makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
+  TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
   
   for(int peakInd=0; peakInd < nFine; peakInd++){
     double xlow = double(peakInd)/nFine;

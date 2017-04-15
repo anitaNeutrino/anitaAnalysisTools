@@ -7,6 +7,7 @@
 #include <iostream>
 #include "TPad.h"
 #include "RayleighHist.h"
+#include "RootTools.h"
 
 /** 
  * This function adds my custom strategies to a map of TString to strategies...
@@ -162,7 +163,8 @@ Acclaim::Filters::SpikeSuppressor::SpikeSuppressor(double spikeThresh_dB, double
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     fourierBuffers.push_back(std::vector<FourierBuffer>(0));
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      fourierBuffers.at(pol).push_back(FourierBuffer(fTimeScale, ant, (AnitaPol::AnitaPol_t)pol));
+      // fourierBuffers.at(pol).push_back(FourierBuffer(fTimeScale, ant, (AnitaPol::AnitaPol_t)pol));
+      fourierBuffers.at(pol).push_back(FourierBuffer(1000, ant, (AnitaPol::AnitaPol_t)pol));      
     }
   }
 }
@@ -417,7 +419,7 @@ Acclaim::Filters::RayleighMonitor::RayleighMonitor(double timeScale){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       // should really be emplaced?
-      fbs[std::make_pair(ant, pol)] = FourierBuffer(timeScale, ant, pol);
+      fbs[std::make_pair(ant, pol)] = FourierBuffer(1000, ant, pol);
     }
   }
 }
@@ -447,10 +449,21 @@ void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol
   it = fbs.find(std::make_pair(ant, pol));
 
   if(it!=fbs.end()){
-
     const FourierBuffer& fb = it->second;
+
+    pad->Clear();
+    
+    TPad* p1 = RootTools::makeSubPad(pad, 0, 0.5, 1, 1, "_p1");
+    p1->cd();
+    TGraphAligned* gr = fb.getReducedChiSquaresOfRayelighDistributions();
+    gr->SetTitle("Reduced ChiSquare; Frequency (GHz); #chi^{2}/NDF");
+    gr->SetBit(kMustCleanup);
+    gr->Draw("al");
+    
+    TPad* p2 = RootTools::makeSubPad(pad, 0, 0, 1, 0.5, "_p2");
+    p2->cd();
+    
     RayleighHist* h = (RayleighHist*) fb.getRayleighDistribution();
-    pad->cd();
     h->Draw();
   }
 }

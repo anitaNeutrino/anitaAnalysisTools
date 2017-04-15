@@ -9,8 +9,11 @@ const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
 const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
 
 
-Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
-  timeScale = timeScaleSeconds;
+// Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
+  
+  // timeScale = timeScaleSeconds;
+  bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;
   ant = theAnt;
   pol = thePol;
   df = -1;
@@ -31,7 +34,8 @@ void Acclaim::FourierBuffer::initVectors(int n){
   sumPower.resize(n, 0);
   sumAmps.resize(n, 0);
   hRays.resize(n, NULL);
-
+  chiSquares.resize(n, 0);
+  ndfs.resize(n, 0);  
   for(int freqBin=0; freqBin < n; freqBin++){
     TString name = TString::Format("hRayleigh");
     name += ant >= 0 && pol < AnitaPol::kNotAPol ? TString::Format("_%d_%d", ant, pol) : "";
@@ -56,7 +60,18 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 }
 
 
+TGraphAligned* Acclaim::FourierBuffer::getReducedChiSquaresOfRayelighDistributions() const{
+  TGraphAligned* gr = NULL;
 
+  if(chiSquares.size() > 2){
+    gr = new TGraphAligned(chiSquares.size() - 1);   
+    for(unsigned i=1; i < chiSquares.size(); i++){
+      double val = (i < chiSquares.size() - 1 && ndfs[i] > 0) ? chiSquares[i]/ndfs[i] : 0;
+      gr->SetPoint(i, df*i, val);
+    }
+  }
+  return gr;
+}
 
 
 
@@ -87,11 +102,6 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   Double_t realTime= header->triggerTime;
   realTime += 1e-9*header->triggerTimeNs;
 
-  // if(ant==0 && pol == 0){
-  //   printf("%d\t%d\t%u\t%u\t%20.20lf\n", ant, pol, header->realTime, header->triggerTimeNs, realTime);
-  // }
-
-
   realTimesNs.push_back(realTime);
 
   // for old compilers, push back copy of empty vector for speed.
@@ -106,31 +116,13 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
     sumPower.at(freqInd) += grPower->GetY()[freqInd];
 
     double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
-    
-    sumAmps.at(freqInd) += amp;
-
-    const double meanAmp = sumAmps.at(freqInd)/eventNumbers.size();
-
-    bool needRebin = hRays.at(freqInd)->axisRangeOK(meanAmp);
-    if(needRebin){
-      hRays.at(freqInd)->rebinAndEmptyHist(meanAmp);
-      std::list<std::vector<double> >::const_iterator powVecPtr = powerRingBuffer.begin();
-      while(powVecPtr!=powerRingBuffer.end()){
-	double oldAmp = TMath::Sqrt(powVecPtr->at(freqInd));
-	hRays.at(freqInd)->Fill(oldAmp);
-	++powVecPtr;
-      }
-    }
-    else{
-      hRays.at(freqInd)->Fill(amp);
-    }
+    hRays.at(freqInd)->add(amp);
   }
   
   removeOld();
 
-
   for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
-    hRays.at(freqInd)->Fit();
+    hRays.at(freqInd)->Eval(chiSquares[freqInd], ndfs[freqInd]);
   }
   
   return eventNumbers.size();
@@ -138,14 +130,17 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
 
 
 
+
 Int_t Acclaim::FourierBuffer::removeOld(){
 
   Int_t nPopped = 0;
-  if(realTimesNs.size() > 0){
+  // if(realTimesNs.size() > 0){
+  if(realTimesNs.size() > 0){    
 
     Double_t mostRecentTime = realTimesNs.back();
 
-    while(mostRecentTime - realTimesNs.front() > timeScale){
+    // while(mostRecentTime - realTimesNs.front() > timeScale){
+    while((int)realTimesNs.size() > bufferSize){      
       if(ant==0 && pol == 0){
 	printf("removing: %lf\t%20.20lf\t%20.20lf\n", mostRecentTime - realTimesNs.front(), realTimesNs.front(), mostRecentTime);
       }
@@ -158,7 +153,7 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 	sumPower.at(freqInd) -= removeThisPower.at(freqInd);
 	double amp = TMath::Sqrt(removeThisPower.at(freqInd));
 	sumAmps.at(freqInd) -= amp;
-	hRays.at(freqInd)->Fill(amp, -1);
+	// hRays.at(freqInd)->Fill(amp, -1);
       }
       powerRingBuffer.pop_front();
       nPopped++;
@@ -176,133 +171,19 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
 
 
-// const Acclaim::RayleighHist* Acclaim::FourierBuffer::fillRayleighInfo(Int_t freqBin, RayleighInfo* info) const{
 
-//   const RayleighHist* hRay = getRayleighDistribution(freqBin);
-//   TString fName = TString::Format("fRay%d", freqBin);
-//   fName += ant >= 0 && pol < AnitaPol::kNotAPol ? TString::Format("_%d_%d", ant, pol) : "";
-//   fName += TString::Format("_%d", TMath::Nint(1e3*df*freqBin));
+TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec_dB(int lastNEvents) const{
 
-//   Double_t xMin = hRay->GetXaxis()->GetBinLowEdge(1);
-//   Double_t xMax = hRay->GetXaxis()->GetBinLowEdge(hRay->GetNbinsX()+1);
-
-//   // TF1* fRay = fRays.at(freqBin);
-//   fRay->SetRange(xMin, xMax);
-  
-  
-//   // TF1* fRay = new TF1(fName, rayleighFuncText, xMin, xMax);
-
-//   // Fill event level info
-//   info->eventNumber = eventNumbers.back();
-//   info->run = runs.back();
-//   info->realTimeNs = realTimesNs.back();
-  
-//   info->firstRun = runs.front();
-//   info->firstEventNumber = eventNumbers.front();
-//   info->firstRealTimeNs = realTimesNs.front();
-
-//   double powerBin = powerRingBuffer.back().at(freqBin);
-//   info->eventAmp = TMath::Sqrt(powerBin);
-  
-//   // Fill histogram related histogram info
-//   info->nBins = hRay->GetNbinsX();
-//   info->integralPlusOverUnderFlow = hRay->Integral(0, info->nBins+1);
-//   info->binWidth = hRay->GetBinWidth(1);
-//   info->rayFitNorm = info->integralPlusOverUnderFlow*info->binWidth;
-//   info->rayGuessAmp = hRay->GetMean()*TMath::Sqrt(2./TMath::Pi());
-
-//   // Set fit params
-//   fRay->FixParameter(0, info->rayFitNorm);
-//   fRay->SetParameter(1, info->rayGuessAmp);
-//   fRay->SetParLimits(1, info->rayGuessAmp, info->rayGuessAmp); // essentially infinite
-
-//   info->rayChiSquare = hRay->Chisquare(fRay);
-
-//   int nonZeroBins = 0;
-//   for(int bx=1; bx <= hRay->GetNbinsX(); bx++){
-//     if(hRay->GetBinContent(bx) > 0){
-//       nonZeroBins++;
-//     }
-//   }
-  
-//   info->rayProb = TMath::Prob(info->rayChiSquare, nonZeroBins);
-//   // std::cout << ant << "\t" << pol << "\t" << freqBin << "\t" << info->rayChiSquare << "\t" <<  nonZeroBins << "\t" << info->rayProb << std::endl;
-  
-//   // hRay->Fit(fRay, "Q0"); //, "", "", xMin, xMax);
-
-//   // // Do fit
-//   // // std::cout << ant << "\t" << pol << "\t" << eventNumbers.back() << "\t" << freqBin << "\t" << fRay->GetChisquare() << "\t";  
-//   // // fRay->SetParLimits(1, 0, 1e9); // essentially infinite  
-//   // // hRay->Fit(fRay, "Q0"); //, "", "", xMin, xMax);
-//   // // std::cout << fRay->GetChisquare() << std::endl;
-  
-//   // Fill fit result params
-//   // info->rayFitAmp = fRay->GetParameter(1);
-//   // info->rayFitAmpError = fRay->GetParError(1);
-//   // info->rayChiSquare = fRay->GetChisquare();
-//   // info->rayNdf = fRay->GetNDF();
-//   // info->rayProb = fRay->GetProb();
-
-//   return hRay;
-// }
-
-
-
-// const Acclaim::RayleighHist* Acclaim::FourierBuffer::fillRiceInfo(Int_t freqBin, RiceInfo* info) const{
-
-//   const RayleighHist* hRay = fillRayleighInfo(freqBin, info);
-
-//   // for now...
-//   if(info->rayChiSquare/info->rayNdf > 2){
-
-//     TString fName = TString::Format("fRice%d", freqBin);
-//     Double_t xMin = hRay->GetXaxis()->GetBinLowEdge(1);
-//     Double_t xMax = hRay->GetXaxis()->GetBinLowEdge(hRay->GetNbinsX()+1);
-//     TF1* fRice = new TF1(fName, riceFuncText, xMin, xMax);
-
-//     fRice->FixParameter(0, info->rayFitNorm);
-//     fRice->SetParameter(1, info->rayGuessAmp);
-//     fRice->SetParLimits(1, 0, 1e9); // essentially infinite
-//     fRice->SetParameter(2, 0);
-//     fRice->SetParLimits(2, 0, 1e9); // essentially infinite
-
-//     // hRay->Fit(fRice, "Q0");
-
-
-//     info->riceFitNorm = fRice->GetParameter(0); // fixed for the fit  
-//     info->riceFitAmp = fRice->GetParameter(1);
-//     info->riceFitAmpError = fRice->GetParError(1);  
-//     info->riceFitSignal = fRice->GetParameter(2);
-//     info->riceFitSignalError = fRice->GetParError(2);  
-
-//     info->riceChiSquare = fRice->GetChisquare();
-//     info->riceNdf = fRice->GetNDF();
-
-//     delete fRice;
-//   }
-  
-//   return hRay;
-// }
-
-
-
-
-
-
-
-TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec_dB(double thisTimeRange) const{
-
-  TGraphAligned* gr = getAvePowSpec(thisTimeRange);
+  TGraphAligned* gr = getAvePowSpec(lastNEvents);
   gr->dBize();
   return gr;
 
 }
 
 
-TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(double thisTimeRange) const{
+TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(int lastNEvents) const{
 
   // set default value (which is the whole range of the fourier buffer)
-  thisTimeRange = thisTimeRange < 0 ? timeScale : thisTimeRange;
 
   int nEvents = eventNumbers.size();
 
@@ -332,17 +213,17 @@ TGraphAligned* Acclaim::FourierBuffer::getAvePowSpec(double thisTimeRange) const
 
 
 
-TGraphAligned* Acclaim::FourierBuffer::getBackground_dB(double thisTimeRange) const{
+TGraphAligned* Acclaim::FourierBuffer::getBackground_dB(int lastNEvents) const{
   
-  TGraphAligned* gr = getBackground(thisTimeRange);
+  TGraphAligned* gr = getBackground(lastNEvents);
   gr->dBize();
   return gr;
 }
 
 
-TGraphAligned* Acclaim::FourierBuffer::getBackground(double thisTimeRange) const{
+TGraphAligned* Acclaim::FourierBuffer::getBackground(int lastNEvents) const{
 
-  TGraphAligned* gr = getAvePowSpec(thisTimeRange);
+  TGraphAligned* gr = getAvePowSpec(lastNEvents);
 
   if(!spectrum){
     spectrum = new TSpectrum();
