@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
   std::map<TString, FilterStrategy*> filterStrats;
   bool saveOutput = true;  
   Filters::appendFilterStrategies(filterStrats, saveOutput);
-
+  
   FilterStrategy* strat = Filters::findStrategy(filterStrats, "RayleighMonitor");
   if(!strat){ 
     std::cerr << "Well, this script is pointless... I give up." << std::endl;

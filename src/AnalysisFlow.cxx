@@ -215,8 +215,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     // this doesn't necessarily mean the output will be saved
     // it will only be saved if operations were added with the optional enable_output bool = true
     fFilterStrat->attachFile(fOutFile);
-
-    
   }
   else{
     // empty strategy does nothing
@@ -236,12 +234,11 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     SelfTriggeredBlastCut stbc;
     stbc.apply(usefulEvent);
 
-    // don't proces events failing quality cuts (will muck up rolling averages)
+    // don't process events failing quality cuts (will muck up rolling averages)
     if(ssc.eventPassesCut && stbc.eventPassesCut){
     
       Adu5Pat* pat = fData->gps();
       UsefulAdu5Pat usefulPat(pat);
-
       FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
 
@@ -261,5 +258,4 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     
     p.inc(entry, numEntries);
   }
-
 }  

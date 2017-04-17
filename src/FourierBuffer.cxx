@@ -12,7 +12,7 @@
 #include "RootTools.h"
 #include "TROOT.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0){
   
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;
@@ -34,9 +34,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize){
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
   
-  fRay = new TF1("fRay", rayleighFuncText, 0, 1);
-  
-  doneVectorInit = false;
+  fRay = new TF1("fRay", rayleighFuncText, 0, 1, TF1::EAddToList::kNo);
 }
 
 
@@ -114,19 +112,6 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 }
 
 
-Acclaim::TGraphFB* Acclaim::FourierBuffer::getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const{
-  TGraphFB* gr = NULL;
-  
-  if(chiSquares[pol][ant].size() > 2){
-    gr = new TGraphFB(this, ant, pol, chiSquares[pol][ant].size() - 1);   
-    for(unsigned i=1; i < chiSquares[pol][ant].size(); i++){
-      double val = (i < chiSquares[pol][ant].size() - 1 && ndfs[i] > 0) ? chiSquares[pol][ant][i]/ndfs[pol][ant][i] : 0;
-      gr->SetPoint(i, df*i, val);
-    }
-  }
-  return gr;
-}
-
 
 
 // size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform* wave){
@@ -182,11 +167,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	//     can->Update();
 	//   }
 	// }
-	
-	
       }
     }
   }
+  eventsInBuffer++;
   
   removeOld();
 
@@ -196,7 +180,9 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
       if((int)sumPowers[pol][ant].size() > 0){
 	for(int freqInd=1; freqInd < (int)sumPowers[pol][ant].size() - 1; freqInd++){
-	  hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+	  // hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+
+	  hRays[pol][ant].at(freqInd)->Fit(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
 
 	  grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
 	  grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
@@ -224,8 +210,7 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-      for(int ant=0; ant < NUM_SEAVEYS; ant++){      
-      
+      for(int ant=0; ant < NUM_SEAVEYS; ant++){
 	std::vector<double>& removeThisPower = powerRingBuffers[pol][ant].front();
 	for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
 	  sumPowers[pol][ant].at(freqInd) -= removeThisPower.at(freqInd);
@@ -233,6 +218,7 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 	powerRingBuffers[pol][ant].pop_front();
       }
     }
+    eventsInBuffer--;
     nPopped++;
   }
   return nPopped;

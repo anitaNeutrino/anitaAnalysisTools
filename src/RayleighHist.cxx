@@ -179,6 +179,30 @@ void Acclaim::RayleighHist::Eval(Double_t& chiSquare, Int_t& ndf){
 }
 
 
+void Acclaim::RayleighHist::Fit(Double_t& chiSquare, Int_t& ndf){
+
+  // double integralWithOverFlow = Integral(0, GetNbinsX()+1);
+  double binWidth = GetBinWidth(1);
+  double rayFitNorm = binWidth*numEvents;
+  double rayGuessAmp = amplitudes.getMean()*TMath::Sqrt(2./TMath::Pi());
+
+  Double_t xMin = GetBinLowEdge(1);
+  Double_t xMax = GetBinLowEdge(GetNbinsX()+1);
+  fRay->SetRange(xMin, xMax);
+  fRay->FixParameter(0, rayFitNorm);
+  fRay->SetParameter(1, rayGuessAmp);
+  fRay->SetParLimits(1, 0, 2*rayGuessAmp);
+  // fRay->SetParLimits(1, rayGuessAmp, rayGuessAmp); // fixed width
+  // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width
+  // fRay->SetParLimits(1, 0, 3*rayGuessAmp); // fixed width        
+
+  TH1::Fit(fRay, "Q0");
+  chiSquare = fRay->GetChisquare();
+  ndf = fRay->GetNDF();  
+  
+}
+
+
 
 void Acclaim::RayleighHist::Draw(Option_t* opt){
 

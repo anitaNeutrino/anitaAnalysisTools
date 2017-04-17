@@ -51,6 +51,12 @@ namespace Acclaim
     TGraphFB* getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const;
     void drawSummary(TPad* pad) const;
+    unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const{return sumPowers[pol][ant].size();}
+    unsigned getCurrentBufferSize();
+    const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
+    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};    
+    int getNumEventsInBuffer() const {return eventsInBuffer;}
+    void loadHistory();
     
   protected:
     Int_t bufferSize;
@@ -59,7 +65,7 @@ namespace Acclaim
 
     // list of events
     std::list<UInt_t> eventNumbers;
-    std::list<Int_t> runs;    
+    std::list<Int_t> runs;
 
     std::list<std::vector<double> > powerRingBuffers[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
@@ -76,6 +82,7 @@ namespace Acclaim
 
     bool doneVectorInit;
     int fDrawFreqBin;
+    int eventsInBuffer;
     
     double df; // frequency bin width (from AnalysisWaveform so probably in GHz)
     mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background

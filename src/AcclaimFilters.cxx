@@ -1,3 +1,4 @@
+
 #include "AcclaimFilters.h"
 #include "AnalysisWaveform.h"
 #include "FilteredAnitaEvent.h"
@@ -36,7 +37,6 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
-
   // FilterStrategy* spikeKiller = new FilterStrategy();
   // spikeKiller->addOperation(alfaFilter);
   // SpikeSuppressor* ss = new SpikeSuppressor(3, 1000);
@@ -44,10 +44,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   // filterStrats["SpikeSuppressor"] = spikeKiller;
 
   FilterStrategy* justRm = new FilterStrategy();
-  RayleighMonitor* rm = new RayleighMonitor(1000);
+  RayleighMonitor* rm = new RayleighMonitor(1500);
   justRm->addOperation(rm, saveOutput);
-  filterStrats["RayleighMonitor"] = justRm;
-  
+  filterStrats["RayleighMonitor"] = justRm;  
 }
 
 
@@ -416,6 +415,89 @@ Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffe
 void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
   
   fourierBuffer.add(fEv);
+
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    }
+  }  
 }
+
+unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
+  (void) i;
+  if(i==2){
+    return 1;
+  }
+  else{
+    return AnitaPol::kNotAPol*NUM_SEAVEYS*131; // TODO, check this at runtime maybe?
+  }
+}
+
+
+
+
+
+const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
+  // so what do I want to output?
+  switch(i){
+  case 0:
+    return "chiSquares";
+  case 1:
+    return "ndfs";    
+  case 2:
+    return "nEvents";
+  default:
+    return NULL;
+  };
+}
+
+
+void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
+
+  if(i==2){
+    v[0] = fourierBuffer.getNumEventsInBuffer();
+    return;
+  }
+  
+  int outInd = 0;
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      const double* vals = 0;
+      const int* valsInt = 0;
+      unsigned n = 0;
+      switch(i){
+      case 0:
+	vals = &fourierBuffer.getChiSquares(ant, pol)[0];
+	n = fourierBuffer.getChiSquares(ant, pol).size();
+      case 1:
+	valsInt = &fourierBuffer.getNDFs(ant, pol)[0];
+	n = fourierBuffer.getNDFs(ant, pol).size();
+      }
+
+      // std::cout << vals << "\t" << valsInt << "\t" << n << std::endl;
+      for(unsigned point=0; point < n; point++){
+	if(vals){
+	  v[outInd] = vals[point];
+	}
+	else if(valsInt){
+	  v[outInd] = valsInt[point];
+	}
+	outInd++;
+      }
+    }
+  }
+}
+
+// /** The number of output variables (doubles or double arrays) defined by this operation */
+// virtual unsigned nOutputs() const  { return 0; } 
+
+// /** The name of the ith output variable */ 
+// virtual const char *  outputName(unsigned i) const  { (void) i; return ""; } 
+
+// /** The length of the ith output variable  (it's a double array of this size)*/ 
+// virtual unsigned outputLength(unsigned i) const { (void) i; return 0; } 
+
+// /** Fill the ith output */ 
+// virtual void fillOutput(unsigned i, double * v) const{ (void) v; (void) i;  return; } 
 
 

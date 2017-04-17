@@ -64,7 +64,7 @@ namespace Acclaim
     class RayleighMonitor : public UniformFilterOperation {
     protected:
       int fNumEvents;
-      FourierBuffer fourierBuffer;      
+      FourierBuffer fourierBuffer;
     public:
 
       
@@ -78,7 +78,12 @@ namespace Acclaim
 	std::cerr << "Error in " << __PRETTY_FUNCTION__ << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
       }
       virtual void process(FilteredAnitaEvent* fEv);
-      const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}
+      virtual unsigned outputLength(unsigned i) const;
+      virtual unsigned nOutputs() const{return 3;}
+      virtual const char* outputName(unsigned i) const;
+      virtual void fillOutput(unsigned i, double* v) const;
+
+      const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}      
     };
     
 
@@ -101,7 +106,7 @@ namespace Acclaim
       void setSeed(UInt_t seed){fRandy.SetSeed(seed);}
       
       SpikeSuppressor(double spikeThresh_dB, int numEvents);
-
+      
       virtual const char * tag () const {return "SpikeSuppressor";};
       virtual const char * description () const {return fDescription.Data();}
       virtual void processOne(AnalysisWaveform* wave);
