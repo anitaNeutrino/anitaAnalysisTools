@@ -39,12 +39,12 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   // FilterStrategy* spikeKiller = new FilterStrategy();
   // spikeKiller->addOperation(alfaFilter);
-  // SpikeSuppressor* ss = new SpikeSuppressor(3, 10);
+  // SpikeSuppressor* ss = new SpikeSuppressor(3, 1000);
   // spikeKiller->addOperation(ss, saveOutput);
   // filterStrats["SpikeSuppressor"] = spikeKiller;
 
   FilterStrategy* justRm = new FilterStrategy();
-  RayleighMonitor* rm = new RayleighMonitor(1);
+  RayleighMonitor* rm = new RayleighMonitor(1000);
   justRm->addOperation(rm, saveOutput);
   filterStrats["RayleighMonitor"] = justRm;
   
@@ -155,18 +155,10 @@ void Acclaim::Filters::Notch::process(FilteredAnitaEvent * ev)
 
 
 
-Acclaim::Filters::SpikeSuppressor::SpikeSuppressor(double spikeThresh_dB, double timeScale) : fRandy(1234){
+Acclaim::Filters::SpikeSuppressor::SpikeSuppressor(double spikeThresh_dB, int numEvents) : fRandy(1234), fourierBuffer(numEvents) {
   fSpikeThresh_dB = spikeThresh_dB;
-  fTimeScale = timeScale;
+  fNumEvents = numEvents;
   fDescription = Form("Finds spikes (as I define them) greater than %4.2lf dB and removes them, replacing them with noise", fSpikeThresh_dB);
-
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-    fourierBuffers.push_back(std::vector<FourierBuffer>(0));
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      // fourierBuffers.at(pol).push_back(FourierBuffer(fTimeScale, ant, (AnitaPol::AnitaPol_t)pol));
-      fourierBuffers.at(pol).push_back(FourierBuffer(1000, ant, (AnitaPol::AnitaPol_t)pol));      
-    }
-  }
 }
 
 void Acclaim::Filters::SpikeSuppressor::processOne(AnalysisWaveform* wave){
@@ -180,12 +172,14 @@ void Acclaim::Filters::SpikeSuppressor::process(FilteredAnitaEvent* fEv){
 
   setSeed(fEv->getHeader()->eventNumber); // for deterministic randomness
 
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      AnalysisWaveform* wave = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
-      fourierBuffers[pol][ant].add(fEv->getHeader(), wave);
+  fourierBuffer.add(fEv);
+  
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){      
+      AnalysisWaveform* wave = getWf(fEv, ant, pol);
 
-      TGraphAligned* grAvePowSpec_dB = fourierBuffers[pol][ant].getAvePowSpec_dB();
+      TGraphAligned* grAvePowSpec_dB = fourierBuffer.getAvePowSpec_dB(ant, pol);
 
       const double cosminFactor = 1000*50*grAvePowSpec_dB->GetN(); // from the fft normlization option in AnalysisWaveform
       
@@ -193,7 +187,7 @@ void Acclaim::Filters::SpikeSuppressor::process(FilteredAnitaEvent* fEv){
       // TGraphAligned grFiltered_dB = suppressSpikes(grAvePowSpec_dB);
 
 
-      TGraphAligned* grBackground_dB = fourierBuffers[pol][ant].getBackground_dB();
+      TGraphAligned* grBackground_dB = fourierBuffer.getBackground_dB(ant, pol);
       TGraphAligned grFiltered_dB = suppressSpikes(grAvePowSpec_dB, grBackground_dB);      
       TGraphAligned grFiltered_not_dB = grFiltered_dB;
       grFiltered_not_dB.undBize();
@@ -412,60 +406,35 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 
 
-Acclaim::Filters::RayleighMonitor::RayleighMonitor(double timeScale){
-  fTimeScale = timeScale;
-
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      // should really be emplaced?
-      fbs[std::make_pair(ant, pol)] = FourierBuffer(1000, ant, pol);
-    }
-  }
+Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
+  fNumEvents = numEvents;
 }
 
 
 
 
 void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
-
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-
-      // AnalysisWaveform* wf = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
-      const AnalysisWaveform* wf = getWf(fEv, ant, (AnitaPol::AnitaPol_t) pol);
-      
-      FourierBuffer& fb = fbs[std::make_pair(ant, pol)];
-      fb.add(fEv->getHeader(), wf);
-    }
-  }
+  
+  fourierBuffer.add(fEv);
 }
 
 
 void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol) const{
 
-  std::map<std::pair<int, AnitaPol::AnitaPol_t>, FourierBuffer>::const_iterator it;
-  it = fbs.find(std::make_pair(ant, pol));
-
-  if(it!=fbs.end()){
-    const FourierBuffer& fb = it->second;
-
-    pad->Clear();
+  pad->Clear();
     
-    TPad* p1 = RootTools::makeSubPad(pad, 0, 0.5, 1, 1, "_p1");
-    p1->cd();
-    TGraphAligned* gr = fb.getReducedChiSquaresOfRayelighDistributions();
-    gr->SetTitle("Reduced ChiSquare; Frequency (GHz); #chi^{2}/NDF");
-    gr->SetBit(kMustCleanup);
-    gr->Draw("al");
+  TPad* p1 = RootTools::makeSubPad(pad, 0, 0.5, 1, 1, "_p1");
+  p1->cd();
+  TGraphFB* gr = fourierBuffer.getReducedChiSquaresOfRayelighDistributions(ant, pol);
+  gr->SetTitle("Reduced ChiSquare; Frequency (GHz); #chi^{2}/NDF");
+  gr->SetBit(kMustCleanup);
+  gr->Draw("al");
     
-    TPad* p2 = RootTools::makeSubPad(pad, 0, 0, 1, 0.5, "_p2");
-    p2->cd();
+  TPad* p2 = RootTools::makeSubPad(pad, 0, 0, 1, 0.5, "_p2");
+  p2->cd();
     
-    RayleighHist* h = (RayleighHist*) fb.getRayleighDistribution();
-    h->Draw();
-  }
+  RayleighHist* h = (RayleighHist*) fourierBuffer.getRayleighDistribution(ant, pol);
+  h->Draw();
 }
 
 

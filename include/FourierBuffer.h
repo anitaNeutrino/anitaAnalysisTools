@@ -16,15 +16,16 @@
 #include "TH1D.h"
 #include <complex>
 #include <list>
-#include <vector>
-#include "RawAnitaHeader.h"
+#include "AnitaConventions.h"
 
 class TSpectrum;
+class FilteredAnitaEvent;
 
 namespace Acclaim
 {
 
   class RayleighHist;
+  class TGraphFB;
   
   /**
    * @class FourierBuffer
@@ -37,48 +38,67 @@ namespace Acclaim
   public:
 
     virtual ~FourierBuffer();
-    // explicit FourierBuffer(Double_t timeScaleSeconds=10, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);
-    explicit FourierBuffer(Int_t theBufferSize=1000, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol = AnitaPol::kNotAPol);    
+    explicit FourierBuffer(Int_t theBufferSize=1000);
 
-    size_t add(const RawAnitaHeader* header, const AnalysisWaveform* wave);
+    size_t add(const FilteredAnitaEvent* fEv);    
     
-    const RayleighHist* getRayleighDistribution(Int_t freqBin=-1) const {return hRays.at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
-    TGraphAligned* getAvePowSpec_dB(int lastNEvents = -1) const;
-    TGraphAligned* getAvePowSpec(int lastNEvents = -1) const;
-    TGraphAligned* getBackground_dB(int lastNEvents = -1) const;
-    TGraphAligned* getBackground(int lastNEvents = -1) const;
-
-    void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
-      ant = theAnt;
-      pol = thePol;
-    }
-
-    TGraphAligned* getReducedChiSquaresOfRayelighDistributions() const;
+    const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol, Int_t freqBin=-1) const {return hRays[pol][ant].at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
+    TGraphFB* getAvePowSpec_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
+    TGraphFB* getAvePowSpec(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
+    TGraphFB* getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
+    TGraphFB* getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
+    TGraphFB* getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const;
     
   private:
     Int_t bufferSize;
     Int_t removeOld();
     void initVectors(int n);
-    Int_t ant;
-    AnitaPol::AnitaPol_t pol;
 
-    std::list<std::vector<double> > powerRingBuffer;
+    // list of events
     std::list<UInt_t> eventNumbers;
-    std::list<Int_t> runs;
-    std::vector<double> sumPower;
-    std::vector<RayleighHist*> hRays;
+    std::list<Int_t> runs;    
 
-    std::vector<double> chiSquares;
-    std::vector<int> ndfs;
+    std::list<std::vector<double> > powerRingBuffers[AnitaPol::kNotAPol][NUM_SEAVEYS];
+
+    // vectors of frequency bins
+    std::vector<double> sumPowers[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<RayleighHist*> hRays[AnitaPol::kNotAPol][NUM_SEAVEYS];
+
+    std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
     TF1* fRay;
     double df;
-    mutable TSpectrum* spectrum; // to estimate the background
+    mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
     bool doneVectorInit;
     int fDrawFreqBin;
   };
+
+
+
+
+
+
+  // little class for some GUI i/o magic
+  class TGraphFB : public TGraphAligned {
+  public:
+    TGraphFB(const FourierBuffer* theFb=NULL, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol=AnitaPol::kNotAPol,
+	     int n=0) : TGraphAligned(n)
+    {
+      fb = theFb;
+      ant = theAnt;
+      pol = thePol;
+    }
+    virtual ~TGraphFB(){;}
+    void ExecuteEvent(Int_t event, Int_t x, Int_t y);
+  private:
+    const FourierBuffer* fb; // pointer to parent
+    Int_t ant;
+    AnitaPol::AnitaPol_t pol;
+  };
+  
 }
 
 

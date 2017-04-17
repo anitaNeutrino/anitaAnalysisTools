@@ -17,13 +17,13 @@
 #include "TRandom3.h"
 #include <map>
 #include <iostream>
+#include "FourierBuffer.h"
 
 class TPad;
 class TGraphAligned;
 
 namespace Acclaim
 {
-  class FourierBuffer;
 
   namespace Filters
   {
@@ -63,14 +63,14 @@ namespace Acclaim
     // probably to be inherited from...
     class RayleighMonitor : public UniformFilterOperation {
     protected:
-      double fTimeScale;
-      std::map<std::pair<Int_t, AnitaPol::AnitaPol_t>, FourierBuffer> fbs;
+      int fNumEvents;
+      FourierBuffer fourierBuffer;
       
     public:
-      explicit RayleighMonitor(double timeScale);
+      explicit RayleighMonitor(int numEvents);
 
       virtual const char * tag () const {return "RayleighMonitor";};
-      virtual const char * description () const {return TString::Format("Tracks frequency bin amplitudes over %4.2lf seconds", fTimeScale);}
+      virtual const char * description () const {return TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);}
       virtual void processOne(AnalysisWaveform* wave)
       {
 	(void) wave;
@@ -89,10 +89,10 @@ namespace Acclaim
     class SpikeSuppressor : public UniformFilterOperation {
     protected:
       double fSpikeThresh_dB;
-      double fTimeScale;
+      int fNumEvents;
       TRandom3 fRandy;
       TString fDescription;
-      std::vector<std::vector<FourierBuffer> > fourierBuffers;
+      FourierBuffer fourierBuffer;
 
       TGraphAligned suppressSpikes(const TGraphAligned* grPower);
       TGraphAligned suppressSpikes(const TGraphAligned* grPower, const TGraphAligned* grBackground);      
@@ -101,7 +101,7 @@ namespace Acclaim
     public:
       void setSeed(UInt_t seed){fRandy.SetSeed(seed);}
       
-      SpikeSuppressor(double spikeThresh_dB, double timeScale);
+      SpikeSuppressor(double spikeThresh_dB, int numEvents);
 
       virtual const char * tag () const {return "SpikeSuppressor";};
       virtual const char * description () const {return fDescription.Data();}
