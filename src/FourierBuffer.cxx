@@ -9,7 +9,8 @@
 #include "TMath.h"
 #include "TCanvas.h"
 #include "RawAnitaHeader.h"
-
+#include "RootTools.h"
+#include "TROOT.h"
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize){
   
@@ -25,31 +26,61 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize){
       spectrums[pol][ant] = NULL;
     }
   }
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    summaryPads[ant] = NULL;
+  }
+
 
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
   
-  TString funcName = TString::Format("fRay");
-  fRay = new TF1(funcName, rayleighFuncText, 0, 1);
+  fRay = new TF1("fRay", rayleighFuncText, 0, 1);
   
   doneVectorInit = false;
 }
 
 
 
-void Acclaim::FourierBuffer::initVectors(int n){
+void Acclaim::FourierBuffer::initVectors(int n, double df){
 
   
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       sumPowers[pol][ant].resize(n, 0);
-      hRays[pol][ant].resize(n, NULL);
+
       chiSquares[pol][ant].resize(n, 0);
       ndfs[pol][ant].resize(n, 0);
+
+
+      hRays[pol][ant].resize(n, NULL);      
       for(int freqBin=0; freqBin < n; freqBin++){
+	double f = df*1e3*freqBin;
 	TString name = TString::Format("hRayleigh_%d_%d_%d", ant, pol, freqBin);
-	hRays[pol][ant].at(freqBin) = new Acclaim::RayleighHist(this, name, name);
+	const char* polChar = pol == AnitaPol::kHorizontal ? "H" : "V";
+	int phiName = (ant%NUM_PHI)+1;
+	int ring = ant / NUM_PHI;
+	const char* ringChar = ring == 0 ? "T" : ring == 1 ? "M" : "V";
+	TString title = TString::Format("Distribution of amplitudes %d%s%s %4.1lf MHz", phiName, ringChar, polChar, f);
+	title += ";Amplitude (mV/MHz?); Events per bin";
+	hRays[pol][ant].at(freqBin) = new Acclaim::RayleighHist(this, name, title);
+	hRays[pol][ant].at(freqBin)->SetDirectory(0); // hide from when .ls is done in MagicDisplay
+	hRays[pol][ant].at(freqBin)->freqMHz = df*1e3*freqBin;	
       }
+
+      // summary graphs for drawSummary
+      grChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
+      grNDFs[pol].push_back(TGraphFB(this, ant, pol, n));
+      grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
+      grReducedChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
+
+      for(int freqBin=0; freqBin < n; freqBin++){
+	double f = df*freqBin;
+	grChiSquares[pol][ant].GetX()[freqBin] = f;
+	grNDFs[pol][ant].GetX()[freqBin] = f;
+	grAmplitudes[pol][ant].GetX()[freqBin] = f;
+	grReducedChiSquares[pol][ant].GetX()[freqBin] = f;
+      }	
     }
   }
   doneVectorInit = true;  
@@ -71,6 +102,13 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 	delete hRays[pol][ant].at(i);
 	hRays[pol][ant].at(i) = NULL;
       }
+    }
+  }
+
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    if(summaryPads[ant]){
+      delete summaryPads[ant];
+      summaryPads[ant] = NULL;
     }
   }
 }
@@ -111,16 +149,11 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
       // do dynamic initialization and sanity checking
       if(!doneVectorInit){
-	initVectors(grPower->GetN());
+	double df = grPower->GetX()[1] - grPower->GetX()[0];
+	initVectors(grPower->GetN(), df);
       }
       if(grPower->GetN() != (int)sumPowers[pol][ant].size()){
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unexpected waveform size" << std::endl;
-      }
-      if(df <= 0){
-	df = grPower->GetX()[1] - grPower->GetX()[0];
-	for(size_t freqBin=0; freqBin < hRays[pol][ant].size(); freqBin++){
-	  hRays[pol][ant].at(freqBin)->freqMHz = df*1e3*freqBin;
-	}
       }
   
 
@@ -137,6 +170,20 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 	double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
 	hRays[pol][ant].at(freqInd)->add(amp);
+
+
+	// // is there a more elegant way to do this?
+	// TSeqCollection* cans = gROOT->GetListOfCanvases();
+	// for(int i=0; i < cans->GetEntries(); i++){
+	//   TCanvas* can = (TCanvas*) cans->At(i);
+	//   TObject* objInCan = can->FindObject(hRays[pol][ant][freqInd]->GetName());
+	//   if(objInCan){
+	//     can->Modified();
+	//     can->Update();
+	//   }
+	// }
+	
+	
       }
     }
   }
@@ -145,9 +192,20 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){      
-      for(int freqInd=0; freqInd < (int)sumPowers[pol][ant].size(); freqInd++){
-	hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+      if((int)sumPowers[pol][ant].size() > 0){
+	for(int freqInd=1; freqInd < (int)sumPowers[pol][ant].size() - 1; freqInd++){
+	  hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+
+	  grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
+	  grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+	  grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
+
+	  double theNorm;
+	  hRays[pol][ant].at(freqInd)->getTF1Params(theNorm, grAmplitudes[pol][ant].GetY()[freqInd]);
+						  
+	}
       }
     }
   }
@@ -264,30 +322,158 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground(Int_t ant, AnitaPol::An
 
 
 
+void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
 
+  pad->cd();
 
+  // find the maximum and minimum values before plotting
+  Double_t yMax = -DBL_MAX;
+  Double_t yMin = DBL_MAX;  
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;  
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
+      if(ant == 4 && pol == AnitaPol::kHorizontal){ // skip alfa
+	continue;
+      }
+      
+      TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
 
-
-
-
-
-
-void Acclaim::TGraphFB::ExecuteEvent(int event, int x, int y){
-  if(event == kButton1Double){
-    Double_t freq = gPad->AbsPixeltoX(x);
-    double df = GetX()[1] - GetX()[0];
-    if(df > 0){
-      int freqBin = TMath::Nint(freq/df);
-      TCanvas* c1 = new TCanvas();
-      c1->cd();
-      // need to pretend it's non-const
-      // don't delete this!
-      RayleighHist* h = (RayleighHist*) fb->getRayleighDistribution(ant, pol, freqBin);
-      h->Draw();
-      c1->Modified();
-      c1->Update();
+      for(int i=0; i < gr.GetN(); i++){
+	if(gr.GetY()[i] > yMax){
+	  yMax = gr.GetY()[i];
+	}
+	if(gr.GetY()[i] < yMin){
+	  yMin = gr.GetY()[i];
+	}	
+      }
     }
   }
+
+  // now do the plotting (setting the max/min)
+  
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+
+    // dynamically initialize the summary pads
+    if(!summaryPads[ant]){
+      int ring = ant/NUM_PHI;
+      int phi = ant % NUM_PHI;
+
+      // instead of 3 by 16
+      // do 6 by 8
+      int xBin = phi/2;
+      int yBin = (2*ring + phi%2);
+    
+      summaryPads[ant] = RootTools::makeSubPad(pad, double(xBin)/8, double(5 - yBin)/6,
+					       double(xBin+1)/8, double(6 - yBin)/6,
+					       TString::Format("FourierBuffer%d", ant));
+      summaryPads[ant]->SetRightMargin(0);
+      summaryPads[ant]->SetLeftMargin(0.1 * (xBin == 0));
+      summaryPads[ant]->SetTopMargin(0.1 * (yBin == 0));
+      summaryPads[ant]->SetBottomMargin(0.1 * (yBin == 5));
+
+      // avoid deletion?
+      summaryPads[ant]->SetBit(kCanDelete);
+      summaryPads[ant]->InvertBit(kCanDelete);      
+    }
+    else{
+      // already have the pad, so append it to the boss pad
+      pad->cd();
+      summaryPads[ant]->AppendPad();
+    }
+
+
+    // do the actual plotting
+    summaryPads[ant]->cd();
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+      
+      // TGraphFB* gr = getReducedChiSquaresOfRayelighDistributions(ant, pol);
+      TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
+      gr.SetEditable(kFALSE);
+      
+      const char* opt = pol == AnitaPol::kVertical ? "lsame" : "al";
+      EColor lineCol = pol == AnitaPol::kHorizontal ? kBlue : kBlack;
+      gr.SetLineColor(lineCol);
+      gr.SetMaximum(yMax);
+      gr.SetMinimum(yMin);
+      
+      gr.Draw(opt);
+    }
+  }
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+void Acclaim::TGraphFB::drawCopy() const{
+  TCanvas* c1 = new TCanvas();
+  c1->cd();
+  TGraphFB* gr2 = (TGraphFB*) Clone();
+  gr2->pol = pol;
+  gr2->ant = ant;
+  gr2->fb = fb;
+  gr2->SetBit(kCanDelete);
+  gr2->fDoubleClickOption = kDrawRayleigh;
+  gr2->Draw();
+  c1->Modified();
+  c1->Update();
+
+}
+void Acclaim::TGraphFB::ExecuteEvent(int event, int x, int y){
+
+  if(event == kButton1Double){    
+    if(fDoubleClickOption==kDrawRayleigh){
+      drawRayleighHistNearMouse(x, y);
+    }
+    else if(fDoubleClickOption==kDrawCopy){
+      drawCopy();
+    }
+  }  
   TGraphAligned::ExecuteEvent(event, x, y);
+}
+
+
+void Acclaim::TGraphFB::drawRayleighHistNearMouse(int x, int y) const{
+
+  int selectedPoint = -1;
+  double minD2 = 1e9;
+  for(int i=0; i < GetN(); i++){
+    Int_t pixelX = gPad->XtoAbsPixel(GetX()[i]);
+    Int_t pixelY = gPad->YtoAbsPixel(GetY()[i]);
+
+    const int closeDist = 4; // number of pixels that means you're close to a point
+    if(TMath::Abs(pixelX - x) < closeDist && TMath::Abs(pixelY - y) < closeDist){
+      double d2 = (pixelX - x)*(pixelX - x) + (pixelY - y)*(pixelY - y);
+      
+      if(d2 < minD2){
+	minD2 = d2;
+	selectedPoint = i;
+      }
+    }
+  }
+      
+  double df = GetX()[1] - GetX()[0];
+  if(selectedPoint > -1 && df > 0){
+    TCanvas* c1 = new TCanvas();
+    c1->cd();
+    // need to pretend it's non-const
+    // don't delete this!
+    RayleighHist* h = (RayleighHist*) fb->getRayleighDistribution(ant, pol, selectedPoint);
+    h->SetLineColor(GetLineColor());
+    h->Draw();
+    c1->Modified();
+    c1->Update();
+  }
+
 }

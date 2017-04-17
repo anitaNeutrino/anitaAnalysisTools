@@ -127,6 +127,20 @@ int Acclaim::RayleighHist::add(double newAmp){
 
 
 
+
+void Acclaim::RayleighHist::getTF1Params(Double_t& normalization, Double_t& rayAmp){
+  if(fRay){
+    normalization = fRay->GetParameter(0);
+    rayAmp = fRay->GetParameter(1);
+  }
+  else{
+    normalization = -999;
+    rayAmp = -999;
+  }
+}
+
+
+  
 void Acclaim::RayleighHist::Eval(Double_t& chiSquare, Int_t& ndf){  
 
   // double integralWithOverFlow = Integral(0, GetNbinsX()+1);
@@ -147,7 +161,7 @@ void Acclaim::RayleighHist::Eval(Double_t& chiSquare, Int_t& ndf){
 
   // TH1::Fit(fRay, "Q0");
 
-
+  
   chiSquare=0;
   ndf = 0;
   for(int bx=1; bx <= GetNbinsX(); bx++){
@@ -161,7 +175,7 @@ void Acclaim::RayleighHist::Eval(Double_t& chiSquare, Int_t& ndf){
       chiSquare += deltaY*deltaY;
       ndf++;
     }
-  }    
+  }
 }
 
 

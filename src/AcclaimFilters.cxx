@@ -419,22 +419,3 @@ void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
 }
 
 
-void Acclaim::Filters::RayleighMonitor::drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol) const{
-
-  pad->Clear();
-    
-  TPad* p1 = RootTools::makeSubPad(pad, 0, 0.5, 1, 1, "_p1");
-  p1->cd();
-  TGraphFB* gr = fourierBuffer.getReducedChiSquaresOfRayelighDistributions(ant, pol);
-  gr->SetTitle("Reduced ChiSquare; Frequency (GHz); #chi^{2}/NDF");
-  gr->SetBit(kMustCleanup);
-  gr->Draw("al");
-    
-  TPad* p2 = RootTools::makeSubPad(pad, 0, 0, 1, 0.5, "_p2");
-  p2->cd();
-    
-  RayleighHist* h = (RayleighHist*) fourierBuffer.getRayleighDistribution(ant, pol);
-  h->Draw();
-}
-
-

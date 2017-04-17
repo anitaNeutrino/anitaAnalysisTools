@@ -17,9 +17,11 @@
 #include <complex>
 #include <list>
 #include "AnitaConventions.h"
+#include "TObject.h"
 
 class TSpectrum;
 class FilteredAnitaEvent;
+class TPad;
 
 namespace Acclaim
 {
@@ -48,11 +50,12 @@ namespace Acclaim
     TGraphFB* getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const;
+    void drawSummary(TPad* pad) const;
     
-  private:
+  protected:
     Int_t bufferSize;
     Int_t removeOld();
-    void initVectors(int n);
+    void initVectors(int n, double df);
 
     // list of events
     std::list<UInt_t> eventNumbers;
@@ -70,10 +73,17 @@ namespace Acclaim
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
     TF1* fRay;
-    double df;
-    mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
+
     bool doneVectorInit;
     int fDrawFreqBin;
+    
+    double df; // frequency bin width (from AnalysisWaveform so probably in GHz)
+    mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
+    mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
+    std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary
+    std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
+    std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
+    std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
   };
 
 
@@ -84,21 +94,30 @@ namespace Acclaim
   // little class for some GUI i/o magic
   class TGraphFB : public TGraphAligned {
   public:
+    enum EDoubleClickOption{
+      kDrawRayleigh,
+      kDrawCopy
+    };
+    
     TGraphFB(const FourierBuffer* theFb=NULL, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol=AnitaPol::kNotAPol,
-	     int n=0) : TGraphAligned(n)
+	     int n=0) : TGraphAligned(n), fDoubleClickOption(kDrawCopy)
     {
       fb = theFb;
       ant = theAnt;
       pol = thePol;
     }
     virtual ~TGraphFB(){;}
-    void ExecuteEvent(Int_t event, Int_t x, Int_t y);
+    virtual void ExecuteEvent(Int_t event, Int_t x, Int_t y);
+    void drawCopy() const;
+    void drawRayleighHistNearMouse(int x, int y) const;// *MENU*
   private:
-    const FourierBuffer* fb; // pointer to parent
+    const FourierBuffer* fb; // pointer to parent, don't delete
     Int_t ant;
     AnitaPol::AnitaPol_t pol;
+    EDoubleClickOption fDoubleClickOption;
+    ClassDef(Acclaim::TGraphFB, 0);
   };
-  
+
 }
 
 

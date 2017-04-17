@@ -19,6 +19,8 @@ namespace Acclaim{
     virtual void Draw(Option_t* opt="");
 
     void Eval(Double_t& chiSquare, Int_t& ndf);
+    void getTF1Params(Double_t& normalization, Double_t& rayAmp);
+    
     int add(double newAmp);
 
     void SetFreqBinToDraw(Int_t freqBin); // *MENU*

@@ -64,9 +64,10 @@ namespace Acclaim
     class RayleighMonitor : public UniformFilterOperation {
     protected:
       int fNumEvents;
-      FourierBuffer fourierBuffer;
-      
+      FourierBuffer fourierBuffer;      
     public:
+
+      
       explicit RayleighMonitor(int numEvents);
 
       virtual const char * tag () const {return "RayleighMonitor";};
@@ -77,9 +78,7 @@ namespace Acclaim
 	std::cerr << "Error in " << __PRETTY_FUNCTION__ << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
       }
       virtual void process(FilteredAnitaEvent* fEv);
-      void drawSummary(TPad* pad, int ant, AnitaPol::AnitaPol_t pol) const;
-      
-      
+      const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}
     };
     
 

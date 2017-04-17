@@ -20,6 +20,8 @@
 #pragma link C++ class Acclaim::ClusteredAnitaEvent+;
 
 #pragma link C++ class Acclaim::RayleighHist+;
+#pragma link C++ class Acclaim::TGraphFB+;
+
 #pragma link C++ class Acclaim::RayleighInfo+;
 #pragma link C++ class Acclaim::RiceInfo+;
 #pragma link C++ class Acclaim::InterferometricMap+;
