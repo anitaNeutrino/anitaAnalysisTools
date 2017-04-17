@@ -43,10 +43,6 @@ namespace Acclaim
     size_t add(const RawAnitaHeader* header, const AnalysisWaveform* wave);
     
     const RayleighHist* getRayleighDistribution(Int_t freqBin=-1) const {return hRays.at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
-    // TGraphAligned* getAvePowSpec_dB(double timeRange = -1) const;
-    // TGraphAligned* getAvePowSpec(double timeRange = -1) const;
-    // TGraphAligned* getBackground_dB(double timeRange = -1) const;
-    // TGraphAligned* getBackground(double timeRange = -1) const;
     TGraphAligned* getAvePowSpec_dB(int lastNEvents = -1) const;
     TGraphAligned* getAvePowSpec(int lastNEvents = -1) const;
     TGraphAligned* getBackground_dB(int lastNEvents = -1) const;
@@ -54,7 +50,7 @@ namespace Acclaim
 
     void setAntPol(Int_t theAnt, AnitaPol::AnitaPol_t thePol){
       ant = theAnt;
-      pol = thePol;      
+      pol = thePol;
     }
 
     TGraphAligned* getReducedChiSquaresOfRayelighDistributions() const;
@@ -69,22 +65,19 @@ namespace Acclaim
     std::list<std::vector<double> > powerRingBuffer;
     std::list<UInt_t> eventNumbers;
     std::list<Int_t> runs;
-    std::list<Double_t> realTimesNs;
-
     std::vector<double> sumPower;
     std::vector<RayleighHist*> hRays;
-    std::vector<double> sumAmps;
 
     std::vector<double> chiSquares;
     std::vector<int> ndfs;
-    
-    Double_t timeScale;
 
+    // it turns out that initialising a TF1 is very slow,
+    // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
+    TF1* fRay;
     double df;
     mutable TSpectrum* spectrum; // to estimate the background
     bool doneVectorInit;
     int fDrawFreqBin;
-    TF1* fRay;
   };
 }
 

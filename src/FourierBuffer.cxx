@@ -4,12 +4,8 @@
 #include "TSpectrum.h"
 #include "RayleighHist.h"
 #include "TF1.h"
+ 
 
-const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
-const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
-
-
-// Acclaim::FourierBuffer::FourierBuffer(double timeScaleSeconds, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, Int_t theAnt, AnitaPol::AnitaPol_t thePol){
   
   // timeScale = timeScaleSeconds;
@@ -22,8 +18,13 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, Int_t theAnt, AnitaPo
   // will initialize this dynamically to get around this no-copy-constructor bullshit
   spectrum = NULL;
 
+
+  const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
+  // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
+  
   TString funcName = TString::Format("fRay_%d_%d", ant, pol);
   fRay = new TF1(funcName, rayleighFuncText, 0, 1);
+  
 
   doneVectorInit = false;
 }
@@ -32,7 +33,6 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, Int_t theAnt, AnitaPo
 
 void Acclaim::FourierBuffer::initVectors(int n){
   sumPower.resize(n, 0);
-  sumAmps.resize(n, 0);
   hRays.resize(n, NULL);
   chiSquares.resize(n, 0);
   ndfs.resize(n, 0);  
@@ -98,12 +98,6 @@ size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisW
   eventNumbers.push_back(header->eventNumber);
   runs.push_back(header->run);
 
-  // Double_t realTime= header->realTime;
-  Double_t realTime= header->triggerTime;
-  realTime += 1e-9*header->triggerTimeNs;
-
-  realTimesNs.push_back(realTime);
-
   // for old compilers, push back copy of empty vector for speed.
   // then get reference that vector in the list
   powerRingBuffer.push_back(std::vector<double>(0));
@@ -135,33 +129,19 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
   Int_t nPopped = 0;
   // if(realTimesNs.size() > 0){
-  if(realTimesNs.size() > 0){    
+  if(eventNumbers.size() > 0){    
 
-    Double_t mostRecentTime = realTimesNs.back();
-
-    // while(mostRecentTime - realTimesNs.front() > timeScale){
-    while((int)realTimesNs.size() > bufferSize){      
-      if(ant==0 && pol == 0){
-	printf("removing: %lf\t%20.20lf\t%20.20lf\n", mostRecentTime - realTimesNs.front(), realTimesNs.front(), mostRecentTime);
-      }
-      
+    while((int)realTimesNs.size() > bufferSize){
       realTimesNs.pop_front();
       eventNumbers.pop_front();
       runs.pop_front();
       std::vector<double>& removeThisPower = powerRingBuffer.front();
       for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
 	sumPower.at(freqInd) -= removeThisPower.at(freqInd);
-	double amp = TMath::Sqrt(removeThisPower.at(freqInd));
-	sumAmps.at(freqInd) -= amp;
-	// hRays.at(freqInd)->Fill(amp, -1);
       }
       powerRingBuffer.pop_front();
       nPopped++;
     }
-    if(ant==0 && pol == 0){
-      std::cout << "after removal: " << mostRecentTime - realTimesNs.front() << "\t" << nPopped << "\t" << std::endl;
-    }
-    
   }
   return nPopped;
 }
