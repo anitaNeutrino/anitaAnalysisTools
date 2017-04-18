@@ -41,9 +41,10 @@ namespace Acclaim{
 
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
 
-    inline static double EvalRayleigh(double normalization, double amplitude, double x){
-      return (normalization*x/(amplitude*amplitude))*exp(-x*x/(2*amplitude*amplitude));
-    }
+    // inline static double EvalRayleigh(double normalization, double amplitude, double x){
+    //   return (normalization*x/(amplitude*amplitude))*exp(-x*x/(2*amplitude*amplitude));
+    //   // return normalization*amplitude*x;
+    // }
     
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
@@ -80,9 +81,18 @@ namespace Acclaim{
     void prepareRayleighFitCache();
     Int_t fNx;
     std::vector<double> rayleighChiSquareCache;
-    
+
+
+    // exp is an expensive operation so I'm going to cache the results in here
+    // with a set of precalculated exponentials, I can vary the exponent in
+    static const double dExponent; // defined in RayleighHist.cxx
+    static const double minExponent; // max is zero
+    static std::vector<double> exponentialCache; // the cached exponentials
+        
     ClassDef(RayleighHist, 0);
-    
   };
+
+
+  
 }
 #endif

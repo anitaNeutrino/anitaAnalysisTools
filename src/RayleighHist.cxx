@@ -8,6 +8,10 @@
 
 ClassImp(Acclaim::RayleighHist);
 
+const double Acclaim::RayleighHist::dExponent = 0.001; // maybe
+const double Acclaim::RayleighHist::minExponent = 10; // min is zero
+std::vector<double> Acclaim::RayleighHist::exponentialCache;
+
 
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
 				    const char* name, const char* title) : TH1D(name, title, 1, -1001, -1000), // deliberately stupid initial binning
@@ -46,6 +50,18 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   
   fNumFitParams = 1;
   fMinimizer->SetFunction(fChiSquaredFunc);
+
+
+  // someone has to initialize 
+  if(exponentialCache.size()==0){
+    unsigned size = TMath::Nint(TMath::Abs(minExponent)/dExponent);
+    exponentialCache.reserve(size);
+    double minExponentCalculated = 0;
+    while(minExponentCalculated > minExponent){
+      exponentialCache.push_back(exp(minExponentCalculated));
+      minExponentCalculated -= dExponent;
+    }
+  }
 }
 
 
@@ -168,11 +184,12 @@ double Acclaim::RayleighHist::getRayleighChiSquare(const double* params){
   
   double amplitude = params[0];
   if(amplitude <= 0){ // does this fuck the fitter?
-    return 9999;
+    return 9999 + fabs(amplitude);
   }
   double chiSquare=0;
   for(int i=0; i < 3*fNx; i+=3){
-    double yR = EvalRayleigh(fRayleighNorm, amplitude, rayleighChiSquareCache[i]) - rayleighChiSquareCache[i+1];    
+    double yR = (fRayleighNorm*rayleighChiSquareCache[i]/(amplitude*amplitude))*exp(-rayleighChiSquareCache[i]*rayleighChiSquareCache[i]/(2*amplitude*amplitude)) - rayleighChiSquareCache[i+1];
+    // double yR = EvalRayleigh(fRayleighNorm, amplitude, rayleighChiSquareCache[i]) - rayleighChiSquareCache[i+1];  
     chiSquare += rayleighChiSquareCache[i+2] > 0 ? yR*yR/rayleighChiSquareCache[i+2] : 0;
   }
   return chiSquare;
@@ -251,6 +268,8 @@ void Acclaim::RayleighHist::prepareRayleighFitCache(){
   for(int bx=1; bx <= fNx; bx++){
     double y = GetBinContent(bx);
     double x = GetXaxis()->GetBinCenter(bx);
+    // double nx = fRayleighNorm*x;
+    // double minusHalfXX = -x*x*0.5;
     double yErr = GetBinError(bx);
     rayleighChiSquareCache.push_back(x);
     rayleighChiSquareCache.push_back(y);
