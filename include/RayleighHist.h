@@ -40,11 +40,6 @@ namespace Acclaim{
     
 
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
-
-    // inline static double EvalRayleigh(double normalization, double amplitude, double x){
-    //   return (normalization*x/(amplitude*amplitude))*exp(-x*x/(2*amplitude*amplitude));
-    //   // return normalization*amplitude*x;
-    // }
     
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
@@ -68,7 +63,7 @@ namespace Acclaim{
     Int_t risingEdgeBins; //!< Number of bins between 0 and where we guess the histogram peak is, for dynamic rebinning
     Int_t fDrawFreqBin;
     double freqMHz; //!< The frequency (MHz) of this Rayleigh distribution
-    Int_t numEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
+    Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
 
 
 
@@ -78,10 +73,11 @@ namespace Acclaim{
     // caching for fit functions
     double fBinWidth;
     double fRayleighNorm;
-    void prepareRayleighFitCache();
     Int_t fNx;
-    std::vector<double> rayleighChiSquareCache;
-
+    std::vector<double> binCentres;
+    std::vector<double> squaredBinCentres;    
+    std::vector<double> binValues;
+    std::vector<double> squaredBinErrors;
 
     // exp is an expensive operation so I'm going to cache the results in here
     // with a set of precalculated exponentials, I can vary the exponent in

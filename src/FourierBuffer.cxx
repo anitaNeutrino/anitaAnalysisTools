@@ -12,7 +12,8 @@
 #include "RootTools.h"
 #include "TROOT.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3)
+{
   
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;
@@ -135,7 +136,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
       // do dynamic initialization and sanity checking
       if(!doneVectorInit){
-	double df = grPower->GetX()[1] - grPower->GetX()[0];
+	df = grPower->GetX()[1] - grPower->GetX()[0];
 	initVectors(grPower->GetN(), df);
       }
       if(grPower->GetN() != (int)sumPowers[pol][ant].size()){
@@ -160,6 +161,9 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	
 	  hRays[pol][ant].at(freqInd)->add(amp);
 	}
+	// else{
+	//   std::cout << f << "\t" << fMinFitFreq << "\t" << fMaxFitFreq << std::endl;
+	// }
 
 	// // is there a more elegant way to do this?
 	// TSeqCollection* cans = gROOT->GetListOfCanvases();
@@ -185,13 +189,16 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       if((int)sumPowers[pol][ant].size() > 0){
 	for(int freqInd=1; freqInd < (int)sumPowers[pol][ant].size() - 1; freqInd++){
 	  // hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+	  double f = df*freqInd;
+	  if(f >= fMinFitFreq && f < fMaxFitFreq){
+	  
+	    hRays[pol][ant].at(freqInd)->Fit(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
 
-	  hRays[pol][ant].at(freqInd)->Fit(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
-
-	  grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
-	  grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
-	  grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
-	  grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
+	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
+	    grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
+	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
+	  }
 						  
 	}
       }
