@@ -8,6 +8,7 @@
 #include <Math/Functor.h>
 
 class TF1;
+class TVirtualPad;
 
 namespace Acclaim{
   class FourierBuffer;
@@ -23,7 +24,8 @@ namespace Acclaim{
       Minuit, // less slow
       Scan, // probably the fastest useful option, won't do errors
       JustEvalGuess, // fastest but obviously the least accurate
-      Default = Scan
+      Adaptive, // Tries just evaluating the guess, if that's good enough (chiSquare < 2), stops there, otherwise does a scan
+      Default = Adaptive
       // Default = JustEvalGuess
     };
     
@@ -31,16 +33,25 @@ namespace Acclaim{
     virtual ~RayleighHist();
 
     virtual void Draw(Option_t* opt="");
-    bool add(double newAmp); // Main interaction method
-    void getRayleighFitParams(double& rayAmp, double& chiSquare, int& ndf);
+    bool add(double newAmp); //!< Input amplitudes events
+    void getRayleighFitParams(double& rayAmp, double& chiSquare, int& ndf); //!< Output Rayleigh distribution parameters
 
-    void SetFreqBinToDraw(Int_t freqBin); // *MENU*
+    void fitRayleigh(bool forGuiUpdateTF1=true); // *MENU* Fit the Rayleigh distribution using the selected fit method
+
+    // Mostly for validating fit sanity with a GUI
+    void fitRayleighAdaptive(bool forGuiUpdateTF1=true); // *MENU* Tries to evaluate the guess, if it's good enough move on, otherwise scan.
+    void fitRayleighScan(bool forGuiUpdateTF1=true); // *MENU* Fit the Rayleigh distribution scanning through amplitude values and choosing the lowest chiSquare residual
+    void fitRayleighJustEvalGuess(bool forGuiUpdateTF1=true); // *MENU* "Fit" the rayleigh distribution just using the guess from the mean/integral of the histogram
+    void fitRayleighTF1(); // *MENU* Fit using the TF1
+    void fitRayleighMinuit(bool forGuiUpdateTF1=true); // *MENU* Fit using Minuit
     
-
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
     
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
+    
+
+
 
     virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
     bool axisRangeOK() const; //!< Checks current axis range is reasonable
@@ -67,8 +78,8 @@ namespace Acclaim{
     Int_t fNDF;
     Double_t fChiSquare;
     Double_t fRayleighAmplitude;
-    void fitRayleigh();
 
+    void updateParamsOfTF1();    
     std::vector<Double_t> fParamsTF1;
     
     FitMethod fitMethod;
@@ -84,14 +95,14 @@ namespace Acclaim{
     std::vector<double> binCentres;
     std::vector<double> squaredBinCentres;    
     std::vector<double> binValues;
-    std::vector<double> squaredBinErrors;
+    std::vector<double> squaredBinErrors;    
 
     // exp is an expensive operation so I'm going to cache the results in here
     // with a set of precalculated exponentials, I can vary the exponent in
     static const double dExponent; // defined in RayleighHist.cxx
     static const double minExponent; // max is zero
     static std::vector<double> exponentialCache; // the cached exponentials
-        
+
     ClassDef(RayleighHist, 0);
   };
 

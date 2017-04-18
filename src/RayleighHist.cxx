@@ -5,6 +5,7 @@
 #include "FourierBuffer.h"
 
 #include "TMinuit.h"
+#include "TPad.h"
 
 ClassImp(Acclaim::RayleighHist);
 
@@ -26,8 +27,10 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   freqMHz = -9999;
   fracOfEventsWanted = 0.99;
   risingEdgeBins = 4;
+
+  fitMethod = FitMethod::Adaptive;
   // fitMethod = FitMethod::Scan;
-  fitMethod = FitMethod::JustEvalGuess;
+  // fitMethod = FitMethod::JustEvalGuess;
   
   
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
@@ -205,7 +208,7 @@ bool Acclaim::RayleighHist::add(double newAmp){
   bool updatedFit = false;
   fNumAddsMod10++;
   if(fFitEveryNAdds > 0 && fNumAddsMod10 == fFitEveryNAdds){
-    fitRayleigh();
+    fitRayleigh(false);
     fNumAddsMod10 = 0;
     updatedFit = true;
   }
@@ -250,82 +253,117 @@ double Acclaim::RayleighHist::getRayleighChiSquare(const double* params){
 
 
 
-void Acclaim::RayleighHist::fitRayleigh(){
+
+void Acclaim::RayleighHist::fitRayleighScan(bool forGuiUpdateTF1){
+  fNDF = fNumNonEmptyBins - 1; // -1 since we are varying the amplitude parameter
+
+  // const int nStep = 2*rayleighAmplitude/theFitParamsSteps.at(0);
+  const int nStep = 100; //2*rayleighAmplitude/theFitParamsSteps.at(0);
+  double ds = 2*fRayleighAmpGuess/nStep;
+  double bestAmp = 0;
+  double minChiSquare = 1e9;
+  int bestS = 0;
+  for(int s=1; s < nStep; s++){
+    double amp = s*ds;
+    double cs = getRayleighChiSquare(&amp);
+    // std::cout << s << "\t" << amp << "\t" << cs << "\t" << nStep << "\t" << ds << std::endl;
+
+    if(cs < minChiSquare){
+      bestAmp = amp;
+      minChiSquare = cs;
+      bestS = s;
+    }
+  }
+  // if(bestS==1){
+  //   std::cout << fName << "\t" << bestAmp << "\t" << minChiSquare << "\t" << fRayleighAmpGuess << std::endl;
+  // }
+  // if(fNumEvents){
+  //   std::cout << bestAmp << "\t" << minChiSquare << "\t" << nStep << "\t" << fNumEvents << std::endl << std::endl;
+  // }
+  fRayleighAmplitude = bestAmp;
+  fChiSquare = minChiSquare;  
+
+  if(forGuiUpdateTF1){
+    updateParamsOfTF1();
+  }
+}
+
+
+void Acclaim::RayleighHist::fitRayleighAdaptive(bool forGuiUpdateTF1){
+  // prepareRayleighFitCache();
+  fNDF = fNumNonEmptyBins; // no varying parameters
+  fChiSquare = getRayleighChiSquare(&fRayleighAmplitude);
+  
+  if(fChiSquare / fNDF >= 2){
+    fitRayleighScan(forGuiUpdateTF1);
+  }
+  else{
+    if(forGuiUpdateTF1){
+      updateParamsOfTF1();
+    }
+  }
+}
+
+
+void Acclaim::RayleighHist::fitRayleighJustEvalGuess(bool forGuiUpdateTF1){
+  // prepareRayleighFitCache();
+  fNDF = fNumNonEmptyBins; // no varying parameters
+  fChiSquare = getRayleighChiSquare(&fRayleighAmplitude);
+  if(forGuiUpdateTF1){
+    updateParamsOfTF1();
+  }
+
+}
+
+void Acclaim::RayleighHist::fitRayleighTF1(){
+  fRay->FixParameter(0, fRayleighNorm);
+  fRay->SetParameter(1, fRayleighAmpGuess);
+  fRay->SetParLimits(1, 0, fRayleighAmpGuess*2);
+  this->Fit(fRay, "Q0");
+  fChiSquare = fRay->GetChisquare();
+  fNDF = fRay->GetNDF();
+  fRayleighAmplitude = fRay->GetParameter(1);
+}
+
+void Acclaim::RayleighHist::fitRayleighMinuit(bool forGuiUpdateTF1){
+  theFitParams.at(0) = fRayleighAmpGuess;
+  fMinimizer->SetVariable(0, "amplitude", fRayleighAmpGuess, theFitParamsSteps.at(0));
+  bool successfulMinimization = fMinimizer->Minimize();
+  if(!successfulMinimization){
+    std::cerr << fTitle << " failed the minimization, amplitude = " << theFitParams.at(0) 
+	      << "\t" << ", intial guess was " << fRayleighAmpGuess << std::endl << std::endl;
+  }
+  fRayleighAmplitude = theFitParams.at(0); // this isn't quite right, but I'm not going to fix it now...
+  // std::cout << fRayleighAmplitude << "\t" << fMinimizer->MinValue() << std::endl;
+  fChiSquare = getRayleighChiSquare(&fRayleighAmplitude);
+  fNDF = fNumNonEmptyBins - 1;
+  if(forGuiUpdateTF1){
+    updateParamsOfTF1();
+  }
+
+}
+
+void Acclaim::RayleighHist::fitRayleigh(bool forGuiUpdateTF1){
 
   // the internals that need to be updated by the fit
   fRayleighAmplitude = fRayleighAmpGuess; // sensible initial guess calculated elsewhere
   fNDF = 0;
   fChiSquare = 0;
 
-  if(fitMethod==FitMethod::Scan){
-    // prepareRayleighFitCache();
-    fNDF = fNumNonEmptyBins - 1; // -1 since we are varying the amplitude parameter
-
-    // const int nStep = 2*rayleighAmplitude/theFitParamsSteps.at(0);
-    const int nStep = 100; //2*rayleighAmplitude/theFitParamsSteps.at(0);
-    double ds = 2*fRayleighAmpGuess/nStep;
-    double bestAmp = 0;
-    double minChiSquare = 1e9;
-    int bestS = 0;
-    for(int s=1; s < nStep; s++){
-      double amp = s*ds;
-      double cs = getRayleighChiSquare(&amp);
-      // std::cout << s << "\t" << amp << "\t" << cs << "\t" << nStep << "\t" << ds << std::endl;
-
-      if(cs < minChiSquare){
-    	bestAmp = amp;
-    	minChiSquare = cs;
-	bestS = s;
-      }
-    }
-    if(bestS==1){
-      std::cout << bestAmp << "\t" << minChiSquare << "\t" << fRayleighAmpGuess << std::endl;
-    }
-    // if(fNumEvents){
-    //   std::cout << bestAmp << "\t" << minChiSquare << "\t" << nStep << "\t" << fNumEvents << std::endl << std::endl;
-    // }
-    fRayleighAmplitude = bestAmp;
-    fChiSquare = minChiSquare;
+  if(fitMethod==FitMethod::Adaptive){
+    fitRayleighAdaptive();
+  }
+  else if(fitMethod==FitMethod::Scan){
+    fitRayleighScan(forGuiUpdateTF1);
   }
   else if(fitMethod==FitMethod::JustEvalGuess){
-    // prepareRayleighFitCache();
-    fNDF = fNumNonEmptyBins; // no varying parameters
-    fChiSquare = getRayleighChiSquare(&fRayleighAmplitude);
-    if(fChiSquare > 1000){
-      std::cerr << std::endl << "???? " << fName << "\t" << fChiSquare << "\t" << fNDF << "\t" << fRayleighAmplitude << "\t" << fRayleighAmpGuess << "\t" << fNumEvents << "\t" << fRayleighNorm << std::endl;
-      double amplitude = fRayleighAmplitude;
-      double invAmpSquare = 1./(amplitude*amplitude);
-      double minusHalfInvAmpSquare = -0.5*invAmpSquare;
-      double exponentPreFactorPart = fRayleighNorm*invAmpSquare;
-      // std::cout << amplitude << "\t" << invAmpSquare << "\t" << exponentPreFactorPart << "\t" << fRayleighNorm << "\t" << fBinWidth << "\t" << fNumEvents << std::endl;
-      double chiSquare = 0;
-      std::cerr << amplitude << "\t" << invAmpSquare << "\t" << minusHalfInvAmpSquare << "\t" << exponentPreFactorPart << std::endl;
-      for(int i=0; i < fNx; i++){
-	std::cerr << binCentres[i] << "\t" << squaredBinCentres[i] << "\t" << binValues[i] << "\t" << GetBinContent(i+1) << "\t" << squaredBinErrors[i] << "\t";
-	if(squaredBinErrors[i] > 0){
-	  // double x = binCentres[i];
-	  // double sigma = amplitude;
-	  // double yRSlow = 
-	  double yR = exponentPreFactorPart*binCentres[i]*exp(minusHalfInvAmpSquare*squaredBinCentres[i]) - binValues[i];
-	  // double yR = exponentPreFactorPart*binCentres[i]*exp(minusHalfInvAmpSquare*squaredBinCentres[i]) - binValues[i];
-	  chiSquare += yR*yR/squaredBinErrors[i];
-	  std::cout << yR << "\t" << yR + binValues[i] << "\t" << chiSquare;
-	}
-	std::cerr << std::endl;
-      }
-    }
-
+    fitRayleighJustEvalGuess(forGuiUpdateTF1);
   }
   else if(fitMethod==FitMethod::TF1){
-    std::cerr << "Not currently implemented" << std::endl;
+    fitRayleighTF1();
   }
   else if(fitMethod==FitMethod::Minuit){
-    fMinimizer->SetVariable(0, "amplitude", fRayleighAmpGuess, theFitParamsSteps.at(0));
-    bool successfulMinimization = fMinimizer->Minimize();
-    if(!successfulMinimization){
-      std::cerr << fTitle << " failed the minimization, amplitude = " << theFitParams.at(0) 
-		<< "\t" << ", intial guess was " << fRayleighAmpGuess << std::endl << std::endl;      
-    }
+    fitRayleighMinuit(forGuiUpdateTF1);
   }
   else{
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ 
@@ -334,9 +372,7 @@ void Acclaim::RayleighHist::fitRayleigh(){
 }
 
 
-void Acclaim::RayleighHist::Draw(Option_t* opt){
-
-  TH1D::Draw(opt);  
+void Acclaim::RayleighHist::updateParamsOfTF1(){
   if(fRay){
     if(fParamsTF1.at(0) != fRayleighNorm){
       fParamsTF1.at(0) = fRayleighNorm;
@@ -346,13 +382,17 @@ void Acclaim::RayleighHist::Draw(Option_t* opt){
       fParamsTF1.at(1) = fRayleighAmplitude;
       fRay->SetParameter(1, fParamsTF1.at(1));
     }
-    std::cout << fParamsTF1.at(0) << "\t" << fParamsTF1.at(1) << std::endl;
-    fRay->Draw("lsame");
   }
-  
 }
 
-void Acclaim::RayleighHist::SetFreqBinToDraw(Int_t freqBin){
-  fParent->fDrawFreqBin = freqBin;
+
+void Acclaim::RayleighHist::Draw(Option_t* opt){
+
+  TH1D::Draw(opt);  
+
+  if(fRay){
+    updateParamsOfTF1();
+    fRay->Draw("lsame");
+  }  
 }
 
