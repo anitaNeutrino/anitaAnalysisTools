@@ -32,8 +32,7 @@ namespace Acclaim{
 
     virtual void Draw(Option_t* opt="");
     bool add(double newAmp); // Main interaction method
-    
-    
+    void getRayleighFitParams(double& rayAmp, double& chiSquare, int& ndf);
 
     void SetFreqBinToDraw(Int_t freqBin); // *MENU*
     
@@ -65,12 +64,17 @@ namespace Acclaim{
     Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
 
 
+    Int_t fNDF;
+    Double_t fChiSquare;
+    Double_t fRayleighAmplitude;
+    void fitRayleigh();
 
-    void Fit(Double_t& rayleighAmplitude, Double_t& chiSquare, Int_t& ndf);
+    std::vector<Double_t> fParamsTF1;
     
     FitMethod fitMethod;
     const Int_t fFitEveryNAdds;
     Int_t fNumAddsMod10;
+    Int_t fNumNonEmptyBins;
 
     // caching for fit functions
     double fBinWidth;

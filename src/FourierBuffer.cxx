@@ -80,6 +80,12 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	grNDFs[pol][ant].GetX()[freqBin] = f;
 	grAmplitudes[pol][ant].GetX()[freqBin] = f;
 	grReducedChiSquares[pol][ant].GetX()[freqBin] = f;
+
+	grChiSquares[pol][ant].GetY()[freqBin] = 0;
+	grNDFs[pol][ant].GetY()[freqBin] = 0;
+	grAmplitudes[pol][ant].GetY()[freqBin] = 0;
+	grReducedChiSquares[pol][ant].GetY()[freqBin] = 0;
+	
       }	
     }
   }
@@ -157,8 +163,12 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  if(updated){
+	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+	    // std::cout << fitAmplitudes[pol][ant][freqInd] << "\t" << chiSquares[pol][ant][freqInd] << "\t" << ndfs[pol][ant][freqInd] << std::endl;
 	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
-	    grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+	    if(ndfs[pol][ant][freqInd] > 0){
+	      grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+	    }
 	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
 	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
 	  }
