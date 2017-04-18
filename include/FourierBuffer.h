@@ -86,6 +86,8 @@ namespace Acclaim
     int eventsInBuffer;
     
     double df; // frequency bin width (from AnalysisWaveform so probably in GHz)
+    double fMinFitFreq;
+    double fMaxFitFreq;
     mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
     std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary

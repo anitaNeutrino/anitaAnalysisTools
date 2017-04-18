@@ -12,7 +12,7 @@
 #include "RootTools.h"
 #include "TROOT.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3){
   
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;
@@ -153,10 +153,13 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       // update sum of power
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
 	sumPowers[pol][ant].at(freqInd) += grPower->GetY()[freqInd];
-
-	double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
-	hRays[pol][ant].at(freqInd)->add(amp);
-
+	double f = df*freqInd;
+	if(f >= fMinFitFreq && f < fMaxFitFreq){
+	
+	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
+	
+	  hRays[pol][ant].at(freqInd)->add(amp);
+	}
 
 	// // is there a more elegant way to do this?
 	// TSeqCollection* cans = gROOT->GetListOfCanvases();
