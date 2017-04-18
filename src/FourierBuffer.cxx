@@ -124,15 +124,12 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
   runs.push_back(header->run);
 
   // get the power
-
-
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
       const AnalysisWaveform* wave = fEv->getFilteredGraph(ant, pol);
       const TGraphAligned* grPower = wave->power();
-
 
       // do dynamic initialization and sanity checking
       if(!doneVectorInit){
@@ -149,7 +146,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
       std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
       freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
-
   
       // update sum of power
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
@@ -159,11 +155,14 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	
 	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
 	
-	  hRays[pol][ant].at(freqInd)->add(amp);
+	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
+	  if(updated){
+	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
+	    grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
+	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
+	  }
 	}
-	// else{
-	//   std::cout << f << "\t" << fMinFitFreq << "\t" << fMaxFitFreq << std::endl;
-	// }
 
 	// // is there a more elegant way to do this?
 	// TSeqCollection* cans = gROOT->GetListOfCanvases();
@@ -181,29 +180,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
   eventsInBuffer++;
   
   removeOld();
-
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-
-      if((int)sumPowers[pol][ant].size() > 0){
-	for(int freqInd=1; freqInd < (int)sumPowers[pol][ant].size() - 1; freqInd++){
-	  // hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
-	  double f = df*freqInd;
-	  if(f >= fMinFitFreq && f < fMaxFitFreq){
-	  
-	    hRays[pol][ant].at(freqInd)->Fit(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
-
-	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
-	    grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
-	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
-	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
-	  }
-						  
-	}
-      }
-    }
-  }
   return eventNumbers.size();
 }
 

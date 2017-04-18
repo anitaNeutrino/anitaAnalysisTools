@@ -31,8 +31,7 @@ namespace Acclaim{
     virtual ~RayleighHist();
 
     virtual void Draw(Option_t* opt="");
-    int add(double newAmp); // Main interaction method
-    void Fit(Double_t& rayleighAmplitude, Double_t& chiSquare, Int_t& ndf);
+    bool add(double newAmp); // Main interaction method
     
     
 
@@ -46,7 +45,7 @@ namespace Acclaim{
 
     virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
     bool axisRangeOK() const; //!< Checks current axis range is reasonable
-    void rebinAndRefill(double meanAmp); //!< Dynamically rebin and refill histogram with contents of RingBuffer of amplitudes
+    void rebinAndRefill(double meanAmp, double sigmaGuess); //!< Dynamically rebin and refill histogram with contents of RingBuffer of amplitudes
     
     FourierBuffer* fParent; //!< Daddy
     TF1* fRay; //!< Pointer to the Rayeligh TF1 cloned from parent FourierBuffer
@@ -67,11 +66,15 @@ namespace Acclaim{
 
 
 
-
+    void Fit(Double_t& rayleighAmplitude, Double_t& chiSquare, Int_t& ndf);
+    
     FitMethod fitMethod;
+    const Int_t fFitEveryNAdds;
+    Int_t fNumAddsMod10;
 
     // caching for fit functions
     double fBinWidth;
+    double fRayleighAmpGuess;
     double fRayleighNorm;
     Int_t fNx;
     std::vector<double> binCentres;

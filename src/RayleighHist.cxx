@@ -14,21 +14,20 @@ std::vector<double> Acclaim::RayleighHist::exponentialCache;
 
 
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
-				    const char* name, const char* title) : TH1D(name, title, 1, -1001, -1000), // deliberately stupid initial binning
-									   fBinWidth(1),
-									   fRayleighNorm(0),
-									   fNumEvents(0),
-									   amplitudes(fb ? fb->bufferSize : 1000),
-									   fNumFitParams(1),
-									   theFitParams(std::vector<double>(fNumFitParams, 0)),
-									   theFitParamsSteps(std::vector<double>(fNumFitParams, 1e-3)),
-									   fChiSquaredFunc(this, &Acclaim::RayleighHist::getRayleighChiSquare, fNumFitParams)
+				    const char* name, const char* title) 
+  : TH1D(name, title, 1, -1001, -1000), // deliberately stupid initial binning
+    fBinWidth(1), fFitEveryNAdds(100), fNumAddsMod10(0), fRayleighNorm(0), fNumEvents(0),
+    amplitudes(fb ? fb->bufferSize : 1000), fNumFitParams(1), 
+    theFitParams(std::vector<double>(fNumFitParams, 0)),
+    theFitParamsSteps(std::vector<double>(fNumFitParams, 1e-3)),
+    fChiSquaredFunc(this, &Acclaim::RayleighHist::getRayleighChiSquare, fNumFitParams)
 { 
   fParent = fb;
   freqMHz = -9999;
   fracOfEventsWanted = 0.99;
   risingEdgeBins = 4;
   fitMethod = FitMethod::Scan;
+  // fitMethod = FitMethod::JustEvalGuess;
   
   
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
@@ -45,10 +44,7 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
   // set tolerance , etc...
   fMinimizer->SetMaxFunctionCalls(1000); // for Minuit/Minuit2 
-  fMinimizer->SetMaxIterations(1000);  // for GSL
-  // fMinimizer->SetMaxFunctionCalls(1000000); // for Minuit/Minuit2 
-  // fMinimizer->SetMaxIterations(10000);  // for GSL
-  
+  fMinimizer->SetMaxIterations(1000);  // for GSL  
   fMinimizer->SetTolerance(0.001);
   fMinimizer->SetPrintLevel(0);
 
@@ -85,6 +81,11 @@ Acclaim::RayleighHist::~RayleighHist(){
     delete fRay;
     fRay = NULL;
   }
+
+  if(fMinimizer){
+    delete fMinimizer;
+    fMinimizer = NULL;
+  }
 }
 
 
@@ -113,11 +114,9 @@ bool Acclaim::RayleighHist::axisRangeOK() const{
 }
 
 
-void Acclaim::RayleighHist::rebinAndRefill(double meanAmp){
+void Acclaim::RayleighHist::rebinAndRefill(double meanAmp, double sigmaGuess){
 
-  const double fracOfEventsWanted = 0.99;
   const double desiredMaxAmp = meanAmp*TMath::Sqrt(-(4./TMath::Pi())*TMath::Log(1.0 - fracOfEventsWanted));
-  const double sigmaGuess = TMath::Sqrt(2./TMath::Pi())*meanAmp;
 
   // get 4 bins from the rising edge to the peak
   const Int_t risingEdgeBins = 4;
@@ -130,35 +129,31 @@ void Acclaim::RayleighHist::rebinAndRefill(double meanAmp){
   binValues.resize(fNx, 0);
   squaredBinErrors.resize(fNx, 0);
 
-  // std::cout << fName << "\t" << this << "\t" << GetNbinsX() << "\t" << fNx << "\t" << meanAmp << "\t" << sigmaGuess << "\t" << desiredMaxAmp << std::endl;
-
   SetBins(fNx, 0, desiredMaxAmp);
   
-
   // empty bins inc. overflow and underflow
   for(int bx = 0; bx <= fNx + 1; bx++){
     SetBinContent(bx, 0);
   }
 
-  // set errors once at the end
+  // set bin content by hand...
   for(RingBuffer::iterator it=amplitudes.begin(); it != amplitudes.end(); ++it){
     double amp = (*it);
     int bx = TH1D::FindBin(amp);
     SetBinContent(bx, GetBinContent(bx)+1);
   }
 
-  // set errors once at the end
+  // ... set errors once at the end
   for(int bx=1; bx <= GetNbinsX(); bx++){
-    binValues[bx-1] = GetBinContent(bx);
-    SetBinError(bx, TMath::Sqrt(GetBinContent(bx)));
-  }
+    double y = GetBinContent(bx);
+    SetBinError(bx, TMath::Sqrt(y));
 
-  // reset cached values
-  for(int bx=1; bx <= GetNbinsX(); bx++){
+    // update cached values
     binCentres[bx-1] = fBinWidth*0.5 + (bx-1)*fBinWidth;
     squaredBinCentres[bx-1] = binCentres[bx-1]*binCentres[bx-1];
-    binValues[bx-1] = GetBinContent(bx);
+    binValues[bx-1] = y;
     squaredBinErrors[bx-1] = binValues[bx-1];
+
   }
   fRayleighNorm = amplitudes.size()*fBinWidth;
   
@@ -183,28 +178,39 @@ int Acclaim::RayleighHist::Fill(double amp, double sign){
 }
 
 
-int Acclaim::RayleighHist::add(double newAmp){
+bool Acclaim::RayleighHist::add(double newAmp){
 
   // first we remove the old value, should be zero if unused
   
   bool needRemoveOld = amplitudes.numElements() == amplitudes.size();
 
-  // std::cout << __PRETTY_FUNCTION__ << "\t" << fName << "\t" << needRemoveOld << "\t" << amplitudes.numElements() << "\t" << amplitudes.size() << std::endl;
   double oldAmp = amplitudes.insert(newAmp);
-
   if(needRemoveOld){
     Fill(oldAmp, -1); // remove old event from hist
   }
   Fill(newAmp);
 
-  // fNumEvents = amplitudes.numElements();  
+  // fNumEvents = amplitudes.numElements();
 
   double mean = amplitudes.getMean();
+  fRayleighNorm = fBinWidth*fNumEvents; // fNumEvents is updated in Fill()
+  fRayleighAmpGuess = TMath::Sqrt(2./TMath::Pi())*mean;
   if(!axisRangeOK()){
-    rebinAndRefill(mean);
+    rebinAndRefill(mean, fRayleighAmpGuess);
   }
-  fRayleighNorm = fBinWidth*fNumEvents;
-  return fNumEvents;
+
+  bool updatedFit = false;
+  fNumAddsMod10++;
+  if(fFitEveryNAdds > 0 && fNumAddsMod10 == fFitEveryNAdds){
+    Double_t rayleighAmplitude, chiSquare;
+    Int_t ndf;
+    Fit(rayleighAmplitude, chiSquare, ndf);
+    fNumAddsMod10 = 0;
+    updatedFit = true;
+  }
+
+
+  return updatedFit;
 }
 
 
@@ -234,10 +240,10 @@ double Acclaim::RayleighHist::getRayleighChiSquare(const double* params){
 
 void Acclaim::RayleighHist::Fit(Double_t& rayleighAmplitude, Double_t& chiSquare, Int_t& ndf){
 
-
+  
   rayleighAmplitude = amplitudes.getMean()*TMath::Sqrt(2./TMath::Pi());
   ndf = 0;
-  chiSquare=0;  
+  chiSquare=0;
   // the number of degrees of freedom are the number of non-empty bins - the number of fit parameters (either 0 or 1)  
 
 
@@ -245,9 +251,8 @@ void Acclaim::RayleighHist::Fit(Double_t& rayleighAmplitude, Double_t& chiSquare
     // prepareRayleighFitCache();
 
     // const int nStep = 2*rayleighAmplitude/theFitParamsSteps.at(0);
-    const int nStep = 10; //2*rayleighAmplitude/theFitParamsSteps.at(0);
+    const int nStep = 100; //2*rayleighAmplitude/theFitParamsSteps.at(0);
     double ds = 2*rayleighAmplitude/nStep;
-    ds = ds <= 0 ? 0.001 : ds;
     double bestAmp = 0;
     double minChiSquare = 1e9;
     for(int s=1; s < nStep; s++){
