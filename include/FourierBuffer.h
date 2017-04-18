@@ -75,6 +75,7 @@ namespace Acclaim
 
     std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    

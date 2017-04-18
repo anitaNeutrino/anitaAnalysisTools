@@ -49,6 +49,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
       chiSquares[pol][ant].resize(n, 0);
       ndfs[pol][ant].resize(n, 0);
+      fitAmplitudes[pol][ant].resize(n, 0);
 
 
       hRays[pol][ant].resize(n, NULL);      
@@ -182,14 +183,12 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	for(int freqInd=1; freqInd < (int)sumPowers[pol][ant].size() - 1; freqInd++){
 	  // hRays[pol][ant].at(freqInd)->Eval(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
 
-	  hRays[pol][ant].at(freqInd)->Fit(chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
+	  hRays[pol][ant].at(freqInd)->Fit(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
 
 	  grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
 	  grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
 	  grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
-
-	  double theNorm;
-	  hRays[pol][ant].at(freqInd)->getTF1Params(theNorm, grAmplitudes[pol][ant].GetY()[freqInd]);
+	  grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
 						  
 	}
       }
