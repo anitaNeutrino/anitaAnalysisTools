@@ -12,7 +12,7 @@
 #include "RootTools.h"
 #include "TROOT.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3)
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(CDF)
 {
   
   // timeScale = timeScaleSeconds;
@@ -171,25 +171,25 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd],
 							      chiSquares[pol][ant][freqInd],
 							      ndfs[pol][ant][freqInd]);
-	    if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
-	      std::cout << pol << "\t" << ant << freqInd << "\t"
-			<< fitAmplitudes[pol][ant][freqInd] << "\t"
-			<< chiSquares[pol][ant][freqInd] << "\t"
-			<< ndfs[pol][ant][freqInd] << std::endl;
-	    }
+	    // if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
+	    //   std::cout << pol << "\t" << ant << freqInd << "\t"
+	    // 		<< fitAmplitudes[pol][ant][freqInd] << "\t"
+	    // 		<< chiSquares[pol][ant][freqInd] << "\t"
+	    // 		<< ndfs[pol][ant][freqInd] << std::endl;
+	    // }
 	    
 	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
 	    if(ndfs[pol][ant][freqInd] > 0){
 	      
 	      grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
 
-	    if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
-	      std::cout << "inside ... " << std::endl;
-	      std::cout << pol << "\t" << ant << "\t" << freqInd << "\t"
-			<< fitAmplitudes[pol][ant][freqInd] << "\t"
-			<< chiSquares[pol][ant][freqInd] << "\t"
-			<< ndfs[pol][ant][freqInd] << std::endl;
-	    }
+	    // if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
+	    //   std::cout << "inside ... " << std::endl;
+	    //   std::cout << pol << "\t" << ant << "\t" << freqInd << "\t"
+	    // 		<< fitAmplitudes[pol][ant][freqInd] << "\t"
+	    // 		<< chiSquares[pol][ant][freqInd] << "\t"
+	    // 		<< ndfs[pol][ant][freqInd] << std::endl;
+	    // }
 	      
 	    }
 	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
@@ -344,15 +344,16 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
 	continue;
       }
       
-      TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
+      // TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant]; 
+      const TGraphFB* gr = getSelectedGraphForSummary(summaryOpt, ant, pol);
       // TGraphFB& gr = (TGraphFB&) grProbs[pol][ant];
 
-      for(int i=0; i < gr.GetN(); i++){
-	if(gr.GetY()[i] > yMax){
-	  yMax = gr.GetY()[i];
+      for(int i=0; i < gr->GetN(); i++){
+	if(gr->GetY()[i] > yMax){
+	  yMax = gr->GetY()[i];
 	}
-	if(gr.GetY()[i] < yMin){
-	  yMin = gr.GetY()[i];
+	if(gr->GetY()[i] < yMin){
+	  yMin = gr->GetY()[i];
 	}	
       }
     }
@@ -395,16 +396,16 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       
-      TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
-      gr.SetEditable(kFALSE);
+      TGraphFB* gr = getSelectedGraphForSummary(summaryOpt, ant, pol);      
+      gr->SetEditable(kFALSE);
       
       const char* opt = pol == AnitaPol::kVertical ? "lsame" : "al";
       EColor lineCol = pol == AnitaPol::kHorizontal ? kBlue : kBlack;
-      gr.SetLineColor(lineCol);
-      gr.SetMaximum(yMax);
-      gr.SetMinimum(yMin);
+      gr->SetLineColor(lineCol);
+      gr->SetMaximum(yMax);
+      gr->SetMinimum(yMin);
       
-      gr.Draw(opt);
+      gr->Draw(opt);
     }
   }
   

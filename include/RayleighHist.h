@@ -8,7 +8,7 @@
 #include <Math/Functor.h>
 
 class TF1;
-class TVirtualPad;
+class TGraph;
 
 namespace Acclaim{
   class FourierBuffer;
@@ -48,7 +48,7 @@ namespace Acclaim{
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
     
     double getCDF(double amp){
-      return 1 - exp(-amp*amp/fRayleighAmplitude*fRayleighAmplitude);
+      return 1 - exp((-0.5*amp*amp)/(fRayleighAmplitude*fRayleighAmplitude));
     }
     
   protected:
@@ -77,7 +77,7 @@ namespace Acclaim{
     Int_t fDrawFreqBin;
     double freqMHz; //!< The frequency (MHz) of this Rayleigh distribution
     Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
-
+    TGraph* grLastAddedAmp; //!< A pretty visual representation of the last added amplitude
 
     Int_t fNDF;
     Double_t fChiSquare;

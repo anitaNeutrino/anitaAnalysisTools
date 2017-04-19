@@ -39,7 +39,15 @@ namespace Acclaim
     friend class RayleighHist;
   public:
 
+    enum SummaryOption_t{
+      Chisquare,
+      ReducedChisquare,
+      NDF,
+      RayleighAmplitude,
+      CDF
+    };
 
+    
     virtual ~FourierBuffer();
     explicit FourierBuffer(Int_t theBufferSize=1000);
 
@@ -92,16 +100,33 @@ namespace Acclaim
     double fMaxFitFreq;
     mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
-    std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary
-    std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
-    std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
-    std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
-    std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
+
+    SummaryOption_t summaryOpt;
+    
+    TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const{
+      switch(choice){
+      case Chisquare:
+	return &grChiSquares[pol][ant];
+      case ReducedChisquare:
+	return &grReducedChiSquares[pol][ant];
+      case NDF:
+	return &grNDFs[pol][ant];
+      case RayleighAmplitude:
+	return &grAmplitudes[pol][ant];
+      case CDF:
+	return &grProbs[pol][ant];
+      }
+    }    
   };
 
 
-
+  
 
 
 

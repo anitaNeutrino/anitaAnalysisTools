@@ -35,6 +35,7 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   
   
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
+  fParamsTF1.resize(2, 0);
 
   binCentres.resize(NUM_BINS, 0);
   squaredBinCentres.resize(NUM_BINS, 0);
@@ -43,8 +44,10 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
 
   fNumNonEmptyBins = 0;
 
-  fParamsTF1.resize(2, 0);
-
+  grLastAddedAmp = new TGraph(2);
+  grLastAddedAmp->SetName("grLastAddedAmplitude");
+  grLastAddedAmp->SetTitle("Last added amplitude");
+  
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2", "");
   // set tolerance , etc...
   fMinimizer->SetMaxFunctionCalls(1000); // for Minuit/Minuit2 
@@ -89,6 +92,11 @@ Acclaim::RayleighHist::~RayleighHist(){
   if(fMinimizer){
     delete fMinimizer;
     fMinimizer = NULL;
+  }
+
+  if(grLastAddedAmp){
+    delete grLastAddedAmp;
+    grLastAddedAmp = NULL;
   }
 }
 
@@ -219,7 +227,10 @@ bool Acclaim::RayleighHist::add(double newAmp){
     updatedFit = true;
   }
 
+  grLastAddedAmp->SetPoint(0, newAmp, 0);
+  grLastAddedAmp->SetPoint(1, newAmp, 100000000);
 
+  
   return updatedFit;
 }
 
@@ -400,5 +411,16 @@ void Acclaim::RayleighHist::Draw(Option_t* opt){
     updateParamsOfTF1();
     fRay->Draw("lsame");
   }  
+  if(grLastAddedAmp){
+    grLastAddedAmp->SetLineColor(kMagenta);
+    grLastAddedAmp->Draw("lsame");
+    std::cout << grLastAddedAmp->GetX()[0] << "\t" 
+	      << fRayleighAmplitude << "\t" 
+	      << getCDF(grLastAddedAmp->GetX()[0]) << std::endl;
+    for(int i=0; i <= 10; i++){
+      std::cout << getCDF(double(i)*fRayleighAmplitude) << std::endl;
+    }
+  }
+
 }
 
