@@ -47,6 +47,10 @@ namespace Acclaim{
     
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
     
+    double getCDF(double amp){
+      return 1 - exp(-amp*amp/fRayleighAmplitude*fRayleighAmplitude);
+    }
+    
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
     
@@ -55,7 +59,7 @@ namespace Acclaim{
 
     virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
     bool axisRangeOK() const; //!< Checks current axis range is reasonable
-    void rebinAndRefill(double meanAmp, double sigmaGuess); //!< Dynamically rebin and refill histogram with contents of RingBuffer of amplitudes
+    void rebinAndRefill(double meanAmp); //!< Dynamically rebin and refill histogram with contents of RingBuffer of amplitudes
     
     FourierBuffer* fParent; //!< Daddy
     TF1* fRay; //!< Pointer to the Rayeligh TF1 cloned from parent FourierBuffer

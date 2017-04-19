@@ -35,7 +35,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(fals
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
   
-  fRay = new TF1("fRay", rayleighFuncText, 0, 1, TF1::EAddToList::kNo);
+  fRay = new TF1("fRay", rayleighFuncText, 0, 100, TF1::EAddToList::kNo);
 }
 
 
@@ -51,6 +51,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       chiSquares[pol][ant].resize(n, 0);
       ndfs[pol][ant].resize(n, 0);
       fitAmplitudes[pol][ant].resize(n, 0);
+      probs[pol][ant].resize(n, 0);
 
 
       hRays[pol][ant].resize(n, NULL);      
@@ -60,7 +61,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	const char* polChar = pol == AnitaPol::kHorizontal ? "H" : "V";
 	int phiName = (ant%NUM_PHI)+1;
 	int ring = ant / NUM_PHI;
-	const char* ringChar = ring == 0 ? "T" : ring == 1 ? "M" : "V";
+	const char* ringChar = ring == 0 ? "T" : ring == 1 ? "M" : "B";
 	TString title = TString::Format("Distribution of amplitudes %d%s%s %4.1lf MHz", phiName, ringChar, polChar, f);
 	title += ";Amplitude (mV/MHz?); Events per bin";
 	hRays[pol][ant].at(freqBin) = new Acclaim::RayleighHist(this, name, title);
@@ -73,6 +74,8 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       grNDFs[pol].push_back(TGraphFB(this, ant, pol, n));
       grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
       grReducedChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
+      grProbs[pol].push_back(TGraphFB(this, ant, pol, n));
+
 
       for(int freqBin=0; freqBin < n; freqBin++){
 	double f = df*freqBin;
@@ -80,11 +83,13 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	grNDFs[pol][ant].GetX()[freqBin] = f;
 	grAmplitudes[pol][ant].GetX()[freqBin] = f;
 	grReducedChiSquares[pol][ant].GetX()[freqBin] = f;
+	grProbs[pol][ant].GetX()[freqBin] = f;
 
 	grChiSquares[pol][ant].GetY()[freqBin] = 0;
 	grNDFs[pol][ant].GetY()[freqBin] = 0;
 	grAmplitudes[pol][ant].GetY()[freqBin] = 0;
 	grReducedChiSquares[pol][ant].GetY()[freqBin] = 0;
+	grProbs[pol][ant].GetY()[freqBin] = -0.1;
 	
       }	
     }
@@ -163,15 +168,36 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  if(updated){
-	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd], chiSquares[pol][ant][freqInd], ndfs[pol][ant][freqInd]);
-	    // std::cout << fitAmplitudes[pol][ant][freqInd] << "\t" << chiSquares[pol][ant][freqInd] << "\t" << ndfs[pol][ant][freqInd] << std::endl;
+	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd],
+							      chiSquares[pol][ant][freqInd],
+							      ndfs[pol][ant][freqInd]);
+	    if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
+	      std::cout << pol << "\t" << ant << freqInd << "\t"
+			<< fitAmplitudes[pol][ant][freqInd] << "\t"
+			<< chiSquares[pol][ant][freqInd] << "\t"
+			<< ndfs[pol][ant][freqInd] << std::endl;
+	    }
+	    
 	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
 	    if(ndfs[pol][ant][freqInd] > 0){
+	      
 	      grReducedChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd]/ndfs[pol][ant][freqInd];
+
+	    if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
+	      std::cout << "inside ... " << std::endl;
+	      std::cout << pol << "\t" << ant << "\t" << freqInd << "\t"
+			<< fitAmplitudes[pol][ant][freqInd] << "\t"
+			<< chiSquares[pol][ant][freqInd] << "\t"
+			<< ndfs[pol][ant][freqInd] << std::endl;
+	    }
+	      
 	    }
 	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
 	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
 	  }
+	  double cdf = hRays[pol][ant].at(freqInd)->getCDF(amp);
+	  probs[pol][ant].at(freqInd) = cdf;
+	  grProbs[pol][ant].GetY()[freqInd] = cdf;
 	}
 
 	// // is there a more elegant way to do this?
@@ -319,6 +345,7 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
       }
       
       TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
+      // TGraphFB& gr = (TGraphFB&) grProbs[pol][ant];
 
       for(int i=0; i < gr.GetN(); i++){
 	if(gr.GetY()[i] > yMax){
@@ -334,8 +361,6 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
   // now do the plotting (setting the max/min)
   
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
-
-
     // dynamically initialize the summary pads
     if(!summaryPads[ant]){
       int ring = ant/NUM_PHI;
@@ -370,7 +395,6 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       
-      // TGraphFB* gr = getReducedChiSquaresOfRayelighDistributions(ant, pol);
       TGraphFB& gr = (TGraphFB&) grReducedChiSquares[pol][ant];
       gr.SetEditable(kFALSE);
       
@@ -406,6 +430,7 @@ void Acclaim::TGraphFB::drawCopy() const{
   gr2->fb = fb;
   gr2->SetBit(kCanDelete);
   gr2->fDoubleClickOption = kDrawRayleigh;
+  gr2->SetTitle(TString::Format(""));
   gr2->Draw();
   c1->Modified();
   c1->Update();

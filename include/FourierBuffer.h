@@ -39,6 +39,7 @@ namespace Acclaim
     friend class RayleighHist;
   public:
 
+
     virtual ~FourierBuffer();
     explicit FourierBuffer(Int_t theBufferSize=1000);
 
@@ -76,6 +77,7 @@ namespace Acclaim
     std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
@@ -94,6 +96,8 @@ namespace Acclaim
     std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
     std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
+    std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
+
   };
 
 
@@ -112,6 +116,7 @@ namespace Acclaim
     TGraphFB(const FourierBuffer* theFb=NULL, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol=AnitaPol::kNotAPol,
 	     int n=0) : TGraphAligned(n), fDoubleClickOption(kDrawCopy)
     {
+      SetTitle("");
       fb = theFb;
       ant = theAnt;
       pol = thePol;
