@@ -274,11 +274,13 @@ namespace Acclaim{
     size_t addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
     size_t addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy);
 
+
+    void initializeBaseList();
+    void initializeEmptyBaseList();
+
     TGraph* makeClusterSummaryTGraph(Int_t clusterInd);
     TTree* makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox);
 
-
-    void initializeBaseList();
 
     Int_t getNumClusters(){
       return numClusters;
