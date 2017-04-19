@@ -414,12 +414,12 @@ void Acclaim::RayleighHist::Draw(Option_t* opt){
   if(grLastAddedAmp){
     grLastAddedAmp->SetLineColor(kMagenta);
     grLastAddedAmp->Draw("lsame");
-    std::cout << grLastAddedAmp->GetX()[0] << "\t" 
-	      << fRayleighAmplitude << "\t" 
-	      << getCDF(grLastAddedAmp->GetX()[0]) << std::endl;
-    for(int i=0; i <= 10; i++){
-      std::cout << getCDF(double(i)*fRayleighAmplitude) << std::endl;
-    }
+    // std::cout << grLastAddedAmp->GetX()[0] << "\t" 
+    // 	      << fRayleighAmplitude << "\t" 
+    // 	      << getCDF(grLastAddedAmp->GetX()[0]) << std::endl;
+    // for(int i=0; i <= 10; i++){
+    //   std::cout << getCDF(double(i)*fRayleighAmplitude) << std::endl;
+    // }
   }
 
 }

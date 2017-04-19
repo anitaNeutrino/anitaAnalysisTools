@@ -12,7 +12,7 @@
 #include "RootTools.h"
 #include "TROOT.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(CDF)
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(RayleighAmplitude)
 {
   
   // timeScale = timeScaleSeconds;
