@@ -46,9 +46,17 @@ namespace Acclaim{
     void fitRayleighMinuit(bool forGuiUpdateTF1=true); // *MENU* Fit using Minuit
     
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
+
     
-    double getCDF(double amp){
-      return 1 - exp((-0.5*amp*amp)/(fRayleighAmplitude*fRayleighAmplitude));
+    
+    inline double getOneMinusCDF(double amp, double distAmp = -1){ //!< This is the probability of getting this amplitude (amp) or higher
+      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified
+      return exp((-0.5*amp*amp)/(distAmp*distAmp));
+    }
+    
+    inline double getCDF(double amp, double distAmp = -1){ // This is the fraction of amplitudes lower than amp 
+      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
+      return 1 - getOneMinusCDF(amp, distAmp);
     }
     
   protected:

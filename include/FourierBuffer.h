@@ -44,7 +44,7 @@ namespace Acclaim
       ReducedChisquare,
       NDF,
       RayleighAmplitude,
-      CDF
+      Prob
     };
 
     
@@ -59,7 +59,7 @@ namespace Acclaim
     TGraphFB* getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const;
-    void drawSummary(TPad* pad) const;
+    void drawSummary(TPad* pad, SummaryOption_t) const;
     unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const{return sumPowers[pol][ant].size();}
     unsigned getCurrentBufferSize();
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
@@ -110,8 +110,6 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
-
-    SummaryOption_t summaryOpt;
     
     TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const{
       switch(choice){
@@ -123,7 +121,7 @@ namespace Acclaim
 	return &grNDFs[pol][ant];
       case RayleighAmplitude:
 	return &grAmplitudes[pol][ant];
-      case CDF:
+      case Prob:
 	return &grProbs[pol][ant];
       }
     }    

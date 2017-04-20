@@ -15,7 +15,7 @@
 #include "FilterStrategy.h"
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(RayleighAmplitude)
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3)
 {
   
   // timeScale = timeScaleSeconds;
@@ -129,8 +129,6 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 
 
 
-
-// size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform* wave){
 size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){  
 
 
@@ -203,9 +201,11 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
 	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
 	  }
-	  double cdf = hRays[pol][ant].at(freqInd)->getCDF(amp);
-	  probs[pol][ant].at(freqInd) = cdf;
-	  grProbs[pol][ant].GetY()[freqInd] = cdf;
+
+	  // this is N, if the probability of getting this amplitude or higher, given the rayeligh distribution is 1/N.
+	  double probDenominator = 1./hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp);
+	  probs[pol][ant].at(freqInd) = probDenominator;
+	  grProbs[pol][ant].GetY()[freqInd] = probDenominator;
 	}
 
 	// // is there a more elegant way to do this?
@@ -395,13 +395,13 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground(Int_t ant, AnitaPol::An
 
 
 
-void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
+void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) const{
 
   pad->cd();
 
   // find the maximum and minimum values before plotting
   Double_t yMax = -DBL_MAX;
-  Double_t yMin = DBL_MAX;  
+  Double_t yMin = DBL_MAX;
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;  
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
@@ -459,11 +459,23 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
 
     // do the actual plotting
     summaryPads[ant]->cd();
+    if(summaryOpt == FourierBuffer::Prob){
+      gPad->SetLogy(1);
+      yMin = 1;
+    }
+    else{
+      gPad->SetLogy(0);
+    }
+      
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+
+
       
       TGraphFB* gr = getSelectedGraphForSummary(summaryOpt, ant, pol);      
       gr->SetEditable(kFALSE);
+
+      
       
       const char* opt = pol == AnitaPol::kVertical ? "lsame" : "al";
       EColor lineCol = pol == AnitaPol::kHorizontal ? kBlue : kBlack;
@@ -489,8 +501,17 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad) const{
 
 
 void Acclaim::TGraphFB::drawCopy() const{
+
+  int logx = gPad->GetLogx();
+  int logy = gPad->GetLogy();
+  int logz = gPad->GetLogz();  
+
   TCanvas* c1 = new TCanvas();
   c1->cd();
+  c1->SetLogx(logx);
+  c1->SetLogy(logy);
+  c1->SetLogz(logz);    
+
   TGraphFB* gr2 = (TGraphFB*) Clone();
   gr2->pol = pol;
   gr2->ant = ant;
@@ -519,11 +540,18 @@ void Acclaim::TGraphFB::ExecuteEvent(int event, int x, int y){
 
 void Acclaim::TGraphFB::drawRayleighHistNearMouse(int x, int y) const{
 
+  int logx = gPad->GetLogx();
+  int logy = gPad->GetLogy();
   int selectedPoint = -1;
-  double minD2 = 1e9;
+  double minD2 = 1e99;
   for(int i=0; i < GetN(); i++){
-    Int_t pixelX = gPad->XtoAbsPixel(GetX()[i]);
-    Int_t pixelY = gPad->YtoAbsPixel(GetY()[i]);
+    double xVal = logx ? TMath::Log10(GetX()[i]) : GetX()[i];
+    double yVal = logy ? TMath::Log10(GetY()[i]) : GetY()[i];
+    Int_t pixelX = gPad->XtoAbsPixel(xVal);
+    Int_t pixelY = gPad->YtoAbsPixel(yVal);
+
+    // std::cout << selectedPoint << "\t" << i << "\t" << x << "\t" << y << "\t" << pixelX << "\t" << pixelY << std::endl;
+    
 
     const int closeDist = 4; // number of pixels that means you're close to a point
     if(TMath::Abs(pixelX - x) < closeDist && TMath::Abs(pixelY - y) < closeDist){
@@ -535,8 +563,10 @@ void Acclaim::TGraphFB::drawRayleighHistNearMouse(int x, int y) const{
       }
     }
   }
-      
-  double df = GetX()[1] - GetX()[0];
+
+  
+  double df = GetX()[1] - GetX()[0];  
+  
   if(selectedPoint > -1 && df > 0){
     TCanvas* c1 = new TCanvas();
     c1->cd();

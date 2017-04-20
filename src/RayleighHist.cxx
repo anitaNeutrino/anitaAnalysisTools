@@ -60,7 +60,6 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   
   fNumFitParams = 1;
   fMinimizer->SetFunction(fChiSquaredFunc);
-
   
   // someone has to initialize 
   if(exponentialCache.size()==0){
