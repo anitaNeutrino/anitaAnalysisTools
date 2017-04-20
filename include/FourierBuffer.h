@@ -65,7 +65,6 @@ namespace Acclaim
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
     const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};    
     int getNumEventsInBuffer() const {return eventsInBuffer;}
-    void loadHistory();
     
   protected:
     Int_t bufferSize;
@@ -92,6 +91,11 @@ namespace Acclaim
     TF1* fRay;
 
     bool doneVectorInit;
+
+
+    void automagicallyLoadHistory(const FilteredAnitaEvent* fEv);    
+    bool fCurrentlyLoadingHistory;
+    
     int fDrawFreqBin;
     int eventsInBuffer;
     
@@ -149,7 +153,7 @@ namespace Acclaim
     virtual ~TGraphFB(){;}
     virtual void ExecuteEvent(Int_t event, Int_t x, Int_t y);
     void drawCopy() const;
-    void drawRayleighHistNearMouse(int x, int y) const;// *MENU*
+    void drawRayleighHistNearMouse(int x, int y) const;
   private:
     const FourierBuffer* fb; // pointer to parent, don't delete
     Int_t ant;

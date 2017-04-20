@@ -11,8 +11,11 @@
 #include "RawAnitaHeader.h"
 #include "RootTools.h"
 #include "TROOT.h"
+#include "AnitaDataset.h"
+#include "FilterStrategy.h"
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) : doneVectorInit(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(RayleighAmplitude)
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), summaryOpt(RayleighAmplitude)
 {
   
   // timeScale = timeScaleSeconds;
@@ -130,6 +133,11 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 // size_t Acclaim::FourierBuffer::add(const RawAnitaHeader* header, const AnalysisWaveform* wave){
 size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){  
 
+
+  if(!fCurrentlyLoadingHistory && eventNumbers.size() == 0){
+    automagicallyLoadHistory(fEv);
+  }
+  
   const RawAnitaHeader* header = fEv->getHeader();
   eventNumbers.push_back(header->eventNumber);
   runs.push_back(header->run);
@@ -247,7 +255,65 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 
 
 
+void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* fEv){
 
+  fCurrentlyLoadingHistory = true;
+  
+  int fuck = 0;
+  bool loadedHistory = false;
+
+  UInt_t desiredFirstEvent = fEv->getHeader()->eventNumber;
+  Int_t run = fEv->getHeader()->run;
+
+
+  while(!loadedHistory){
+
+    AnitaDataset d(run);
+
+    d.first();
+    UInt_t firstEventThisRun = d.header()->eventNumber;
+
+    if(firstEventThisRun > desiredFirstEvent){
+      run--;
+    }
+    else{
+
+      // assume monotonically increasing eventNumber at one per event...
+      int desiredFirstEntry = desiredFirstEvent - firstEventThisRun;
+
+      for(int bi = 0; bi < bufferSize; bi++){
+	int thisEntry = d.getEntry(bi + desiredFirstEntry);
+
+	if(thisEntry > 0){
+	
+	  if(bi==0 && d.header()->eventNumber != desiredFirstEvent){
+	    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", couldn't find the right first event, wanted "
+		      << desiredFirstEvent << ", but got " << d.header()->eventNumber << ", while looking in run "
+		      << run << std::endl;
+	  }
+	
+	  FilteredAnitaEvent fEv2(d.useful(), (FilterStrategy*) fEv->getStrategy(), d.gps(), d.header(), false);
+	  add(&fEv2);
+	}	
+      }
+
+      if(eventNumbers.size() != (unsigned) bufferSize){
+	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", tried to load " << bufferSize
+		  << " events of history but instead I got " <<  eventNumbers.size() << " events..." << std::endl;
+      }
+      
+      loadedHistory = true;
+    }
+    fuck++;
+    if(fuck==4){
+      std::cerr << "quadruple fuck" << std::endl;
+      exit(4);
+    }
+  }
+
+  fCurrentlyLoadingHistory = false;
+  
+}
 
 
 
