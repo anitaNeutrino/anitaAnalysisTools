@@ -15,7 +15,7 @@
 #include "FilterStrategy.h"
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3)
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), fMinSpecFreq(0.2), fMaxSpecFreq(1.3)
 {
   
   // timeScale = timeScaleSeconds;
@@ -24,19 +24,14 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
   fDrawFreqBin = 100; //26;
 
   // will initialize this dynamically to get around this no-copy-constructor bullshit
-
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      spectrums[pol][ant] = NULL;
-    }
-  }
-  for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    summaryPads[ant] = NULL;
-  }
-
+  fSpectrum = NULL;
 
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
+
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    summaryPads[ant] = NULL;
+  }
   
   fRay = new TF1("fRay", rayleighFuncText, 0, 100, TF1::EAddToList::kNo);
 }
@@ -53,8 +48,11 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
       chiSquares[pol][ant].resize(n, 0);
       ndfs[pol][ant].resize(n, 0);
+
+      probs[pol][ant].resize(n, 0);      
+
       fitAmplitudes[pol][ant].resize(n, 0);
-      probs[pol][ant].resize(n, 0);
+      spectrumAmplitudes[pol][ant].resize(n, 0);
 
 
       hRays[pol][ant].resize(n, NULL);      
@@ -75,23 +73,32 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       // summary graphs for drawSummary
       grChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
       grNDFs[pol].push_back(TGraphFB(this, ant, pol, n));
-      grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
       grReducedChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
+      
       grProbs[pol].push_back(TGraphFB(this, ant, pol, n));
+
+      grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
+      grSpectrumAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
+      
 
 
       for(int freqBin=0; freqBin < n; freqBin++){
 	double f = df*freqBin;
 	grChiSquares[pol][ant].GetX()[freqBin] = f;
 	grNDFs[pol][ant].GetX()[freqBin] = f;
-	grAmplitudes[pol][ant].GetX()[freqBin] = f;
 	grReducedChiSquares[pol][ant].GetX()[freqBin] = f;
+
+	grAmplitudes[pol][ant].GetX()[freqBin] = f;	
+	grSpectrumAmplitudes[pol][ant].GetX()[freqBin] = f;
+
 	grProbs[pol][ant].GetX()[freqBin] = f;
 
 	grChiSquares[pol][ant].GetY()[freqBin] = 0;
 	grNDFs[pol][ant].GetY()[freqBin] = 0;
-	grAmplitudes[pol][ant].GetY()[freqBin] = 0;
 	grReducedChiSquares[pol][ant].GetY()[freqBin] = 0;
+	
+	grAmplitudes[pol][ant].GetY()[freqBin] = 0;	
+	grSpectrumAmplitudes[pol][ant].GetY()[freqBin] = 0;
 	grProbs[pol][ant].GetY()[freqBin] = -0.1;
 	
       }	
@@ -104,13 +111,13 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
 Acclaim::FourierBuffer::~FourierBuffer(){
 
+  if(fSpectrum){
+    delete fSpectrum;
+    fSpectrum = NULL;
+  }
 
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      if(spectrums[pol][ant]){
-	delete spectrums[pol][ant];
-	spectrums[pol][ant] = NULL;
-      }
   
       for(unsigned i=0; i < hRays[pol][ant].size(); i++){
 	delete hRays[pol][ant].at(i);
@@ -140,6 +147,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
   eventNumbers.push_back(header->eventNumber);
   runs.push_back(header->run);
 
+
+  bool anyUpdated = false; // should all get updated at the same time, but whatever...
+      
+  
   // get the power
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
@@ -174,9 +185,11 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  if(updated){
+	    anyUpdated = true;
 	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd],
 							      chiSquares[pol][ant][freqInd],
 							      ndfs[pol][ant][freqInd]);
+
 	    // if(ant == 47 && pol == AnitaPol::kHorizontal && freqInd == 44){
 	    //   std::cout << pol << "\t" << ant << freqInd << "\t"
 	    // 		<< fitAmplitudes[pol][ant][freqInd] << "\t"
@@ -200,6 +213,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    }
 	    grNDFs[pol][ant].GetY()[freqInd] = ndfs[pol][ant][freqInd];
 	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
+	    
 	  }
 
 	  // this is N, if the probability of getting this amplitude or higher, given the rayeligh distribution is 1/N.
@@ -208,19 +222,58 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  grProbs[pol][ant].GetY()[freqInd] = probDenominator;
 	}
 
-	// // is there a more elegant way to do this?
-	// TSeqCollection* cans = gROOT->GetListOfCanvases();
-	// for(int i=0; i < cans->GetEntries(); i++){
-	//   TCanvas* can = (TCanvas*) cans->At(i);
-	//   TObject* objInCan = can->FindObject(hRays[pol][ant][freqInd]->GetName());
-	//   if(objInCan){
-	//     can->Modified();
-	//     can->Update();
-	//   }
-	// }
       }
     }
   }
+
+
+  if(anyUpdated){
+    int firstSpecInd = int(fMinSpecFreq/df);
+    int lastSpecInd = int(fMaxSpecFreq/df);
+
+    // double sumLowEdgeBins = 0;
+    // double sumHighEdgeBins = 0;    
+    // int numSum = 0;
+    // for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    //   AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    // 	sumLowEdgeBins += fitAmplitudes[pol][ant][firstSpecInd];
+    // 	sumHighEdgeBins += fitAmplitudes[pol][ant][lastSpecInd];
+    // 	numSum++;
+    //   }
+    // }
+
+    // double meanSpecLowEdge = sumLowEdgeBins/numSum;
+    // double meanSpecHighEdge = sumHighEdgeBins/numSum;    
+    
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+      for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+	int nf = fitAmplitudes[pol][ant].size();
+	// std::cout << fitAmplitudes[pol][ant].size() << "\t" << sumPowers[ant][pol].size() << "\t" << nf << std::endl;
+	for(int freqInd = 0; freqInd < nf; freqInd++){
+	  // if(freqInd < firstSpecInd){
+	  //   spectrumAmplitudes[pol][ant][freqInd] = meanSpecLowEdge;
+	  // }
+	  // else if(freqInd >= lastSpecInd){
+	  //   spectrumAmplitudes[pol][ant][freqInd] = meanSpecHighEdge;
+	  // }
+	  // else{
+	    spectrumAmplitudes[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd];
+	  // }
+	}
+	
+	// getSpectrum(&spectrumAmplitudes[pol][ant][0], nf);
+	getSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd], lastSpecInd - firstSpecInd);	
+	for(int freqInd = 0; freqInd < nf; freqInd++){
+	  grSpectrumAmplitudes[pol][ant].GetY()[freqInd] = spectrumAmplitudes[pol][ant][freqInd];
+	}
+      }
+    }
+  }
+
+  
   eventsInBuffer++;
   
   removeOld();
@@ -357,36 +410,44 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground_dB(Int_t ant, AnitaPol:
 }
 
 
+// wrapper for spectrum since it's interface changes in a fucking stupid way between ROOT versions
+void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{
+
+  if(!fSpectrum){
+    fSpectrum = new TSpectrum();
+  }
+
+  const int numIter = 6;
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)  
+  double* tempPtr = y;
+#else
+  std::vector<float> tempFloats(n, 0);
+  for(int i=0; i < n; i++){
+    tempFloats[i] = y[i];
+  }
+  float* tempPtr = &tempFloats[0];
+#endif
+
+  fSpectrum->Background(tempPtr,n,
+			numIter,TSpectrum::kBackDecreasingWindow,
+			TSpectrum::kBackOrder2,kFALSE,
+			TSpectrum::kBackSmoothing3,kFALSE);
+  
+#if ROOT_VERSION_CODE < ROOT_VERSION(6,0,0)
+  for(int i=0; i < n; i++){
+    y[i] = tempFloats[i];
+  }
+#endif
+  
+  
+}
+
 Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents) const{
 
   TGraphFB* gr = getAvePowSpec(ant, pol, lastNEvents);
 
-  if(!spectrums[pol][ant]){
-    spectrums[pol][ant] = new TSpectrum();
-  }
-
-  // at some point this changed from doubles to floats, not added a new method, changed...
-  // git blames Lorenzo Moneta... 
-#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
-
-  spectrums[pol][ant]->Background(gr->GetY(),gr->GetN(),
-				  6,TSpectrum::kBackDecreasingWindow,
-				  TSpectrum::kBackOrder2,kFALSE,
-				  TSpectrum::kBackSmoothing3,kFALSE);
-#else
-  std::vector<float> tempFloats(gr->GetN(), 0);
-  for(int i=0; i < gr->GetN(); i++){
-    tempFloats[i] = gr->GetY()[i];
-  }
-  spectrums[pol][ant]->Background(&tempFloats[0],gr->GetN(),
-				  6,TSpectrum::kBackDecreasingWindow,
-				  TSpectrum::kBackOrder2,kFALSE,
-				  TSpectrum::kBackSmoothing3,kFALSE);
-  for(int i=0; i < gr->GetN(); i++){
-    gr->GetY()[i] = tempFloats[i];
-  }
-#endif
-  
+  getSpectrum(gr->GetY(), gr->GetN());
 
   return gr;
 }
@@ -476,7 +537,6 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
       gr->SetEditable(kFALSE);
 
       
-      
       const char* opt = pol == AnitaPol::kVertical ? "lsame" : "al";
       EColor lineCol = pol == AnitaPol::kHorizontal ? kBlue : kBlack;
       gr->SetLineColor(lineCol);
@@ -484,6 +544,12 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
       gr->SetMinimum(yMin);
       
       gr->Draw(opt);
+
+      if(summaryOpt == FourierBuffer::RayleighAmplitude){
+	grSpectrumAmplitudes[pol][ant].SetLineColor(gr->GetLineColor());
+	grSpectrumAmplitudes[pol][ant].SetLineStyle(2);
+	grSpectrumAmplitudes[pol][ant].Draw("lsame");
+      }           
     }
   }
   

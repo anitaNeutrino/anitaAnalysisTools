@@ -84,6 +84,7 @@ namespace Acclaim
     std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     // it turns out that initialising a TF1 is very slow,
@@ -102,11 +103,17 @@ namespace Acclaim
     double df; // frequency bin width (from AnalysisWaveform so probably in GHz)
     double fMinFitFreq;
     double fMaxFitFreq;
-    mutable TSpectrum* spectrums[AnitaPol::kNotAPol][NUM_SEAVEYS]; // to estimate the background
+    mutable TSpectrum* fSpectrum; // to estimate the background    
+    double fMinSpecFreq;
+    double fMaxSpecFreq;
+    void getSpectrum(double* y, int n) const;
+
+
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
     mutable std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
