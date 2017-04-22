@@ -15,19 +15,21 @@
 #include "RiceInfo.h"
 #include "TH1D.h"
 #include <complex>
-#include <list>
+#include <deque>
 #include "AnitaConventions.h"
 #include "TObject.h"
 
 class TSpectrum;
 class FilteredAnitaEvent;
 class TPad;
+class UsefulAnitaEvent;
 
 namespace Acclaim
 {
 
   class RayleighHist;
   class TGraphFB;
+  
   
   /**
    * @class FourierBuffer
@@ -40,6 +42,7 @@ namespace Acclaim
   public:
 
     enum SummaryOption_t{
+      None,
       Chisquare,
       ReducedChisquare,
       NDF,
@@ -51,9 +54,17 @@ namespace Acclaim
     virtual ~FourierBuffer();
     explicit FourierBuffer(Int_t theBufferSize=1000);
 
-    size_t add(const FilteredAnitaEvent* fEv);    
+    size_t add(const FilteredAnitaEvent* fEv);
+
+    Double_t getProb(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
+      return probs[pol][ant][freqBin];
+    }
+    Double_t getSpectrumAmp(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
+      return spectrumAmplitudes[pol][ant][freqBin];
+    }
+
     
-    const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol, Int_t freqBin=-1) const {return hRays[pol][ant].at(freqBin >= 0 ? freqBin : fDrawFreqBin);}
+    const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol, Int_t freqBin) const {return hRays[pol][ant].at(freqBin);}
     TGraphFB* getAvePowSpec_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getAvePowSpec(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
@@ -65,17 +76,20 @@ namespace Acclaim
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
     const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};    
     int getNumEventsInBuffer() const {return eventsInBuffer;}
-    
+    void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
+    bool isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful);
+
+    const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
     Int_t removeOld();
     void initVectors(int n, double df);
 
     // list of events
-    std::list<UInt_t> eventNumbers;
-    std::list<Int_t> runs;
+    std::deque<UInt_t> eventNumbers;
+    std::deque<Int_t> runs;
 
-    std::list<std::vector<double> > powerRingBuffers[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::deque<std::vector<double> > powerRingBuffers[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     // vectors of frequency bins
     std::vector<double> sumPowers[AnitaPol::kNotAPol][NUM_SEAVEYS];
@@ -94,10 +108,10 @@ namespace Acclaim
     bool doneVectorInit;
 
 
-    void automagicallyLoadHistory(const FilteredAnitaEvent* fEv);    
+    void automagicallyLoadHistory(const FilteredAnitaEvent* fEv);
     bool fCurrentlyLoadingHistory;
+    mutable bool fForceLoadHistory;
     
-    int fDrawFreqBin;
     int eventsInBuffer;
     
     double df; // frequency bin width (from AnalysisWaveform so probably in GHz)
@@ -120,6 +134,8 @@ namespace Acclaim
     
     TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const{
       switch(choice){
+      case None:
+	return NULL;
       case Chisquare:
 	return &grChiSquares[pol][ant];
       case ReducedChisquare:
@@ -141,6 +157,7 @@ namespace Acclaim
 
   // little class for some GUI i/o magic
   class TGraphFB : public TGraphAligned {
+    friend class FourierBuffer;
   public:
     enum EDoubleClickOption{
       kDrawRayleigh,
@@ -148,12 +165,21 @@ namespace Acclaim
     };
     
     TGraphFB(const FourierBuffer* theFb=NULL, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol=AnitaPol::kNotAPol,
-	     int n=0) : TGraphAligned(n), fDoubleClickOption(kDrawCopy)
+	     int n=0) : TGraphAligned(n), fDoubleClickOption(kDrawCopy), fDerivedFrom(NULL)
     {
       SetTitle("");
       fb = theFb;
       ant = theAnt;
       pol = thePol;
+    }
+    explicit TGraphFB(const TGraphFB* gr) : TGraphAligned(gr->GetN(), gr->GetX(), gr->GetY()), fDoubleClickOption(gr->fDoubleClickOption), fDerivatives(gr->fDerivatives)
+    {
+      fb = gr->fb;
+      ant = gr->ant;
+      pol = gr->pol;
+      SetLineColor(gr->GetLineColor());
+      SetLineStyle(gr->GetLineStyle());      
+      fDerivedFrom = gr->fDerivedFrom;
     }
     virtual ~TGraphFB(){;}
     virtual void ExecuteEvent(Int_t event, Int_t x, Int_t y);
@@ -164,6 +190,10 @@ namespace Acclaim
     Int_t ant;
     AnitaPol::AnitaPol_t pol;
     EDoubleClickOption fDoubleClickOption;
+
+    // just raw pointers, no one "owns" anyone, rely on FourierBuffer and ROOT's garbage collection as appropriate
+    const TGraphFB* fDerivedFrom; // e.g. spectrum is derived from amplitudes, want to draw them together
+    std::vector<TGraphFB*> fDerivatives; // amplitudes point to spectrum
     ClassDef(Acclaim::TGraphFB, 0);
   };
 

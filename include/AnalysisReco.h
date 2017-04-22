@@ -23,6 +23,7 @@ namespace Acclaim
   public:
   
     virtual void process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary) const;
+    virtual void process(const FilteredAnitaEvent * ev, Adu5Pat* pat, AnitaEventSummary * summary) const;    
 
     AnalysisReco();
     virtual ~AnalysisReco();

@@ -17,9 +17,18 @@ Acclaim::AnalysisReco::~AnalysisReco(){
 
 
 
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat, AnitaEventSummary * eventSummary) const{
 
+  if(pat){
+    UsefulAdu5Pat usefulPat(pat);
+    process(fEv, &usefulPat, eventSummary);
+  }
+  else{
+    process(fEv, (UsefulAdu5Pat*)NULL, eventSummary);
+  }
+}
 
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat ,AnitaEventSummary * eventSummary) const{
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat, AnitaEventSummary * eventSummary) const{
   
 
   if(!cc){

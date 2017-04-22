@@ -13,7 +13,8 @@ int main(int argc, char* argv[]){
   bool saveOutput = true;  
   Filters::appendFilterStrategies(filterStrats, saveOutput);
   
-  FilterStrategy* strat = Filters::findStrategy(filterStrats, "RayleighMonitor");
+  // FilterStrategy* strat = Filters::findStrategy(filterStrats, "RayleighMonitor");
+  FilterStrategy* strat = Filters::findStrategy(filterStrats, "RayleighFilter");  
   if(!strat){ 
     std::cerr << "Well, this script is pointless... I give up." << std::endl;
     return 1;

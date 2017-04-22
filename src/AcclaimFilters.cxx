@@ -43,10 +43,16 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   // spikeKiller->addOperation(ss, saveOutput);
   // filterStrats["SpikeSuppressor"] = spikeKiller;
 
-  FilterStrategy* justRm = new FilterStrategy();
-  RayleighMonitor* rm = new RayleighMonitor(1500);
-  justRm->addOperation(rm, saveOutput);
-  filterStrats["RayleighMonitor"] = justRm;  
+  // FilterStrategy* justRm = new FilterStrategy();
+  // RayleighMonitor* rm = new RayleighMonitor(1000);
+  // justRm->addOperation(rm, saveOutput);
+  // filterStrats["RayleighMonitor"] = justRm;
+
+  FilterStrategy* fs = new FilterStrategy();
+  RayleighFilter* rf = new RayleighFilter(1500);
+  fs->addOperation(rf, saveOutput);
+  filterStrats["RayleighFilter"] = fs;
+  
 }
 
 
@@ -407,19 +413,12 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
   fNumEvents = numEvents;
+  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
 }
 
 
-
-
-void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
-  
+void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){  
   fourierBuffer.add(fEv);
-
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    }
-  }  
 }
 
 unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
@@ -488,16 +487,77 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
   }
 }
 
-// /** The number of output variables (doubles or double arrays) defined by this operation */
-// virtual unsigned nOutputs() const  { return 0; } 
-
-// /** The name of the ith output variable */ 
-// virtual const char *  outputName(unsigned i) const  { (void) i; return ""; } 
-
-// /** The length of the ith output variable  (it's a double array of this size)*/ 
-// virtual unsigned outputLength(unsigned i) const { (void) i; return 0; } 
-
-// /** Fill the ith output */ 
-// virtual void fillOutput(unsigned i, double * v) const{ (void) v; (void) i;  return; } 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Acclaim::Filters::RayleighFilter::RayleighFilter(int numEvents) : RayleighMonitor(numEvents)
+{
+  fRandy = new TRandom3(1234);
+  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
+}
+
+Acclaim::Filters::RayleighFilter::~RayleighFilter()
+{
+  if(fRandy){
+    delete fRandy;
+    fRandy = NULL;
+  }
+}
+
+
+void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
+
+  UInt_t eventNumber = fEv->getHeader()->eventNumber;  
+  fRandy->SetSeed(eventNumber);
+  RayleighMonitor::process(fEv);
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      AnalysisWaveform* wf = getWf(fEv, ant, pol);
+
+      const int nf = wf->Nfreq();
+
+      FFTWComplex* theFreqs = wf->updateFreq();
+      for(int freqInd=0; freqInd < nf; freqInd++){
+
+	double probVal = fourierBuffer.getProb(pol, ant, freqInd);
+
+	if(probVal >= 3){
+	  double specAmp = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
+	  // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
+	  
+	  double x1 = fRandy->Gaus(0, specAmp);
+	  double x2 = fRandy->Gaus(0, specAmp);
+	  double newAmp = TMath::Sqrt(x1*x1 + x2*x2);
+	  
+	  double phase = fRandy->Uniform(0, TMath::TwoPi());
+
+	  // std::cout << probVal << "\t" << x1 << "\t" << x2 << "\t" << newAmp << "\t" << phase << "\t" << theFreqs[freqInd] << "\t";
+	  
+	  theFreqs[freqInd].setMagPhase(newAmp, phase);
+	  
+
+	  // std::cout << theFreqs[freqInd] << std::endl;
+	}
+      }
+    }
+  }  
+}

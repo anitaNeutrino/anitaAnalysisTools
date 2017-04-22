@@ -28,7 +28,7 @@ namespace Acclaim{
     QualityCut(){;}
     virtual ~QualityCut(){;}
     // virtual void apply(FilteredAnitaEvent* fEv) = 0;
-    virtual void apply(UsefulAnitaEvent* useful) = 0;    
+    virtual void apply(const UsefulAnitaEvent* useful) = 0;    
     TString description;
     Bool_t eventPassesCut;
     ClassDef(QualityCut, 1)
@@ -60,7 +60,7 @@ namespace Acclaim{
     SurfSaturationCut();
     virtual ~SurfSaturationCut(){;}    
     // virtual void apply(FilteredAnitaEvent* fEv);
-    virtual void apply(UsefulAnitaEvent* useful);    
+    virtual void apply(const UsefulAnitaEvent* useful);    
   };
 
 
@@ -84,7 +84,7 @@ namespace Acclaim{
     SelfTriggeredBlastCut();   
     virtual ~SelfTriggeredBlastCut(){;}
     // virtual void apply(FilteredAnitaEvent* fEv);
-    virtual void apply(UsefulAnitaEvent* useful);
+    virtual void apply(const UsefulAnitaEvent* useful);
   };
   
   

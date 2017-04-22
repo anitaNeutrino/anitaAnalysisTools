@@ -13,15 +13,16 @@
 #include "TROOT.h"
 #include "AnitaDataset.h"
 #include "FilterStrategy.h"
+#include "ProgressBar.h"
+#include "QualityCut.h"
+#include "AcclaimFilters.h"
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.3), fMinSpecFreq(0.2), fMaxSpecFreq(1.3)
-{
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fMaxSpecFreq(1.29){
   
   // timeScale = timeScaleSeconds;
-  bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;
+  bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
-  fDrawFreqBin = 100; //26;
 
   // will initialize this dynamically to get around this no-copy-constructor bullshit
   fSpectrum = NULL;
@@ -43,6 +44,18 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
   
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+
+    grSpectrumAmplitudes[pol].reserve(NUM_SEAVEYS);
+    grChiSquares[pol].reserve(NUM_SEAVEYS);
+    grNDFs[pol].reserve(NUM_SEAVEYS);
+    grReducedChiSquares[pol].reserve(NUM_SEAVEYS);
+      
+    grProbs[pol].reserve(NUM_SEAVEYS);
+
+    grAmplitudes[pol].reserve(NUM_SEAVEYS);
+    grSpectrumAmplitudes[pol].reserve(NUM_SEAVEYS);
+    
+
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       sumPowers[pol][ant].resize(n, 0);
 
@@ -79,7 +92,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
       grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
       grSpectrumAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
-      
+
 
 
       for(int freqBin=0; freqBin < n; freqBin++){
@@ -104,6 +117,18 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       }	
     }
   }
+
+  // need to do this at the end so the vector doesn't reallocate the memory (also reserved it too now so doubly fixed)
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+      // get them to know about eachother
+      grSpectrumAmplitudes[pol][ant].fDerivedFrom = &grAmplitudes[pol][ant];
+      grAmplitudes[pol][ant].fDerivatives.push_back(&grSpectrumAmplitudes[pol][ant]);
+    }
+  }
+
   doneVectorInit = true;  
 }
 
@@ -136,11 +161,43 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 
 
 
-size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){  
+bool Acclaim::FourierBuffer::isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful){
+
+  SurfSaturationCut ssc;
+  ssc.apply(useful);
+
+  SelfTriggeredBlastCut stbc;
+  stbc.apply(useful);
+
+  // don't process events failing quality cuts (will muck up rolling averages)
+  return !(ssc.eventPassesCut && stbc.eventPassesCut);
+
+}
 
 
-  if(!fCurrentlyLoadingHistory && eventNumbers.size() == 0){
+size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
+  
+  // don't add nasty events that have crazy amounts of power.
+  if(isASelfTriggeredBlastOrHasSurfSaturation(fEv->getUsefulAnitaEvent())){
+    // then do nothing
+    return eventNumbers.size();
+  }
+
+  // handle use in MagicDisplay where refreshing event display on same event...
+  // things still won't be exactly right if you do anything other than repeat the same event
+  // or move forwards sequentially...
+  if(eventNumbers.size() > 0 && fEv->getHeader()->eventNumber == eventNumbers.back()){
+    // However, if we've asked to load the history of an event, we've probably just jumped to that event in MagicDisplay
+    // I'll create an exception to this rule if fForceLoadHistory is true
+    if(!fForceLoadHistory){
+      return eventNumbers.size();
+    }
+  }  
+
+   
+  if(!fCurrentlyLoadingHistory && fForceLoadHistory){
     automagicallyLoadHistory(fEv);
+    fForceLoadHistory = false;
   }
   
   const RawAnitaHeader* header = fEv->getHeader();
@@ -149,7 +206,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
   bool anyUpdated = false; // should all get updated at the same time, but whatever...
-      
   
   // get the power
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
@@ -168,12 +224,11 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unexpected waveform size" << std::endl;
       }
   
-
       // for old compilers, push back copy of empty vector for speed.
       // then get reference that vector in the list
-      powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
-      std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
-      freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
+      // powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
+      // std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
+      // freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
   
       // update sum of power
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
@@ -182,6 +237,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	if(f >= fMinFitFreq && f < fMaxFitFreq){
 	
 	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
+
+	  // if(ant==0 && polInd == 0 && eventNumbers.size() >= bufferSize && fCurrentlyLoadingHistory){
+	  //   std::cerr << eventNumbers.size() << "\t" << pol << "\t" << ant << "\t" << freqInd << "\t" << doneVectorInit << std::endl;
+	  // }
 	
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  if(updated){
@@ -217,9 +276,35 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  }
 
 	  // this is N, if the probability of getting this amplitude or higher, given the rayeligh distribution is 1/N.
-	  double probDenominator = 1./hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp);
-	  probs[pol][ant].at(freqInd) = probDenominator;
-	  grProbs[pol][ant].GetY()[freqInd] = probDenominator;
+
+
+	  // double probDenominator = 0;
+	  double probVal = 0;	  
+	  double prob = 0;
+
+	  // if(eventNumbers.size() == 1 && ant == 0 && polInd == 0){
+	  //   std::cout << freqInd << "\t" << spectrumAmplitudes[pol][ant][freqInd];
+	  // }
+	    
+	  if(spectrumAmplitudes[pol][ant][freqInd] > 0){
+	    prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp, spectrumAmplitudes[pol][ant][freqInd]);	    
+	  }
+	  else{
+	    prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp);
+	  }
+	  
+	  probVal = prob > 0 ? -1*TMath::Log10(prob) : TMath::Log10(DBL_MAX);
+
+	  // if(eventNumbers.size() == 1 && ant == 0 && polInd == 0){
+	  //   std::cout << "\t" << probVal << "\t" << prob << "\t" << amp << "\t" << hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp) << std::endl;
+	  // }
+	  
+	  // if(!TMath::Finite(probVal)){
+	  //   std::cout << probVal << "\t" << prob << std::endl;
+	  // }
+	  
+	  probs[pol][ant].at(freqInd) = probVal;
+	  grProbs[pol][ant].GetY()[freqInd] = probVal;
 	}
 
       }
@@ -275,6 +360,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
   
   eventsInBuffer++;
+
+  // if(fCurrentlyLoadingHistory){
+  //   std::cerr << eventsInBuffer << "\t" << eventNumbers.size() << std::endl;
+  // }
   
   removeOld();
   return eventNumbers.size();
@@ -293,11 +382,11 @@ Int_t Acclaim::FourierBuffer::removeOld(){
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	std::vector<double>& removeThisPower = powerRingBuffers[pol][ant].front();
-	for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
-	  sumPowers[pol][ant].at(freqInd) -= removeThisPower.at(freqInd);
-	}
-	powerRingBuffers[pol][ant].pop_front();
+	// std::vector<double>& removeThisPower = powerRingBuffers[pol][ant].front();
+	// for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
+	//   sumPowers[pol][ant].at(freqInd) -= removeThisPower.at(freqInd);
+	// }
+	// powerRingBuffers[pol][ant].pop_front();
       }
     }
     eventsInBuffer--;
@@ -312,58 +401,106 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
 
   fCurrentlyLoadingHistory = true;
   
-  int fuck = 0;
   bool loadedHistory = false;
 
-  UInt_t desiredFirstEvent = fEv->getHeader()->eventNumber;
+  const int safetyMargin = 100; // we don't add self triggered blasts or SURF saturated events, but I don't know how many there are before I try
+  const int numEventsToLoopOver = bufferSize + safetyMargin; // so do a little more than the minimum
+
   Int_t run = fEv->getHeader()->run;
+  UInt_t eventNumber = fEv->getHeader()->eventNumber;
 
+  // if this FourierBuffer is inside an operation in the filter, then we can just process all the old events
+  // otherwise we need to manually add them to this FourierBuffer
+  // I imagine that needToAddManually will basically always be false...
+  // bool needToAddManually = true;
+  // const FilterStrategy* fs = fEv->getStrategy();
+  // for(unsigned i=0; i < fs->nOperations(); i++){
+  //   const Filters::RayleighMonitor* rm = dynamic_cast<const Filters::RayleighMonitor*>(fs->getOperation(i));
+  //   if(rm){
+  //     FourierBuffer fb = rm->getFourierBuffer();
 
+  //     std::cout << fb.getAddress() << "\t" << this << std::endl;
+      
+  //     if(this == fb.getAddress()){
+  // 	needToAddManually = false;
+  // 	break;
+  //     }
+  //   }
+  // }
+  
+  bool needToAddManually = false;
+
+  std::cerr << "Info in " << __PRETTY_FUNCTION__ << ": Loading history for FourierBuffer, will loop over the last " << bufferSize << " events plus a few." << std::endl;
+  // std::cerr << "In " << __PRETTY_FUNCTION__ << ", I think I am here " << this << std::endl;
+  
   while(!loadedHistory){
 
-    AnitaDataset d(run);
+    std::vector<AnitaDataset*> ds;
+    std::vector<Int_t> firstEntries;
+    std::vector<Int_t> lastEntries;
+    Long64_t eventsInQueue = 0;
+    int thisRun = run;
+    while(eventsInQueue < numEventsToLoopOver){
+      ds.push_back(new AnitaDataset(thisRun));
+      
+      AnitaDataset* d = ds.back();
 
-    d.first();
-    UInt_t firstEventThisRun = d.header()->eventNumber;
+      d->first();
+      UInt_t firstEventThisRun = d->header()->eventNumber;
 
-    if(firstEventThisRun > desiredFirstEvent){
-      run--;
+      d->last();
+      UInt_t lastEventThisRun = d->header()->eventNumber;
+
+
+      UInt_t maxPossEventNumber = run == thisRun ? eventNumber : lastEventThisRun;
+      
+      Int_t potentialEvents = maxPossEventNumber - firstEventThisRun;
+
+      Int_t eventsThisRun = potentialEvents > numEventsToLoopOver ? numEventsToLoopOver : potentialEvents;
+
+      firstEntries.push_back(potentialEvents - eventsThisRun);
+      lastEntries.push_back(potentialEvents);
+      eventsInQueue += lastEntries.back() - firstEntries.back();
+
+      thisRun--;
     }
-    else{
 
-      // assume monotonically increasing eventNumber at one per event...
-      int desiredFirstEntry = desiredFirstEvent - firstEventThisRun;
+    // now we have the queue of events, iterate backwards (so run number is increasing), so they go in the buffer in the proper order...
 
-      for(int bi = 0; bi < bufferSize; bi++){
-	int thisEntry = d.getEntry(bi + desiredFirstEntry);
+    Long64_t eventsDone = 0;
+    ProgressBar p(eventsInQueue);
+    for(int i = (int)ds.size() - 1; i >= 0; i--){    
 
+      AnitaDataset* d = ds.at(i);
+
+      for(int entry = firstEntries.at(i); entry < lastEntries.at(i); entry++){
+
+	int thisEntry = d->getEntry(entry);
+
+	// std::cout << thisEntry << "\t" << entry << "\t" << d->header()->eventNumber << "\t" << std::endl;
+      
 	if(thisEntry > 0){
 	
-	  if(bi==0 && d.header()->eventNumber != desiredFirstEvent){
-	    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", couldn't find the right first event, wanted "
-		      << desiredFirstEvent << ", but got " << d.header()->eventNumber << ", while looking in run "
-		      << run << std::endl;
+	  FilteredAnitaEvent fEv2(d->useful(), (FilterStrategy*) fEv->getStrategy(), d->gps(), d->header(), false);
+	  if(needToAddManually){
+	    add(&fEv2);
 	  }
-	
-	  FilteredAnitaEvent fEv2(d.useful(), (FilterStrategy*) fEv->getStrategy(), d.gps(), d.header(), false);
-	  add(&fEv2);
-	}	
+	}
+	p.inc(eventsDone, eventsInQueue);
+	eventsDone++;
       }
 
-      if(eventNumbers.size() != (unsigned) bufferSize){
-	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", tried to load " << bufferSize
-		  << " events of history but instead I got " <<  eventNumbers.size() << " events..." << std::endl;
-      }
+      delete d;
+    }
+
+    if(eventNumbers.size() != (unsigned) bufferSize){
+      std::cerr << std::endl;
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", tried to load history, but only got "
+		<< eventNumbers.size() << " events when I have a buffer size " << bufferSize << std::endl;
+    }
       
-      loadedHistory = true;
-    }
-    fuck++;
-    if(fuck==4){
-      std::cerr << "quadruple fuck" << std::endl;
-      exit(4);
-    }
+    loadedHistory = true;
   }
-
   fCurrentlyLoadingHistory = false;
   
 }
@@ -409,6 +546,7 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground_dB(Int_t ant, AnitaPol:
   return gr;
 }
 
+#define IS_ROOT_6 (ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0))
 
 // wrapper for spectrum since it's interface changes in a fucking stupid way between ROOT versions
 void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{
@@ -417,9 +555,7 @@ void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{
     fSpectrum = new TSpectrum();
   }
 
-  const int numIter = 6;
-
-#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)  
+#if IS_ROOT_6
   double* tempPtr = y;
 #else
   std::vector<float> tempFloats(n, 0);
@@ -429,12 +565,13 @@ void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{
   float* tempPtr = &tempFloats[0];
 #endif
 
+  const int numIter = 6;
   fSpectrum->Background(tempPtr,n,
 			numIter,TSpectrum::kBackDecreasingWindow,
 			TSpectrum::kBackOrder2,kFALSE,
 			TSpectrum::kBackSmoothing3,kFALSE);
   
-#if ROOT_VERSION_CODE < ROOT_VERSION(6,0,0)
+#if !(IS_ROOT_6)
   for(int i=0; i < n; i++){
     y[i] = tempFloats[i];
   }
@@ -458,6 +595,10 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground(Int_t ant, AnitaPol::An
 
 void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) const{
 
+  if(summaryOpt == None){
+    return;
+  }
+  
   pad->cd();
 
   // find the maximum and minimum values before plotting
@@ -509,7 +650,7 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
       // avoid deletion?
       summaryPads[ant]->SetBit(kCanDelete);
-      summaryPads[ant]->InvertBit(kCanDelete);      
+      summaryPads[ant]->InvertBit(kCanDelete);
     }
     else{
       // already have the pad, so append it to the boss pad
@@ -520,22 +661,20 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
     // do the actual plotting
     summaryPads[ant]->cd();
-    if(summaryOpt == FourierBuffer::Prob){
-      gPad->SetLogy(1);
-      yMin = 1;
-    }
-    else{
-      gPad->SetLogy(0);
-    }
+    // if(summaryOpt == FourierBuffer::Prob){
+    //   // gPad->SetLogy(1);
+    //   // yMax = 1e5;
+    //   yMin = 1;
+    // }
+    // else{
+    //   gPad->SetLogy(0);
+    // }
       
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-
-
       
       TGraphFB* gr = getSelectedGraphForSummary(summaryOpt, ant, pol);      
       gr->SetEditable(kFALSE);
-
       
       const char* opt = pol == AnitaPol::kVertical ? "lsame" : "al";
       EColor lineCol = pol == AnitaPol::kHorizontal ? kBlue : kBlack;
@@ -548,6 +687,8 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
       if(summaryOpt == FourierBuffer::RayleighAmplitude){
 	grSpectrumAmplitudes[pol][ant].SetLineColor(gr->GetLineColor());
 	grSpectrumAmplitudes[pol][ant].SetLineStyle(2);
+	grSpectrumAmplitudes[pol][ant].SetMaximum(yMax);
+	grSpectrumAmplitudes[pol][ant].SetMinimum(yMin);
 	grSpectrumAmplitudes[pol][ant].Draw("lsame");
       }           
     }
@@ -566,30 +707,43 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
 
 
+
 void Acclaim::TGraphFB::drawCopy() const{
 
-  int logx = gPad->GetLogx();
-  int logy = gPad->GetLogy();
-  int logz = gPad->GetLogz();  
 
-  TCanvas* c1 = new TCanvas();
-  c1->cd();
-  c1->SetLogx(logx);
-  c1->SetLogy(logy);
-  c1->SetLogz(logz);    
+  if(fDerivedFrom){ // this setup should recursively call draw copy with the parent
+    fDerivedFrom->drawCopy();
+  }  
+  else{
+    int logx = gPad->GetLogx();
+    int logy = gPad->GetLogy();
+    int logz = gPad->GetLogz();  
 
-  TGraphFB* gr2 = (TGraphFB*) Clone();
-  gr2->pol = pol;
-  gr2->ant = ant;
-  gr2->fb = fb;
-  gr2->SetBit(kCanDelete);
-  gr2->fDoubleClickOption = kDrawRayleigh;
-  gr2->SetTitle(TString::Format(""));
-  gr2->Draw();
-  c1->Modified();
-  c1->Update();
+    TCanvas* c1 = new TCanvas();
+    c1->cd();
+    c1->SetLogx(logx);
+    c1->SetLogy(logy);
+    c1->SetLogz(logz);
 
+    TGraphFB* gr2 = new TGraphFB(this);    
+    gr2->SetBit(kCanDelete);
+    gr2->fDoubleClickOption = kDrawRayleigh;
+    gr2->SetTitle(TString::Format(""));
+  
+    gr2->Draw();
+    for(unsigned i=0; i < fDerivatives.size(); i++){
+      TGraphFB* grD = new TGraphFB(fDerivatives.at(i));
+      grD->SetBit(kCanDelete);
+      grD->fDoubleClickOption = kDrawRayleigh;
+      grD->SetTitle(TString::Format(""));
+      grD->Draw("lsame");
+    }
+   
+    gPad->Modified();
+    gPad->Update();
+  }
 }
+
 void Acclaim::TGraphFB::ExecuteEvent(int event, int x, int y){
 
   if(event == kButton1Double){    
@@ -646,3 +800,5 @@ void Acclaim::TGraphFB::drawRayleighHistNearMouse(int x, int y) const{
   }
 
 }
+
+ 
