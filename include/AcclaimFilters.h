@@ -123,11 +123,6 @@ namespace Acclaim
       virtual void processOne(AnalysisWaveform* wave);
       virtual void process(FilteredAnitaEvent* fEv);
     };
-
-
-
-    
-    
   }
 }
 

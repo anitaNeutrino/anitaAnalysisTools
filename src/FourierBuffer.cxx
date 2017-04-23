@@ -17,6 +17,9 @@
 #include "QualityCut.h"
 #include "AcclaimFilters.h"
 
+#define IS_ROOT_6 (ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0))
+
+
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
   doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fMaxSpecFreq(1.29){
   
@@ -33,8 +36,12 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
     summaryPads[ant] = NULL;
   }
-  
+
+#if IS_ROOT_6
   fRay = new TF1("fRay", rayleighFuncText, 0, 100, TF1::EAddToList::kNo);
+#else
+  fRay = new TF1("fRay", rayleighFuncText, 0, 100);
+#endif
 }
 
 
@@ -545,8 +552,6 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground_dB(Int_t ant, AnitaPol:
   gr->dBize();
   return gr;
 }
-
-#define IS_ROOT_6 (ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0))
 
 // wrapper for spectrum since it's interface changes in a fucking stupid way between ROOT versions
 void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{

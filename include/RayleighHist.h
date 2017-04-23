@@ -6,8 +6,8 @@
 #include <Math/Minimizer.h>
 #include <Math/Factory.h>
 #include <Math/Functor.h>
+#include "TF1.h"
 
-class TF1;
 class TGraph;
 
 namespace Acclaim{
@@ -19,15 +19,15 @@ namespace Acclaim{
 
   public:
 
-    enum class FitMethod{
-      TF1, // slow 
-      Minuit, // less slow
-      Scan, // probably the fastest useful option, won't do errors
-      JustEvalGuess, // fastest but obviously the least accurate
-      Adaptive, // Tries just evaluating the guess, if that's good enough (chiSquare < 2), stops there, otherwise does a scan
-      Default = Adaptive
+    typedef enum {
+      kTF1, // slow 
+      kMinuit, // less slow
+      kScan, // probably the fastest useful option, won't do errors
+      kJustEvalGuess, // fastest but obviously the least accurate
+      kAdaptive, // Tries just evaluating the guess, if that's good enough (chiSquare < 2), stops there, otherwise does a scan
+      kDefault = kAdaptive
       // Default = JustEvalGuess
-    };
+    } FitMethod;
     
     RayleighHist(FourierBuffer* fb=NULL, const char* name = "", const char* title = "");
     virtual ~RayleighHist();

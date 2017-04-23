@@ -29,9 +29,9 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   freqMHz = -9999;
   fracOfEventsWanted = 0.99;
 
-  fitMethod = FitMethod::Adaptive;
-  // fitMethod = FitMethod::Scan;
-  // fitMethod = FitMethod::JustEvalGuess;
+  fitMethod = kAdaptive;
+  // fitMethod = Scan;
+  // fitMethod = JustEvalGuess;
   
   
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
@@ -383,19 +383,19 @@ void Acclaim::RayleighHist::fitRayleigh(bool forGuiUpdateTF1){
   fNDF = 0;
   fChiSquare = 0;
 
-  if(fitMethod==FitMethod::Adaptive){
+  if(fitMethod==kAdaptive){
     fitRayleighAdaptive(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::Scan){
+  else if(fitMethod==kScan){
     fitRayleighScan(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::JustEvalGuess){
+  else if(fitMethod==kJustEvalGuess){
     fitRayleighJustEvalGuess(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::TF1){
+  else if(fitMethod==kTF1){
     fitRayleighTF1();
   }
-  else if(fitMethod==FitMethod::Minuit){
+  else if(fitMethod==kMinuit){
     fitRayleighMinuit(forGuiUpdateTF1);
   }
   else{
