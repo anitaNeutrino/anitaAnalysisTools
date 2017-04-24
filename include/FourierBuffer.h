@@ -11,8 +11,6 @@
 
 #include "AnalysisWaveform.h"
 
-#include "RayleighInfo.h"
-#include "RiceInfo.h"
 #include "TH1D.h"
 #include <complex>
 #include <deque>
