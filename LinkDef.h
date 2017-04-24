@@ -20,6 +20,7 @@
 #pragma link C++ class Acclaim::ClusteredAnitaEvent+;
 
 #pragma link C++ class Acclaim::RayleighHist+;
+#pragma link C++ enum Acclaim::RayleighHist::FitMethod;
 #pragma link C++ class Acclaim::TGraphFB+;
 
 #pragma link C++ class Acclaim::InterferometricMap+;

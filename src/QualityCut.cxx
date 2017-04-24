@@ -30,14 +30,14 @@ Acclaim::SurfSaturationCut::SurfSaturationCut(){
 
 
 // void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
-void Acclaim::SurfSaturationCut::apply(UsefulAnitaEvent* useful){  
+void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful){  
 
   maxVolts = 0;
   minVolts = 0;
   for(int pol=0; pol <AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       const int chanIndex = AnitaGeomTool::getChanIndexFromAntPol(ant, (AnitaPol::AnitaPol_t) pol);
-      double* volts = useful->fVolts[chanIndex];
+      const double* volts = useful->fVolts[chanIndex];
       int n = useful->fNumPoints[chanIndex];
       
       double maxThisChan = TMath::MaxElement(n, volts);
@@ -97,7 +97,7 @@ Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
 
 
 
-void Acclaim::SelfTriggeredBlastCut::apply(UsefulAnitaEvent* useful){
+void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful){
 // void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;

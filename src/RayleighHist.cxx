@@ -19,7 +19,7 @@ std::vector<double> Acclaim::RayleighHist::exponentialCache;
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
 				    const char* name, const char* title) 
   : TH1D(name, title, NUM_BINS, -1001, -1000), // deliberately stupid initial binning
-    fBinWidth(1), fFitEveryNAdds(10), fNumAddsMod10(0), fRayleighNorm(0), fNumEvents(0),
+    fBinWidth(1), fFitEveryNAdds(10), fNumAddsMod10(fFitEveryNAdds), fRayleighNorm(0), fNumEvents(0),
     amplitudes(fb ? fb->bufferSize : 1000), fNumFitParams(1), 
     theFitParams(std::vector<double>(fNumFitParams, 0)),
     theFitParamsSteps(std::vector<double>(fNumFitParams, 1e-3)),
@@ -29,9 +29,9 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   freqMHz = -9999;
   fracOfEventsWanted = 0.99;
 
-  fitMethod = FitMethod::Adaptive;
-  // fitMethod = FitMethod::Scan;
-  // fitMethod = FitMethod::JustEvalGuess;
+  fitMethod = kAdaptive;
+  // fitMethod = Scan;
+  // fitMethod = JustEvalGuess;
   
   
   fRay = fParent ? (TF1*) fParent->fRay->Clone(TString::Format("%s_fit", name)) : NULL;
@@ -60,7 +60,6 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   
   fNumFitParams = 1;
   fMinimizer->SetFunction(fChiSquaredFunc);
-
   
   // someone has to initialize 
   if(exponentialCache.size()==0){
@@ -115,7 +114,8 @@ bool Acclaim::RayleighHist::axisRangeOK() const{
   guessMaxBinLimitAndSigmaFromMean(mean, maxAmp, sigmaGuess, fracOfEventsWanted);
 
   // let's say, within 10% is OK?
-  double xup = GetBinLowEdge(NUM_BINS+1);
+  // double xup = GetBinLowEdge(NUM_BINS+1);
+  double xup = fBinWidth*(NUM_BINS+1);
   if(xup/maxAmp > 0.9 && xup/maxAmp < 1.1){
     return true;
   }
@@ -146,20 +146,36 @@ void Acclaim::RayleighHist::rebinAndRefill(double meanAmp){
   
   // empty bins inc. overflow and underflow
   for(int bx = 0; bx <= NUM_BINS + 1; bx++){
-    SetBinContent(bx, 0);
+    SetBinContent(bx, 0);    
+  }
+
+  for(int bin=0; bin < NUM_BINS; bin++){
+    binValues[bin] = 0;
   }
 
   // set bin content by hand...
   for(RingBuffer::iterator it=amplitudes.begin(); it != amplitudes.end(); ++it){
     double amp = (*it);
-    int bx = TH1D::FindBin(amp);
-    SetBinContent(bx, GetBinContent(bx)+1);
+    if(amp < desiredMaxAmp){
+      int bin = floor(amp/fBinWidth);
+      binValues[bin]++;
+    }
   }
+
+  // // set bin content by hand...
+  // for(RingBuffer::iterator it=amplitudes.begin(); it != amplitudes.end(); ++it){
+  //   double amp = (*it);
+  //   int bx = TH1D::FindBin(amp);
+  //   SetBinContent(bx, GetBinContent(bx)+1);
+  // }  
 
   // ... set errors once at the end
   fNumNonEmptyBins = 0;
   for(int bx=1; bx <= NUM_BINS; bx++){
-    double y = GetBinContent(bx);
+    // double y = GetBinContent(bx);
+    double y = binValues[bx-1];
+    
+    SetBinContent(bx, y);
     SetBinError(bx, TMath::Sqrt(y));
 
     // update cached values
@@ -220,12 +236,12 @@ bool Acclaim::RayleighHist::add(double newAmp){
   fRayleighNorm = fBinWidth*fNumEvents; // fNumEvents is updated in Fill()
 
   bool updatedFit = false;
-  fNumAddsMod10++;
-  if(fFitEveryNAdds > 0 && fNumAddsMod10 == fFitEveryNAdds){
+  if(fNumAddsMod10 == fFitEveryNAdds){
     fitRayleigh(false);
     fNumAddsMod10 = 0;
     updatedFit = true;
   }
+  fNumAddsMod10++;  
 
   grLastAddedAmp->SetPoint(0, newAmp, 0);
   grLastAddedAmp->SetPoint(1, newAmp, 100000000);
@@ -367,19 +383,19 @@ void Acclaim::RayleighHist::fitRayleigh(bool forGuiUpdateTF1){
   fNDF = 0;
   fChiSquare = 0;
 
-  if(fitMethod==FitMethod::Adaptive){
+  if(fitMethod==kAdaptive){
     fitRayleighAdaptive(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::Scan){
+  else if(fitMethod==kScan){
     fitRayleighScan(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::JustEvalGuess){
+  else if(fitMethod==kJustEvalGuess){
     fitRayleighJustEvalGuess(forGuiUpdateTF1);
   }
-  else if(fitMethod==FitMethod::TF1){
+  else if(fitMethod==kTF1){
     fitRayleighTF1();
   }
-  else if(fitMethod==FitMethod::Minuit){
+  else if(fitMethod==kMinuit){
     fitRayleighMinuit(forGuiUpdateTF1);
   }
   else{

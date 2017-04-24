@@ -6,8 +6,8 @@
 #include <Math/Minimizer.h>
 #include <Math/Factory.h>
 #include <Math/Functor.h>
+#include "TF1.h"
 
-class TF1;
 class TGraph;
 
 namespace Acclaim{
@@ -19,15 +19,15 @@ namespace Acclaim{
 
   public:
 
-    enum class FitMethod{
-      TF1, // slow 
-      Minuit, // less slow
-      Scan, // probably the fastest useful option, won't do errors
-      JustEvalGuess, // fastest but obviously the least accurate
-      Adaptive, // Tries just evaluating the guess, if that's good enough (chiSquare < 2), stops there, otherwise does a scan
-      Default = Adaptive
+    typedef enum {
+      kTF1, // slow 
+      kMinuit, // less slow
+      kScan, // probably the fastest useful option, won't do errors
+      kJustEvalGuess, // fastest but obviously the least accurate
+      kAdaptive, // Tries just evaluating the guess, if that's good enough (chiSquare < 2), stops there, otherwise does a scan
+      kDefault = kAdaptive
       // Default = JustEvalGuess
-    };
+    } FitMethod;
     
     RayleighHist(FourierBuffer* fb=NULL, const char* name = "", const char* title = "");
     virtual ~RayleighHist();
@@ -47,8 +47,15 @@ namespace Acclaim{
     
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
     
-    double getCDF(double amp){
-      return 1 - exp((-0.5*amp*amp)/(fRayleighAmplitude*fRayleighAmplitude));
+    
+    inline double getOneMinusCDF(double amp, double distAmp = -1){ //!< This is the probability of getting this amplitude (amp) or higher
+      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
+      return exp((-0.5*amp*amp)/(distAmp*distAmp));
+    }
+    
+    inline double getCDF(double amp, double distAmp = -1){ // This is the fraction of amplitudes lower than amp 
+      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
+      return 1 - getOneMinusCDF(amp, distAmp);
     }
     
   protected:
@@ -74,7 +81,6 @@ namespace Acclaim{
     
     double fracOfEventsWanted; //!< Fraction of events to be in the histogram bin limits using the guessed amplitude (don't set to 1 as this requires an infinite axis range)
     Int_t risingEdgeBins; //!< Number of bins between 0 and where we guess the histogram peak is, for dynamic rebinning
-    Int_t fDrawFreqBin;
     double freqMHz; //!< The frequency (MHz) of this Rayleigh distribution
     Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
     TGraph* grLastAddedAmp; //!< A pretty visual representation of the last added amplitude
@@ -98,7 +104,7 @@ namespace Acclaim{
     Int_t fNx;
     std::vector<double> binCentres;
     std::vector<double> squaredBinCentres;    
-    std::vector<double> binValues;
+    std::vector<int> binValues; // cache histogram bin contents, should be integers
     std::vector<double> squaredBinErrors;    
 
     // exp is an expensive operation so I'm going to cache the results in here

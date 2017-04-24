@@ -65,17 +65,16 @@ namespace Acclaim
     protected:
       int fNumEvents;
       FourierBuffer fourierBuffer;
+      TString fDescription;
     public:
-
-      
       explicit RayleighMonitor(int numEvents);
-
       virtual const char * tag () const {return "RayleighMonitor";};
-      virtual const char * description () const {return TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);}
+      virtual const char * description () const {return fDescription.Data();}
       virtual void processOne(AnalysisWaveform* wave)
       {
 	(void) wave;
-	std::cerr << "Error in " << __PRETTY_FUNCTION__ << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
+	std::cerr << "Error in " << __PRETTY_FUNCTION__
+		  << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
       }
       virtual void process(FilteredAnitaEvent* fEv);
       virtual unsigned outputLength(unsigned i) const;
@@ -83,12 +82,24 @@ namespace Acclaim
       virtual const char* outputName(unsigned i) const;
       virtual void fillOutput(unsigned i, double* v) const;
 
-      const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}      
+      // const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}
+      const FourierBuffer* getFourierBuffer() const{return &fourierBuffer;}
     };
     
 
+    class RayleighFilter : public RayleighMonitor {
+    public:
+      explicit RayleighFilter(Int_t numEvents);
+      virtual ~RayleighFilter();
+      virtual void process(FilteredAnitaEvent* fEv);
+      virtual unsigned nOutputs() const {return 0;}
+      virtual const char * tag () const {return "RayleighFilter";};
+      virtual const char * description () const {return fDescription.Data();}
+    protected:
+      TRandom3* fRandy;
+    };
 
-
+    
 
     class SpikeSuppressor : public UniformFilterOperation {
     protected:
@@ -111,14 +122,7 @@ namespace Acclaim
       virtual const char * description () const {return fDescription.Data();}
       virtual void processOne(AnalysisWaveform* wave);
       virtual void process(FilteredAnitaEvent* fEv);
-
-
-      
     };
-
-
-    
-    
   }
 }
 
