@@ -29,7 +29,7 @@ namespace Acclaim
   {
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
-
+    void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);    
 
     // base notch class
     class Notch: public UniformFilterOperation
@@ -66,6 +66,9 @@ namespace Acclaim
       int fNumEvents;
       FourierBuffer fourierBuffer;
       TString fDescription;
+      unsigned fNumOutputs;
+      AnitaPol::AnitaPol_t fOutputPol;
+      int fOutputAnt;
     public:
       explicit RayleighMonitor(int numEvents);
       virtual const char * tag () const {return "RayleighMonitor";};
@@ -78,7 +81,7 @@ namespace Acclaim
       }
       virtual void process(FilteredAnitaEvent* fEv);
       virtual unsigned outputLength(unsigned i) const;
-      virtual unsigned nOutputs() const{return 3;}
+      virtual unsigned nOutputs() const{return fNumOutputs;}
       virtual const char* outputName(unsigned i) const;
       virtual void fillOutput(unsigned i, double* v) const;
 
@@ -92,7 +95,7 @@ namespace Acclaim
       explicit RayleighFilter(Int_t numEvents);
       virtual ~RayleighFilter();
       virtual void process(FilteredAnitaEvent* fEv);
-      virtual unsigned nOutputs() const {return 0;}
+      // virtual unsigned nOutputs() const {return 0;}
       virtual const char * tag () const {return "RayleighFilter";};
       virtual const char * description () const {return fDescription.Data();}
     protected:

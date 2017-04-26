@@ -3,6 +3,7 @@
 #include "ProgressBar.h"
 #include "FilterStrategy.h"
 #include "QualityCut.h"
+#include "AcclaimFilters.h"
 
 /** 
  * Constructor, sets up some of the options for the analysis 
@@ -184,6 +185,8 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
 
 
 
+
+
 /** 
  * Does the main analysis loop
  */
@@ -221,12 +224,18 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     fFilterStrat = new FilterStrategy();
   }
 
+  UInt_t lastEventConsidered = 0;
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
     fData->getEntry(entry);
     RawAnitaHeader* header = fData->header();
     UsefulAnitaEvent* usefulEvent = fData->useful();
 
+    // make FourierBuffer filters behave as if we were considering sequential events
+    // this is useful for the decimated data set...
+    if(lastEventConsidered + 1 != header->eventNumber){
+      Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
+    }    
 
     SurfSaturationCut ssc;
     ssc.apply(usefulEvent);
@@ -234,28 +243,25 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     SelfTriggeredBlastCut stbc;
     stbc.apply(usefulEvent);
 
-    // don't process events failing quality cuts (will muck up rolling averages)
-    if(ssc.eventPassesCut && stbc.eventPassesCut){
+    Adu5Pat* pat = fData->gps();
+    UsefulAdu5Pat usefulPat(pat);
     
-      Adu5Pat* pat = fData->gps();
-      UsefulAdu5Pat usefulPat(pat);
-      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
+    FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
+    // since we now have rolling averages make sure the filter strategy is processed before deciding whether or not to reconstruct 
+    Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
 
-      // since we now have rolling averages make sure the filter strategy is processed before deciding whether or not to reconstruct 
-      Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
+    if(selectedEvent){
+      eventSummary = new AnitaEventSummary(header, &usefulPat);
+      // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+      fReco->process(&filteredEvent, &usefulPat, eventSummary);
 
-      if(selectedEvent){
-	eventSummary = new AnitaEventSummary(header, &usefulPat);
-	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
-	fReco->process(&filteredEvent, &usefulPat, eventSummary);
-
-	fSumTree->Fill();
-	delete eventSummary;
-	eventSummary = NULL;
-      }
+      fSumTree->Fill();
+      delete eventSummary;
+      eventSummary = NULL;
     }
-    
+
+    lastEventConsidered = header->eventNumber;
     p.inc(entry, numEntries);
   }
 }  

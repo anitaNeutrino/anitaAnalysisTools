@@ -27,7 +27,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
-
+  
   // will initialize this dynamically to get around this no-copy-constructor bullshit
   fSpectrum = NULL;
 
@@ -408,7 +408,6 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* fEv){
 
   fCurrentlyLoadingHistory = true;
-  
   bool loadedHistory = false;
 
   const int safetyMargin = 100; // we don't add self triggered blasts or SURF saturated events, but I don't know how many there are before I try

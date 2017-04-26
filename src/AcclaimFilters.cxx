@@ -1,4 +1,3 @@
-
 #include "AcclaimFilters.h"
 #include "AnalysisWaveform.h"
 #include "FilteredAnitaEvent.h"
@@ -9,6 +8,27 @@
 #include "TPad.h"
 #include "RayleighHist.h"
 #include "RootTools.h"
+
+
+
+/** 
+ * Checks all operations in the Filter Strategy and forces the strategy to load history the before it processes the next event
+ * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
+ *
+ * @param fs is the FilterStrategy
+ */
+void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs){
+  // load history if needed
+  for(unsigned i=0; i < fs->nOperations(); i++){
+    const Acclaim::Filters::RayleighMonitor* rmConst = dynamic_cast<const Acclaim::Filters::RayleighMonitor*>(fs->getOperation(i));
+    if(rmConst){
+      const Acclaim::FourierBuffer* fb = rmConst->getFourierBuffer();
+      fb->setForceLoadHistory(true);
+    }
+  }
+}
+
+
 
 /** 
  * This function adds my custom strategies to a map of TString to strategies...
@@ -31,9 +51,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   // then make the strategies
   
   FilterStrategy* stupidNotchStrat = new FilterStrategy();
-  stupidNotchStrat->addOperation(alfaFilter, saveOutput);  
+  stupidNotchStrat->addOperation(alfaFilter, saveOutput);
   stupidNotchStrat->addOperation(n260, saveOutput);
-  stupidNotchStrat->addOperation(n370, saveOutput);  
+  stupidNotchStrat->addOperation(n370, saveOutput);
 
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
@@ -48,11 +68,11 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   // justRm->addOperation(rm, saveOutput);
   // filterStrats["RayleighMonitor"] = justRm;
 
-  FilterStrategy* fs = new FilterStrategy();
+  FilterStrategy* fs = new FilterStrategy();  
   RayleighFilter* rf = new RayleighFilter(1500);
+  fs->addOperation(alfaFilter, saveOutput);  
   fs->addOperation(rf, saveOutput);
-  filterStrats["RayleighFilter"] = fs;
-  
+  filterStrats["RayleighFilter"] = fs;  
 }
 
 
@@ -413,7 +433,10 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
   fNumEvents = numEvents;
-  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
+  fDescription = TString::Format("Decides whether or not to filter events based on characteristics of the event amplitude and Rayleigh distribution over %d events", fNumEvents);
+  fNumOutputs = 6;
+  fOutputAnt = 4;
+  fOutputPol = AnitaPol::kHorizontal;
 }
 
 
@@ -421,17 +444,19 @@ void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){
   fourierBuffer.add(fEv);
 }
 
+
+
+
 unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
   (void) i;
-  if(i==2){
+  if(i==0){
     return 1;
   }
   else{
-    return AnitaPol::kNotAPol*NUM_SEAVEYS*131; // TODO, check this at runtime maybe?
+    // return AnitaPol::kNotAPol*NUM_SEAVEYS*131; // TODO, check this at runtime maybe?
+    return 131; // TODO, check this at runtime maybe?    
   }
 }
-
-
 
 
 
@@ -439,11 +464,17 @@ const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
   // so what do I want to output?
   switch(i){
   case 0:
-    return "chiSquares";
+    return "numEvents";
   case 1:
-    return "ndfs";    
+    return "chiSquares";    
   case 2:
-    return "nEvents";
+    return "ndfs";
+  case 3:
+    return "rayleighAmps";
+  case 4:
+    return "spectrumAmps";    
+  case 5:
+    return "prob";
   default:
     return NULL;
   };
@@ -452,7 +483,7 @@ const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
 
 void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
-  if(i==2){
+  if(i==0){
     v[0] = fourierBuffer.getNumEventsInBuffer();
     return;
   }
@@ -461,27 +492,47 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      const double* vals = 0;
-      const int* valsInt = 0;
-      unsigned n = 0;
-      switch(i){
-      case 0:
-	vals = &fourierBuffer.getChiSquares(ant, pol)[0];
-	n = fourierBuffer.getChiSquares(ant, pol).size();
-      case 1:
-	valsInt = &fourierBuffer.getNDFs(ant, pol)[0];
-	n = fourierBuffer.getNDFs(ant, pol).size();
-      }
+      if(ant==fOutputAnt && pol == fOutputPol){
+      
+	const double* vals = 0;
+	const int* valsInt = 0;
+	unsigned n = 0;
+	switch(i){
+	case 0:
+	  std::cerr << "uh oh!" << std::endl;
+	  break;
+	case 1:
+	  vals = &fourierBuffer.getChiSquares(ant, pol)[0];
+	  n = fourierBuffer.getChiSquares(ant, pol).size();
+	  break;
+	case 2:
+	  valsInt = &fourierBuffer.getNDFs(ant, pol)[0];
+	  n = fourierBuffer.getNDFs(ant, pol).size();
+	  break;
+	case 3:
+	  vals = &fourierBuffer.getRayleighAmplitudes(ant, pol)[0];
+	  n = fourierBuffer.getRayleighAmplitudes(ant, pol).size();
+	  break;
+	case 4:
+	  vals = &fourierBuffer.getSpectrumAmplitudes(ant, pol)[0];
+	  n = fourierBuffer.getSpectrumAmplitudes(ant, pol).size();
+	  break;
+	case 5:
+	  vals = &fourierBuffer.getProbabilities(ant, pol)[0];
+	  n = fourierBuffer.getProbabilities(ant, pol).size();
+	  break;
+	}
 
-      // std::cout << vals << "\t" << valsInt << "\t" << n << std::endl;
-      for(unsigned point=0; point < n; point++){
-	if(vals){
-	  v[outInd] = vals[point];
+	// std::cout << vals << "\t" << valsInt << "\t" << n << std::endl;
+	for(unsigned point=0; point < n; point++){
+	  if(vals){
+	    v[outInd] = vals[point];
+	  }
+	  else if(valsInt){
+	    v[outInd] = valsInt[point];
+	  }
+	  outInd++;
 	}
-	else if(valsInt){
-	  v[outInd] = valsInt[point];
-	}
-	outInd++;
       }
     }
   }

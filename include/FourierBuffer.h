@@ -71,13 +71,18 @@ namespace Acclaim
     void drawSummary(TPad* pad, SummaryOption_t) const;
     unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const{return sumPowers[pol][ant].size();}
     unsigned getCurrentBufferSize();
+
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
-    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};    
+    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};
+    const std::vector<double>& getRayleighAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return fitAmplitudes[pol][ant];};
+    const std::vector<double>& getSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
+    const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {return probs[pol][ant];};
+    
     int getNumEventsInBuffer() const {return eventsInBuffer;}
     void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
     bool isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful);
 
-    const FourierBuffer* getAddress(){return this;}
+    // const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
     Int_t removeOld();
