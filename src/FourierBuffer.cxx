@@ -18,6 +18,7 @@
 #include "AcclaimFilters.h"
 
 #define IS_ROOT_6 (ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0))
+#define IS_ROOT_6_06_08 (ROOT_VERSION_CODE >= ROOT_VERSION(6,6,8))
 
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
@@ -37,7 +38,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
     summaryPads[ant] = NULL;
   }
 
-#if IS_ROOT_6
+#if IS_ROOT_6_06_08
   fRay = new TF1("fRay", rayleighFuncText, 0, 100, TF1::EAddToList::kNo);
 #else
   fRay = new TF1("fRay", rayleighFuncText, 0, 100);
