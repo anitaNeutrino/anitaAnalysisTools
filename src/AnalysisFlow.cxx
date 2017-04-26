@@ -18,11 +18,54 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
-  fFilterStrat = filterStrat;  
+  fFilterStrat = filterStrat;
   fBlindStrat = blindStrat;
-  fDivision = division;
-  fNumDivisions = numDivisions;
-  fRun = run;
+
+
+  // on the Hoffman2 cluster, this is the task ID
+  // we're going to use it to try and figure out how to set the division if it wasn't explicitly set
+  // assuming this wasn't explicitly set...
+  const char* sgeTaskId = "SGE_TASK_ID";
+  const char* sgeTaskIdEnv = getenv(sgeTaskId);
+  if(sgeTaskIdEnv && numDivisions==1){
+    // we have runs 130-439
+    // I'm going to set the job array like:
+    // 130-439 for 1 job per run = 309 jobs
+    // 1300-4390 for 10 jobs per run = 3090 jobs
+    // 13000-43900 for 100 jobs per run = 30900 jobs (that's probably excessive)
+    Int_t jobArrayIndex = atoi(sgeTaskId);
+
+    if(jobArrayIndex < 1e3){
+      fNumDivisions = 1;
+      fRun = jobArrayIndex;
+      fDivision = 0;
+    }
+    else if(jobArrayIndex < 1e4){
+      fNumDivisions = 10;
+      fRun = jobArrayIndex/fNumDivisions;
+      fDivision = jobArrayIndex%10;
+    }
+    else if(jobArrayIndex < 1e5){
+      fNumDivisions = 100;
+      fRun = jobArrayIndex/fNumDivisions;      
+      fDivision = jobArrayIndex%100;
+    }
+    else{
+      std::cerr << "Error in " << __FILE__ << " couldn't figure out the run/divisions from " << sgeTaskId << ". Giving up." << std::endl;
+      exit(1);
+    }
+
+    std::cout << "Found " << sgeTaskId << " " << sgeTaskIdEnv
+	      << ", set fRun = " << fRun
+	      << ", fNumDivisions = " << fNumDivisions
+	      << ", fDivision = " << fDivision << "." << std::endl;
+  }
+  else{
+    fDivision = division;
+    fNumDivisions = numDivisions;
+    fRun = run;
+  }
+
 
   fSumTree = NULL;
   fData = NULL;
@@ -235,13 +278,7 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     // this is useful for the decimated data set...
     if(lastEventConsidered + 1 != header->eventNumber){
       Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
-    }    
-
-    SurfSaturationCut ssc;
-    ssc.apply(usefulEvent);
-
-    SelfTriggeredBlastCut stbc;
-    stbc.apply(usefulEvent);
+    }
 
     Adu5Pat* pat = fData->gps();
     UsefulAdu5Pat usefulPat(pat);
@@ -253,6 +290,15 @@ void Acclaim::AnalysisFlow::doAnalysis(){
 
     if(selectedEvent){
       eventSummary = new AnitaEventSummary(header, &usefulPat);
+      
+      SurfSaturationCut ssc;
+      ssc.apply(usefulEvent);
+
+      SelfTriggeredBlastCut stbc;
+      stbc.apply(usefulEvent);
+
+      
+      
       // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
       fReco->process(&filteredEvent, &usefulPat, eventSummary);
 

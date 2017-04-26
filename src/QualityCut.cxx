@@ -30,7 +30,7 @@ Acclaim::SurfSaturationCut::SurfSaturationCut(){
 
 
 // void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
-void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful){  
+void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){  
 
   maxVolts = 0;
   minVolts = 0;
@@ -73,6 +73,10 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful){
   else{
     eventPassesCut = true;
   }
+
+  if(sum!=NULL){
+    sum->flags.isPayloadBlast = 1;
+  }  
 }
 
 
@@ -97,13 +101,12 @@ Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
 
 
 
-void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful){
+void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
 // void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
 
-  double bottomToTopMaxToMinRatio = 0;
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){      
     for(int phi=0; phi < NUM_PHI; phi++){
 
@@ -153,5 +156,8 @@ void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful){
   }
   else{
     eventPassesCut = true;
+  }
+  if(sum!=NULL){
+    sum->flags.isVarner = 1;
   }
 }
