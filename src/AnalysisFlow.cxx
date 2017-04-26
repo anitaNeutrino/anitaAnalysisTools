@@ -292,12 +292,10 @@ void Acclaim::AnalysisFlow::doAnalysis(){
       eventSummary = new AnitaEventSummary(header, &usefulPat);
       
       SurfSaturationCut ssc;
-      ssc.apply(usefulEvent);
+      ssc.apply(usefulEvent, eventSummary);
 
       SelfTriggeredBlastCut stbc;
-      stbc.apply(usefulEvent);
-
-      
+      stbc.apply(usefulEvent, eventSummary);
       
       // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
       fReco->process(&filteredEvent, &usefulPat, eventSummary);
