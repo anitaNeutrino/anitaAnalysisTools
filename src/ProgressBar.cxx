@@ -24,7 +24,8 @@ Acclaim::ProgressBar::ProgressBar(){
   counter = 0;
   percentage = 0;
   watch.Start(kTRUE);
-  setHandler = 0;  
+  setHandler = 0;
+  numBreakTries = 0;
 }
 
 
@@ -43,6 +44,7 @@ Acclaim::ProgressBar::ProgressBar(Long64_t maxEntryInit){
   percentage = 0;
   watch.Start(kTRUE);
   setHandler = 0;
+  numBreakTries = 0;
 }
 
 
@@ -132,8 +134,18 @@ void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
   }
 
   if(setHandler==1 && progState!=0){
-    std::cerr << "Program with ProgressBar received SIGINT, will try and exit main loop gracefully. " << std::endl;
-    entry=numEntries;
+    if(numBreakTries==0)
+    {
+      std::cerr << "Program with ProgressBar received SIGINT, will try and exit main loop gracefully. " << std::endl;
+      entry=numEntries;
+    }
+    else
+    {
+      std::cerr << "Unable to exit main loop gracefully, raising SIGINT properly." << std::endl;
+      signal(SIGINT, SIG_DFL); // now sigint points to the default handler again
+      raise(SIGINT); // raise sigint
+    }
+    numBreakTries++;
   }
   
   (*this)++;
