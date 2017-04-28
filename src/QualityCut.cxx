@@ -75,7 +75,12 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
   }
 
   if(sum!=NULL){
-    sum->flags.isPayloadBlast = 1;
+    if(eventPassesCut){
+      sum->flags.isPayloadBlast = 0;
+    }
+    else{
+      sum->flags.isPayloadBlast = 1;
+    }
   }  
 }
 
@@ -158,6 +163,11 @@ void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful, Anita
     eventPassesCut = true;
   }
   if(sum!=NULL){
-    sum->flags.isVarner = 1;
+    if(eventPassesCut){
+      sum->flags.isVarner = 0;
+    }
+    else{
+      sum->flags.isVarner = 1;
+    }
   }
 }
