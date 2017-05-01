@@ -22,7 +22,7 @@
 
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fMaxSpecFreq(1.29){
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fMaxSpecFreq(1.29), fNumSkipped(0){
   
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
@@ -177,13 +177,29 @@ bool Acclaim::FourierBuffer::isASelfTriggeredBlastOrHasSurfSaturation(const Usef
   SelfTriggeredBlastCut stbc;
   stbc.apply(useful);
 
+  if(!(ssc.eventPassesCut && stbc.eventPassesCut)){
+    fNumSkipped++;
+  }
   // don't process events failing quality cuts (will muck up rolling averages)
-  return !(ssc.eventPassesCut && stbc.eventPassesCut);
+  return !(ssc.eventPassesCut && stbc.eventPassesCut);  
 
 }
 
 
 size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
+
+
+
+  // do dynamic initialization, need this first in case we return from this function before the end
+  if(!doneVectorInit){
+    // arbitrarily choose 1TH    
+    const AnalysisWaveform* wave = fEv->getFilteredGraph(0, AnitaPol::kHorizontal);
+    const TGraphAligned* grPower = wave->power();
+    df = grPower->GetX()[1] - grPower->GetX()[0];
+    initVectors(grPower->GetN(), df);
+  }
+
+
   
   // don't add nasty events that have crazy amounts of power.
   if(isASelfTriggeredBlastOrHasSurfSaturation(fEv->getUsefulAnitaEvent())){
@@ -214,7 +230,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
   bool anyUpdated = false; // should all get updated at the same time, but whatever...
-  
+
   // get the power
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
@@ -223,11 +239,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       const AnalysisWaveform* wave = fEv->getFilteredGraph(ant, pol);
       const TGraphAligned* grPower = wave->power();
 
-      // do dynamic initialization and sanity checking
-      if(!doneVectorInit){
-	df = grPower->GetX()[1] - grPower->GetX()[0];
-	initVectors(grPower->GetN(), df);
-      }
+      // quick sanity check
       if(grPower->GetN() != (int)sumPowers[pol][ant].size()){
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unexpected waveform size" << std::endl;
       }

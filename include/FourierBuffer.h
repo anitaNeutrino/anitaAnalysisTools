@@ -108,7 +108,8 @@ namespace Acclaim
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
     TF1* fRay;
 
-    bool doneVectorInit;
+    Int_t fNumSkipped; //!< Incremented when skipping a payload blast or SURF saturation event, currently only for debugging
+    bool doneVectorInit; //!< Do we need to allocate a bunch of memory? (Do this dynamically to avoid MagicDisplay being slow)
 
 
     void automagicallyLoadHistory(const FilteredAnitaEvent* fEv);
