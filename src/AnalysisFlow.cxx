@@ -33,7 +33,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
     // 130-439 for 1 job per run = 309 jobs
     // 1300-4390 for 10 jobs per run = 3090 jobs
     // 13000-43900 for 100 jobs per run = 30900 jobs (that's probably excessive)
-    Int_t jobArrayIndex = atoi(sgeTaskId);
+    Int_t jobArrayIndex = atoi(sgeTaskIdEnv);
 
     if(jobArrayIndex < 1e3){
       fNumDivisions = 1;
@@ -56,6 +56,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
     }
 
     std::cout << "Found " << sgeTaskId << " " << sgeTaskIdEnv
+	      << ", so the jobArrayIndex = " << jobArrayIndex
 	      << ", set fRun = " << fRun
 	      << ", fNumDivisions = " << fNumDivisions
 	      << ", fDivision = " << fDivision << "." << std::endl;
