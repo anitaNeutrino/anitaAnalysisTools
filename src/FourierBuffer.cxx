@@ -613,7 +613,7 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;  
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
-      if(ant == 4 && pol == AnitaPol::kHorizontal){ // skip alfa
+      if((ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal)){ // skip alfa and alfa cross-talk channels
 	continue;
       }
       
