@@ -70,7 +70,7 @@ namespace Acclaim
       AnitaPol::AnitaPol_t fOutputPol;
       int fOutputAnt;
     public:
-      explicit RayleighMonitor(int numEvents);
+      explicit RayleighMonitor(int numEvents, double alfaLowPassFreqGHz=0.65);
       virtual const char * tag () const {return "RayleighMonitor";};
       virtual const char * description () const {return fDescription.Data();}
       virtual void processOne(AnalysisWaveform* wave)
@@ -92,7 +92,7 @@ namespace Acclaim
 
     class RayleighFilter : public RayleighMonitor {
     public:
-      explicit RayleighFilter(Int_t numEvents);
+      explicit RayleighFilter(double log10ProbThreshold, double chiSquarePerDofThresh, Int_t numEvents, double alfaLowPassFreqGHz=0.65);
       virtual ~RayleighFilter();
       virtual void process(FilteredAnitaEvent* fEv);
       // virtual unsigned nOutputs() const {return 0;}
@@ -100,6 +100,8 @@ namespace Acclaim
       virtual const char * description () const {return fDescription.Data();}
     protected:
       TRandom3* fRandy;
+      double fLog10ProbThreshold; //!< What was the probability
+      double fChiSquarePerDofThreshold; // Remove frequency if our fit of the rayleigh amplitude is bad
     };
 
     

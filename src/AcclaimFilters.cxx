@@ -37,8 +37,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   // first make the operations
 
-  ALFAFilter* alfaFilter = new ALFAFilter(); // should always use this unless you have a good reaon...
-  
+  double alfaLowPassFreq = 0.7;
+  ALFASincFilter* alfaFilter = new ALFASincFilter(alfaLowPassFreq); // should always use some kind of alfa filter unless you have a good reason
+
   Double_t widthMHz = 26;
   Double_t centreMHz = 260;
   Notch* n260 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
@@ -47,6 +48,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   centreMHz = 370;
   Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
 
+  double log10ProbThresh = -2;
+  double reducedChiSquareThresh = 3;
+  RayleighFilter* rf = new RayleighFilter(log10ProbThresh, reducedChiSquareThresh, 1500, alfaLowPassFreq);  
 
   // then make the strategies
   
@@ -57,22 +61,10 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
-  // FilterStrategy* spikeKiller = new FilterStrategy();
-  // spikeKiller->addOperation(alfaFilter);
-  // SpikeSuppressor* ss = new SpikeSuppressor(3, 1000);
-  // spikeKiller->addOperation(ss, saveOutput);
-  // filterStrats["SpikeSuppressor"] = spikeKiller;
-
-  // FilterStrategy* justRm = new FilterStrategy();
-  // RayleighMonitor* rm = new RayleighMonitor(1000);
-  // justRm->addOperation(rm, saveOutput);
-  // filterStrats["RayleighMonitor"] = justRm;
-
-  FilterStrategy* fs = new FilterStrategy();  
-  RayleighFilter* rf = new RayleighFilter(1500);
-  fs->addOperation(alfaFilter, saveOutput);  
+  FilterStrategy* fs = new FilterStrategy();
+  fs->addOperation(alfaFilter, saveOutput);
   fs->addOperation(rf, saveOutput);
-  filterStrats["RayleighFilter"] = fs;  
+  filterStrats["RayleighFilter"] = fs;
 }
 
 
@@ -431,7 +423,7 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 
 
-Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
+Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents, double alfaLowPassFreqGHz) : fourierBuffer(numEvents, alfaLowPassFreqGHz) {
   fNumEvents = numEvents;
   fDescription = TString::Format("Decides whether or not to filter events based on characteristics of the event amplitude and Rayleigh distribution over %d events", fNumEvents);
   fNumOutputs = 6;
@@ -559,9 +551,9 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(int numEvents) : RayleighMonitor(numEvents)
+Acclaim::Filters::RayleighFilter::RayleighFilter(double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
 {
-  fRandy = new TRandom3(1234);
+  fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
   fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
 }
 
@@ -590,8 +582,10 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
       for(int freqInd=0; freqInd < nf; freqInd++){
 
 	double probVal = fourierBuffer.getProb(pol, ant, freqInd);
+	int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
+	double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
 
-	if(probVal >= 3){
+	if(reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
 	  double specAmp = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
 	  // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
 	  
@@ -608,6 +602,9 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
 	  // std::cout << theFreqs[freqInd] << std::endl;
 	}
+	// else{
+	//   std::cout << pol << "\t" << ant << "\t" << theFreqs[freqInd] << "\t" << probVal << "\t" << std::endl;
+	// }
       }
     }
   }  

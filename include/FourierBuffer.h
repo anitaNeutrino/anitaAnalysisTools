@@ -50,7 +50,7 @@ namespace Acclaim
 
     
     virtual ~FourierBuffer();
-    explicit FourierBuffer(Int_t theBufferSize=1000);
+    explicit FourierBuffer(Int_t theBufferSize=1000, double alfaLowPassFreqGHz=0.65);
 
     size_t add(const FilteredAnitaEvent* fEv);
 
@@ -82,6 +82,10 @@ namespace Acclaim
     void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
     bool isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful);
 
+    bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const{
+      return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
+    }
+    
     // const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
@@ -103,6 +107,9 @@ namespace Acclaim
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
+
+    // will be 1.3ish for non-alfa bandpassed channels, much smaller otherwise.
+    double fAlfaLowPassFreq; 
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    

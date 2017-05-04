@@ -21,16 +21,15 @@
 #define IS_ROOT_6_06_08 (ROOT_VERSION_CODE >= ROOT_VERSION(6,6,8))
 
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fMaxSpecFreq(1.29), fNumSkipped(0){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, double alfaLowPassFreqGHz) :
+  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(0.15), fMaxFitFreq(1.29), fMinSpecFreq(0.2), fAlfaLowPassFreq(alfaLowPassFreqGHz), fNumSkipped(0){
   
   // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
   
   // will initialize this dynamically to get around this no-copy-constructor bullshit
-  fSpectrum = NULL;
-
+  fSpectrum = NULL;  
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
 
@@ -41,7 +40,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
 #if IS_ROOT_6_06_08
   fRay = new TF1("fRay", rayleighFuncText, 0, 100, TF1::EAddToList::kNo);
 #else
-  fRay = new TF1("fRay", rayleighFuncText, 0, 100);
+  fRay = new TF1("fRay", rayleighFuncText, 0, 100);  
 #endif
 }
 
@@ -65,6 +64,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
     
 
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
       sumPowers[pol][ant].resize(n, 0);
 
       chiSquares[pol][ant].resize(n, 0);
@@ -90,7 +90,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	hRays[pol][ant].at(freqBin)->SetDirectory(0); // hide from when .ls is done in MagicDisplay
 	hRays[pol][ant].at(freqBin)->freqMHz = df*1e3*freqBin;	
       }
-
+      
       // summary graphs for drawSummary
       grChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
       grNDFs[pol].push_back(TGraphFB(this, ant, pol, n));
@@ -120,7 +120,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	
 	grAmplitudes[pol][ant].GetY()[freqBin] = 0;	
 	grSpectrumAmplitudes[pol][ant].GetY()[freqBin] = 0;
-	grProbs[pol][ant].GetY()[freqBin] = -0.1;
+	grProbs[pol][ant].GetY()[freqBin] = 0;
 	
       }	
     }
@@ -313,12 +313,8 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp);
 	  }
 	  
-	  probVal = prob > 0 ? -1*TMath::Log10(prob) : TMath::Log10(DBL_MAX);
+	  probVal = prob > 0 ? TMath::Log10(prob) : 0;
 
-	  // if(eventNumbers.size() == 1 && ant == 0 && polInd == 0){
-	  //   std::cout << "\t" << probVal << "\t" << prob << "\t" << amp << "\t" << hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp) << std::endl;
-	  // }
-	  
 	  // if(!TMath::Finite(probVal)){
 	  //   std::cout << probVal << "\t" << prob << std::endl;
 	  // }
@@ -334,7 +330,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
   if(anyUpdated){
     int firstSpecInd = int(fMinSpecFreq/df);
-    int lastSpecInd = int(fMaxSpecFreq/df);
+    // int lastSpecInd = int(fMaxSpecFreq/df);
 
     // double sumLowEdgeBins = 0;
     // double sumHighEdgeBins = 0;    
@@ -355,6 +351,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
+	int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
 	int nf = fitAmplitudes[pol][ant].size();
 	// std::cout << fitAmplitudes[pol][ant].size() << "\t" << sumPowers[ant][pol].size() << "\t" << nf << std::endl;
 	for(int freqInd = 0; freqInd < nf; freqInd++){
@@ -449,7 +446,7 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
   
   bool needToAddManually = false;
 
-  std::cerr << "Info in " << __PRETTY_FUNCTION__ << ": Loading history for FourierBuffer, will loop over the last " << bufferSize << " events plus a few." << std::endl;
+   std::cerr << "Info in " << __PRETTY_FUNCTION__ << ": Loading history for FourierBuffer, will loop over the last " << bufferSize << " events plus a few." << std::endl;
   // std::cerr << "In " << __PRETTY_FUNCTION__ << ", I think I am here " << this << std::endl;
   
   while(!loadedHistory){
@@ -582,7 +579,7 @@ void Acclaim::FourierBuffer::getSpectrum(double* y, int n) const{
   float* tempPtr = &tempFloats[0];
 #endif
 
-  const int numIter = 6;
+  const int numIter = 4;
   fSpectrum->Background(tempPtr,n,
 			numIter,TSpectrum::kBackDecreasingWindow,
 			TSpectrum::kBackOrder2,kFALSE,
@@ -625,7 +622,7 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;  
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
-      if((ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal)){ // skip alfa and alfa cross-talk channels
+      if(isAlfaBandpassed(ant, pol)){
 	continue;
       }
       
