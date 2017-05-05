@@ -3,6 +3,23 @@
 ClassImp(Acclaim::QualityCut);
 ClassImp(Acclaim::SurfSaturationCut);
 ClassImp(Acclaim::SelfTriggeredBlastCut);
+ClassImp(Acclaim::NumPointsCut);
+
+
+
+Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaEventSummary* sum){
+      
+  SurfSaturationCut ssc;
+  ssc.apply(usefulEvent, sum);
+
+  SelfTriggeredBlastCut stbc;
+  stbc.apply(usefulEvent, sum);
+
+  NumPointsCut npc;
+  npc.apply(usefulEvent, sum);
+
+  return (ssc.eventPassesCut && stbc.eventPassesCut && npc.eventPassesCut);
+}
 
 
 
@@ -171,3 +188,33 @@ void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful, Anita
     }
   }
 }
+
+
+
+Acclaim::NumPointsCut::NumPointsCut(){
+  // This wasn't chosen particularly carefully
+  // I just want to stop core dumps with old root when there aren't enough points for interpolation
+  // which is < 5 points, so this is more than sufficient.
+  numPointsCutLow = 200;  
+}
+
+
+void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
+  eventPassesCut = true;
+  for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
+    const int numPoints = useful->fNumPoints[chanIndex];
+    if(numPoints < numPointsCutLow){
+      eventPassesCut = false;
+      break;
+    }
+  }
+
+  // silly old flag name
+  if(sum){    
+    sum->flags.isVarner2 = 1;
+  }
+  else{
+    sum->flags.isVarner2 = 0;
+  }  
+}
+

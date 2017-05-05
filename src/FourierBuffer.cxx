@@ -169,22 +169,6 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 
 
 
-bool Acclaim::FourierBuffer::isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful){
-
-  SurfSaturationCut ssc;
-  ssc.apply(useful);
-
-  SelfTriggeredBlastCut stbc;
-  stbc.apply(useful);
-
-  if(!(ssc.eventPassesCut && stbc.eventPassesCut)){
-    fNumSkipped++;
-  }
-  // don't process events failing quality cuts (will muck up rolling averages)
-  return !(ssc.eventPassesCut && stbc.eventPassesCut);  
-
-}
-
 
 size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
@@ -201,8 +185,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
   
-  // don't add nasty events that have crazy amounts of power.
-  if(isASelfTriggeredBlastOrHasSurfSaturation(fEv->getUsefulAnitaEvent())){
+  // don't add nasty events that have crazy amounts of power or other pathologies
+  Bool_t isGoodEvent = QualityCut::applyAll(fEv->getUsefulAnitaEvent());
+  if(!isGoodEvent){
+    fNumSkipped++;
     // then do nothing
     return eventNumbers.size();
   }

@@ -80,7 +80,6 @@ namespace Acclaim
     
     int getNumEventsInBuffer() const {return eventsInBuffer;}
     void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
-    bool isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful);
 
     bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const{
       return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
