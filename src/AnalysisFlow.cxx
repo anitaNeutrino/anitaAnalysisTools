@@ -136,7 +136,7 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 
 
 /** 
- * Coax the OutputConvention class into making an appropriately named output file/
+ * Coax the OutputConvention class into making an appropriately named output files
  */
 void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
@@ -152,18 +152,24 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     TString runStr = TString::Format("%d", fRun);
     fakeArgv.push_back((char*) runStr.Data());
     
-
+    TString extra;
     if(fNumDivisions > 1){
       
-      Int_t numDigitsTotal = TMath::Log10(fNumDivisions);
-      Int_t numDigitsThis = fDivision > 0 ? TMath::Log10(fDivision) : 1;
+      Int_t numDigitsTotal = floor(TMath::Log10(fNumDivisions) + 1);
+      Int_t numDigitsThis = fDivision == 0 ? 1 : floor(TMath::Log10(fDivision) + 1);
 
-      TString extra;
+      std::cout << fNumDivisions << "\t" << numDigitsTotal << std::endl;
+      std::cout << fDivision << "\t" << numDigitsThis << std::endl;
+
       for(int i=0; i < numDigitsTotal - numDigitsThis; i++){
+	std::cout << i << "\t" << numDigitsTotal - numDigitsThis << std::endl;
+	
 	extra += TString::Format("0");
       }
       extra += TString::Format("%d", fDivision);
 
+      std::cout << extra << std::endl;
+      
       fakeArgv.push_back((char*) extra.Data());
     }
     Int_t fakeArgc = (Int_t) fakeArgv.size();

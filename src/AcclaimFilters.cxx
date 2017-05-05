@@ -48,7 +48,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   centreMHz = 370;
   Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
 
-  double log10ProbThresh = -2;
+  double log10ProbThresh = -2.5;
   double reducedChiSquareThresh = 3;
   RayleighFilter* rf = new RayleighFilter(log10ProbThresh, reducedChiSquareThresh, 1500, alfaLowPassFreq);  
 
