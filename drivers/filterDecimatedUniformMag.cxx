@@ -18,7 +18,7 @@ int main(int argc, char* argv[]){
     std::cerr << "Well, this script is pointless... I give up." << std::endl;
     return 1;
   }
-  AnalysisFlow analysisSimpleNotchFilters(argv[0], run, AnalysisFlow::kWais, stupidNotchStrat);
+  AnalysisFlow analysisSimpleNotchFilters(argv[0], run, AnalysisFlow::kDecimated, stupidNotchStrat);
   analysisSimpleNotchFilters.doAnalysis();
     
   return 0;
