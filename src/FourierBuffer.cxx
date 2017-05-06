@@ -99,8 +99,8 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       grProbs[pol].push_back(TGraphFB(this, ant, pol, n));
 
       grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
+      grLastAmps[pol].push_back(TGraphFB(this, ant, pol, n));      
       grSpectrumAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
-
 
 
       for(int freqBin=0; freqBin < n; freqBin++){
@@ -111,6 +111,7 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
 	grAmplitudes[pol][ant].GetX()[freqBin] = f;	
 	grSpectrumAmplitudes[pol][ant].GetX()[freqBin] = f;
+	grLastAmps[pol][ant].GetX()[freqBin] = f;	
 
 	grProbs[pol][ant].GetX()[freqBin] = f;
 
@@ -118,7 +119,9 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	grNDFs[pol][ant].GetY()[freqBin] = 0;
 	grReducedChiSquares[pol][ant].GetY()[freqBin] = 0;
 	
-	grAmplitudes[pol][ant].GetY()[freqBin] = 0;	
+	grAmplitudes[pol][ant].GetY()[freqBin] = 0;
+	grLastAmps[pol][ant].GetY()[freqBin] = 0;	
+	
 	grSpectrumAmplitudes[pol][ant].GetY()[freqBin] = 0;
 	grProbs[pol][ant].GetY()[freqBin] = 0;
 	
@@ -133,7 +136,11 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
       // get them to know about eachother
       grSpectrumAmplitudes[pol][ant].fDerivedFrom = &grAmplitudes[pol][ant];
+      grLastAmps[pol][ant].fDerivedFrom = &grAmplitudes[pol][ant];
+
       grAmplitudes[pol][ant].fDerivatives.push_back(&grSpectrumAmplitudes[pol][ant]);
+      grAmplitudes[pol][ant].fDerivatives.push_back(&grLastAmps[pol][ant]);      
+
     }
   }
 
@@ -247,8 +254,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  // if(ant==0 && polInd == 0 && eventNumbers.size() >= bufferSize && fCurrentlyLoadingHistory){
 	  //   std::cerr << eventNumbers.size() << "\t" << pol << "\t" << ant << "\t" << freqInd << "\t" << doneVectorInit << std::endl;
 	  // }
-	
+	  
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
+	  grLastAmps[pol][ant].GetY()[freqInd] = amp;
+	  
 	  if(updated){
 	    anyUpdated = true;
 	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd],
@@ -280,6 +289,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];
 	    
 	  }
+	  
 
 	  // this is N, if the probability of getting this amplitude or higher, given the rayeligh distribution is 1/N.
 
@@ -686,10 +696,17 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
       if(summaryOpt == FourierBuffer::RayleighAmplitude){
 	grSpectrumAmplitudes[pol][ant].SetLineColor(gr->GetLineColor());
-	grSpectrumAmplitudes[pol][ant].SetLineStyle(2);
+	grSpectrumAmplitudes[pol][ant].SetLineStyle(3);
 	grSpectrumAmplitudes[pol][ant].SetMaximum(yMax);
 	grSpectrumAmplitudes[pol][ant].SetMinimum(yMin);
 	grSpectrumAmplitudes[pol][ant].Draw("lsame");
+
+	grLastAmps[pol][ant].SetLineColor(gr->GetLineColor());
+	grLastAmps[pol][ant].SetLineStyle(5);
+	grLastAmps[pol][ant].SetMaximum(yMax);
+	grLastAmps[pol][ant].SetMinimum(yMin);
+	grLastAmps[pol][ant].Draw("lsame");
+	
       }           
     }
   }

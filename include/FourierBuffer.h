@@ -139,6 +139,7 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grLastAmps[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
     

@@ -18,7 +18,11 @@ Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaE
   NumPointsCut npc;
   npc.apply(usefulEvent, sum);
 
-  return (ssc.eventPassesCut && stbc.eventPassesCut && npc.eventPassesCut);
+  Bool_t isGood = (ssc.eventPassesCut && stbc.eventPassesCut && npc.eventPassesCut);
+  if(sum){
+    sum->flags.isGood = isGood;
+  }  
+  return isGood;
 }
 
 
@@ -195,7 +199,8 @@ Acclaim::NumPointsCut::NumPointsCut(){
   // This wasn't chosen particularly carefully
   // I just want to stop core dumps with old root when there aren't enough points for interpolation
   // which is < 5 points, so this is more than sufficient.
-  numPointsCutLow = 200;  
+  numPointsCutLow = 200;
+  description = "Checks there are a reasonable number of points in each waveform.";  
 }
 
 
@@ -209,12 +214,14 @@ void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSumm
     }
   }
 
-  // silly old flag name
-  if(sum){    
-    sum->flags.isVarner2 = 1;
+  if(sum){
+    if(!eventPassesCut){
+      // silly old flag name      
+      sum->flags.isVarner2 = 1;
+    }
+    else{
+      sum->flags.isVarner2 = 0;
+    }
   }
-  else{
-    sum->flags.isVarner2 = 0;
-  }  
 }
 

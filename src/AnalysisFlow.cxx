@@ -287,27 +287,28 @@ void Acclaim::AnalysisFlow::doAnalysis(){
       Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
     }
 
+
     Adu5Pat* pat = fData->gps();
     UsefulAdu5Pat usefulPat(pat);
-    
-    FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
-    // since we now have rolling averages make sure the filter strategy is processed before deciding whether or not to reconstruct 
-    Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
+    Bool_t needToReconstruct = shouldIDoThisEvent(header, &usefulPat);
 
-    if(selectedEvent){
+    if(needToReconstruct){
       eventSummary = new AnitaEventSummary(header, &usefulPat);
-      
-      QualityCut::applyAll(usefulEvent, eventSummary);
-      
-      // fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
-      fReco->process(&filteredEvent, &usefulPat, eventSummary);
+      Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, eventSummary);
+
+      if(!isGoodEvent){
+	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
+	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
+	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
+	fReco->process(&filteredEvent, &usefulPat, eventSummary);
+      }
 
       fSumTree->Fill();
       delete eventSummary;
       eventSummary = NULL;
     }
-
+    
     lastEventConsidered = header->eventNumber;
     p.inc(entry, numEntries);
   }

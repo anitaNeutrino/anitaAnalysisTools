@@ -50,7 +50,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   double log10ProbThresh = -2.5;
   double reducedChiSquareThresh = 3;
-  RayleighFilter* rf = new RayleighFilter(log10ProbThresh, reducedChiSquareThresh, 1500, alfaLowPassFreq);  
+  RayleighFilter* rf = new RayleighFilter(log10ProbThresh, reducedChiSquareThresh, 1500, alfaLowPassFreq);
+
+  UniformMagnitude* um = new UniformMagnitude();
 
   // then make the strategies
   
@@ -65,6 +67,13 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   fs->addOperation(alfaFilter, saveOutput);
   fs->addOperation(rf, saveOutput);
   filterStrats["RayleighFilter"] = fs;
+
+
+  FilterStrategy* ufs = new FilterStrategy();
+  ufs->addOperation(alfaFilter, saveOutput);  
+  ufs->addOperation(um);
+  filterStrats["UniformMagnitude"] = ufs;
+  
 }
 
 
@@ -394,6 +403,18 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 
 
+
+
+Acclaim::Filters::UniformMagnitude::UniformMagnitude(){
+}
+
+void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
+
+  FFTWComplex* fft = wf->updateFreq();  
+  for(int i=0; i< wf->Nfreq(); i++){
+    fft[i].setMagPhase(i > 0 ? 1 : 0, fft[i].getPhase());
+  }
+}
 
 
 

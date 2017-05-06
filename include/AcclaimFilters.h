@@ -104,6 +104,17 @@ namespace Acclaim
       double fChiSquarePerDofThreshold; // Remove frequency if our fit of the rayleigh amplitude is bad
     };
 
+
+    class UniformMagnitude : public UniformFilterOperation {
+    public:
+      explicit UniformMagnitude();
+      virtual ~UniformMagnitude() { ;}
+      virtual void processOne(AnalysisWaveform* fw);
+      // virtual unsigned nOutputs() const {return 0;}
+      virtual const char * tag () const {return "UniformMagnitude";};
+      virtual const char * description () const {return "Gives every frequency bin the same magnitude, keeping the phase constant";}
+    };
+    
     
 
     class SpikeSuppressor : public UniformFilterOperation {
