@@ -1,6 +1,5 @@
 
-
-set(BINARIES analyzeWais filterWaisBrickWallSatellites filterDecimatedAcclaim filterWaisAcclaim)
+set(BINARIES analyzeWais filterDecimatedAcclaim filterDecimatedBrickWallSatellites filterWaisAcclaim filterWaisBrickWallSatellites)
 
 foreach(binary ${BINARIES})
   MESSAGE(STATUS "Process file: ${binary}")
