@@ -54,6 +54,8 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   UniformMagnitude* um = new UniformMagnitude();
 
+  SpectrumMagnitude* sm = new SpectrumMagnitude(1500, alfaLowPassFreq);
+  
   // then make the strategies
   
   FilterStrategy* stupidNotchStrat = new FilterStrategy();
@@ -73,6 +75,12 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   ufs->addOperation(alfaFilter, saveOutput);  
   ufs->addOperation(um);
   filterStrats["UniformMagnitude"] = ufs;
+
+  FilterStrategy* sfs = new FilterStrategy();
+  sfs->addOperation(alfaFilter, saveOutput);  
+  sfs->addOperation(sm);
+  filterStrats["SpectrumMagnitude"] = sfs;
+  
   
 }
 
@@ -413,6 +421,30 @@ void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
   FFTWComplex* fft = wf->updateFreq();  
   for(int i=0; i< wf->Nfreq(); i++){
     fft[i].setMagPhase(i > 0 ? 1 : 0, fft[i].getPhase());
+  }
+}
+
+
+Acclaim::Filters::SpectrumMagnitude::SpectrumMagnitude(Int_t numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz){
+  fDescription = "Sets the magnitude of each frequency bin equal to the fourier buffer spectrum";
+}
+
+void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
+  RayleighMonitor::process(fEv);
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      AnalysisWaveform* wf = getWf(fEv, ant, pol);
+
+      const int nf = wf->Nfreq();
+
+      FFTWComplex* theFreqs = wf->updateFreq();
+      for(int freqInd=0; freqInd < nf; freqInd++){
+	double mag = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
+	double phase = theFreqs[freqInd].getPhase();
+	theFreqs[freqInd].setMagPhase(mag, phase);
+      }
+    }
   }
 }
 

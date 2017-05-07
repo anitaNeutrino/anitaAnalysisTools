@@ -241,15 +241,21 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       // then get reference that vector in the list
       // powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
       // std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
-      // freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN());
-  
+      // freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN()); 
       // update sum of power
+
+      //g_power.SetPoint(i, i * df, the_fft[i].getAbsSq()*2/fft_len/50/1000);	  
+
+      // need *50*1000/2 = 25000
+      const double cosminPowerConversionFactor = 25000*grPower->GetN();
+       
+      
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
 	sumPowers[pol][ant].at(freqInd) += grPower->GetY()[freqInd];
 	double f = df*freqInd;
 	if(f >= fMinFitFreq && f < fMaxFitFreq){
-	
-	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]);
+
+	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]*cosminPowerConversionFactor);
 
 	  // if(ant==0 && polInd == 0 && eventNumbers.size() >= bufferSize && fCurrentlyLoadingHistory){
 	  //   std::cerr << eventNumbers.size() << "\t" << pol << "\t" << ant << "\t" << freqInd << "\t" << doneVectorInit << std::endl;

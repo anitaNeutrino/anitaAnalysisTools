@@ -105,16 +105,31 @@ namespace Acclaim
     };
 
 
+    class SpectrumMagnitude : public RayleighMonitor {
+    public:
+      explicit SpectrumMagnitude(Int_t numEvents, double alfaLowPassFreqGHz=0.65);
+      virtual ~SpectrumMagnitude() {;}
+      virtual void process(FilteredAnitaEvent* fEv);
+      // virtual unsigned nOutputs() const {return 0;}
+      virtual const char * tag () const {return "SpectrumMagnitude";};
+      virtual const char * description () const {return fDescription.Data();}
+    protected:
+    };
+    
+    
+
+
     class UniformMagnitude : public UniformFilterOperation {
     public:
       explicit UniformMagnitude();
       virtual ~UniformMagnitude() { ;}
-      virtual void processOne(AnalysisWaveform* fw);
+      virtual void processOne(AnalysisWaveform* wf);
       // virtual unsigned nOutputs() const {return 0;}
       virtual const char * tag () const {return "UniformMagnitude";};
       virtual const char * description () const {return "Gives every frequency bin the same magnitude, keeping the phase constant";}
     };
-    
+
+
     
 
     class SpikeSuppressor : public UniformFilterOperation {
