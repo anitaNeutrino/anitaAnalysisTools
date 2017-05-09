@@ -57,8 +57,16 @@ namespace Acclaim
     Double_t getProb(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
       return probs[pol][ant][freqBin];
     }
-    Double_t getSpectrumAmp(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
+    Double_t getBackgroundSpectrumAmp(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
       return spectrumAmplitudes[pol][ant][freqBin];
+    }
+    
+    void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant, double& chiSquare, int& ndf){
+      chiSquare = chanChisquare[pol][ant];
+      ndf = chanNdf[pol][ant];      
+    }
+    double getFitOverSpectrum(AnitaPol::AnitaPol_t pol, Int_t ant, int freqBin){
+      return fitOverSpectrum[pol][ant].at(freqBin);
     }
 
     
@@ -75,7 +83,7 @@ namespace Acclaim
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
     const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};
     const std::vector<double>& getRayleighAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return fitAmplitudes[pol][ant];};
-    const std::vector<double>& getSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
+    const std::vector<double>& getBackgroundSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
     const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {return probs[pol][ant];};
     
     int getNumEventsInBuffer() const {return eventsInBuffer;}
@@ -84,6 +92,8 @@ namespace Acclaim
     bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const{
       return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
     }
+
+    void getImpulseResponseAmplitudes();
     
     // const FourierBuffer* getAddress(){return this;}
   protected:
@@ -105,8 +115,13 @@ namespace Acclaim
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> fitOverSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS]; // fractional excess of fit over spectrum
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> impulseRelativeAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
+    double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    int chanNdf[AnitaPol::kNotAPol][NUM_SEAVEYS];    
+	   
     // will be 1.3ish for non-alfa bandpassed channels, much smaller otherwise.
     double fAlfaLowPassFreq; 
 
@@ -130,7 +145,7 @@ namespace Acclaim
     mutable TSpectrum* fSpectrum; // to estimate the background    
     double fMinSpecFreq;
     double fMaxSpecFreq;
-    void getSpectrum(double* y, int n) const;
+    void getBackgroundSpectrum(double* y, int n) const;
 
 
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
@@ -139,6 +154,7 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grFitOverSpectrum[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grLastAmps[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
@@ -153,8 +169,11 @@ namespace Acclaim
 	return &grReducedChiSquares[pol][ant];
       case NDF:
 	return &grNDFs[pol][ant];
+      // case RayleighAmplitude:
+      // 	return &grAmplitudes[pol][ant];
       case RayleighAmplitude:
-	return &grAmplitudes[pol][ant];
+	return &grFitOverSpectrum[pol][ant];
+	
       case Prob:
 	return &grProbs[pol][ant];
       }

@@ -36,10 +36,10 @@ void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* 
 void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
 
   // first make the operations
-
-  double alfaLowPassFreq = 0.7;
-  ALFASincFilter* alfaFilter = new ALFASincFilter(alfaLowPassFreq); // should always use some kind of alfa filter unless you have a good reason
-
+  ALFASincFilter* alfaFilter = new ALFASincFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+  Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
+  Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
+  
   Double_t widthMHz = 26;
   Double_t centreMHz = 260;
   Notch* n260 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
@@ -50,33 +50,47 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
   double log10ProbThresh = -2.5;
   double reducedChiSquareThresh = 3;
-  RayleighFilter* rf = new RayleighFilter(log10ProbThresh, reducedChiSquareThresh, 1500, alfaLowPassFreq);
+  double fitOverSpectrumThreshold = 1.05;
+  const int numEventsInRayleighDistributions = 1500;
+  RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
 
-  UniformMagnitude* um = new UniformMagnitude();
+  UniformMagnitude* um = new UniformMagnitude();   
+  SpectrumMagnitude* sm = new SpectrumMagnitude(numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
 
-  SpectrumMagnitude* sm = new SpectrumMagnitude(1500, alfaLowPassFreq);
-  
+
+
+
+
   // then make the strategies
+
+  // every operation is going to use these default strategies
+  FilterStrategy* defaultOps = new FilterStrategy();
+  defaultOps->addOperation(bandHighPass, saveOutput);
+  defaultOps->addOperation(bandLowPass, saveOutput);
+  defaultOps->addOperation(alfaFilter, saveOutput);
+  filterStrats["Default"] = defaultOps;  
+
   
   FilterStrategy* stupidNotchStrat = new FilterStrategy();
-  stupidNotchStrat->addOperation(alfaFilter, saveOutput);
+  (*stupidNotchStrat) = (*defaultOps);
   stupidNotchStrat->addOperation(n260, saveOutput);
   stupidNotchStrat->addOperation(n370, saveOutput);
-
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
   FilterStrategy* fs = new FilterStrategy();
-  fs->addOperation(alfaFilter, saveOutput);
+  (*fs) = (*defaultOps);  
   fs->addOperation(rf, saveOutput);
   filterStrats["RayleighFilter"] = fs;
 
 
   FilterStrategy* ufs = new FilterStrategy();
+  (*ufs) = (*defaultOps);    
   ufs->addOperation(alfaFilter, saveOutput);  
   ufs->addOperation(um);
   filterStrats["UniformMagnitude"] = ufs;
 
   FilterStrategy* sfs = new FilterStrategy();
+  (*sfs) = (*defaultOps);      
   sfs->addOperation(alfaFilter, saveOutput);  
   sfs->addOperation(sm);
   filterStrats["SpectrumMagnitude"] = sfs;
@@ -440,7 +454,7 @@ void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
 
       FFTWComplex* theFreqs = wf->updateFreq();
       for(int freqInd=0; freqInd < nf; freqInd++){
-	double mag = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
+	double mag = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
 	double phase = theFreqs[freqInd].getPhase();
 	theFreqs[freqInd].setMagPhase(mag, phase);
       }
@@ -559,8 +573,8 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 	  n = fourierBuffer.getRayleighAmplitudes(ant, pol).size();
 	  break;
 	case 4:
-	  vals = &fourierBuffer.getSpectrumAmplitudes(ant, pol)[0];
-	  n = fourierBuffer.getSpectrumAmplitudes(ant, pol).size();
+	  vals = &fourierBuffer.getBackgroundSpectrumAmplitudes(ant, pol)[0];
+	  n = fourierBuffer.getBackgroundSpectrumAmplitudes(ant, pol).size();
 	  break;
 	case 5:
 	  vals = &fourierBuffer.getProbabilities(ant, pol)[0];
@@ -604,7 +618,7 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
+Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold), fAmpFitOverSpectrumThreshold(amplitudeFitOverSpectrumThreshold)
 {
   fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
   fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
@@ -631,15 +645,40 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
       const int nf = wf->Nfreq();
 
+      // first check spectrum threshold filtering...
+      std::vector<int> binsAboveFitOverSpecThreshold;
+      for(int freqInd=0; freqInd < nf; freqInd++){
+	double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
+	if(fitOverSpec > fAmpFitOverSpectrumThreshold){
+	  binsAboveFitOverSpecThreshold.push_back(freqInd);
+	}
+      }
+      // now go through and fill out spikes...
+      std::vector<bool> nearPeakInFitOverThreshold(nf, false);
+      for(UInt_t i=0; i < binsAboveFitOverSpecThreshold.size(); i++){
+	Int_t startBin = binsAboveFitOverSpecThreshold.at(i);
+	Int_t thisBin = startBin;
+	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
+	  nearPeakInFitOverThreshold.at(thisBin) = true;
+	  thisBin++;
+	}
+	thisBin = startBin;
+	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
+	  nearPeakInFitOverThreshold.at(thisBin) = true;
+	  thisBin--;
+	}
+      }
+      
+
       FFTWComplex* theFreqs = wf->updateFreq();
       for(int freqInd=0; freqInd < nf; freqInd++){
 
 	double probVal = fourierBuffer.getProb(pol, ant, freqInd);
 	int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
 	double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
-
-	if(reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
-	  double specAmp = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
+	// double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
+	if(nearPeakInFitOverThreshold.at(freqInd) || reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
+	  double specAmp = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
 	  // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
 	  
 	  double x1 = fRandy->Gaus(0, specAmp);
