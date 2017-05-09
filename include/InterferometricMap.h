@@ -85,6 +85,7 @@ namespace Acclaim
     void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
     void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const;
     void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = imagePeak, phiDeg = peakPhiDeg, thetaDeg = peakThetaDeg;}
+    void ExecuteEvent(int event, int x, int y);
 
   
     inline Int_t GetNbinsPhi() const {return GetNbinsX();}
@@ -99,6 +100,7 @@ namespace Acclaim
     Int_t getPeakPhiSector() const {return peakPhiSector;}
     AnitaPol::AnitaPol_t getPol() const {return pol;}  
 
+    
   protected:
 
     TGraph& findOrMakeGraph(TString name);

@@ -16,6 +16,15 @@ std::vector<Double_t> coarseBinEdgesTheta; // has size NUM_BINS_THETA+1
 std::vector<Double_t> fineBinEdgesTheta; // has size NUM_BINS_THETA_ZOOM_TOTAL+1
 Double_t bin0PhiDeg = -9999;
 
+void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
+ 
+  if(event == kButton1Double){
+    (void) x;
+    (void) y;
+    new TCanvas();
+    Draw("colz");
+  }  
+}
 
 
 Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
