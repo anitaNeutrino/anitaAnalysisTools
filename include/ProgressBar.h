@@ -42,6 +42,7 @@ namespace Acclaim
     UInt_t percentage; //!< Percentage to print to the screen
     TStopwatch watch; //!< ROOT's stopwatch class, used to time the progress since object construction
     Int_t setHandler; //!< Have we set the interupt signal handler?
+    Int_t numBreakTries; ///!< Did I manage to break of the the loop, not if this number goes above 1?
   };
 }
 

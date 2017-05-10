@@ -16,6 +16,7 @@
 #include "AnalysisWaveform.h"
 #include "RootTools.h"
 
+#include "AnitaEventSummary.h"
 
 namespace Acclaim{
 
@@ -25,10 +26,13 @@ namespace Acclaim{
   class QualityCut : public TObject {
 
   public:
+    static Bool_t applyAll(const UsefulAnitaEvent* usefulEvent, AnitaEventSummary* sum=NULL); // static utility function, applies all cuts defined here
+
+    
     QualityCut(){;}
     virtual ~QualityCut(){;}
     // virtual void apply(FilteredAnitaEvent* fEv) = 0;
-    virtual void apply(const UsefulAnitaEvent* useful) = 0;    
+    virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL) = 0;    
     TString description;
     Bool_t eventPassesCut;
     ClassDef(QualityCut, 1)
@@ -39,7 +43,7 @@ namespace Acclaim{
   class SurfSaturationCut : public QualityCut {
     ClassDef(Acclaim::SurfSaturationCut, 1);
 
-  private:
+  protected:
     double maxLimit;
     double minLimit;
     double asymLimit;
@@ -60,7 +64,7 @@ namespace Acclaim{
     SurfSaturationCut();
     virtual ~SurfSaturationCut(){;}    
     // virtual void apply(FilteredAnitaEvent* fEv);
-    virtual void apply(const UsefulAnitaEvent* useful);    
+    virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL);    
   };
 
 
@@ -71,7 +75,7 @@ namespace Acclaim{
   class SelfTriggeredBlastCut : public QualityCut {
     ClassDef(Acclaim::SelfTriggeredBlastCut, 1);    
     
-  private:
+  protected:
     double ratioCutHigh;
     double ratioCutLow;
 
@@ -84,10 +88,23 @@ namespace Acclaim{
     SelfTriggeredBlastCut();   
     virtual ~SelfTriggeredBlastCut(){;}
     // virtual void apply(FilteredAnitaEvent* fEv);
-    virtual void apply(const UsefulAnitaEvent* useful);
+    virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL);
   };
   
   
+  class NumPointsCut : public QualityCut {
+    ClassDef(Acclaim::NumPointsCut, 1);    
+    
+  protected:
+    int numPointsCutLow; // presumably don't need a cut on the other side of this...
+    int minNumPoints;
+
+  public:
+    NumPointsCut();
+    virtual ~NumPointsCut(){;}
+    // virtual void apply(FilteredAnitaEvent* fEv);
+    virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL);
+  };
   
 }
 

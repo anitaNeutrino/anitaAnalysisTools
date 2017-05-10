@@ -2,7 +2,6 @@
 #include "InterferometricMap.h"
 #include "InterferometryCache.h"
 
-
 Acclaim::AnalysisReco::AnalysisReco(){
   initializeInternals();
 }

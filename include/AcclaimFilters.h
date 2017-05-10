@@ -27,9 +27,17 @@ namespace Acclaim
 
   namespace Filters
   {
+    namespace Bands {
+      // zero everything outside of these
+      const double anitaHighPassGHz = 0.19;
+      const double anitaLowPassGHz = 1.2;
+      const double alfaLowPassGHz = 0.65;
+    }
+
+    
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
-
+    void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);    
 
     // base notch class
     class Notch: public UniformFilterOperation
@@ -66,8 +74,11 @@ namespace Acclaim
       int fNumEvents;
       FourierBuffer fourierBuffer;
       TString fDescription;
+      unsigned fNumOutputs;
+      AnitaPol::AnitaPol_t fOutputPol;
+      int fOutputAnt;
     public:
-      explicit RayleighMonitor(int numEvents);
+      explicit RayleighMonitor(int numEvents, double alfaLowPassFreqGHz=0.65);
       virtual const char * tag () const {return "RayleighMonitor";};
       virtual const char * description () const {return fDescription.Data();}
       virtual void processOne(AnalysisWaveform* wave)
@@ -78,7 +89,7 @@ namespace Acclaim
       }
       virtual void process(FilteredAnitaEvent* fEv);
       virtual unsigned outputLength(unsigned i) const;
-      virtual unsigned nOutputs() const{return 3;}
+      virtual unsigned nOutputs() const{return fNumOutputs;}
       virtual const char* outputName(unsigned i) const;
       virtual void fillOutput(unsigned i, double* v) const;
 
@@ -89,15 +100,44 @@ namespace Acclaim
 
     class RayleighFilter : public RayleighMonitor {
     public:
-      explicit RayleighFilter(Int_t numEvents);
+      explicit RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThresh, Int_t numEvents, double alfaLowPassFreqGHz=0.65);
       virtual ~RayleighFilter();
       virtual void process(FilteredAnitaEvent* fEv);
-      virtual unsigned nOutputs() const {return 0;}
+      // virtual unsigned nOutputs() const {return 0;}
       virtual const char * tag () const {return "RayleighFilter";};
       virtual const char * description () const {return fDescription.Data();}
     protected:
       TRandom3* fRandy;
+      double fLog10ProbThreshold; //!< What was the probability
+      double fChiSquarePerDofThreshold; // Remove frequency if our fit of the rayleigh amplitude is bad
+      double fAmpFitOverSpectrumThreshold; // filter regions of the waveform where the ratio of the fitted amplitude to the spectrum amplitude is greater than this value
     };
+
+
+    class SpectrumMagnitude : public RayleighMonitor {
+    public:
+      explicit SpectrumMagnitude(Int_t numEvents, double alfaLowPassFreqGHz=0.65);
+      virtual ~SpectrumMagnitude() {;}
+      virtual void process(FilteredAnitaEvent* fEv);
+      // virtual unsigned nOutputs() const {return 0;}
+      virtual const char * tag () const {return "SpectrumMagnitude";};
+      virtual const char * description () const {return fDescription.Data();}
+    protected:
+    };
+    
+    
+
+
+    class UniformMagnitude : public UniformFilterOperation {
+    public:
+      explicit UniformMagnitude();
+      virtual ~UniformMagnitude() { ;}
+      virtual void processOne(AnalysisWaveform* wf);
+      // virtual unsigned nOutputs() const {return 0;}
+      virtual const char * tag () const {return "UniformMagnitude";};
+      virtual const char * description () const {return "Gives every frequency bin the same magnitude, keeping the phase constant";}
+    };
+
 
     
 

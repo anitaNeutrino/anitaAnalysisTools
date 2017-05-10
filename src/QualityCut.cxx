@@ -3,6 +3,27 @@
 ClassImp(Acclaim::QualityCut);
 ClassImp(Acclaim::SurfSaturationCut);
 ClassImp(Acclaim::SelfTriggeredBlastCut);
+ClassImp(Acclaim::NumPointsCut);
+
+
+
+Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaEventSummary* sum){
+      
+  SurfSaturationCut ssc;
+  ssc.apply(usefulEvent, sum);
+
+  SelfTriggeredBlastCut stbc;
+  stbc.apply(usefulEvent, sum);
+
+  NumPointsCut npc;
+  npc.apply(usefulEvent, sum);
+
+  Bool_t isGood = (ssc.eventPassesCut && stbc.eventPassesCut && npc.eventPassesCut);
+  if(sum){
+    sum->flags.isGood = isGood;
+  }  
+  return isGood;
+}
 
 
 
@@ -30,7 +51,7 @@ Acclaim::SurfSaturationCut::SurfSaturationCut(){
 
 
 // void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
-void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful){  
+void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){  
 
   maxVolts = 0;
   minVolts = 0;
@@ -73,6 +94,15 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful){
   else{
     eventPassesCut = true;
   }
+
+  if(sum!=NULL){
+    if(eventPassesCut){
+      sum->flags.isPayloadBlast = 0;
+    }
+    else{
+      sum->flags.isPayloadBlast = 1;
+    }
+  }  
 }
 
 
@@ -97,13 +127,12 @@ Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
 
 
 
-void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful){
+void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
 // void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
 
-  double bottomToTopMaxToMinRatio = 0;
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){      
     for(int phi=0; phi < NUM_PHI; phi++){
 
@@ -154,4 +183,45 @@ void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful){
   else{
     eventPassesCut = true;
   }
+  if(sum!=NULL){
+    if(eventPassesCut){
+      sum->flags.isVarner = 0;
+    }
+    else{
+      sum->flags.isVarner = 1;
+    }
+  }
 }
+
+
+
+Acclaim::NumPointsCut::NumPointsCut(){
+  // This wasn't chosen particularly carefully
+  // I just want to stop core dumps with old root when there aren't enough points for interpolation
+  // which is < 5 points, so this is more than sufficient.
+  numPointsCutLow = 200;
+  description = "Checks there are a reasonable number of points in each waveform.";  
+}
+
+
+void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
+  eventPassesCut = true;
+  for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
+    const int numPoints = useful->fNumPoints[chanIndex];
+    if(numPoints < numPointsCutLow){
+      eventPassesCut = false;
+      break;
+    }
+  }
+
+  if(sum){
+    if(!eventPassesCut){
+      // silly old flag name      
+      sum->flags.isVarner2 = 1;
+    }
+    else{
+      sum->flags.isVarner2 = 0;
+    }
+  }
+}
+

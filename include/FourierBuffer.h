@@ -50,15 +50,23 @@ namespace Acclaim
 
     
     virtual ~FourierBuffer();
-    explicit FourierBuffer(Int_t theBufferSize=1000);
+    explicit FourierBuffer(Int_t theBufferSize=1000, double alfaLowPassFreqGHz=0.65);
 
     size_t add(const FilteredAnitaEvent* fEv);
 
     Double_t getProb(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
       return probs[pol][ant][freqBin];
     }
-    Double_t getSpectrumAmp(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
+    Double_t getBackgroundSpectrumAmp(AnitaPol::AnitaPol_t pol, Int_t ant, Int_t freqBin) const{
       return spectrumAmplitudes[pol][ant][freqBin];
+    }
+    
+    void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant, double& chiSquare, int& ndf){
+      chiSquare = chanChisquare[pol][ant];
+      ndf = chanNdf[pol][ant];      
+    }
+    double getFitOverSpectrum(AnitaPol::AnitaPol_t pol, Int_t ant, int freqBin){
+      return fitOverSpectrum[pol][ant].at(freqBin);
     }
 
     
@@ -71,13 +79,23 @@ namespace Acclaim
     void drawSummary(TPad* pad, SummaryOption_t) const;
     unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const{return sumPowers[pol][ant].size();}
     unsigned getCurrentBufferSize();
+
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
-    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};    
+    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};
+    const std::vector<double>& getRayleighAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return fitAmplitudes[pol][ant];};
+    const std::vector<double>& getBackgroundSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
+    const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {return probs[pol][ant];};
+    
     int getNumEventsInBuffer() const {return eventsInBuffer;}
     void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
-    bool isASelfTriggeredBlastOrHasSurfSaturation(const UsefulAnitaEvent* useful);
 
-    const FourierBuffer* getAddress(){return this;}
+    bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const{
+      return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
+    }
+
+    void getImpulseResponseAmplitudes();
+    
+    // const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
     Int_t removeOld();
@@ -97,13 +115,22 @@ namespace Acclaim
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> fitOverSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS]; // fractional excess of fit over spectrum
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> impulseRelativeAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+
+    double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    int chanNdf[AnitaPol::kNotAPol][NUM_SEAVEYS];    
+	   
+    // will be 1.3ish for non-alfa bandpassed channels, much smaller otherwise.
+    double fAlfaLowPassFreq; 
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
     TF1* fRay;
 
-    bool doneVectorInit;
+    Int_t fNumSkipped; //!< Incremented when skipping a payload blast or SURF saturation event, currently only for debugging
+    bool doneVectorInit; //!< Do we need to allocate a bunch of memory? (Do this dynamically to avoid MagicDisplay being slow)
 
 
     void automagicallyLoadHistory(const FilteredAnitaEvent* fEv);
@@ -118,7 +145,7 @@ namespace Acclaim
     mutable TSpectrum* fSpectrum; // to estimate the background    
     double fMinSpecFreq;
     double fMaxSpecFreq;
-    void getSpectrum(double* y, int n) const;
+    void getBackgroundSpectrum(double* y, int n) const;
 
 
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
@@ -127,6 +154,8 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grFitOverSpectrum[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grLastAmps[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
     
@@ -140,8 +169,11 @@ namespace Acclaim
 	return &grReducedChiSquares[pol][ant];
       case NDF:
 	return &grNDFs[pol][ant];
+      // case RayleighAmplitude:
+      // 	return &grAmplitudes[pol][ant];
       case RayleighAmplitude:
-	return &grAmplitudes[pol][ant];
+	return &grFitOverSpectrum[pol][ant];
+	
       case Prob:
 	return &grProbs[pol][ant];
       }

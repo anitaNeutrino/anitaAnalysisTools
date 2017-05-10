@@ -3,6 +3,7 @@
 #include "ProgressBar.h"
 #include "FilterStrategy.h"
 #include "QualityCut.h"
+#include "AcclaimFilters.h"
 
 /** 
  * Constructor, sets up some of the options for the analysis 
@@ -17,11 +18,55 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
-  fFilterStrat = filterStrat;  
+  fFilterStrat = filterStrat;
   fBlindStrat = blindStrat;
-  fDivision = division;
-  fNumDivisions = numDivisions;
-  fRun = run;
+
+
+  // on the Hoffman2 cluster, this is the task ID
+  // we're going to use it to try and figure out how to set the division if it wasn't explicitly set
+  // assuming this wasn't explicitly set...
+  const char* sgeTaskId = "SGE_TASK_ID";
+  const char* sgeTaskIdEnv = getenv(sgeTaskId);
+  if(sgeTaskIdEnv && numDivisions==1){
+    // we have runs 130-439
+    // I'm going to set the job array like:
+    // 130-439 for 1 job per run = 309 jobs
+    // 1300-4390 for 10 jobs per run = 3090 jobs
+    // 13000-43900 for 100 jobs per run = 30900 jobs (that's probably excessive)
+    Int_t jobArrayIndex = atoi(sgeTaskIdEnv);
+
+    if(jobArrayIndex < 1e3){
+      fNumDivisions = 1;
+      fRun = jobArrayIndex;
+      fDivision = 0;
+    }
+    else if(jobArrayIndex < 1e4){
+      fNumDivisions = 10;
+      fRun = jobArrayIndex/fNumDivisions;
+      fDivision = jobArrayIndex%10;
+    }
+    else if(jobArrayIndex < 1e5){
+      fNumDivisions = 100;
+      fRun = jobArrayIndex/fNumDivisions;      
+      fDivision = jobArrayIndex%100;
+    }
+    else{
+      std::cerr << "Error in " << __FILE__ << " couldn't figure out the run/divisions from " << sgeTaskId << ". Giving up." << std::endl;
+      exit(1);
+    }
+
+    std::cout << "Found " << sgeTaskId << " " << sgeTaskIdEnv
+	      << ", so the jobArrayIndex = " << jobArrayIndex
+	      << ", set fRun = " << fRun
+	      << ", fNumDivisions = " << fNumDivisions
+	      << ", fDivision = " << fDivision << "." << std::endl;
+  }
+  else{
+    fDivision = division;
+    fNumDivisions = numDivisions;
+    fRun = run;
+  }
+
 
   fSumTree = NULL;
   fData = NULL;
@@ -91,7 +136,7 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 
 
 /** 
- * Coax the OutputConvention class into making an appropriately named output file/
+ * Coax the OutputConvention class into making an appropriately named output files
  */
 void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
@@ -107,18 +152,24 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     TString runStr = TString::Format("%d", fRun);
     fakeArgv.push_back((char*) runStr.Data());
     
-
+    TString extra;
     if(fNumDivisions > 1){
       
-      Int_t numDigitsTotal = TMath::Log10(fNumDivisions);
-      Int_t numDigitsThis = fDivision > 0 ? TMath::Log10(fDivision) : 1;
+      Int_t numDigitsTotal = floor(TMath::Log10(fNumDivisions) + 1);
+      Int_t numDigitsThis = fDivision == 0 ? 1 : floor(TMath::Log10(fDivision) + 1);
 
-      TString extra;
+      std::cout << fNumDivisions << "\t" << numDigitsTotal << std::endl;
+      std::cout << fDivision << "\t" << numDigitsThis << std::endl;
+
       for(int i=0; i < numDigitsTotal - numDigitsThis; i++){
+	std::cout << i << "\t" << numDigitsTotal - numDigitsThis << std::endl;
+	
 	extra += TString::Format("0");
       }
       extra += TString::Format("%d", fDivision);
 
+      std::cout << extra << std::endl;
+      
       fakeArgv.push_back((char*) extra.Data());
     }
     Int_t fakeArgc = (Int_t) fakeArgv.size();
@@ -184,6 +235,8 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
 
 
 
+
+
 /** 
  * Does the main analysis loop
  */
@@ -221,41 +274,44 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     fFilterStrat = new FilterStrategy();
   }
 
+  UInt_t lastEventConsidered = 0;
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
     fData->getEntry(entry);
     RawAnitaHeader* header = fData->header();
     UsefulAnitaEvent* usefulEvent = fData->useful();
 
-
-    SurfSaturationCut ssc;
-    ssc.apply(usefulEvent);
-
-    SelfTriggeredBlastCut stbc;
-    stbc.apply(usefulEvent);
-
-    // don't process events failing quality cuts (will muck up rolling averages)
-    if(ssc.eventPassesCut && stbc.eventPassesCut){
-    
-      Adu5Pat* pat = fData->gps();
-      UsefulAdu5Pat usefulPat(pat);
-      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
+    // make FourierBuffer filters behave as if we were considering sequential events
+    // this is useful for the decimated data set...
+    if(lastEventConsidered + 1 != header->eventNumber){
+      Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
+    }
 
 
-      // since we now have rolling averages make sure the filter strategy is processed before deciding whether or not to reconstruct 
-      Bool_t selectedEvent = shouldIDoThisEvent(header, &usefulPat);
+    Adu5Pat* pat = fData->gps();
+    UsefulAdu5Pat usefulPat(pat);
 
-      if(selectedEvent){
-	eventSummary = new AnitaEventSummary(header, &usefulPat);
+    Bool_t needToReconstruct = shouldIDoThisEvent(header, &usefulPat);
+
+    if(needToReconstruct){
+      eventSummary = new AnitaEventSummary(header, &usefulPat);
+      Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, eventSummary);
+
+      if(isGoodEvent){
+	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
+	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
 	fReco->process(&filteredEvent, &usefulPat, eventSummary);
-
-	fSumTree->Fill();
-	delete eventSummary;
-	eventSummary = NULL;
       }
+
+      fSumTree->Fill();
+      delete eventSummary;
+      eventSummary = NULL;
     }
     
+    lastEventConsidered = header->eventNumber;
     p.inc(entry, numEntries);
   }
-}  
+}
+
+

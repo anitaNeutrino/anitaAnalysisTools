@@ -1,4 +1,3 @@
-
 #include "AcclaimFilters.h"
 #include "AnalysisWaveform.h"
 #include "FilteredAnitaEvent.h"
@@ -10,14 +9,36 @@
 #include "RayleighHist.h"
 #include "RootTools.h"
 
+
+
+/** 
+ * Checks all operations in the Filter Strategy and forces the strategy to load history the before it processes the next event
+ * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
+ *
+ * @param fs is the FilterStrategy
+ */
+void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs){
+  // load history if needed
+  for(unsigned i=0; i < fs->nOperations(); i++){
+    const Acclaim::Filters::RayleighMonitor* rmConst = dynamic_cast<const Acclaim::Filters::RayleighMonitor*>(fs->getOperation(i));
+    if(rmConst){
+      const Acclaim::FourierBuffer* fb = rmConst->getFourierBuffer();
+      fb->setForceLoadHistory(true);
+    }
+  }
+}
+
+
+
 /** 
  * This function adds my custom strategies to a map of TString to strategies...
  */
 void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
 
   // first make the operations
-
-  ALFAFilter* alfaFilter = new ALFAFilter(); // should always use this unless you have a good reaon...
+  ALFASincFilter* alfaFilter = new ALFASincFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+  Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
+  Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
   
   Double_t widthMHz = 26;
   Double_t centreMHz = 260;
@@ -27,31 +48,53 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   centreMHz = 370;
   Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
 
+  double log10ProbThresh = -2.5;
+  double reducedChiSquareThresh = 3;
+  double fitOverSpectrumThreshold = 1.05;
+  const int numEventsInRayleighDistributions = 1500;
+  RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
+
+  UniformMagnitude* um = new UniformMagnitude();   
+  SpectrumMagnitude* sm = new SpectrumMagnitude(numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
+
+
+
+
 
   // then make the strategies
+
+  // every operation is going to use these default strategies
+  FilterStrategy* defaultOps = new FilterStrategy();
+  defaultOps->addOperation(bandHighPass, saveOutput);
+  defaultOps->addOperation(bandLowPass, saveOutput);
+  defaultOps->addOperation(alfaFilter, saveOutput);
+  filterStrats["Default"] = defaultOps;  
+
   
   FilterStrategy* stupidNotchStrat = new FilterStrategy();
-  stupidNotchStrat->addOperation(alfaFilter, saveOutput);  
+  (*stupidNotchStrat) = (*defaultOps);
   stupidNotchStrat->addOperation(n260, saveOutput);
-  stupidNotchStrat->addOperation(n370, saveOutput);  
-
+  stupidNotchStrat->addOperation(n370, saveOutput);
   filterStrats["BrickWallSatellites"] = stupidNotchStrat;
 
-  // FilterStrategy* spikeKiller = new FilterStrategy();
-  // spikeKiller->addOperation(alfaFilter);
-  // SpikeSuppressor* ss = new SpikeSuppressor(3, 1000);
-  // spikeKiller->addOperation(ss, saveOutput);
-  // filterStrats["SpikeSuppressor"] = spikeKiller;
-
-  // FilterStrategy* justRm = new FilterStrategy();
-  // RayleighMonitor* rm = new RayleighMonitor(1000);
-  // justRm->addOperation(rm, saveOutput);
-  // filterStrats["RayleighMonitor"] = justRm;
-
   FilterStrategy* fs = new FilterStrategy();
-  RayleighFilter* rf = new RayleighFilter(1500);
+  (*fs) = (*defaultOps);  
   fs->addOperation(rf, saveOutput);
   filterStrats["RayleighFilter"] = fs;
+
+
+  FilterStrategy* ufs = new FilterStrategy();
+  (*ufs) = (*defaultOps);    
+  ufs->addOperation(alfaFilter, saveOutput);  
+  ufs->addOperation(um);
+  filterStrats["UniformMagnitude"] = ufs;
+
+  FilterStrategy* sfs = new FilterStrategy();
+  (*sfs) = (*defaultOps);      
+  sfs->addOperation(alfaFilter, saveOutput);  
+  sfs->addOperation(sm);
+  filterStrats["SpectrumMagnitude"] = sfs;
+  
   
 }
 
@@ -384,104 +427,36 @@ double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
-  fNumEvents = numEvents;
-  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
+Acclaim::Filters::UniformMagnitude::UniformMagnitude(){
 }
 
+void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
 
-void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){  
-  fourierBuffer.add(fEv);
-}
-
-unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
-  (void) i;
-  if(i==2){
-    return 1;
-  }
-  else{
-    return AnitaPol::kNotAPol*NUM_SEAVEYS*131; // TODO, check this at runtime maybe?
+  FFTWComplex* fft = wf->updateFreq();  
+  for(int i=0; i< wf->Nfreq(); i++){
+    fft[i].setMagPhase(i > 0 ? 1 : 0, fft[i].getPhase());
   }
 }
 
 
-
-
-
-const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
-  // so what do I want to output?
-  switch(i){
-  case 0:
-    return "chiSquares";
-  case 1:
-    return "ndfs";    
-  case 2:
-    return "nEvents";
-  default:
-    return NULL;
-  };
+Acclaim::Filters::SpectrumMagnitude::SpectrumMagnitude(Int_t numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz){
+  fDescription = "Sets the magnitude of each frequency bin equal to the fourier buffer spectrum";
 }
 
-
-void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
-
-  if(i==2){
-    v[0] = fourierBuffer.getNumEventsInBuffer();
-    return;
-  }
-  
-  int outInd = 0;
+void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
+  RayleighMonitor::process(fEv);
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      const double* vals = 0;
-      const int* valsInt = 0;
-      unsigned n = 0;
-      switch(i){
-      case 0:
-	vals = &fourierBuffer.getChiSquares(ant, pol)[0];
-	n = fourierBuffer.getChiSquares(ant, pol).size();
-      case 1:
-	valsInt = &fourierBuffer.getNDFs(ant, pol)[0];
-	n = fourierBuffer.getNDFs(ant, pol).size();
-      }
+      AnalysisWaveform* wf = getWf(fEv, ant, pol);
 
-      // std::cout << vals << "\t" << valsInt << "\t" << n << std::endl;
-      for(unsigned point=0; point < n; point++){
-	if(vals){
-	  v[outInd] = vals[point];
-	}
-	else if(valsInt){
-	  v[outInd] = valsInt[point];
-	}
-	outInd++;
+      const int nf = wf->Nfreq();
+
+      FFTWComplex* theFreqs = wf->updateFreq();
+      for(int freqInd=0; freqInd < nf; freqInd++){
+	double mag = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
+	double phase = theFreqs[freqInd].getPhase();
+	theFreqs[freqInd].setMagPhase(mag, phase);
       }
     }
   }
@@ -508,9 +483,144 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(int numEvents) : RayleighMonitor(numEvents)
+
+
+
+
+
+
+
+Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents, double alfaLowPassFreqGHz) : fourierBuffer(numEvents, alfaLowPassFreqGHz) {
+  fNumEvents = numEvents;
+  fDescription = TString::Format("Decides whether or not to filter events based on characteristics of the event amplitude and Rayleigh distribution over %d events", fNumEvents);
+  fNumOutputs = 6;
+  fOutputAnt = 4;
+  fOutputPol = AnitaPol::kHorizontal;
+}
+
+
+void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){  
+  fourierBuffer.add(fEv);
+}
+
+
+
+
+unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
+  (void) i;
+  if(i==0){
+    return 1;
+  }
+  else{
+    // return AnitaPol::kNotAPol*NUM_SEAVEYS*131; // TODO, check this at runtime maybe?
+    return 131; // TODO, check this at runtime maybe?    
+  }
+}
+
+
+
+const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
+  // so what do I want to output?
+  switch(i){
+  case 0:
+    return "numEvents";
+  case 1:
+    return "chiSquares";    
+  case 2:
+    return "ndfs";
+  case 3:
+    return "rayleighAmps";
+  case 4:
+    return "spectrumAmps";    
+  case 5:
+    return "prob";
+  default:
+    return NULL;
+  };
+}
+
+
+void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
+
+  if(i==0){
+    v[0] = fourierBuffer.getNumEventsInBuffer();
+    return;
+  }
+  
+  int outInd = 0;
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      if(ant==fOutputAnt && pol == fOutputPol){
+      
+	const double* vals = 0;
+	const int* valsInt = 0;
+	unsigned n = 0;
+	switch(i){
+	case 0:
+	  std::cerr << "uh oh!" << std::endl;
+	  break;
+	case 1:
+	  vals = &fourierBuffer.getChiSquares(ant, pol)[0];
+	  n = fourierBuffer.getChiSquares(ant, pol).size();
+	  break;
+	case 2:
+	  valsInt = &fourierBuffer.getNDFs(ant, pol)[0];
+	  n = fourierBuffer.getNDFs(ant, pol).size();
+	  break;
+	case 3:
+	  vals = &fourierBuffer.getRayleighAmplitudes(ant, pol)[0];
+	  n = fourierBuffer.getRayleighAmplitudes(ant, pol).size();
+	  break;
+	case 4:
+	  vals = &fourierBuffer.getBackgroundSpectrumAmplitudes(ant, pol)[0];
+	  n = fourierBuffer.getBackgroundSpectrumAmplitudes(ant, pol).size();
+	  break;
+	case 5:
+	  vals = &fourierBuffer.getProbabilities(ant, pol)[0];
+	  n = fourierBuffer.getProbabilities(ant, pol).size();
+	  break;
+	}
+
+	// std::cout << vals << "\t" << valsInt << "\t" << n << std::endl;
+	for(unsigned point=0; point < n; point++){
+	  if(vals){
+	    v[outInd] = vals[point];
+	  }
+	  else if(valsInt){
+	    v[outInd] = valsInt[point];
+	  }
+	  outInd++;
+	}
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold), fAmpFitOverSpectrumThreshold(amplitudeFitOverSpectrumThreshold)
 {
-  fRandy = new TRandom3(1234);
+  fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
   fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
 }
 
@@ -535,13 +645,40 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
       const int nf = wf->Nfreq();
 
+      // first check spectrum threshold filtering...
+      std::vector<int> binsAboveFitOverSpecThreshold;
+      for(int freqInd=0; freqInd < nf; freqInd++){
+	double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
+	if(fitOverSpec > fAmpFitOverSpectrumThreshold){
+	  binsAboveFitOverSpecThreshold.push_back(freqInd);
+	}
+      }
+      // now go through and fill out spikes...
+      std::vector<bool> nearPeakInFitOverThreshold(nf, false);
+      for(UInt_t i=0; i < binsAboveFitOverSpecThreshold.size(); i++){
+	Int_t startBin = binsAboveFitOverSpecThreshold.at(i);
+	Int_t thisBin = startBin;
+	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
+	  nearPeakInFitOverThreshold.at(thisBin) = true;
+	  thisBin++;
+	}
+	thisBin = startBin;
+	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
+	  nearPeakInFitOverThreshold.at(thisBin) = true;
+	  thisBin--;
+	}
+      }
+      
+
       FFTWComplex* theFreqs = wf->updateFreq();
       for(int freqInd=0; freqInd < nf; freqInd++){
 
 	double probVal = fourierBuffer.getProb(pol, ant, freqInd);
-
-	if(probVal >= 3){
-	  double specAmp = fourierBuffer.getSpectrumAmp(pol, ant, freqInd);
+	int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
+	double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
+	// double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
+	if(nearPeakInFitOverThreshold.at(freqInd) || reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
+	  double specAmp = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
 	  // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
 	  
 	  double x1 = fRandy->Gaus(0, specAmp);
@@ -557,6 +694,9 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
 	  // std::cout << theFreqs[freqInd] << std::endl;
 	}
+	// else{
+	//   std::cout << pol << "\t" << ant << "\t" << theFreqs[freqInd] << "\t" << probVal << "\t" << std::endl;
+	// }
       }
     }
   }  

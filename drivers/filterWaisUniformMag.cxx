@@ -10,16 +10,16 @@ int main(int argc, char* argv[]){
   int run = argc > 1 ? atoi(argv[1]) : 352;
 
   std::map<TString, FilterStrategy*> filterStrats;
-  bool saveOutput = false;  
+  bool saveOutput = true;  
   Filters::appendFilterStrategies(filterStrats, saveOutput);
 
-  FilterStrategy* strat = Filters::findStrategy(filterStrats, "RayleighFilter");  
-  if(!strat){ 
+  FilterStrategy* stupidNotchStrat = Filters::findStrategy(filterStrats, "UniformMagnitude");
+  if(!stupidNotchStrat){ 
     std::cerr << "Well, this script is pointless... I give up." << std::endl;
     return 1;
   }
-  AnalysisFlow analysis(argv[0], run, AnalysisFlow::kWaisPulser, strat, BlindDataset::kDefault);
-  analysis.doAnalysis();
+  AnalysisFlow analysisSimpleNotchFilters(argv[0], run, AnalysisFlow::kWaisPulser, stupidNotchStrat);
+  analysisSimpleNotchFilters.doAnalysis();
     
   return 0;
 }

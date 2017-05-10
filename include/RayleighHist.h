@@ -57,6 +57,7 @@ namespace Acclaim{
       distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
       return 1 - getOneMinusCDF(amp, distAmp);
     }
+    inline double getAmplitude(){return fRayleighAmplitude;}
     
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
