@@ -3,6 +3,7 @@
 
 #include "TH1D.h"
 #include "RingBuffer.h"
+#include "RingBufferHist.h"
 #include <Math/Minimizer.h>
 #include <Math/Factory.h>
 #include <Math/Functor.h>
@@ -13,7 +14,7 @@ class TGraph;
 namespace Acclaim{
   class FourierBuffer;
 
-  class RayleighHist : public TH1D {
+  class RayleighHist : public RingBufferHist {
 
     friend class FourierBuffer;
 
@@ -33,7 +34,7 @@ namespace Acclaim{
     virtual ~RayleighHist();
 
     virtual void Draw(Option_t* opt="");
-    bool add(double newAmp); //!< Input amplitudes events
+    virtual bool add(double newAmp); //!< Input amplitudes events
     void getRayleighFitParams(double& rayAmp, double& chiSquare, int& ndf); //!< Output Rayleigh distribution parameters
 
     void fitRayleigh(bool forGuiUpdateTF1=true); // *MENU* Fit the Rayleigh distribution using the selected fit method
@@ -54,18 +55,18 @@ namespace Acclaim{
     }
     
     inline double getCDF(double amp, double distAmp = -1) const{ // This is the fraction of amplitudes lower than amp 
-      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
+      distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // Use this histograms rayleigh distribution amplitude if one wasn't specified      
       return 1 - getOneMinusCDF(amp, distAmp);
     }
     inline double getAmplitude() const {return fRayleighAmplitude;}
     
   protected:
-    RingBuffer amplitudes; //!< Tracks all the amplitudes
+    // RingBuffer amplitudes; //!< Tracks all the amplitudes
     
 
 
 
-    virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
+    // virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
     bool axisRangeOK() const; //!< Checks current axis range is reasonable
     void rebinAndRefill(double meanAmp); //!< Dynamically rebin and refill histogram with contents of RingBuffer of amplitudes
     
@@ -83,7 +84,7 @@ namespace Acclaim{
     double fracOfEventsWanted; //!< Fraction of events to be in the histogram bin limits using the guessed amplitude (don't set to 1 as this requires an infinite axis range)
     Int_t risingEdgeBins; //!< Number of bins between 0 and where we guess the histogram peak is, for dynamic rebinning
     double freqMHz; //!< The frequency (MHz) of this Rayleigh distribution
-    Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)
+
     TGraph* grLastAddedAmp; //!< A pretty visual representation of the last added amplitude
 
     Int_t fNDF;
@@ -96,17 +97,16 @@ namespace Acclaim{
     FitMethod fitMethod;
     const Int_t fFitEveryNAdds;
     Int_t fNumAddsMod10;
-    Int_t fNumNonEmptyBins;
 
     // caching for fit functions
     double fBinWidth;
     double fRayleighAmpGuess;
     double fRayleighNorm;
-    Int_t fNx;
-    std::vector<double> binCentres;
-    std::vector<double> squaredBinCentres;    
-    std::vector<int> binValues; // cache histogram bin contents, should be integers
-    std::vector<double> squaredBinErrors;    
+    // Int_t fNx;
+    // std::vector<double> binCentres;
+    // std::vector<double> squaredBinCentres;    
+    // std::vector<int> binValues; // cache histogram bin contents, should be integers
+    // std::vector<double> squaredBinErrors;    
 
     ClassDef(RayleighHist, 0);
   };
