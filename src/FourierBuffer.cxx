@@ -24,19 +24,13 @@
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, double alfaLowPassFreqGHz) :
   doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz-0.01), fMinSpecFreq(Filters::Bands::anitaHighPassGHz+0.01), fAlfaLowPassFreq(alfaLowPassFreqGHz), fNumSkipped(0){
-      // const double anitaHighPassGHz = 0.19;
-      // const double anitaLowPassGHz = 1.2;
-      // const double alfaLowPassGHz = 0.65;
   
-  // timeScale = timeScaleSeconds;
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
   
   // will initialize this dynamically to get around this no-copy-constructor bullshit
   fSpectrum = NULL;  
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
-  // const char* riceFuncText = "([0]*x/([1]*[1]))*exp(-(x*x+[2]*[2])/(2*[1]*[1]))*TMath::BesselI0([2]*x/([1]*[1]))";
-
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
     summaryPads[ant] = NULL;
   }
@@ -49,94 +43,55 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, double alfaLowPassFre
 }
 
 
-void Acclaim::FourierBuffer::getImpulseResponseAmplitudes(){
-  const char* phiNames[NUM_PHI] = {"01", "02", "03", "04", "05", "06", "07", "08",
-				   "09", "10", "11", "12", "13", "14", "15", "16"};
-  const char* ringNames[AnitaRing::kNotARing] = {"T", "M", "B"};
-  const char* polNames[AnitaPol::kNotAPol] = {"V", "H"};
+void Acclaim::FourierBuffer::initGraphAndVector(std::vector<double> vec[][NUM_SEAVEYS],
+						std::vector<TGraphFB>* gr,
+						int n, double df, double defaultVal){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
-  const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
-  if(!anitaUtilInstallDir){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find ANITA_UTIL_INSTALL_DIR" << std::endl;
-    return;
-  }
-
-  // auto c1 = new TCanvas();
-  // int nDrawn = 0;
-  TString baseDir = TString::Format("%s/share/UCorrelator/responses/IndividualBRotter/", anitaUtilInstallDir);
-  for(int phi=0; phi < NUM_PHI; phi++){
-    for(int ring=0; ring < AnitaRing::kNotARing; ring++){
-      int ant = phi + NUM_PHI*ring;
-      for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
-	
-	TString fName = baseDir + TString::Format("%s%s%s.imp", phiNames[phi], ringNames[ring], polNames[pol]);
-	TGraph grImp(fName);
-	AnalysisWaveform aw(grImp.GetN(), grImp.GetX(), grImp.GetY());
-	const TGraphAligned* grPow = aw.power();
-
-	TGraph* grNew = new TGraph();
-	double sumPow = 0;
-	const int n = chiSquares[pol][ant].size();
-	impulseRelativeAmplitudes[pol][ant].reserve(n);
-	
-	// std::cout << "df = " << df << ", n = " << n << std::endl;
-
-	for(int i=0; i < n; i++){
-	  double f = df*i;
-	  double y = i == 0 ? 0 : TMath::Sqrt(grPow->Eval(f));
-	  impulseRelativeAmplitudes[pol][ant].push_back(y);
-	  // grNew->SetPoint(i, f, y);
-	  sumPow += y;
-	}
-
-	for(int i=0; i < n; i++){
-	  // double newY = grNew->GetY()[i]/sumPow;
-	  double newY = impulseRelativeAmplitudes[pol][ant].at(i)/sumPow;
-	  impulseRelativeAmplitudes[pol][ant].at(i) = newY;
-	  // grNew->SetPoint(i, grNew->GetX()[i], newY);
-	}
-	
-	// std::cout << fName << "\t" << grPow->GetN() << "\t"
-	// 	  << grPow->GetX()[1] - grPow->GetX()[0] << std::endl;
-	// TString opt = nDrawn == 0 ? "al" : "lsame";
-	// grNew->Draw(opt);
-	// nDrawn++;
-      }
+    if(gr){
+      gr[pol].reserve(NUM_SEAVEYS);
     }
+    
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      if(vec){
+	vec[pol][ant].resize(n, defaultVal);
+      }
+
+      if(gr){
+	gr[pol].push_back(TGraphFB(this, ant, pol, n));
+	for(int freqBin=0; freqBin < n; freqBin++){
+	  double f = df*freqBin;
+	  gr[pol][ant].GetX()[freqBin] = f;
+	  gr[pol][ant].GetY()[freqBin] = defaultVal;
+	}
+      }
+      
+    }    
   }
-  // c1->SetLogy(1);
 }
+
 
 
 void Acclaim::FourierBuffer::initVectors(int n, double df){
 
+  initGraphAndVector(spectrumAmplitudes, grSpectrumAmplitudes, n, df, 0);
+  initGraphAndVector(chiSquares, grChiSquares, n, df, 0);
+  initGraphAndVector(chiSquaresRelativeToSpectrum, grChiSquaresRelativeToSpectrum, n, df, 0);
+  initGraphAndVector(NULL, grReducedChiSquares, n, df, 0);
+  initGraphAndVector(NULL, grReducedChiSquaresRelativeToSpectrum, n, df, 0);
+  initGraphAndVector(probs, grProbs, n, df, 0);
+  initGraphAndVector(fitAmplitudes, grAmplitudes, n, df, 0);  
+  initGraphAndVector(fitOverSpectrum, grFitOverSpectrum, n, df, 0);
+  initGraphAndVector(sumPowers, NULL, n, df, 0);
+  initGraphAndVector(NULL, grLastAmps, n, df, 0);
+  initGraphAndVector(NULL, grNDFs, n, df, 0);    
   
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
-    grSpectrumAmplitudes[pol].reserve(NUM_SEAVEYS);
-    grChiSquares[pol].reserve(NUM_SEAVEYS);
-    grNDFs[pol].reserve(NUM_SEAVEYS);
-    grReducedChiSquares[pol].reserve(NUM_SEAVEYS);
-      
-    grProbs[pol].reserve(NUM_SEAVEYS);
-
-    grAmplitudes[pol].reserve(NUM_SEAVEYS);
-    grSpectrumAmplitudes[pol].reserve(NUM_SEAVEYS);
-    grFitOverSpectrum[pol].reserve(NUM_SEAVEYS);
-
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-
-      sumPowers[pol][ant].resize(n, 0);
-
-      chiSquares[pol][ant].resize(n, 0);
       ndfs[pol][ant].resize(n, 0);
-
-      probs[pol][ant].resize(n, 0);      
-
-      fitAmplitudes[pol][ant].resize(n, 0);
-      spectrumAmplitudes[pol][ant].resize(n, 0);
-      fitOverSpectrum[pol][ant].resize(n, 0);
 
       hRays[pol][ant].resize(n, NULL);      
       for(int freqBin=0; freqBin < n; freqBin++){
@@ -152,46 +107,6 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 	hRays[pol][ant].at(freqBin)->SetDirectory(0); // hide from when .ls is done in MagicDisplay
 	hRays[pol][ant].at(freqBin)->freqMHz = df*1e3*freqBin;	
       }
-      
-      // summary graphs for drawSummary
-      grChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
-      grNDFs[pol].push_back(TGraphFB(this, ant, pol, n));
-      grReducedChiSquares[pol].push_back(TGraphFB(this, ant, pol, n));
-      
-      grProbs[pol].push_back(TGraphFB(this, ant, pol, n));
-
-      grAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
-      grLastAmps[pol].push_back(TGraphFB(this, ant, pol, n));      
-      grSpectrumAmplitudes[pol].push_back(TGraphFB(this, ant, pol, n));
-      grFitOverSpectrum[pol].push_back(TGraphFB(this, ant, pol, n));
-
-      for(int freqBin=0; freqBin < n; freqBin++){
-	double f = df*freqBin;
-	grChiSquares[pol][ant].GetX()[freqBin] = f;
-	grNDFs[pol][ant].GetX()[freqBin] = f;
-	grReducedChiSquares[pol][ant].GetX()[freqBin] = f;
-
-	grAmplitudes[pol][ant].GetX()[freqBin] = f;	
-	grSpectrumAmplitudes[pol][ant].GetX()[freqBin] = f;
-	grFitOverSpectrum[pol][ant].GetX()[freqBin] = f;	
-	
-	grLastAmps[pol][ant].GetX()[freqBin] = f;	
-
-	grProbs[pol][ant].GetX()[freqBin] = f;
-
-	grChiSquares[pol][ant].GetY()[freqBin] = 0;
-	grNDFs[pol][ant].GetY()[freqBin] = 0;
-	grReducedChiSquares[pol][ant].GetY()[freqBin] = 0;
-	
-	grAmplitudes[pol][ant].GetY()[freqBin] = 0;
-	grLastAmps[pol][ant].GetY()[freqBin] = 0;	
-	
-	grSpectrumAmplitudes[pol][ant].GetY()[freqBin] = 0;
-	grProbs[pol][ant].GetY()[freqBin] = 0;
-	grFitOverSpectrum[pol][ant].GetY()[freqBin] = 0;
-
-	
-      }	
     }
   }
 
@@ -210,7 +125,6 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
     }
   }
 
-  getImpulseResponseAmplitudes();
   doneVectorInit = true;  
 }
 
@@ -288,10 +202,8 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
   eventNumbers.push_back(header->eventNumber);
   runs.push_back(header->run);
 
-
   bool anyUpdated = false; // should all get updated at the same time, but whatever...
 
-  // get the power
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
@@ -306,11 +218,11 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
   
       // for old compilers, push back copy of empty vector for speed.
       // then get reference that vector in the list
-      // powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
-      // std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
-      // freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN()); 
-      // update sum of power
+      powerRingBuffers[pol][ant].push_back(std::vector<double>(0));
+      std::vector<double>& freqVec = powerRingBuffers[pol][ant].back();
+      freqVec.assign(grPower->GetY(), grPower->GetY()+grPower->GetN()); 
 
+      // update sum of power
       //g_power.SetPoint(i, i * df, the_fft[i].getAbsSq()*2/fft_len/50/1000);	  
 
       // need *50*1000/2 = 25000
@@ -318,7 +230,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
       chanChisquare[pol][ant] = 0;
       chanNdf[pol][ant] = 0;
-      
+
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
 	sumPowers[pol][ant].at(freqInd) += grPower->GetY()[freqInd];
 	double f = df*freqInd;
@@ -348,7 +260,15 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    }
 	  }
 
-	  double probVal = 0;	  
+	  // double expectedRay = 0.5*TMath::Pi()*fitAmplitudes[pol][ant][freqInd];
+	  // eventPower[pol][ant] = 0;
+	  // int firstSpecInd = int(fMinSpecFreq/df);
+	  // int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
+	  // for(int freqInd = firstSpecInd; freqInd < lastSpecInd; freqInd++){
+	  //   eventPower[pol][ant] += squaredRayleighAmplitudeToMeanFactor*amp*amp;
+	  // }
+	  
+	  double probVal = 0;
 	  double prob = 0;
 	  double distAmp = 0;
 	  
@@ -383,44 +303,29 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
   if(anyUpdated){
     int firstSpecInd = int(fMinSpecFreq/df);
-    // int lastSpecInd = int(fMaxSpecFreq/df);
 
-    // double sumLowEdgeBins = 0;
-    // double sumHighEdgeBins = 0;    
-    // int numSum = 0;
-    // for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    //   AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    //   for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    // 	sumLowEdgeBins += fitAmplitudes[pol][ant][firstSpecInd];
-    // 	sumHighEdgeBins += fitAmplitudes[pol][ant][lastSpecInd];
-    // 	numSum++;
-    //   }
-    // }
-
-    // double meanSpecLowEdge = sumLowEdgeBins/numSum;
-    // double meanSpecHighEdge = sumHighEdgeBins/numSum;    
-    
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
 	int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
 	int nf = fitAmplitudes[pol][ant].size();
-	// std::cout << fitAmplitudes[pol][ant].size() << "\t" << sumPowers[ant][pol].size() << "\t" << nf << std::endl;
+
+	// // double expectedRay = 0.5*TMath::Pi()*fitAmplitudes[pol][ant][freqInd];
+	// expectedThermalPower[pol][ant] = 0;
+	// for(int freqInd = firstSpecInd; freqInd < lastSpecInd; freqInd++){
+	//   expectedThermalPower[pol][ant] += squaredRayleighAmplitudeToMeanFactor*fitAmplitudes[pol][ant][freqInd]*fitAmplitudes[pol][ant][freqInd];
+	// }
+
+	// copy the fitted amplitudes into the background array (before applying the TSpectrum background thing)
 	for(int freqInd = 0; freqInd < nf; freqInd++){
-	  // if(freqInd < firstSpecInd){
-	  //   spectrumAmplitudes[pol][ant][freqInd] = meanSpecLowEdge;
-	  // }
-	  // else if(freqInd >= lastSpecInd){
-	  //   spectrumAmplitudes[pol][ant][freqInd] = meanSpecHighEdge;
-	  // }
-	  // else{
-	    spectrumAmplitudes[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd];
-	  // }
+	  spectrumAmplitudes[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd];
 	}
-	
-	// getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][0], nf);
-	getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd], lastSpecInd - firstSpecInd);	
+
+	// do the spectral analysis of the amplitudes
+	getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd], lastSpecInd - firstSpecInd);
+
+	// update summary graphs	
 	for(int freqInd = 0; freqInd < nf; freqInd++){
 	  grSpectrumAmplitudes[pol][ant].GetY()[freqInd] = spectrumAmplitudes[pol][ant][freqInd];
 	}
@@ -428,12 +333,16 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
     }
   }
 
-  
-  eventsInBuffer++;
 
-  // if(fCurrentlyLoadingHistory){
-  //   std::cerr << eventsInBuffer << "\t" << eventNumbers.size() << std::endl;
-  // }
+  // if(!fCurrentlyLoadingHistory){
+  //   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+  //     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+  //     for(int ant=0; ant < NUM_SEAVEYS; ant++){
+  // 	std::cout << pol << "\t" << ant << "\t" << eventPower[pol][ant] << "\t" << expectedThermalPower[pol][ant] << std::endl;
+  //     }
+  //   }
+  // }  
+  eventsInBuffer++;
   
   removeOld();
   return eventNumbers.size();
@@ -452,11 +361,11 @@ Int_t Acclaim::FourierBuffer::removeOld(){
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	// std::vector<double>& removeThisPower = powerRingBuffers[pol][ant].front();
-	// for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
-	//   sumPowers[pol][ant].at(freqInd) -= removeThisPower.at(freqInd);
-	// }
-	// powerRingBuffers[pol][ant].pop_front();
+	std::vector<double>& removeThisPower = powerRingBuffers[pol][ant].front();
+	for(unsigned int freqInd=0; freqInd < removeThisPower.size(); freqInd++){
+	  sumPowers[pol][ant].at(freqInd) -= removeThisPower.at(freqInd);
+	}
+	powerRingBuffers[pol][ant].pop_front();
       }
     }
     eventsInBuffer--;
@@ -520,7 +429,6 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
       d->last();
       UInt_t lastEventThisRun = d->header()->eventNumber;
 
-
       UInt_t maxPossEventNumber = run == thisRun ? eventNumber : lastEventThisRun;
       
       Int_t potentialEvents = maxPossEventNumber - firstEventThisRun;
@@ -567,7 +475,7 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
       std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", tried to load history, but only got "
 		<< eventNumbers.size() << " events when I have a buffer size " << bufferSize << std::endl;
     }
-      
+
     loadedHistory = true;
   }
   fCurrentlyLoadingHistory = false;

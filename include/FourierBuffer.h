@@ -68,8 +68,10 @@ namespace Acclaim
     double getFitOverSpectrum(AnitaPol::AnitaPol_t pol, Int_t ant, int freqBin){
       return fitOverSpectrum[pol][ant].at(freqBin);
     }
+    const std::vector<double>& getPowerRingBufferBack(AnitaPol::AnitaPol_t pol, int ant){
+      return powerRingBuffers[pol][ant].back();
+    }
 
-    
     const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol, Int_t freqBin) const {return hRays[pol][ant].at(freqBin);}
     TGraphFB* getAvePowSpec_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getAvePowSpec(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
@@ -93,8 +95,6 @@ namespace Acclaim
       return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
     }
 
-    void getImpulseResponseAmplitudes();
-    
     // const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
@@ -107,17 +107,23 @@ namespace Acclaim
 
     std::deque<std::vector<double> > powerRingBuffers[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
+    // utility function to sanitize vector/graph initialization
+    void initGraphAndVector(std::vector<double> vec[][NUM_SEAVEYS],
+			    std::vector<TGraphFB>* gr,
+			    int n, double df, double defaultVal);
+
+    
     // vectors of frequency bins
     std::vector<double> sumPowers[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<RayleighHist*> hRays[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> chiSquaresRelativeToSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS];    
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitOverSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS]; // fractional excess of fit over spectrum
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
-    std::vector<double> impulseRelativeAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
     int chanNdf[AnitaPol::kNotAPol][NUM_SEAVEYS];    
@@ -147,10 +153,14 @@ namespace Acclaim
     double fMaxSpecFreq;
     void getBackgroundSpectrum(double* y, int n) const;
 
+    // double eventPower[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    // double expectedThermalPower[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     mutable TPad* summaryPads[NUM_SEAVEYS]; // for drawSummary
     mutable std::vector<TGraphFB> grReducedChiSquares[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grChiSquares[AnitaPol::kNotAPol]; // for drawSummary
+    mutable std::vector<TGraphFB> grChiSquaresRelativeToSpectrum[AnitaPol::kNotAPol]; // for drawSummary        
+    mutable std::vector<TGraphFB> grReducedChiSquaresRelativeToSpectrum[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
