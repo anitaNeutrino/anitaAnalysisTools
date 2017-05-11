@@ -122,6 +122,8 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
       grAmplitudes[pol][ant].fDerivatives.push_back(&grSpectrumAmplitudes[pol][ant]);
       grAmplitudes[pol][ant].fDerivatives.push_back(&grLastAmps[pol][ant]);      
 
+      grReducedChiSquaresRelativeToSpectrum[pol][ant].fDerivatives.push_back(&grReducedChiSquares[pol][ant]);
+      grReducedChiSquares[pol][ant].fDerivedFrom = &grReducedChiSquaresRelativeToSpectrum[pol][ant];
     }
   }
 
@@ -238,10 +240,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 	  double amp = TMath::Sqrt(grPower->GetY()[freqInd]*cosminPowerConversionFactor);
 	  
-	  // if(ant==0 && polInd == 0 && eventNumbers.size() >= bufferSize && fCurrentlyLoadingHistory){
-	  //   std::cerr << eventNumbers.size() << "\t" << pol << "\t" << ant << "\t" << freqInd << "\t" << doneVectorInit << std::endl;
-	  // }
-	  
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  grLastAmps[pol][ant].GetY()[freqInd] = amp;
 	  
@@ -250,6 +248,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	    hRays[pol][ant].at(freqInd)->getRayleighFitParams(fitAmplitudes[pol][ant][freqInd],
 							      chiSquares[pol][ant][freqInd],
 							      ndfs[pol][ant][freqInd]);
+	    
 	    grChiSquares[pol][ant].GetY()[freqInd] = chiSquares[pol][ant][freqInd];
 	    if(ndfs[pol][ant][freqInd] > 0){
 	      
@@ -275,12 +274,22 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  if(spectrumAmplitudes[pol][ant][freqInd] > 0){
 	    distAmp = spectrumAmplitudes[pol][ant][freqInd];
 	    fitOverSpectrum[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd]/spectrumAmplitudes[pol][ant][freqInd];
+
+	    
+	    chiSquaresRelativeToSpectrum[pol][ant].at(freqInd) = hRays[pol][ant].at(freqInd)->getRayleighChiSquare(&spectrumAmplitudes[pol][ant][freqInd]);
+	    
 	  }
 	  else{
 	    distAmp = hRays[pol][ant].at(freqInd)->getAmplitude();
 	    fitOverSpectrum[pol][ant][freqInd] = 1;
+	    chiSquaresRelativeToSpectrum[pol][ant].at(freqInd) = chiSquares[pol][ant][freqInd];
 	  }
+	  grChiSquaresRelativeToSpectrum[pol][ant].GetY()[freqInd] = chiSquaresRelativeToSpectrum[pol][ant].at(freqInd);
 
+	  if(ndfs[pol][ant][freqInd] > 0){
+	    grReducedChiSquaresRelativeToSpectrum[pol][ant].GetY()[freqInd] = chiSquaresRelativeToSpectrum[pol][ant].at(freqInd)/ndfs[pol][ant][freqInd];
+	  }
+	  
 	  chanChisquare[pol][ant] += (amp*amp)/(distAmp*distAmp);
 	  chanNdf[pol][ant] += 2;
 	  
@@ -324,6 +333,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 	// do the spectral analysis of the amplitudes
 	getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd], lastSpecInd - firstSpecInd);
+
 
 	// update summary graphs	
 	for(int freqInd = 0; freqInd < nf; freqInd++){

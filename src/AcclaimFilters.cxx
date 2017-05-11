@@ -9,8 +9,6 @@
 #include "RayleighHist.h"
 #include "RootTools.h"
 
-
-
 /** 
  * Checks all operations in the Filter Strategy and forces the strategy to load history the before it processes the next event
  * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
@@ -48,7 +46,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   centreMHz = 370;
   Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
 
-  double log10ProbThresh = -2.5;
+  double log10ProbThresh = -100; //2.5;
   double reducedChiSquareThresh = 3;
   double fitOverSpectrumThreshold = 1.05;
   const int numEventsInRayleighDistributions = 1500;
@@ -618,10 +616,10 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold), fAmpFitOverSpectrumThreshold(amplitudeFitOverSpectrumThreshold)
+Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
 {
   fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
-  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events", fNumEvents);
+  fDescription = TString::Format("Tracks frequency bin amplitudes over %d events, the chi squared threshold is %lf", fNumEvents, fChiSquarePerDofThreshold);
 }
 
 Acclaim::Filters::RayleighFilter::~RayleighFilter()
@@ -645,59 +643,42 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
       const int nf = wf->Nfreq();
 
-      // first check spectrum threshold filtering...
-      std::vector<int> binsAboveFitOverSpecThreshold;
-      for(int freqInd=0; freqInd < nf; freqInd++){
-	double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
-	if(fitOverSpec > fAmpFitOverSpectrumThreshold){
-	  binsAboveFitOverSpecThreshold.push_back(freqInd);
-	}
-      }
-      // now go through and fill out spikes...
-      std::vector<bool> nearPeakInFitOverThreshold(nf, false);
-      for(UInt_t i=0; i < binsAboveFitOverSpecThreshold.size(); i++){
-	Int_t startBin = binsAboveFitOverSpecThreshold.at(i);
-	Int_t thisBin = startBin;
-	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
-	  nearPeakInFitOverThreshold.at(thisBin) = true;
-	  thisBin++;
-	}
-	thisBin = startBin;
-	while(fourierBuffer.getFitOverSpectrum(pol, ant, thisBin) > 1){
-	  nearPeakInFitOverThreshold.at(thisBin) = true;
-	  thisBin--;
-	}
-      }
-      
-
       FFTWComplex* theFreqs = wf->updateFreq();
       for(int freqInd=0; freqInd < nf; freqInd++){
 
-	double probVal = fourierBuffer.getProb(pol, ant, freqInd);
+	// double probVal = fourierBuffer.getProb(pol, ant, freqInd);
 	int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
-	double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
+	// double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
+	double reducedChiSquareRelativeToSpectrum = ndf > 0 ? fourierBuffer.getChiSquaresRelativeToSpectrum(ant, pol)[freqInd]/ndf : -1;
+	
 	// double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
-	if(nearPeakInFitOverThreshold.at(freqInd) || reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
-	  double specAmp = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
-	  // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
+	// if(nearPeakInFitOverThreshold.at(freqInd) || reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
+	// if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
+	// if(freqInd == 26){
+	//   std::cout << reducedChiSquareRelativeToSpectrum << ", ";
+	// }
+
+	
+	if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold){// || probVal < fLog10ProbThreshold){	  
 	  
-	  double x1 = fRandy->Gaus(0, specAmp);
-	  double x2 = fRandy->Gaus(0, specAmp);
-	  double newAmp = TMath::Sqrt(x1*x1 + x2*x2);
+	  // double specAmp = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
+	  // // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
 	  
-	  double phase = fRandy->Uniform(0, TMath::TwoPi());
+	  // double x1 = fRandy->Gaus(0, specAmp);
+	  // double x2 = fRandy->Gaus(0, specAmp);
+	  // double newAmp = TMath::Sqrt(x1*x1 + x2*x2);
+	  
+	  // double phase = fRandy->Uniform(0, TMath::TwoPi());
 
 	  // std::cout << probVal << "\t" << x1 << "\t" << x2 << "\t" << newAmp << "\t" << phase << "\t" << theFreqs[freqInd] << "\t";
 	  
-	  theFreqs[freqInd].setMagPhase(newAmp, phase);
-	  
-
+	  // theFreqs[freqInd].setMagPhase(newAmp, phase);
+	  theFreqs[freqInd].re = 0;
+	  theFreqs[freqInd].im = 0;
 	  // std::cout << theFreqs[freqInd] << std::endl;
 	}
-	// else{
-	//   std::cout << pol << "\t" << ant << "\t" << theFreqs[freqInd] << "\t" << probVal << "\t" << std::endl;
-	// }
       }
+      // std::cout << std::endl;
     }
   }  
 }

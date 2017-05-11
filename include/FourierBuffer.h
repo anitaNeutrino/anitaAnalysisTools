@@ -83,6 +83,8 @@ namespace Acclaim
     unsigned getCurrentBufferSize();
 
     const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
+    const std::vector<double>& getChiSquaresRelativeToSpectrum(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquaresRelativeToSpectrum[pol][ant];};
+    
     const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};
     const std::vector<double>& getRayleighAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return fitAmplitudes[pol][ant];};
     const std::vector<double>& getBackgroundSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
@@ -176,7 +178,8 @@ namespace Acclaim
       case Chisquare:
 	return &grChiSquares[pol][ant];
       case ReducedChisquare:
-	return &grReducedChiSquares[pol][ant];
+	// return &grReducedChiSquares[pol][ant];
+	return &grReducedChiSquaresRelativeToSpectrum[pol][ant];	
       case NDF:
 	return &grNDFs[pol][ant];
       // case RayleighAmplitude:
