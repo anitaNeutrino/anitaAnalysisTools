@@ -2,7 +2,7 @@
 #define RAYLEIGH_HIST_H
 
 #include "TH1D.h"
-#include "RingBuffer.h" // dumb class I put in eventReaderRoot ages ago, looks like I can actually use it again!
+#include "RingBuffer.h"
 #include <Math/Minimizer.h>
 #include <Math/Factory.h>
 #include <Math/Functor.h>
@@ -48,16 +48,16 @@ namespace Acclaim{
     static void guessMaxBinLimitAndSigmaFromMean(double meanAmp, double& maxAmp, double& sigmaGuess, double fracOfEventsInsideMaxAmp);
     
     
-    inline double getOneMinusCDF(double amp, double distAmp = -1){ //!< This is the probability of getting this amplitude (amp) or higher
+    inline double getOneMinusCDF(double amp, double distAmp = -1) const { //!< This is the probability of getting this amplitude (amp) or higher
       distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
       return exp((-0.5*amp*amp)/(distAmp*distAmp));
     }
     
-    inline double getCDF(double amp, double distAmp = -1){ // This is the fraction of amplitudes lower than amp 
+    inline double getCDF(double amp, double distAmp = -1) const{ // This is the fraction of amplitudes lower than amp 
       distAmp = distAmp < 0 ? fRayleighAmplitude : distAmp; // use this histograms rayleigh distribution amplitude if one wasn't specified      
       return 1 - getOneMinusCDF(amp, distAmp);
     }
-    inline double getAmplitude(){return fRayleighAmplitude;}
+    inline double getAmplitude() const {return fRayleighAmplitude;}
     
   protected:
     RingBuffer amplitudes; //!< Tracks all the amplitudes
@@ -107,12 +107,6 @@ namespace Acclaim{
     std::vector<double> squaredBinCentres;    
     std::vector<int> binValues; // cache histogram bin contents, should be integers
     std::vector<double> squaredBinErrors;    
-
-    // exp is an expensive operation so I'm going to cache the results in here
-    // with a set of precalculated exponentials, I can vary the exponent in
-    static const double dExponent; // defined in RayleighHist.cxx
-    static const double minExponent; // max is zero
-    static std::vector<double> exponentialCache; // the cached exponentials
 
     ClassDef(RayleighHist, 0);
   };

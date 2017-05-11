@@ -11,10 +11,6 @@ ClassImp(Acclaim::RayleighHist);
 
 #define NUM_BINS 10
 
-const double Acclaim::RayleighHist::dExponent = 0.001; // maybe
-const double Acclaim::RayleighHist::minExponent = 10; // min is zero
-std::vector<double> Acclaim::RayleighHist::exponentialCache;
-
 
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
 				    const char* name, const char* title) 
@@ -59,18 +55,7 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   // a IMultiGenFunction type
   
   fNumFitParams = 1;
-  fMinimizer->SetFunction(fChiSquaredFunc);
-  
-  // someone has to initialize 
-  if(exponentialCache.size()==0){
-    unsigned size = TMath::Nint(TMath::Abs(minExponent)/dExponent);
-    exponentialCache.reserve(size);
-    double minExponentCalculated = 0;
-    while(minExponentCalculated > minExponent){
-      exponentialCache.push_back(exp(minExponentCalculated));
-      minExponentCalculated -= dExponent;
-    }
-  }
+  fMinimizer->SetFunction(fChiSquaredFunc);  
 }
 
 
