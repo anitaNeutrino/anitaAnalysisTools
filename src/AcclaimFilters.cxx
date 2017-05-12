@@ -39,10 +39,13 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   if(acclaimDefaults.size()==0){
 
     // first make the operations...
-    ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+
+    // should always use some kind of alfa filter unless you have a good reason
+    const double fpeSafety = 1e-10;    
+    ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz - fpeSafety);
     
-    Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
-    Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
+    Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
+    Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
 
     double log10ProbThresh = -100; //2.5;
     double reducedChiSquareThresh = 3;
@@ -96,13 +99,15 @@ FilterStrategy* Acclaim::Filters::findStrategy(const std::map<TString, FilterStr
 
 
 
-Acclaim::Filters::Notch::Notch(Double_t lowEdgeMHz, Double_t highEdgeMHz){
+Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz){
 
-  // Freq bins are currently in 10MHz steps
-  fTag = TString::Format("notch%.lfMHzto%.lfMHz", lowEdgeMHz, highEdgeMHz);
-  fDescription = TString::Format("Notch filter from %.lf MHz to %.lf MHz", lowEdgeMHz, highEdgeMHz);
-  fLowEdgeMHz = lowEdgeMHz;
-  fHighEdgeMHz = highEdgeMHz;
+  // Freq bins are currently in 0.1 GHz steps
+  fTag = TString::Format("notch%.lfGHzto%.lfGHz", lowEdgeGHz, highEdgeGHz);
+  fDescription = TString::Format("Notch filter from %.lf GHz to %.lf GHz", lowEdgeGHz, highEdgeGHz);
+  fLowEdgeGHz = lowEdgeGHz;
+  fHighEdgeGHz = highEdgeGHz;
+  // fLowNotchIndex = -1;
+  // fHighNotchIndex = -1;  
 
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
@@ -112,29 +117,21 @@ Acclaim::Filters::Notch::Notch(Double_t lowEdgeMHz, Double_t highEdgeMHz){
 }
 
 
-void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g){//, AnitaPol::AnitaPol_t pol, int ant){
-
-  // std::cout << __PRETTY_FUNCTION__ << "\t" << g << std::endl;
-  const double deltaFMHz = 1e3*g->deltaF();
+void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g){
+  // add small offset to frequencies to avoid inconsistent notch edges due to
+  // floating point error...
+  const double floatPointError = 1e-10; // plently 
+      
+  const double deltaF_GHz = g->deltaF();
   const int nf = g->Nfreq();
-
-  // // std::cout << g << "\t" << g->deltaF() << "\t" << deltaFMHz << "\t" << nf << "\t" << std::endl;
-  // Double_t removedPower = 0;
-  
   FFTWComplex* theFreqs = g->updateFreq();
   for(int freqInd=0; freqInd < nf; freqInd++){
-    const double freqMHz = deltaFMHz* freqInd;
+    const double freqGHz = deltaF_GHz* freqInd + floatPointError;
 
-    if(freqMHz >= fLowEdgeMHz && freqMHz < fHighEdgeMHz){
-      // removedPower += theFreqs[freqInd].getAbsSq();
+    if(freqGHz >= fLowEdgeGHz && freqGHz < fHighEdgeGHz){
       theFreqs[freqInd] = 0;
     }
   }
-
-  // if(pol!=AnitaPol::kNotAPol && ant >= 0 && ant < NUM_SEAVEYS){
-  //   fPowerRemovedByNotch[pol][ant] = removedPower;
-  // }
-// return removedPower;
 }
 
 

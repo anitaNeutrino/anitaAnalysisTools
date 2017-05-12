@@ -29,9 +29,9 @@ namespace Acclaim
   {
     namespace Bands {
       // zero everything outside of these
-      const double anitaHighPassGHz = 0.19;
+      const double anitaHighPassGHz = 0.2;
       const double anitaLowPassGHz = 1.2;
-      const double alfaLowPassGHz = 0.65;
+      const double alfaLowPassGHz = 0.7;
     }
 
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
@@ -45,12 +45,12 @@ namespace Acclaim
     {
     protected:
       TString fTag, fDescription, fOutputName;
-      Double_t fLowEdgeMHz, fHighEdgeMHz;
+      Double_t fLowEdgeGHz, fHighEdgeGHz;
       mutable Double_t fPowerRemovedByNotch[AnitaPol::kNotAPol][NUM_SEAVEYS];
       virtual void processOne(AnalysisWaveform * g);
   
     public:
-      Notch(Double_t lowEdgeMHz, Double_t highEdgeMHz);
+      Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz);
   
       virtual const char * tag () const {return fTag.Data();};
       virtual const char * description () const {return fDescription.Data();} 
