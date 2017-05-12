@@ -50,7 +50,7 @@ namespace Acclaim
 
     
     virtual ~FourierBuffer();
-    explicit FourierBuffer(Int_t theBufferSize=1000, double alfaLowPassFreqGHz=0.65);
+    explicit FourierBuffer(Int_t theBufferSize=1000);
 
     size_t add(const FilteredAnitaEvent* fEv);
 
@@ -152,9 +152,6 @@ namespace Acclaim
 
     double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
     int chanNdf[AnitaPol::kNotAPol][NUM_SEAVEYS];    
-	   
-    // will be 1.3ish for non-alfa bandpassed channels, much smaller otherwise.
-    double fAlfaLowPassFreq; 
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    

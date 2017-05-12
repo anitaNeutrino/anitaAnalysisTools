@@ -51,7 +51,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     double reducedChiSquareThresh = 3;
     double fitOverSpectrumThreshold = 1.05;
     const int numEventsInRayleighDistributions = 1500;
-    RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
+    RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
 
     // then make the strategies
 
@@ -414,7 +414,7 @@ void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
 }
 
 
-Acclaim::Filters::SpectrumMagnitude::SpectrumMagnitude(Int_t numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz){
+Acclaim::Filters::SpectrumMagnitude::SpectrumMagnitude(Int_t numEvents) : RayleighMonitor(numEvents){
   fDescription = "Sets the magnitude of each frequency bin equal to the fourier buffer spectrum";
 }
 
@@ -465,7 +465,7 @@ void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
 
 
 
-Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents, double alfaLowPassFreqGHz) : fourierBuffer(numEvents, alfaLowPassFreqGHz) {
+Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
   fNumEvents = numEvents;
   fDescription = TString::Format("Decides whether or not to filter events based on characteristics of the event amplitude and Rayleigh distribution over %d events", fNumEvents);
   fNumOutputs = 6;
@@ -593,7 +593,7 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents, double alfaLowPassFreqGHz) : RayleighMonitor(numEvents, alfaLowPassFreqGHz), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
+Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents) : RayleighMonitor(numEvents), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
 {
   fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
   fDescription = TString::Format("Tracks frequency bin amplitudes over %d events, the chi squared threshold is %lf", fNumEvents, fChiSquarePerDofThreshold);

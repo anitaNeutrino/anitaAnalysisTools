@@ -22,8 +22,8 @@
 #define IS_ROOT_6_06_08 (ROOT_VERSION_CODE >= ROOT_VERSION(6,6,8))
 
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, double alfaLowPassFreqGHz) :
-    doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz-0.01), fMinSpecFreq(Filters::Bands::anitaHighPassGHz+0.01), fAlfaLowPassFreq(alfaLowPassFreqGHz), fNumSkipped(0){
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
+    doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz), fNumSkipped(0){
   
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
@@ -296,13 +296,13 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
   if(anyUpdated){
-    int firstSpecInd = int(fMinSpecFreq/df);
+    int firstSpecInd = 0; 
 
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
-	int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
+	int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? Filters::Bands::alfaLowPassGHz : fMaxFitFreq)/df);
 	int nf = fitAmplitudes[pol][ant].size();
 
 	// copy the fitted amplitudes into the background array
@@ -635,7 +635,13 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
     else{
       gPad->SetLogy(0);
     }
-      
+
+    summaryPads[ant]->cd();
+    if(summaryOpt == FourierBuffer::Prob){
+      yMax = 0; // otherwise some events get a little too crazy..      
+      yMin = -10; // otherwise some events get a little too crazy..
+    }
+    
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
       
