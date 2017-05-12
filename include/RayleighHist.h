@@ -29,6 +29,11 @@ namespace Acclaim{
       kDefault = kAdaptive
       // Default = JustEvalGuess
     } FitMethod;
+
+    typedef enum {
+      kPoisson,
+      kPearson
+    } ChiSquareErrorMethod;
     
     RayleighHist(FourierBuffer* fb=NULL, const char* name = "", const char* title = "");
     virtual ~RayleighHist();
@@ -95,6 +100,7 @@ namespace Acclaim{
     std::vector<Double_t> fParamsTF1;
     
     FitMethod fitMethod;
+    ChiSquareErrorMethod chiSquareErrorMethod;
     const Int_t fFitEveryNAdds;
     Int_t fNumAddsMod10;
 

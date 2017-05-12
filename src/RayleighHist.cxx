@@ -29,6 +29,7 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
   fracOfEventsWanted = 0.99;
 
   fitMethod = kAdaptive;
+  chiSquareErrorMethod = kPearson;
   // fitMethod = Scan;
   // fitMethod = JustEvalGuess;
   
@@ -245,7 +246,8 @@ void Acclaim::RayleighHist::getRayleighFitParams(double& rayAmp, double& chiSqua
 
 double Acclaim::RayleighHist::getRayleighChiSquare(const double* params){
   
-  double amplitude = params[0];
+  double amplitude = params[0];  
+  
   double chiSquare=0;
   if(amplitude <= 0){ // does this fuck the fitter?
     chiSquare = 9999 + fabs(amplitude);
@@ -257,8 +259,19 @@ double Acclaim::RayleighHist::getRayleighChiSquare(const double* params){
     // std::cout << amplitude << "\t" << invAmpSquare << "\t" << exponentPreFactorPart << "\t" << fRayleighNorm << "\t" << fBinWidth << "\t" << fNumEvents << std::endl;
     for(int i=0; i < NUM_BINS; i++){
       if(squaredBinErrors[i] > 0){
-	double yR = exponentPreFactorPart*binCentres[i]*exp(minusHalfInvAmpSquare*squaredBinCentres[i]) - binValues[i];
-        chiSquare += yR*yR/squaredBinErrors[i];
+	double yTheoretical = exponentPreFactorPart*binCentres[i]*exp(minusHalfInvAmpSquare*squaredBinCentres[i]);
+        double yMeasured = binValues[i];
+        double dy = yTheoretical - yMeasured;
+        if(chiSquareErrorMethod==kPoisson){
+          chiSquare += dy*dy/squaredBinErrors[i];
+        }
+        else if(chiSquareErrorMethod==kPearson){
+          chiSquare += dy*dy/yTheoretical;
+        }
+        else{
+          std::cerr << "Error in " << __PRETTY_FUNCTION__
+                    << ". Unknown chiSquareErrorMethod" << std::endl;
+        }
       }
     }
   }
