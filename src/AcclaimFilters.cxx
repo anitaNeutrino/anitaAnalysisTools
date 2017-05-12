@@ -9,6 +9,8 @@
 #include "RayleighHist.h"
 #include "RootTools.h"
 
+static std::map<TString, FilterStrategy*> acclaimDefaults;
+
 /** 
  * Checks all operations in the Filter Strategy and forces the strategy to load history the before it processes the next event
  * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
@@ -33,69 +35,49 @@ void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* 
  */
 void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
 
-  // first make the operations
-  ALFASincFilter* alfaFilter = new ALFASincFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
-  Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
-  Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
+
+  if(acclaimDefaults.size()==0){
   
-  Double_t widthMHz = 26;
-  Double_t centreMHz = 260;
-  Notch* n260 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
+    // first make the operations
+    ALFASincFilter* alfaFilter = new ALFASincFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+    Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
+    Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
 
-  // Double_t widthMHz = 26;
-  centreMHz = 370;
-  Notch* n370 = new Notch(centreMHz-widthMHz, centreMHz+widthMHz);
+    double log10ProbThresh = -100; //2.5;
+    double reducedChiSquareThresh = 3;
+    double fitOverSpectrumThreshold = 1.05;
+    const int numEventsInRayleighDistributions = 1500;
+    RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
 
-  double log10ProbThresh = -100; //2.5;
-  double reducedChiSquareThresh = 3;
-  double fitOverSpectrumThreshold = 1.05;
-  const int numEventsInRayleighDistributions = 1500;
-  RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
+    // then make the strategies
 
-  UniformMagnitude* um = new UniformMagnitude();   
-  SpectrumMagnitude* sm = new SpectrumMagnitude(numEventsInRayleighDistributions, Bands::alfaLowPassGHz);
-
-
-
-
-
-  // then make the strategies
-
-  // every operation is going to use these default strategies
-  FilterStrategy* defaultOps = new FilterStrategy();
-  defaultOps->addOperation(bandHighPass, saveOutput);
-  defaultOps->addOperation(bandLowPass, saveOutput);
-  defaultOps->addOperation(alfaFilter, saveOutput);
-  filterStrats["Default"] = defaultOps;  
-
+    // every operation is going to use these default strategies
+    FilterStrategy* defaultOps = new FilterStrategy();
+    if(AnitaVersion::get()==3){
+      defaultOps->addOperation(alfaFilter, saveOutput);
+    }
+    acclaimDefaults["Minimum"] = defaultOps;
   
-  FilterStrategy* stupidNotchStrat = new FilterStrategy();
-  (*stupidNotchStrat) = (*defaultOps);
-  stupidNotchStrat->addOperation(n260, saveOutput);
-  stupidNotchStrat->addOperation(n370, saveOutput);
-  filterStrats["BrickWallSatellites"] = stupidNotchStrat;
+    FilterStrategy* fs = new FilterStrategy();
+    (*fs) = (*defaultOps);
+    fs->addOperation(bandHighPass, saveOutput);
+    fs->addOperation(bandLowPass, saveOutput);
+    fs->addOperation(rf, saveOutput);
+    acclaimDefaults["RayleighFilter"] = fs;
+  }
 
-  FilterStrategy* fs = new FilterStrategy();
-  (*fs) = (*defaultOps);  
-  fs->addOperation(rf, saveOutput);
-  filterStrats["RayleighFilter"] = fs;
-
-
-  FilterStrategy* ufs = new FilterStrategy();
-  (*ufs) = (*defaultOps);    
-  ufs->addOperation(alfaFilter, saveOutput);  
-  ufs->addOperation(um);
-  filterStrats["UniformMagnitude"] = ufs;
-
-  FilterStrategy* sfs = new FilterStrategy();
-  (*sfs) = (*defaultOps);      
-  sfs->addOperation(alfaFilter, saveOutput);  
-  sfs->addOperation(sm);
-  filterStrats["SpectrumMagnitude"] = sfs;
-  
+  std::map<TString, FilterStrategy*>::iterator it;
+  for(it = acclaimDefaults.begin(); it != acclaimDefaults.end(); ++it){
+    filterStrats[it->first] = it->second;
+  }
   
 }
 
+FilterStrategy* Acclaim::Filters::findDefaultStrategy(const TString& stratName){
+
+  appendFilterStrategies(acclaimDefaults, false);
+  return findStrategy(acclaimDefaults, stratName);
+}
 
 FilterStrategy* Acclaim::Filters::findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName){
 

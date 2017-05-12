@@ -34,9 +34,10 @@ namespace Acclaim
       const double alfaLowPassGHz = 0.65;
     }
 
-    
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
+    FilterStrategy* findDefaultStrategy(const TString& stratName);    
+    
     void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);    
 
     // base notch class
