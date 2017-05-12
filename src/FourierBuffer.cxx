@@ -23,7 +23,7 @@
 
 
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize, double alfaLowPassFreqGHz) :
-  doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz-0.01), fMinSpecFreq(Filters::Bands::anitaHighPassGHz+0.01), fAlfaLowPassFreq(alfaLowPassFreqGHz), fNumSkipped(0){
+    doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz-0.01), fMinSpecFreq(Filters::Bands::anitaHighPassGHz+0.01), fAlfaLowPassFreq(alfaLowPassFreqGHz), fNumSkipped(0){
   
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
@@ -82,7 +82,6 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
   initGraphAndVector(NULL, grReducedChiSquaresRelativeToSpectrum, n, df, 0);
   initGraphAndVector(probs, grProbs, n, df, 0);
   initGraphAndVector(fitAmplitudes, grAmplitudes, n, df, 0);  
-  initGraphAndVector(fitOverSpectrum, grFitOverSpectrum, n, df, 0);
   initGraphAndVector(sumPowers, NULL, n, df, 0);
   initGraphAndVector(NULL, grLastAmps, n, df, 0);
   initGraphAndVector(NULL, grNDFs, n, df, 0);    
@@ -116,14 +115,17 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
       // get them to know about eachother
-      grSpectrumAmplitudes[pol][ant].fDerivedFrom = &grAmplitudes[pol][ant];
-      grLastAmps[pol][ant].fDerivedFrom = &grAmplitudes[pol][ant];
+      std::vector<TGraphFB*> grAmpVec {
+        &grLastAmps[pol][ant],
+            &grAmplitudes[pol][ant],
+            &grSpectrumAmplitudes[pol][ant]};
+      TGraphFB::setDrawingDependencies(grAmpVec);      
 
-      grAmplitudes[pol][ant].fDerivatives.push_back(&grSpectrumAmplitudes[pol][ant]);
-      grAmplitudes[pol][ant].fDerivatives.push_back(&grLastAmps[pol][ant]);      
+      std::vector<TGraphFB*> grChiSqVec {
+        &grReducedChiSquares[pol][ant],
+            &grReducedChiSquaresRelativeToSpectrum[pol][ant]};
 
-      grReducedChiSquaresRelativeToSpectrum[pol][ant].fDerivatives.push_back(&grReducedChiSquares[pol][ant]);
-      grReducedChiSquares[pol][ant].fDerivedFrom = &grReducedChiSquaresRelativeToSpectrum[pol][ant];
+      TGraphFB::setDrawingDependencies(grChiSqVec);      
     }
   }
 
@@ -258,30 +260,14 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	      grAmplitudes[pol][ant].GetY()[freqInd] = fitAmplitudes[pol][ant][freqInd];	    
 	    }
 	  }
-
-	  // double expectedRay = 0.5*TMath::Pi()*fitAmplitudes[pol][ant][freqInd];
-	  // eventPower[pol][ant] = 0;
-	  // int firstSpecInd = int(fMinSpecFreq/df);
-	  // int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
-	  // for(int freqInd = firstSpecInd; freqInd < lastSpecInd; freqInd++){
-	  //   eventPower[pol][ant] += squaredRayleighAmplitudeToMeanFactor*amp*amp;
-	  // }
-	  
-	  double probVal = 0;
-	  double prob = 0;
 	  double distAmp = 0;
-	  
 	  if(spectrumAmplitudes[pol][ant][freqInd] > 0){
 	    distAmp = spectrumAmplitudes[pol][ant][freqInd];
-	    fitOverSpectrum[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd]/spectrumAmplitudes[pol][ant][freqInd];
-
-	    
 	    chiSquaresRelativeToSpectrum[pol][ant].at(freqInd) = hRays[pol][ant].at(freqInd)->getRayleighChiSquare(&spectrumAmplitudes[pol][ant][freqInd]);
 	    
 	  }
 	  else{
 	    distAmp = hRays[pol][ant].at(freqInd)->getAmplitude();
-	    fitOverSpectrum[pol][ant][freqInd] = 1;
 	    chiSquaresRelativeToSpectrum[pol][ant].at(freqInd) = chiSquares[pol][ant][freqInd];
 	  }
 	  grChiSquaresRelativeToSpectrum[pol][ant].GetY()[freqInd] = chiSquaresRelativeToSpectrum[pol][ant].at(freqInd);
@@ -293,9 +279,9 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  chanChisquare[pol][ant] += (amp*amp)/(distAmp*distAmp);
 	  chanNdf[pol][ant] += 2;
 	  
-	  prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp, distAmp);
+	  double prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp, distAmp);
 	  
-	  probVal = prob > 0 ? TMath::Log10(prob) : 0;
+	  double probVal = probVal = prob > 0 ? TMath::Log10(prob) : 0;
 
 	  // if(!TMath::Finite(probVal)){
 	  //   std::cout << probVal << "\t" << prob << std::endl;
@@ -303,7 +289,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  
 	  probs[pol][ant].at(freqInd) = probVal;
 	  grProbs[pol][ant].GetY()[freqInd] = probVal;
-	  grFitOverSpectrum[pol][ant].GetY()[freqInd] = fitOverSpectrum[pol][ant][freqInd];
 	}
       }
     }
@@ -320,20 +305,15 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	int lastSpecInd = int((isAlfaBandpassed(ant,pol) ? fAlfaLowPassFreq : fMaxFitFreq)/df);
 	int nf = fitAmplitudes[pol][ant].size();
 
-	// // double expectedRay = 0.5*TMath::Pi()*fitAmplitudes[pol][ant][freqInd];
-	// expectedThermalPower[pol][ant] = 0;
-	// for(int freqInd = firstSpecInd; freqInd < lastSpecInd; freqInd++){
-	//   expectedThermalPower[pol][ant] += squaredRayleighAmplitudeToMeanFactor*fitAmplitudes[pol][ant][freqInd]*fitAmplitudes[pol][ant][freqInd];
-	// }
-
-	// copy the fitted amplitudes into the background array (before applying the TSpectrum background thing)
+	// copy the fitted amplitudes into the background array
+	// (before applying the TSpectrum background thing)
 	for(int freqInd = 0; freqInd < nf; freqInd++){
 	  spectrumAmplitudes[pol][ant][freqInd] = fitAmplitudes[pol][ant][freqInd];
 	}
 
 	// do the spectral analysis of the amplitudes
-	getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd], lastSpecInd - firstSpecInd);
-
+	getBackgroundSpectrum(&spectrumAmplitudes[pol][ant][firstSpecInd],
+			      lastSpecInd - firstSpecInd);
 
 	// update summary graphs	
 	for(int freqInd = 0; freqInd < nf; freqInd++){
@@ -418,7 +398,7 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
   
   bool needToAddManually = false;
 
-   std::cerr << "Info in " << __PRETTY_FUNCTION__ << ": Loading history for FourierBuffer, will loop over the last " << bufferSize << " events plus a few." << std::endl;
+  std::cerr << "Info in " << __PRETTY_FUNCTION__ << ": Loading history for FourierBuffer, will loop over the last " << bufferSize << " events plus a few." << std::endl;
   // std::cerr << "In " << __PRETTY_FUNCTION__ << ", I think I am here " << this << std::endl;
   
   while(!loadedHistory){
@@ -649,14 +629,12 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
     // do the actual plotting
     summaryPads[ant]->cd();
-    // if(summaryOpt == FourierBuffer::Prob){
-    //   // gPad->SetLogy(1);
-    //   // yMax = 1e5;
-    //   yMin = 1;
-    // }
-    // else{
-    //   gPad->SetLogy(0);
-    // }
+    if(summaryOpt == FourierBuffer::ReducedChisquare){
+      gPad->SetLogy(1);
+    }
+    else{
+      gPad->SetLogy(0);
+    }
       
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
@@ -672,23 +650,14 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
       
       gr->Draw(opt);
 
-      if(summaryOpt == FourierBuffer::RayleighAmplitude){
-	grSpectrumAmplitudes[pol][ant].SetLineColor(gr->GetLineColor());
-	grSpectrumAmplitudes[pol][ant].SetLineStyle(3);
-	grSpectrumAmplitudes[pol][ant].SetMaximum(yMax);
-	grSpectrumAmplitudes[pol][ant].SetMinimum(yMin);
-	grSpectrumAmplitudes[pol][ant].Draw("lsame");
-
-	grLastAmps[pol][ant].SetLineColor(gr->GetLineColor());
-	grLastAmps[pol][ant].SetLineStyle(5);
-	grLastAmps[pol][ant].SetMaximum(yMax);
-	grLastAmps[pol][ant].SetMinimum(yMin);
-	grLastAmps[pol][ant].Draw("lsame");
-	
-      }           
+      for(unsigned i=0; i < gr->fDerivatives.size(); i++){
+	TGraphFB* gr2 = gr->fDerivatives[i];
+	gr2->Draw("lsame");
+	gr2->SetLineColor(gr->GetLineColor());
+	gr2->SetLineStyle(i+1);
+      }      
     }
   }
-  
 }
 
 
@@ -796,4 +765,13 @@ void Acclaim::TGraphFB::drawRayleighHistNearMouse(int x, int y) const{
 
 }
 
- 
+
+// Utility function to set fDerives from and fDerivatives (i.e. the drawing ownership)
+void Acclaim::TGraphFB::setDrawingDependencies(const std::vector<TGraphFB*> grs){
+  if(grs.size() > 0){
+    for(unsigned i=1; i < grs.size(); i++){
+      grs[0]->fDerivatives.push_back(grs[i]);
+      grs[i]->fDerivedFrom = grs[0];
+    }    
+  }
+}

@@ -61,43 +61,67 @@ namespace Acclaim
       return spectrumAmplitudes[pol][ant][freqBin];
     }
     
-    void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant, double& chiSquare, int& ndf){
+    void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant,
+				double& chiSquare, int& ndf) const{
       chiSquare = chanChisquare[pol][ant];
       ndf = chanNdf[pol][ant];      
-    }
-    double getFitOverSpectrum(AnitaPol::AnitaPol_t pol, Int_t ant, int freqBin){
-      return fitOverSpectrum[pol][ant].at(freqBin);
     }
     const std::vector<double>& getPowerRingBufferBack(AnitaPol::AnitaPol_t pol, int ant){
       return powerRingBuffers[pol][ant].back();
     }
 
-    const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol, Int_t freqBin) const {return hRays[pol][ant].at(freqBin);}
+    const RayleighHist* getRayleighDistribution(Int_t ant, AnitaPol::AnitaPol_t pol,
+						Int_t freqBin) const {
+      return hRays[pol][ant].at(freqBin);
+    }
+
+    unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const {
+      return sumPowers[pol][ant].size();
+    }
+    
     TGraphFB* getAvePowSpec_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getAvePowSpec(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getBackground(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents = -1) const;
     TGraphFB* getReducedChiSquaresOfRayelighDistributions(Int_t ant, AnitaPol::AnitaPol_t pol) const;
     void drawSummary(TPad* pad, SummaryOption_t) const;
-    unsigned getN(int ant, AnitaPol::AnitaPol_t pol) const{return sumPowers[pol][ant].size();}
-    unsigned getCurrentBufferSize();
+    unsigned getCurrentBufferSize() const;
 
-    const std::vector<double>& getChiSquares(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquares[pol][ant];};
-    const std::vector<double>& getChiSquaresRelativeToSpectrum(int ant, AnitaPol::AnitaPol_t pol) const {return chiSquaresRelativeToSpectrum[pol][ant];};
+    const std::vector<double>& getChiSquares(int ant,
+					     AnitaPol::AnitaPol_t pol) const {
+      return chiSquares[pol][ant];
+    }
+    const std::vector<double>& getChiSquaresRelativeToSpectrum(int ant,
+							       AnitaPol::AnitaPol_t pol) const {
+      return chiSquaresRelativeToSpectrum[pol][ant];
+    }
+    const std::vector<int>& getNDFs(int ant,
+				    AnitaPol::AnitaPol_t pol) const{
+      return ndfs[pol][ant];
+    }
+    const std::vector<double>& getRayleighAmplitudes(int ant,
+						     AnitaPol::AnitaPol_t pol) const {
+      return fitAmplitudes[pol][ant];
+    }
+    const std::vector<double>& getBackgroundSpectrumAmplitudes(int ant,
+							       AnitaPol::AnitaPol_t pol) const {
+      return spectrumAmplitudes[pol][ant];
+    }
+    const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {
+      return probs[pol][ant];
+    }
     
-    const std::vector<int>& getNDFs(int ant, AnitaPol::AnitaPol_t pol) const {return ndfs[pol][ant];};
-    const std::vector<double>& getRayleighAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return fitAmplitudes[pol][ant];};
-    const std::vector<double>& getBackgroundSpectrumAmplitudes(int ant, AnitaPol::AnitaPol_t pol) const {return spectrumAmplitudes[pol][ant];};
-    const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {return probs[pol][ant];};
-    
-    int getNumEventsInBuffer() const {return eventsInBuffer;}
-    void setForceLoadHistory(bool f) const {fForceLoadHistory=f;}
+    int getNumEventsInBuffer() const {
+      return eventsInBuffer;
+    }
+    void setForceLoadHistory(bool f) const {
+      fForceLoadHistory=f;
+    }
 
-    bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const{
+    bool isAlfaBandpassed(int ant, AnitaPol::AnitaPol_t pol) const {
       return (ant == 4 && pol == AnitaPol::kHorizontal) || (ant == 12 && pol == AnitaPol::kHorizontal);
     }
 
-    // const FourierBuffer* getAddress(){return this;}
   protected:
     Int_t bufferSize;
     Int_t removeOld();
@@ -124,7 +148,6 @@ namespace Acclaim
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
-    std::vector<double> fitOverSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS]; // fractional excess of fit over spectrum
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
     double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
@@ -166,7 +189,6 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grNDFs[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grSpectrumAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
-    mutable std::vector<TGraphFB> grFitOverSpectrum[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grLastAmps[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
 
@@ -182,11 +204,9 @@ namespace Acclaim
 	return &grReducedChiSquaresRelativeToSpectrum[pol][ant];	
       case NDF:
 	return &grNDFs[pol][ant];
-      // case RayleighAmplitude:
-      // 	return &grAmplitudes[pol][ant];
       case RayleighAmplitude:
-	return &grFitOverSpectrum[pol][ant];
-	
+      	// return &grAmplitudes[pol][ant];
+      	return &grLastAmps[pol][ant];        
       case Prob:
 	return &grProbs[pol][ant];
       }
@@ -202,6 +222,10 @@ namespace Acclaim
   class TGraphFB : public TGraphAligned {
     friend class FourierBuffer;
   public:
+
+    // Utility function to set fDerives from and fDerivatives (i.e. the drawing ownership)
+    static void setDrawingDependencies(const std::vector<TGraphFB*> grs);
+    
     enum EDoubleClickOption{
       kDrawRayleigh,
       kDrawCopy

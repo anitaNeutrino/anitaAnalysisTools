@@ -37,9 +37,10 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
 
   if(acclaimDefaults.size()==0){
-  
-    // first make the operations
-    ALFASincFilter* alfaFilter = new ALFASincFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+
+    // first make the operations...
+    ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz); // should always use some kind of alfa filter unless you have a good reason
+    
     Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz*1e3);
     Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz*1e3, 1e9);
 
@@ -53,9 +54,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
     // every operation is going to use these default strategies
     FilterStrategy* defaultOps = new FilterStrategy();
-    if(AnitaVersion::get()==3){
-      defaultOps->addOperation(alfaFilter, saveOutput);
-    }
+    defaultOps->addOperation(alfaFilter, saveOutput); // has internal check for ANITA version
     acclaimDefaults["Minimum"] = defaultOps;
   
     FilterStrategy* fs = new FilterStrategy();
@@ -69,8 +68,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   std::map<TString, FilterStrategy*>::iterator it;
   for(it = acclaimDefaults.begin(); it != acclaimDefaults.end(); ++it){
     filterStrats[it->first] = it->second;
-  }
-  
+  }  
 }
 
 FilterStrategy* Acclaim::Filters::findDefaultStrategy(const TString& stratName){
