@@ -237,7 +237,7 @@ namespace Acclaim
   public:
 
     // Utility function to set fDerives from and fDerivatives (i.e. the drawing ownership)
-    static void setDrawingDependencies(const std::vector<TGraphFB*> grs);
+    static void setDrawingDependencies(const std::vector<Acclaim::TGraphFB*> grs);
     
     enum EDoubleClickOption{
       kDrawRayleigh,

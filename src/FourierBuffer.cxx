@@ -121,17 +121,19 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
       // get them to know about eachother
-      std::vector<TGraphFB*> grAmpVec {
-        &grLastAmps[pol][ant],
-            &grAmplitudes[pol][ant],
-            &grSpectrumAmplitudes[pol][ant]};
-      TGraphFB::setDrawingDependencies(grAmpVec);      
+      
+      
+      std::vector<Acclaim::TGraphFB*> grAmpVec;
+      grAmpVec.push_back(&grLastAmps[pol][ant]);
+      grAmpVec.push_back(&grAmplitudes[pol][ant]);
+      grAmpVec.push_back(&grSpectrumAmplitudes[pol][ant]);
+      Acclaim::TGraphFB::setDrawingDependencies(grAmpVec);      
 
-      std::vector<TGraphFB*> grChiSqVec {
-        &grReducedChiSquares[pol][ant],
-            &grReducedChiSquaresRelativeToSpectrum[pol][ant]};
-
-      TGraphFB::setDrawingDependencies(grChiSqVec);      
+      std::vector<Acclaim::TGraphFB*> grChiSqVec;
+      grChiSqVec.push_back(&grReducedChiSquares[pol][ant]);
+      grChiSqVec.push_back(&grReducedChiSquaresRelativeToSpectrum[pol][ant]);
+      
+      Acclaim::TGraphFB::setDrawingDependencies(grChiSqVec);      
     }
   }
 
