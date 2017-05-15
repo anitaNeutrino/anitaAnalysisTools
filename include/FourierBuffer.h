@@ -16,11 +16,13 @@
 #include <deque>
 #include "AnitaConventions.h"
 #include "TObject.h"
+#include "RingBufferHist.h"
 
 class TSpectrum;
 class FilteredAnitaEvent;
 class TPad;
 class UsefulAnitaEvent;
+
 
 namespace Acclaim
 {
@@ -61,11 +63,11 @@ namespace Acclaim
       return spectrumAmplitudes[pol][ant][freqBin];
     }
     
-    void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant,
-				double& chiSquare, int& ndf) const{
-      chiSquare = chanChisquare[pol][ant];
-      ndf = chanNdf[pol][ant];      
-    }
+    // void getChanChiSquareAndNDF(AnitaPol::AnitaPol_t pol, Int_t ant,
+    //     			double& chiSquare, int& ndf) const{
+    //   chiSquare = chanChisquare[pol][ant];
+    //   ndf = chanNdf[pol][ant];      
+    // }
     const std::vector<double>& getPowerRingBufferBack(AnitaPol::AnitaPol_t pol, int ant){
       return powerRingBuffers[pol][ant].back();
     }
@@ -110,6 +112,15 @@ namespace Acclaim
     const std::vector<double>& getProbabilities(int ant, AnitaPol::AnitaPol_t pol) const {
       return probs[pol][ant];
     }
+
+    const std::vector<double>& getChanChiSquares(int ant, AnitaPol::AnitaPol_t pol) const{
+      return chanChiSquares[pol][ant];
+    }
+
+    void getMeanVarChanChiSquares(int ant, AnitaPol::AnitaPol_t pol, double mean, double var) const{
+      mean = meanChanChiSquare[pol][ant];
+      var = varChanChiSquare[pol][ant];
+    }
     
     int getNumEventsInBuffer() const {
       return eventsInBuffer;
@@ -143,15 +154,20 @@ namespace Acclaim
     std::vector<double> sumPowers[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<RayleighHist*> hRays[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
-    std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> chiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];    
     std::vector<double> chiSquaresRelativeToSpectrum[AnitaPol::kNotAPol][NUM_SEAVEYS];    
     std::vector<int> ndfs[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> fitAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
     std::vector<double> spectrumAmplitudes[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<double> lastAmps[AnitaPol::kNotAPol][NUM_SEAVEYS];    
     std::vector<double> probs[AnitaPol::kNotAPol][NUM_SEAVEYS];
 
-    double chanChisquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
-    int chanNdf[AnitaPol::kNotAPol][NUM_SEAVEYS];    
+
+    std::vector<double> chanChiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    double meanChanChiSquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    double varChanChiSquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
+    std::vector<GuiHist*> hChanChiSquare[AnitaPol::kNotAPol];
+
 
     // it turns out that initialising a TF1 is very slow,
     // so I initialize a master here (owned by FourierBuffer) and clone others from this one.    
@@ -188,7 +204,7 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grAmplitudes[AnitaPol::kNotAPol]; // for drawSummary
     mutable std::vector<TGraphFB> grLastAmps[AnitaPol::kNotAPol]; // for drawSummary    
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
-
+    
     
     TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const{
       switch(choice){

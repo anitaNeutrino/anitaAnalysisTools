@@ -26,10 +26,12 @@ Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
 { 
   fParent = fb;
   freqMHz = -9999;
-  fracOfEventsWanted = 0.99;
+  // fracOfEventsWanted = (1 - 1e-8);
+  fracOfEventsWanted = 0.999;  
 
   fitMethod = kAdaptive;
-  chiSquareErrorMethod = kPearson;
+  // chiSquareErrorMethod = kPearson;
+  chiSquareErrorMethod = kPoisson;
   // fitMethod = Scan;
   // fitMethod = JustEvalGuess;
   

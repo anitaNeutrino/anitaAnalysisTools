@@ -36,9 +36,9 @@ namespace Acclaim
 
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
-    FilterStrategy* findDefaultStrategy(const TString& stratName);    
-    
-    void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);    
+    FilterStrategy* findDefaultStrategy(const TString& stratName);
+
+    void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);
 
     // base notch class
     class Notch: public UniformFilterOperation
@@ -101,7 +101,7 @@ namespace Acclaim
 
     class RayleighFilter : public RayleighMonitor {
     public:
-      explicit RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThresh, Int_t numEvents);
+      explicit RayleighFilter(double channelChiSquareCdfThresh, double chiSquarePerDofThresh, Int_t numEvents);
       virtual ~RayleighFilter();
       virtual void process(FilteredAnitaEvent* fEv);
       // virtual unsigned nOutputs() const {return 0;}
@@ -109,9 +109,10 @@ namespace Acclaim
       virtual const char * description () const {return fDescription.Data();}
     protected:
       TRandom3* fRandy;
-      double fLog10ProbThreshold; //!< What was the probability
+      // double fLog10ProbThreshold; //!< What was the probability
       double fChiSquarePerDofThreshold; // Remove frequency if our fit of the rayleigh amplitude is bad
-      double fAmpFitOverSpectrumThreshold; // filter regions of the waveform where the ratio of the fitted amplitude to the spectrum amplitude is greater than this value
+      double fChanChiSquareCdfThreshold; // threshold in chiSquareCdf
+      double fChanChiSquareThreshold; // threshold in chiSquare (computed from threshold in chiSquareCdf)
     };
 
 

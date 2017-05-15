@@ -22,14 +22,14 @@
 #define IS_ROOT_6_06_08 (ROOT_VERSION_CODE >= ROOT_VERSION(6,6,8))
 
 
-Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
+Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize ) :
     doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz), fNumSkipped(0){
   
   bufferSize = theBufferSize <= 0 ? 1000 : theBufferSize;  
   df = -1;
   
   // will initialize this dynamically to get around this no-copy-constructor bullshit
-  fSpectrum = NULL;  
+  fSpectrum = NULL;
   const char* rayleighFuncText = "([0]*x/([1]*[1]))*exp(-x*x/(2*[1]*[1]))";
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
     summaryPads[ant] = NULL;
@@ -38,7 +38,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize) :
 #if IS_ROOT_6_06_08
   fRay = new TF1("fRay", rayleighFuncText, 0, 1e4, TF1::EAddToList::kNo);
 #else
-  fRay = new TF1("fRay", rayleighFuncText, 0, 1e4);  
+  fRay = new TF1("fRay", rayleighFuncText, 0, 1e4);
 #endif
 }
 
@@ -83,16 +83,22 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
   initGraphAndVector(probs, grProbs, n, df, 0);
   initGraphAndVector(fitAmplitudes, grAmplitudes, n, df, 0);  
   initGraphAndVector(sumPowers, NULL, n, df, 0);
-  initGraphAndVector(NULL, grLastAmps, n, df, 0);
-  initGraphAndVector(NULL, grNDFs, n, df, 0);    
+  initGraphAndVector(lastAmps, grLastAmps, n, df, 0);
+  initGraphAndVector(NULL, grNDFs, n, df, 0);
+  initGraphAndVector(chanChiSquares, NULL, n, df, 0);  
   
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
+    hChanChiSquare[pol].resize(NUM_SEAVEYS, NULL);
+    
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       ndfs[pol][ant].resize(n, 0);
 
-      hRays[pol][ant].resize(n, NULL);      
+      TString hName = TString::Format("hChanChiSquare_%d_%d", pol, ant);
+      hChanChiSquare[pol].at(ant) = new Acclaim::GuiHist(hName, hName, 8, 0, 20);
+          
+      hRays[pol][ant].resize(n, NULL);
       for(int freqBin=0; freqBin < n; freqBin++){
 	double f = df*1e3*freqBin;
 	TString name = TString::Format("hRayleigh_%d_%d_%d", ant, pol, freqBin);
@@ -143,10 +149,17 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
+
+      if(hChanChiSquare[pol][ant]){
+        delete hChanChiSquare[pol][ant];
+        hChanChiSquare[pol][ant] = NULL;
+      }
   
       for(unsigned i=0; i < hRays[pol][ant].size(); i++){
-	delete hRays[pol][ant].at(i);
-	hRays[pol][ant].at(i) = NULL;
+        if(hRays[pol][ant].at(i)){
+          delete hRays[pol][ant].at(i);          
+          hRays[pol][ant].at(i) = NULL;
+        }
       }
     }
   }
@@ -232,9 +245,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
       // need *50*1000/2 = 25000
       const double cosminPowerConversionFactor = 25000*grPower->GetN();
 
-      chanChisquare[pol][ant] = 0;
-      chanNdf[pol][ant] = 0;
-
       for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
 	sumPowers[pol][ant].at(freqInd) += grPower->GetY()[freqInd];
 	double f = df*freqInd;
@@ -244,6 +254,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  
 	  bool updated = hRays[pol][ant].at(freqInd)->add(amp);
 	  grLastAmps[pol][ant].GetY()[freqInd] = amp;
+          lastAmps[pol][ant][freqInd] = amp;
 	  
 	  if(updated){
 	    anyUpdated = true;
@@ -275,10 +286,13 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  if(ndfs[pol][ant][freqInd] > 0){
 	    grReducedChiSquaresRelativeToSpectrum[pol][ant].GetY()[freqInd] = chiSquaresRelativeToSpectrum[pol][ant].at(freqInd)/ndfs[pol][ant][freqInd];
 	  }
-	  
-	  chanChisquare[pol][ant] += (amp*amp)/(distAmp*distAmp);
-	  chanNdf[pol][ant] += 2;
-	  
+
+          // if(distAmp > 0){
+          //   chanChisquare[pol][ant] += (amp*amp)/(distAmp*distAmp);
+          //   chanNdf[pol][ant] += 2;
+          // }
+
+
 	  double prob = hRays[pol][ant].at(freqInd)->getOneMinusCDF(amp, distAmp);
 	  
 	  double probVal = probVal = prob > 0 ? TMath::Log10(prob) : 0;
@@ -291,6 +305,55 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	  grProbs[pol][ant].GetY()[freqInd] = probVal;
 	}
       }
+
+      // integral, contents, errors, statistics, min/max
+      bool fFillChiSquareHists = false;
+      if(fFillChiSquareHists){
+        hChanChiSquare[pol][ant]->Reset("ICESM");
+      }
+      // for(int bx=0; bx < hChanChiSquare[pol][ant]->GetNbinsX(); bx++){
+      //   hChanChiSquare[pol][ant]->SetBinContent(bx, 0);
+      // }
+      double sumChanChiSquares = 0;
+      int n=0;
+      double sumSquaredChanChiSquares = 0;
+      for(int freqInd=0; freqInd < grPower->GetN(); freqInd++){
+        double amp = lastAmps[pol][ant][freqInd];
+        if(amp > 0){
+          double realAmp = fitAmplitudes[pol][ant][freqInd];
+          chanChiSquares[pol][ant][freqInd] = (amp*amp)/(realAmp*realAmp);
+          sumChanChiSquares += chanChiSquares[pol][ant][freqInd];
+          sumSquaredChanChiSquares += chanChiSquares[pol][ant][freqInd]*chanChiSquares[pol][ant][freqInd];
+          n++;
+
+          if(fFillChiSquareHists){
+            hChanChiSquare[pol][ant]->Fill(chanChiSquares[pol][ant][freqInd]);
+          }
+          // std::cout << "(" << amp << ", " << realAmp << ")" << std::endl;
+          // std::cout << "(" << chanChiSquares[pol][ant][freqInd] << ")" << std::endl;          
+        }
+      }
+      // std::cout << std::endl;
+
+      if(n > 0){
+        meanChanChiSquare[pol][ant] = sumChanChiSquares/n;
+        varChanChiSquare[pol][ant] = sumSquaredChanChiSquares/n - meanChanChiSquare[pol][ant]*meanChanChiSquare[pol][ant];
+      }
+      else{
+        meanChanChiSquare[pol][ant] = 0;
+        varChanChiSquare[pol][ant] = 0;
+      }
+
+      if(!fCurrentlyLoadingHistory){
+        // std::cout << pol << "\t" << ant << "\t" << sumChanChiSquares << "\t" << sumSquaredChanChiSquares << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
+        // std::cout << pol << "\t" << ant << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
+      }
+      // if(!fCurrentlyLoadingHistory){
+      //   std::cout << pol << "\t" << ant << "\t" << hChanChiSquares[pol][ant]->GetMean() << "\t" << hChanChiSquares[pol][ant]->GetRMS() << std::endl;
+      // }
+      // if(!fCurrentlyLoadingHistory){
+      //   std::cout  << pol << "\t" << ant << "\t" << chanChisquare[pol][ant] << "\t" << chanNdf[pol][ant] << std::endl;
+      // }
     }
   }
 
@@ -628,12 +691,19 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
 
     // do the actual plotting
-    summaryPads[ant]->cd();
+    summaryPads[ant]->cd();    
     if(summaryOpt == FourierBuffer::ReducedChisquare){
-      gPad->SetLogy(1);
+      hChanChiSquare[0][ant]->SetLineColor(kBlue);
+      hChanChiSquare[1][ant]->SetLineColor(kBlack);      
+      hChanChiSquare[0][ant]->Draw("e");
+      hChanChiSquare[1][ant]->Draw("esame");
+      continue;
+      yMax = 10;
+      yMin = 0;
+      // gPad->SetLogy(1);
     }
     else{
-      gPad->SetLogy(0);
+      // gPad->SetLogy(0);
     }
 
     summaryPads[ant]->cd();

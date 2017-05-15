@@ -19,6 +19,7 @@
 #pragma link C++ class Acclaim::AnitaClusterer::Cluster+;
 #pragma link C++ class Acclaim::ClusteredAnitaEvent+;
 
+#pragma link C++ class Acclaim::GuiHist+;
 #pragma link C++ class Acclaim::RingBufferHist+;
 #pragma link C++ class Acclaim::RayleighHist+;
 #pragma link C++ enum Acclaim::RayleighHist::FitMethod;

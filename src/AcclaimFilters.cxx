@@ -47,11 +47,11 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
     Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
 
-    double log10ProbThresh = -100; //2.5;
-    double reducedChiSquareThresh = 3;
-    double fitOverSpectrumThreshold = 1.05;
+    // double log10ProbThresh = -100; //2.5;
+    double reducedChiSquareThresh = 5;
+    double channelChiSquareCdfThresh = 0.999;
     const int numEventsInRayleighDistributions = 1500;
-    RayleighFilter* rf = new RayleighFilter(fitOverSpectrumThreshold, log10ProbThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
+    RayleighFilter* rf = new RayleighFilter(channelChiSquareCdfThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
 
     // then make the strategies
 
@@ -593,10 +593,12 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
-Acclaim::Filters::RayleighFilter::RayleighFilter(double amplitudeFitOverSpectrumThreshold, double log10ProbThreshold, double chiSquarePerDofThreshold, int numEvents) : RayleighMonitor(numEvents), fLog10ProbThreshold(log10ProbThreshold), fChiSquarePerDofThreshold(chiSquarePerDofThreshold)
+Acclaim::Filters::RayleighFilter::RayleighFilter(double channelChiSquareCdfThresh, double chiSquarePerDofThreshold, int numEvents) : RayleighMonitor(numEvents), fChiSquarePerDofThreshold(chiSquarePerDofThreshold), fChanChiSquareCdfThreshold(channelChiSquareCdfThresh)
 {
   fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
   fDescription = TString::Format("Tracks frequency bin amplitudes over %d events, the chi squared threshold is %lf", fNumEvents, fChiSquarePerDofThreshold);
+  
+  fChanChiSquareThreshold = -2*TMath::Log(1 - fChanChiSquareCdfThreshold);
 }
 
 Acclaim::Filters::RayleighFilter::~RayleighFilter()
@@ -620,6 +622,15 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
       const int nf = wf->Nfreq();
 
+      double meanChanChiSquare = 0;
+      double varChanChiSquare = 0;
+      fourierBuffer.getMeanVarChanChiSquares(ant, pol, meanChanChiSquare, varChanChiSquare);
+
+      // thisEventChiSquareThreshold =
+      double thisChannelExtraThreshold = meanChanChiSquare > 2 ? meanChanChiSquare - 2 : 0;
+      double thisChannelChiChiSquareThreshold = fChanChiSquareThreshold + thisChannelExtraThreshold;
+      // fChanChiSquareCdfThreshold
+
       FFTWComplex* theFreqs = wf->updateFreq();
       for(int freqInd=0; freqInd < nf; freqInd++){
 
@@ -627,16 +638,10 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 	int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
 	// double reducedChiSquare = fourierBuffer.getChiSquares(ant, pol)[freqInd]/ndf;
 	double reducedChiSquareRelativeToSpectrum = ndf > 0 ? fourierBuffer.getChiSquaresRelativeToSpectrum(ant, pol)[freqInd]/ndf : -1;
+        
+        double freqBinChiSquare = fourierBuffer.getChanChiSquares(ant, pol)[freqInd];
 	
-	// double fitOverSpec = fourierBuffer.getFitOverSpectrum(pol, ant, freqInd);
-	// if(nearPeakInFitOverThreshold.at(freqInd) || reducedChiSquare > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
-	// if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold || probVal < fLog10ProbThreshold){
-	// if(freqInd == 26){
-	//   std::cout << reducedChiSquareRelativeToSpectrum << ", ";
-	// }
-
-	
-	if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold){// || probVal < fLog10ProbThreshold){	  
+	if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold || freqBinChiSquare > thisChannelChiChiSquareThreshold){
 	  
 	  // double specAmp = fourierBuffer.getBackgroundSpectrumAmp(pol, ant, freqInd);
 	  // // std::cout << pol << "\t" << ant << "\t" << freqInd << "\t" << probVal << "\t" << specAmp << std::endl;
@@ -647,12 +652,9 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 	  
 	  // double phase = fRandy->Uniform(0, TMath::TwoPi());
 
-	  // std::cout << probVal << "\t" << x1 << "\t" << x2 << "\t" << newAmp << "\t" << phase << "\t" << theFreqs[freqInd] << "\t";
-	  
 	  // theFreqs[freqInd].setMagPhase(newAmp, phase);
 	  theFreqs[freqInd].re = 0;
 	  theFreqs[freqInd].im = 0;
-	  // std::cout << theFreqs[freqInd] << std::endl;
 	}
       }
       // std::cout << std::endl;

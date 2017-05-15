@@ -7,10 +7,26 @@
 #include <Math/Factory.h>
 #include <Math/Functor.h>
 #include "TF1.h"
+#include "TCanvas.h"
 
 class TGraph;
 
 namespace Acclaim{
+
+  class GuiHist : public TH1D {
+   public:
+    GuiHist(const char* name, const char* title, int nBins, double xMin, double xMax) : TH1D(name, title, nBins, xMin, xMax) { ;}
+    virtual ~GuiHist(){;}     
+    virtual void ExecuteEvent(int event, int x, int y){
+      if(event == kButton1Double){
+        (void) x;
+        (void) y;
+        new TCanvas();
+        Draw("e");
+      }
+    }
+    ClassDef(GuiHist, 0);
+  };
 
   class RingBufferHist : public TH1D {
 
