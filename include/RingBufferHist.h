@@ -11,28 +11,13 @@
 
 class TGraph;
 
-namespace Acclaim{
-
-  class GuiHist : public TH1D {
-   public:
-    GuiHist(const char* name, const char* title, int nBins, double xMin, double xMax) : TH1D(name, title, nBins, xMin, xMax) { ;}
-    virtual ~GuiHist(){;}     
-    virtual void ExecuteEvent(int event, int x, int y){
-      if(event == kButton1Double){
-        (void) x;
-        (void) y;
-        new TCanvas();
-        Draw("e");
-      }
-    }
-    ClassDef(GuiHist, 0);
-  };
+namespace Acclaim {
 
   class RingBufferHist : public TH1D {
 
     friend class FourierBuffer;
 
-  public:
+   public:
 
     RingBufferHist(const char* name = "", const char* title = "", int nBins=1, double xMin=0, double xMax=1, int ringBufferSize=1000);
     virtual ~RingBufferHist();

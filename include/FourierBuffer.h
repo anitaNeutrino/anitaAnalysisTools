@@ -117,6 +117,8 @@ namespace Acclaim
       return chanChiSquares[pol][ant];
     }
 
+    TH1D* makeChanChisquareHist(AnitaPol::AnitaPol_t pol, Int_t ant, TPad* pad, const char* drawOpt) const; // for summary
+    
     void getMeanVarChanChiSquares(int ant, AnitaPol::AnitaPol_t pol, double mean, double var) const{
       mean = meanChanChiSquare[pol][ant];
       var = varChanChiSquare[pol][ant];
@@ -166,7 +168,6 @@ namespace Acclaim
     std::vector<double> chanChiSquares[AnitaPol::kNotAPol][NUM_SEAVEYS];
     double meanChanChiSquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
     double varChanChiSquare[AnitaPol::kNotAPol][NUM_SEAVEYS];
-    std::vector<GuiHist*> hChanChiSquare[AnitaPol::kNotAPol];
 
 
     // it turns out that initialising a TF1 is very slow,
@@ -225,11 +226,6 @@ namespace Acclaim
       }
     }    
   };
-
-
-  
-
-
 
   // little class for some GUI i/o magic
   class TGraphFB : public TGraphAligned {

@@ -7,8 +7,6 @@
 #include "TMinuit.h"
 #include "TPad.h"
 
-ClassImp(Acclaim::GuiHist);
-
 ClassImp(Acclaim::RingBufferHist);
 
 Acclaim::RingBufferHist::RingBufferHist(const char* name, const char* title, int nBins, double xMin, double xMax, int ringBufferSize) : 

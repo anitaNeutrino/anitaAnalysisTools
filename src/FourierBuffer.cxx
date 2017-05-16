@@ -89,14 +89,9 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
   
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-
-    hChanChiSquare[pol].resize(NUM_SEAVEYS, NULL);
     
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       ndfs[pol][ant].resize(n, 0);
-
-      TString hName = TString::Format("hChanChiSquare_%d_%d", pol, ant);
-      hChanChiSquare[pol].at(ant) = new Acclaim::GuiHist(hName, hName, 8, 0, 20);
           
       hRays[pol][ant].resize(n, NULL);
       for(int freqBin=0; freqBin < n; freqBin++){
@@ -152,11 +147,6 @@ Acclaim::FourierBuffer::~FourierBuffer(){
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
 
-      if(hChanChiSquare[pol][ant]){
-        delete hChanChiSquare[pol][ant];
-        hChanChiSquare[pol][ant] = NULL;
-      }
-  
       for(unsigned i=0; i < hRays[pol][ant].size(); i++){
         if(hRays[pol][ant].at(i)){
           delete hRays[pol][ant].at(i);          
@@ -308,14 +298,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 	}
       }
 
-      // integral, contents, errors, statistics, min/max
-      bool fFillChiSquareHists = false;
-      if(fFillChiSquareHists){
-        hChanChiSquare[pol][ant]->Reset("ICESM");
-      }
-      // for(int bx=0; bx < hChanChiSquare[pol][ant]->GetNbinsX(); bx++){
-      //   hChanChiSquare[pol][ant]->SetBinContent(bx, 0);
-      // }
       double sumChanChiSquares = 0;
       int n=0;
       double sumSquaredChanChiSquares = 0;
@@ -328,9 +310,6 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
           sumSquaredChanChiSquares += chanChiSquares[pol][ant][freqInd]*chanChiSquares[pol][ant][freqInd];
           n++;
 
-          if(fFillChiSquareHists){
-            hChanChiSquare[pol][ant]->Fill(chanChiSquares[pol][ant][freqInd]);
-          }
           // std::cout << "(" << amp << ", " << realAmp << ")" << std::endl;
           // std::cout << "(" << chanChiSquares[pol][ant][freqInd] << ")" << std::endl;          
         }
@@ -404,6 +383,26 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 }
 
 
+
+TH1D* Acclaim::FourierBuffer::makeChanChisquareHist(AnitaPol::AnitaPol_t pol, Int_t ant, TPad* pad, const char* drawOpt) const{
+
+  TString hName = TString::Format("hChanChiSquare_%d_%d", pol, ant);  
+  TH1D* h = new TH1D(hName, hName, 8, 0, 24);
+  // std::cout << "filling " << pol << "\t" << ant << ":";
+  for(unsigned freqInd=0; freqInd < sumPowers[pol][ant].size(); freqInd++){
+    h->Fill(chanChiSquares[pol][ant][freqInd]);
+  }
+  // std::cout << std::endl;
+
+  if(!pad){
+    new TCanvas();    
+  }
+  else{
+    pad->cd();
+  }
+  h->Draw(drawOpt);
+  return h;
+}
 
 
 Int_t Acclaim::FourierBuffer::removeOld(){
@@ -628,7 +627,7 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
   if(summaryOpt == None){
     return;
   }
-  
+
   pad->cd();
 
   // find the maximum and minimum values before plotting
@@ -693,22 +692,32 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
 
 
     // do the actual plotting
-    summaryPads[ant]->cd();    
+    summaryPads[ant]->Clear();
+    
+    summaryPads[ant]->cd();
+    
     if(summaryOpt == FourierBuffer::ReducedChisquare){
-      hChanChiSquare[0][ant]->SetLineColor(kBlue);
-      hChanChiSquare[1][ant]->SetLineColor(kBlack);      
-      hChanChiSquare[0][ant]->Draw("e");
-      hChanChiSquare[1][ant]->Draw("esame");
+
+      TH1D* hH = makeChanChisquareHist(AnitaPol::kHorizontal, ant, summaryPads[ant], "e");
+      TH1D* hV = makeChanChisquareHist(AnitaPol::kVertical, ant, summaryPads[ant], "esame");
+      hV->SetBit(kCanDelete);
+      hH->SetBit(kCanDelete);
+
+      hH->SetLineColor(kBlue);
+      hV->SetLineColor(kBlack);
+      gPad->SetLogy(1);
+      
       continue;
       yMax = 10;
       yMin = 0;
       // gPad->SetLogy(1);
     }
     else{
-      // gPad->SetLogy(0);
+      gPad->SetLogy(0);
     }
 
     summaryPads[ant]->cd();
+    
     if(summaryOpt == FourierBuffer::Prob){
       yMax = 0; // otherwise some events get a little too crazy..      
       yMin = -10; // otherwise some events get a little too crazy..
