@@ -32,7 +32,7 @@ void Acclaim::InterferometryCache::init(CrossCorrelator* cc, const AnalysisReco*
 void Acclaim::InterferometryCache::populateCache(CrossCorrelator* cc, const AnalysisReco* reco){
 
 
-  kUseOffAxisDelay = reco->kUseOffAxisDelay;
+  kUseOffAxisDelay = reco->fUseOffAxisDelay;
   // std::cout << "in cache kUseOffAxisDelay " << kUseOffAxisDelay << std::endl;
   numCombos = cc->numCombos;
   

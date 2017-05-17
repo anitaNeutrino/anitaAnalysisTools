@@ -24,6 +24,7 @@
 #pragma link C++ enum Acclaim::RayleighHist::FitMethod;
 #pragma link C++ class Acclaim::TGraphFB+;
 
+#pragma link C++ class Acclaim::AnalysisReco+;
 #pragma link C++ class Acclaim::InterferometricMap+;
 
 #pragma link C++ class Acclaim::QualityCut+;

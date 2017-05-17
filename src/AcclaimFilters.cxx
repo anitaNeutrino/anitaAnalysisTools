@@ -49,7 +49,7 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
 
     // double log10ProbThresh = -100; //2.5;
     double reducedChiSquareThresh = 5;
-    double channelChiSquareCdfThresh = 0.999;
+    double channelChiSquareCdfThresh = 0.995;
     const int numEventsInRayleighDistributions = 1500;
     RayleighFilter* rf = new RayleighFilter(channelChiSquareCdfThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
 
@@ -655,8 +655,40 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 	  // theFreqs[freqInd].setMagPhase(newAmp, phase);
 	  theFreqs[freqInd].re = 0;
 	  theFreqs[freqInd].im = 0;
-	}
+	}        
       }
+      
+      int nZero=0;
+      for(int freqInd=0; freqInd < nf; freqInd++){
+        if(theFreqs[freqInd].re == 0 && theFreqs[freqInd].im == 0){
+          nZero++;
+        }
+      }
+      if(nZero==nf){
+        std::cerr << "Event " << fEv->getHeader()->eventNumber << ", channel " << pol << ", " << ant << " has all zero frequency bins...";
+        int nFailReducedChiSquare = 0;
+        int nFailChannelChiSquare = 0;
+        for(int freqInd=0; freqInd < nf; freqInd++){
+          if(freqInd >= 26 && freqInd < 120){
+            if(theFreqs[freqInd].re == 0 && theFreqs[freqInd].im == 0){
+              int ndf = fourierBuffer.getNDFs(ant, pol)[freqInd];
+              double reducedChiSquareRelativeToSpectrum = ndf > 0 ? fourierBuffer.getChiSquaresRelativeToSpectrum(ant, pol)[freqInd]/ndf : -1;
+        
+              double freqBinChiSquare = fourierBuffer.getChanChiSquares(ant, pol)[freqInd];
+	
+              if(reducedChiSquareRelativeToSpectrum > fChiSquarePerDofThreshold){
+                nFailReducedChiSquare++;
+              }
+              if(freqBinChiSquare > thisChannelChiChiSquareThreshold){
+                nFailChannelChiSquare++;                
+              }
+            }
+          }
+        }
+        std::cerr << nFailReducedChiSquare << " failed the reducedChiSquare, ";
+        std::cerr << nFailChannelChiSquare << " failed the channelChiSquare " << std::endl;
+      }
+      
       // std::cout << std::endl;
     }
   }  

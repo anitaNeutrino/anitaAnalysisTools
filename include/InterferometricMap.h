@@ -96,7 +96,7 @@ namespace Acclaim
     TGraph& getPeakPointGraph(); // for plotting
     TGraph& getEdgeBoxGraph(); // for plotting
 
-    bool isAZoomMap() const {return isZoomMap;}
+    bool isAZoomMap() const {return fIsZoomMap;}
     Int_t getPeakPhiSector() const {return peakPhiSector;}
     AnitaPol::AnitaPol_t getPol() const {return pol;}  
 
@@ -112,12 +112,12 @@ namespace Acclaim
     void setDefaultName(); // before then...
   
   
-    bool thetaAxisInSinTheta;
+    bool fThetaAxisInSinTheta;
     void initializeInternals();
 
     // doing the zoomed in maps requires knowing a little more information
     // isZoomMap = false, and all other = -1 if doing a coarse map
-    bool isZoomMap;
+    bool fIsZoomMap;
     int peakPhiSector;
     int minThetaBin;
     int minPhiBin;

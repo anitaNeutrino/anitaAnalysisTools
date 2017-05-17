@@ -10,6 +10,7 @@
 #ifndef ANALYSIS_FLOW_H
 #define ANALYSIS_FLOW_H
 
+#include "AnalysisSettings.h"
 #include "BlindDataset.h"
 #include "AnalysisReco.h"
 #include "TFile.h"
@@ -54,6 +55,7 @@ namespace Acclaim
 
     AnalysisReco* fReco;  
     FilterStrategy* fFilterStrat;
+    AnalysisSettings* fSettings;
   
     TString fOutFileBaseName;
     TFile* fOutFile;

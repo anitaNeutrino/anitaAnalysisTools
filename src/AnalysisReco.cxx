@@ -1,6 +1,9 @@
 #include "AnalysisReco.h"
 #include "InterferometricMap.h"
 #include "InterferometryCache.h"
+#include "AcclaimFilters.h"
+
+ClassImp(Acclaim::AnalysisReco);
 
 Acclaim::AnalysisReco::AnalysisReco(){
   initializeInternals();
@@ -44,7 +47,6 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
 
-    
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
     cc->correlateEvent(fEv, pol);
@@ -58,8 +60,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     coarseMaps[pol]->findPeakValues(thisNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
 
     eventSummary->nPeaks[pol] = thisNumPeaks;
-    
-    
+
     for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
@@ -72,7 +73,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
       }
 
-      h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);      
+      h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
 
       // fill in difference between rough and fine
       eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
@@ -80,9 +81,6 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
       // based on Cosmin's comments in AnitaAnalysisSummary.h
       eventSummary->peak[pol][peakInd].phi_separation = peakInd == 0 ? 1000 : RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
-      
-      // AnalysisWaveform* coherent = coherentlySum(fEv, h);
-
 
       AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
       
@@ -95,7 +93,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       coherent[pol][peakInd] = coherentWave;
 
       const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
-      eventSummary->coherent[pol][peakInd].peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
+      eventSummary->coherent[pol][peakInd].peakHilbert = TMath::MaxElement(grHilbert->GetN(),
+									   grHilbert->GetY());
+
 
       if(usefulPat != NULL){
       
@@ -104,7 +104,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
 	// *   Returns 0 if never hits the ground, even with maximum adjustment
 	// *   Returns 1 if hits the ground with no adjustment
-	// *   Returns 2 if it hits the ground with adjustment      
+	// *   Returns 2 if it hits the ground with adjustment
 	int success = usefulPat->traceBackToContinent(phiWave, thetaWave, 
 						      &eventSummary->peak[pol][peakInd].latitude,
 						      &eventSummary->peak[pol][peakInd].longitude,
@@ -132,6 +132,29 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
 
 
+// void Acclaim::AnalysisReco::coherentSummary(const FilteredAnitaEvent* fEv, const InterferometricMap* h, An){
+//       // AnalysisWaveform* coherent = coherentlySum(fEv, h);
+
+//       AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
+      
+//       std::map<Int_t, AnalysisWaveform*>::iterator it2 = coherent[pol].find(peakInd);
+//       if(it2!=coherent[pol].end()){
+// 	if(it2->second != NULL){
+// 	  delete it2->second;
+// 	}
+//       }
+//       coherent[pol][peakInd] = coherentWave;
+
+//       // FilteredAnitaEvent fEvMin(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader());
+//       // AnalysisWaveform* coherentUnfilteredWave = coherentlySum(&fEvMin, h);
+      
+
+//       const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
+//       eventSummary->coherent[pol][peakInd].peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
+
+// }
+
+
 void Acclaim::AnalysisReco::initializeInternals(){
 
   cc = NULL;
@@ -149,8 +172,16 @@ void Acclaim::AnalysisReco::initializeInternals(){
   coarseMaps[AnitaPol::kHorizontal] = NULL;//new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
   coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
 
-  kUseOffAxisDelay = 1;  
-  coherentDeltaPhi = 1; // +/- this many phi-sectors when coherently summing waves
+  fUseOffAxisDelay = 1;
+  fCoherentDeltaPhi = 1; // +/- this many phi-sectors when coherently summing waves
+
+  const TString minFiltName = "Minimum";
+  fMinFilter = Filters::findDefaultStrategy(minFiltName);
+  if(!fMinFilter){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minFiltName << std::endl;
+  }
+  
+  
 }
 
 
@@ -438,7 +469,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   Int_t biggest = -1;
   Double_t largestPeakToPeak = 0;
   std::vector<Int_t> ants;
-  for(int deltaPhiSect=-coherentDeltaPhi; deltaPhiSect <= coherentDeltaPhi; deltaPhiSect++){
+  for(int deltaPhiSect=-fCoherentDeltaPhi; deltaPhiSect <= fCoherentDeltaPhi; deltaPhiSect++){
 
     Int_t phiSector = peakPhiSector + deltaPhiSect;
     phiSector = phiSector < 0        ? phiSector + NUM_PHI : phiSector;

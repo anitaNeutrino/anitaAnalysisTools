@@ -17,8 +17,7 @@ namespace Acclaim
    * Class to make interferometric maps from FilteredAnitaEvents...
    */
 
-  class AnalysisReco : public AnitaEventReconstructor{
-
+class AnalysisReco : public TObject, public AnitaEventReconstructor {
 
   public:
   
@@ -73,12 +72,14 @@ namespace Acclaim
     std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
     std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
 
-    Int_t kUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
-    Int_t coherentDeltaPhi; //!< +- Number of neighbouring phi-sectors in the coherently summed wave
-  
-  private:
+    Int_t fUseOffAxisDelay; //!< Flag for whether or not to apply off axis delay to deltaT expected.
+    Int_t fCoherentDeltaPhi; //!< How many neighbouring phi-sectors to use in the coherently summed waveform
 
-    // silly that thse all have to be mutable... I blame Cosmin (or am I just too lazy to change the base class?)
+    // Getter and Setter methods for the AnalysisSettings class
+    Int_t GetCoherentDeltaPhi() const {return fCoherentDeltaPhi;};
+    void SetCoherentDeltaPhi(Int_t cdp){fCoherentDeltaPhi=cdp;};
+    
+  protected:
   
     // I delete maps left in memory next time process() is called
     // if getMap() or getZoomMap() is called ,I set the internal pointer to NULL
@@ -86,16 +87,23 @@ namespace Acclaim
     mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
     mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
     mutable std::map<Int_t, AnalysisWaveform*> coherent[AnitaPol::kNotAPol]; //
+    mutable std::map<Int_t, AnalysisWaveform*> coherentUnfiltered[AnitaPol::kNotAPol];
+
     mutable AnitaEventSummary summary; //   
     // lazily generates CrossCorrelator when process() is called
     // (plan to add attachment function for external cross correlator)
     // if spawns one, sets the bool to true and deletes the cross correlator in destructor
-    mutable CrossCorrelator* cc;  
+    mutable CrossCorrelator* cc;
+
     mutable bool spawnedCrossCorrelator;
   
     // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
     mutable InterferometryCache dtCache;
-  
+
+
+    FilterStrategy* fMinFilter; //!< Would be no filters, except for the case where we're looking at ANITA-3 data
+
+    ClassDef(AnalysisReco, 0)
   };
 
 }

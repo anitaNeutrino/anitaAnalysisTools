@@ -702,7 +702,6 @@ void Acclaim::FourierBuffer::drawSummary(TPad* pad, SummaryOption_t summaryOpt) 
       TH1D* hV = makeChanChisquareHist(AnitaPol::kVertical, ant, summaryPads[ant], "esame");
       hV->SetBit(kCanDelete);
       hH->SetBit(kCanDelete);
-
       hH->SetLineColor(kBlue);
       hV->SetLineColor(kBlack);
       gPad->SetLogy(1);

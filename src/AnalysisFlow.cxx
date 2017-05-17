@@ -72,6 +72,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fData = NULL;
   fReco = NULL;
   fOutFile = NULL;
+  fSettings = NULL;
 }
 
 
@@ -87,6 +88,13 @@ Acclaim::AnalysisFlow::~AnalysisFlow(){
   if(fData){
     delete fData;
     fData = NULL;
+  }
+
+  if(fSettings){
+    if(fOutFile){
+      fSettings->write(fOutFile);
+    }
+    delete fSettings;
   }
 
   if(fReco){
@@ -246,8 +254,13 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     prepareDataSet();
   }
 
+  if(!fSettings){
+    fSettings = new AnalysisSettings();
+  }
+
   if(!fReco){
     fReco = new AnalysisReco();
+    fSettings->apply(fReco);
   }
 
   if(!fOutFile){
@@ -286,7 +299,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     if(lastEventConsidered + 1 != header->eventNumber){
       Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
     }
-
 
     Adu5Pat* pat = fData->gps();
     UsefulAdu5Pat usefulPat(pat);

@@ -121,3 +121,9 @@ file(GLOB IMAGE_FILES
   "anitaMap/*.png"
   )
 install(FILES ${IMAGE_FILES} DESTINATION ${UTIL_SHARE_DIR}/anitaMap)
+
+file(MAKE_DIRECTORY ${UTIL_SHARE_DIR}/Acclaim)
+file(GLOB CONFIG_FILES
+  "config/*.conf"
+  )
+install(FILES ${CONFIG_FILES} DESTINATION ${UTIL_SHARE_DIR}/Acclaim)

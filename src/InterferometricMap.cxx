@@ -168,7 +168,7 @@ void Acclaim::InterferometricMap::setDefaultName(){
 void Acclaim::InterferometricMap::setNameAndTitle(){
 
 
-  if(isZoomMap){
+  if(fIsZoomMap){
     fName = "hFine";
     fName += pol == AnitaPol::kVertical ? "ImageV" : "ImageH";
     fName += TString::Format("%u_%u", peakIndex, eventNumber);
@@ -205,7 +205,7 @@ void Acclaim::InterferometricMap::setNameAndTitle(){
 
 Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
 {
-  isZoomMap = true;
+  fIsZoomMap = true;
   peakPhiSector = phiSector;
   peakIndex = peakInd;
   Double_t minPhiDesired = zoomCentrePhi - phiRange/2;
@@ -238,7 +238,7 @@ Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, 
 
 
  Acclaim::InterferometricMap::InterferometricMap(){
-  isZoomMap = false;
+  fIsZoomMap = false;
   peakPhiSector = -1;
   minPhiBin = -1;
   minThetaBin = -1;
@@ -263,9 +263,9 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
   // for(int bx=1; bx <= GetNbinsX(); bx++){
     
   // }
-  // std::cout << isZoomMap << "\t" << eventNumber << "\t" << cc->eventNumber[0] << "\t" << cc->eventNumber[1] << std::endl;
+  // std::cout << fIsZoomMap << "\t" << eventNumber << "\t" << cc->eventNumber[0] << "\t" << cc->eventNumber[1] << std::endl;
   
-  if(!isZoomMap){
+  if(!fIsZoomMap){
     
     std::vector<Int_t>* combosToUse = NULL;
     Int_t binsPerPhiSector = GetNbinsPhi()/NUM_PHI;
@@ -558,7 +558,7 @@ void Acclaim::InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Dou
 
 
 void Acclaim::InterferometricMap::initializeInternals(){
-  thetaAxisInSinTheta = true;
+  fThetaAxisInSinTheta = true;
   pol = AnitaPol::kNotAPol;
   eventNumber = 0;
   setDefaultName();

@@ -4,6 +4,108 @@
 #include "TString.h"
 #include "TObjArray.h"
 #include "TRegexp.h"
+#include "TClass.h"
+#include "TDataMember.h"
+#include "TMethodCall.h"
+
+Acclaim::AnalysisSettings::AnalysisSettings(const char* fName) : fileName(fName) {
+
+  parseSettingsFile();
+}
+
+
+void Acclaim::AnalysisSettings::write(TFile* f){
+
+  if(!f){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__
+              << ", got NULL pointer to TFile. Cannot save AnalysisSettings." << std::endl;
+    return;
+  }
+
+  if(!f->IsWritable()){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", TFile " << f->GetName()
+              << " is not writable. Cannot save AnalysisSettings." << std::endl;
+    return;
+  }
+
+  if(!f->IsOpen()){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", TFile " << f->GetName()
+              << " is not open. Cannot save AnalysisSettings." << std::endl;
+    return;
+  }
+  
+  f->cd();
+
+  TObjArray* tokens = fileName.Tokenize("/");
+  TString shortFileName = ((TObjString*) tokens->Last())->GetString();  
+
+  TNamed* tn = new TNamed(shortFileName, parsedFileCopy);
+  tn->Write();
+  delete tn;
+  
+}
+
+
+void Acclaim::AnalysisSettings::print(){
+  // For debugging
+  std::cout << __PRETTY_FUNCTION__ << std::endl;  
+
+  SectionMap_t::iterator sit = sectionMap.begin();
+  for(; sit!= sectionMap.end(); ++sit){
+    VariableMap_t* vm = sit->second;
+    std::cout << "[" << sit->first << "]" << std::endl;
+
+    VariableMap_t::iterator vit = vm->begin();
+    for(; vit!=vm->end(); ++vit){
+      std::cout << vit->first << "=" << vit->second << std::endl;
+    }
+
+    std::cout << std::endl;
+  }
+}
+
+
+
+
+void Acclaim::AnalysisSettings::apply(TObject* obj){
+
+  if(obj==NULL){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got NULL TObject pointer. Doing nothing." << std::endl;
+    return;
+  }
+
+  TString className = obj->ClassName();
+
+  SectionMap_t::iterator sit = sectionMap.find(className);
+  if(sit==sectionMap.end()){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", found no settings for " << className
+              << ". Doing nothing. " << std::endl;
+  }
+  
+  VariableMap_t* varMap = sit->second;
+  TClass* cl = obj->IsA();
+
+  VariableMap_t::iterator vit = varMap->begin();
+  for(; vit!= varMap->end(); ++vit){
+    TDataMember *dm = cl->GetDataMember(vit->first);
+
+    if(!dm){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find data member for "
+                << className << "." << vit->first << ". Skipping this setting." << std::endl;
+    }
+    else{
+      TMethodCall *sm = dm->SetterMethod(cl);
+      if(!sm){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find setter method for "
+                << className << "." << vit->first << ". Skipping this setting." << std::endl;
+      }
+      else{
+        sm->Execute(obj, vit->second);
+      }
+    }
+  }
+}
+
 
 
 Bool_t Acclaim::AnalysisSettings::stringIsKeyValuePair(const TString& commentStrippedLine, TString& key, TString& value){
@@ -66,35 +168,131 @@ Bool_t Acclaim::AnalysisSettings::stringIsSection(const TString& commentStripped
       }
       delete tokens;
     }
-  }  
+  }
   return isSection;
 }
 
 
-void Acclaim::AnalysisSettings::handleSection(const TString& section){
-  std::cout << "I found a section: " << section << std::endl;
+Acclaim::AnalysisSettings::VariableMap_t* Acclaim::AnalysisSettings::handleSection(const TString& section){  
+  
+  // std::cout << "I found a section: " << section << std::endl;
+
+  SectionMap_t::iterator it = sectionMap.find(section);
+  VariableMap_t* variableMap = NULL;
+  if(it!=sectionMap.end()){
+    variableMap = it->second;
+  }
+  else{
+    variableMap = new VariableMap_t();
+    sectionMap[section] = variableMap;
+  }
+  return variableMap;
 }
 
-void Acclaim::AnalysisSettings::handleKeyValue(const TString& key, const TString& value){
-  std::cout << "I found a key/value pair: " << key << "\t" << value << std::endl;
+
+void Acclaim::AnalysisSettings::handleKeyValue(VariableMap_t* variableMap, const TString& key, const TString& value){
+
+  if(variableMap==NULL){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << " found variable " << key << " with value " << value << " but has no section! Variables must have a section. Skipping this entry." << std::endl;
+    return;
+  }
+
+  VariableMap_t::iterator it = variableMap->find(key);
+  if(it!=variableMap->end()){
+    // something funky going on here...
+    TString sectionName;
+    SectionMap_t::iterator it2 = sectionMap.begin();    
+    for(; it2 != sectionMap.end(); ++it2){
+      if(variableMap==it2->second){
+        sectionName = it2->first;
+        break;
+      }
+    }
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", while parsing section " << sectionName \
+              << "I found a duplicate entry for " << key << std::endl;
+    std::cerr << "The original value is " << it->second << ", the duplicated value is " << value << std::endl;
+    std::cerr << "Ignoring the second value." << std::endl;
+  }
+  else{
+    (*variableMap)[key] = value;
+  }
 }
 
-void Acclaim::AnalysisSettings::parseSettingsFile(const char* fileName){
 
+Bool_t Acclaim::AnalysisSettings::tryFile(const char* fName){
+  Bool_t openedFile = false;
+  std::ifstream a(fName);
+  if(a.is_open()){
+    openedFile = true;
+  }
+  return openedFile;
+}
+
+void Acclaim::AnalysisSettings::findFile(){
+
+  if(fileName.Length()!=0){
+    std::cout << "Trying " << fileName << std::endl;  
+    // try to open current file name
+    if(tryFile(fileName)){      
+      return;
+    }
+  }
+
+  // that didn't work so try a couple more things ...
+
+  // default file name in the present working directory
+  const char* fName = "AcclaimSettings.conf";
+  std::cout << "Trying " << fName << std::endl;  
+  if(tryFile(fName)){
+    fileName = TString(fName);
+    return;
+  }
+
+  const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+  if(!anitaUtilInstallDir){
+    // you've got some major issues...
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", ANITA_UTIL_INSTALL_DIR not set." << std::endl;
+  }
+
+  TString fName2 = TString::Format("%s/share/Acclaim/%s", anitaUtilInstallDir, fName);
+  std::cout << "Trying " << fName2 << std::endl;
+  if(tryFile(fName2.Data())){
+    fileName = TString(fName2);
+    return;
+  }
+
+  // if you get here, then there's some problems...
+  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find any settings files! Giving up." << std::endl;
+  exit(1);
+}
+
+
+
+void Acclaim::AnalysisSettings::parseSettingsFile(){
+
+  findFile();
+  std::cout << "After findFile(), fileName = " << fileName << std::endl;
+  
   std::ifstream settingsFile(fileName);
 
   if(!settingsFile.is_open()){
-    std::cerr << "Oops" << std::endl;
+    // if you get here, then there's some problems...
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find settings file " << fileName
+              << ". Giving up." << std::endl;
+    exit(1);
   }
   else{
     int lineNum = 1;
+
+    VariableMap_t* varMap = NULL;
+    
     while(!settingsFile.eof()){
 
       std::string thisLine;
       std::getline(settingsFile, thisLine);
 
-      settingsFileAsString.Append(thisLine);
-      settingsFileAsString.Append("\n");
+      parsedFileCopy.Append(thisLine);
+      parsedFileCopy.Append("\n");
 
       // First cut out the comment, which is all characters after the first #, including the #
       std::size_t found = thisLine.find("#");
@@ -105,16 +303,14 @@ void Acclaim::AnalysisSettings::parseSettingsFile(const char* fileName){
       TString section;
       Bool_t isSection = stringIsSection(thisLineCommentsRemoved, section);
 
-
       if(isSection){
-        handleSection(section);
-        // take action
+        varMap = handleSection(section);
       }
       else{
         TString key, value;
         Bool_t isKeyValuePair = stringIsKeyValuePair(thisLineCommentsRemoved, key, value);        
         if(isKeyValuePair){
-          handleKeyValue(key, value);
+          handleKeyValue(varMap, key, value);
         }
         else{
           Bool_t isAlphaNumeric = stringIsAlphaNumeric(thisLineCommentsRemoved);
@@ -130,16 +326,11 @@ void Acclaim::AnalysisSettings::parseSettingsFile(const char* fileName){
         }
       }
       
-      // std::cout << settingsFileAsString << std::endl;
       lineNum++;
     }
     
   }
 }
 
-Acclaim::AnalysisSettings::AnalysisSettings(const char* fileName){
-
-  parseSettingsFile(fileName);
-}
 
 
