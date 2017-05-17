@@ -10,7 +10,7 @@
 #ifndef ANALYSIS_FLOW_H
 #define ANALYSIS_FLOW_H
 
-#include "BlindDataset.h"
+#include "AnitaDataset.h"
 #include "AnalysisReco.h"
 #include "TFile.h"
 #include "FilterStrategy.h"
@@ -31,7 +31,7 @@ namespace Acclaim
 
 
 
-    AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, BlindDataset::strategy blindStrat=BlindDataset::kDefault, int theDivision=0, int theNumDivisions=1);
+    AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1);
     ~AnalysisFlow();  
 
     void doAnalysis();  
@@ -42,12 +42,12 @@ namespace Acclaim
   private:
     int fRun;
     selection fSelection;
-    BlindDataset::strategy fBlindStrat;
+    AnitaDataset::BlindingStrategy fBlindStrat;
     int fDivision;
     int fNumDivisions;
 
 
-    BlindDataset* fData;
+    AnitaDataset* fData;
     Long64_t fFirstEntry;
     Long64_t fLastEntry;
 

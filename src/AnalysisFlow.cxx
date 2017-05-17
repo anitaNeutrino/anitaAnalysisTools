@@ -14,7 +14,7 @@
  * @param division selects which subset of the run to do, goes from 0 -> numDivisions -1, default is 0.
  * @param numDivisions is the number of bits we're splitting the event into
  */
-Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, BlindDataset::strategy blindStrat, int division, int numDivisions){
+Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
   fSelection = selection;
@@ -117,7 +117,7 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 
   if(fData==NULL){
     bool doDecimated = fSelection == kDecimated ? true : false;
-    fData = new BlindDataset(fBlindStrat, fRun, doDecimated);
+    fData = new AnitaDataset(fRun, doDecimated, WaveCalType::kDefault, -1, fBlindStrat);
 
     Long64_t numEntriesInRun = fData->N();
 

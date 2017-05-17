@@ -18,7 +18,7 @@ int main(int argc, char* argv[]){
     std::cerr << "Well, this script is pointless... I give up." << std::endl;
     return 1;
   }
-  AnalysisFlow analysis(argv[0], run, AnalysisFlow::kWaisPulser, strat, BlindDataset::kDefault);
+  AnalysisFlow analysis(argv[0], run, AnalysisFlow::kWaisPulser, strat, AnitaDataset::kDefault);
   analysis.doAnalysis();
     
   return 0;
