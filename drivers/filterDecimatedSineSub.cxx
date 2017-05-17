@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
   }
   // return 0;
   
-  AnalysisFlow analysis(argv[0], run, AnalysisFlow::kDecimated, strat, BlindDataset::kDefault);
+  AnalysisFlow analysis(argv[0], run, AnalysisFlow::kDecimated, strat, AnitaDataset::kDefault);
   analysis.doAnalysis();
     
   return 0;

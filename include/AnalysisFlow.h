@@ -12,6 +12,7 @@
 
 #include "AnitaDataset.h"
 #include "AnalysisReco.h"
+#include "AnalysisSettings.h"
 #include "TFile.h"
 #include "FilterStrategy.h"
 
