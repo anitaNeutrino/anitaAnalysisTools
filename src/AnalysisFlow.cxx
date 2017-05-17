@@ -125,7 +125,7 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 
   if(fData==NULL){
     bool doDecimated = fSelection == kDecimated ? true : false;
-    fData = new AnitaDataset(fRun, doDecimated, WaveCalType::kDefault, -1, fBlindStrat);
+    fData = new AnitaDataset(fRun, doDecimated, WaveCalType::kDefault, AnitaDataset::ANITA_ROOT_DATA, fBlindStrat);
 
     Long64_t numEntriesInRun = fData->N();
 
