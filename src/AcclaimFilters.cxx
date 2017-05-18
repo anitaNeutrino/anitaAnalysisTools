@@ -2,6 +2,7 @@
 #include "AnalysisWaveform.h"
 #include "FilteredAnitaEvent.h"
 #include "BasicFilters.h" // Cosmin's example filters
+#include "ResponseManager.h"
 #include "FourierBuffer.h"
 #include "FFTWComplex.h"
 #include <iostream>
@@ -53,12 +54,24 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     const int numEventsInRayleighDistributions = 1500;
     RayleighFilter* rf = new RayleighFilter(channelChiSquareCdfThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
 
+
+
+    AnitaResponse::AllPassDeconvolution* allPass = new AnitaResponse::AllPassDeconvolution();    
+    TString responseDir = TString::Format("%s/share/AnitaAnalysisFramework/responses/IndividualBRotter", getenv("ANITA_UTIL_INSTALL_DIR"));
+    AnitaResponse::ResponseManager* responseManager = new AnitaResponse::ResponseManager(responseDir.Data(), 0, allPass);
+    AnitaResponse::DeconvolveFilter* df = new AnitaResponse::DeconvolveFilter(responseManager, allPass);
     // then make the strategies
 
     // every operation is going to use these default strategies
     FilterStrategy* defaultOps = new FilterStrategy();
     defaultOps->addOperation(alfaFilter, saveOutput); // has internal check for ANITA version
     acclaimDefaults["Minimum"] = defaultOps;
+
+    // every operation is going to use these default strategies
+    FilterStrategy* defaultDeco = new FilterStrategy();
+    (*defaultDeco) = (*defaultOps);
+    defaultDeco->addOperation(df, saveOutput); // has internal check for ANITA version
+    acclaimDefaults["Deconvolve"] = defaultDeco;
   
     FilterStrategy* fs = new FilterStrategy();
     (*fs) = (*defaultOps);
