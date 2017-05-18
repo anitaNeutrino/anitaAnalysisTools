@@ -185,7 +185,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
   coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
 
   fUseOffAxisDelay = 1;
-  fCoherentDeltaPhi = 1; // +/- this many phi-sectors when coherently summing waves
+  fCoherentDeltaPhi = 2; // +/- this many phi-sectors when coherently summing waves
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);

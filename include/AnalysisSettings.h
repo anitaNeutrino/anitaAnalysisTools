@@ -16,6 +16,34 @@
 #include "TFile.h"
 #include <map>
 
+// Macro used to define an analysis SettingVariable and create the associate getter/setter functions
+//
+// This is evil, but a lesser of two evils I think.
+// It ensures that the functions always match the naming conventions expected by ROOT.
+// Using ANALYSIS_SETTING(Int_t, Example) in a class definition defines the following
+// Int_t fExample;
+// Int_t GetExample();
+// void SetExample(Int_t)
+//
+// NOTE: Does NOT work with string-like types. TString, const char*, Option_t* etc all cause problems!
+//       Known working types are Int_t, Bool_t, Double_t, stick to those.
+//       Current work around is define your string option in an array and pick with an index.
+
+#define ANALYSIS_SETTING(var_type, SettingVariable) \
+    protected: \
+       var_type f##SettingVariable; \
+    public: \
+       var_type Get##SettingVariable() const \
+       {\
+          return f##SettingVariable; \
+       }\
+       void Set##SettingVariable(var_type val) \
+       {\
+          f##SettingVariable = val; \
+       }
+
+
+
 namespace Acclaim {
 
 class AnalysisSettings{

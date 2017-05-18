@@ -7,6 +7,8 @@
 #include "TClass.h"
 #include "TDataMember.h"
 #include "TMethodCall.h"
+#include <cstdlib>
+#include <stdexcept>
 
 Acclaim::AnalysisSettings::AnalysisSettings(const char* fName) : fileName(fName) {
 
@@ -78,8 +80,9 @@ void Acclaim::AnalysisSettings::apply(TObject* obj){
 
   SectionMap_t::iterator sit = sectionMap.find(className);
   if(sit==sectionMap.end()){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", found no settings for " << className
-              << ". Doing nothing. " << std::endl;
+    std::cerr << "Fatal error in " << __PRETTY_FUNCTION__ << ", found no settings for " << className
+              << "." << std::endl;
+    throw std::runtime_error("Missing settings");
   }
   
   VariableMap_t* varMap = sit->second;
@@ -90,14 +93,16 @@ void Acclaim::AnalysisSettings::apply(TObject* obj){
     TDataMember *dm = cl->GetDataMember(vit->first);
 
     if(!dm){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find data member for "
-                << className << "." << vit->first << ". Skipping this setting." << std::endl;
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find data member for "
+                << className << "." << vit->first << "." << std::endl;
+      throw std::runtime_error("Missing data member");
     }
     else{
       TMethodCall *sm = dm->SetterMethod(cl);
       if(!sm){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find setter method for "
-                << className << "." << vit->first << ". Skipping this setting." << std::endl;
+        std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find setter method for "
+                  << className << "." << vit->first << ". Skipping this setting." << std::endl;
+        throw std::runtime_error("Missing Setter function");        
       }
       else{
         sm->Execute(obj, vit->second);
@@ -279,7 +284,7 @@ void Acclaim::AnalysisSettings::parseSettingsFile(){
     // if you get here, then there's some problems...
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find settings file " << fileName
               << ". Giving up." << std::endl;
-    exit(1);
+    throw "Acclaim::AnalysisSettings Error";
   }
   else{
     int lineNum = 1;
