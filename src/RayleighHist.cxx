@@ -92,7 +92,6 @@ void Acclaim::RayleighHist::guessMaxBinLimitAndSigmaFromMean(double meanAmp, dou
 
 bool Acclaim::RayleighHist::axisRangeOK() const{
 
-  const double fracOfEventsWanted = 0.99;
   double mean = amplitudes.getMean();
   double maxAmp, sigmaGuess;
   guessMaxBinLimitAndSigmaFromMean(mean, maxAmp, sigmaGuess, fracOfEventsWanted);
