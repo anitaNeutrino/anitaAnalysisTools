@@ -121,7 +121,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
       AnalysisWaveform* deconvolvedFilteredWave = coherentlySum(&fEvDeco, h);
       putInCoherentMap(wfDeconvolvedFiltered[pol], peakInd, deconvolvedFilteredWave);
-      fillWaveformInfo(eventSummary->deconvolved[pol][peakInd], deconvolvedFilteredWave);
+      fillWaveformInfo(eventSummary->deconvolved_filtered[pol][peakInd], deconvolvedFilteredWave);
 
       AnalysisWaveform* deconvolvedWave = coherentlySum(&fEvDeco, h);
       putInCoherentMap(wfDeconvolved[pol], peakInd, deconvolvedWave);
@@ -581,11 +581,9 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     };    
   }
 
-  // std::cerr << "here 3\t"  << grCoherent << std::endl;    
-
-  // for(int samp=0; samp < grCoherent->GetN(); samp++){
-  //   grCoherent->GetY()[samp]/=waves.size();
-  // };    
+  for(int samp=0; samp < grCoherent->GetN(); samp++){
+    grCoherent->GetY()[samp]/=waves.size();
+  };    
 
   // std::cerr << "return " << __PRETTY_FUNCTION__ << "\t" << coherentWave << std::endl;  
   return coherentWave;
