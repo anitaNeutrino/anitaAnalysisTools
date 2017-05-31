@@ -1,9 +1,9 @@
 /* -*- C++ -*-.*********************************************************************************************
  Author: Ben Strutt
- Email: b.strutt.12@ucl.ac.uk
+ Email: strutt@physics.ucla.edu
 
  Description:
-             My ANITA-3 data quality cuts, to remove bad events that mess up things like averages
+             My ANITA-3 data quality cuts, to remove bad events
 ***********************************************************************************************************/
 
 #ifndef QUALITYCUTS_H
@@ -25,6 +25,10 @@ namespace Acclaim{
    * @brief Base class from which all my quality cuts inherit
    *
    * Contains a description, boolian to indicate pass/fail and apply function which must be implemented in descendents
+   * Some of my filters use rolling averages so "bad events" could ruin them.
+   * Therefore apply() acts on a UsefulAnitaEvent rather than a FilteredAnitaEvent so that we can decide whether or not we
+   * want to exponse the a FilterStrategy with an internal state to a bad event.
+   * 
    */
   class QualityCut : public TObject {
 
@@ -107,7 +111,15 @@ namespace Acclaim{
     virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL);
   };
   
-  
+
+
+  /** 
+   * @class NumPointsCut
+   * @brief Removes events which have short waveforms
+   *
+   * Very simple, just counts the number of points in each chanel of a UsefulAnitaEvent
+   * 
+   */
   class NumPointsCut : public QualityCut {
     ClassDef(Acclaim::NumPointsCut, 1);    
     
