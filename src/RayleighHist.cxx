@@ -13,18 +13,18 @@ ClassImp(Acclaim::RayleighHist);
 
 
 Acclaim::RayleighHist::RayleighHist(FourierBuffer* fb,
-				    const char* name, const char* title) 
-  // : TH1D(name, title, NUM_BINS, -1001, -1000), // deliberately stupid initial binning
-  // deliberately stupid initial binning  
-  : RingBufferHist(name, title, NUM_BINS, -1001, -1000, fb ? fb->bufferSize : 1000),
-    fBinWidth(1), fFitEveryNAdds(10), fNumAddsMod10(fFitEveryNAdds), fRayleighNorm(0),
-
+				    const char* name, const char* title) : 
+    TH1D(name, title, 10, 0, 1), amplitudes(fb ? fb->bufferSize : 1000), fNx(10), fNumEvents(0),  fNumNonEmptyBins(0),  
     fNumFitParams(1),
     theFitParams(std::vector<double>(fNumFitParams, 0)),
     theFitParamsSteps(std::vector<double>(fNumFitParams, 1e-3)),
-    fChiSquaredFunc(this, &Acclaim::RayleighHist::getRayleighChiSquare, fNumFitParams)
-{ 
-  fParent = fb;
+    fChiSquaredFunc(this, &Acclaim::RayleighHist::getRayleighChiSquare, fNumFitParams),
+    fBinWidth(1), fFitEveryNAdds(10), fNumAddsMod10(fFitEveryNAdds), fRayleighNorm(0){
+
+  binValues.resize(fNx, 0);
+  squaredBinErrors.resize(fNx, 0),
+  
+      fParent = fb;
   freqMHz = -9999;
   // fracOfEventsWanted = (1 - 1e-8);
   fracOfEventsWanted = 0.999;  
@@ -174,41 +174,43 @@ void Acclaim::RayleighHist::rebinAndRefill(double meanAmp){
 }
 
 
-// int Acclaim::RayleighHist::Fill(double amp, double sign){
+int Acclaim::RayleighHist::Fill(double amp, double sign){
 
-//   // Here I force poisson errors for bin content *even if removing events*
-//   // this allows this histogram to be used for a rolling average
+  // Here I force poisson errors for bin content *even if removing events*
+  // this allows this histogram to be used for a rolling average
 
-//   sign = sign >= 0 ? 1 : -1;
-//   int bx = TH1D::Fill(amp, sign);
-//   double n = GetBinContent(bx);
+  sign = sign >= 0 ? 1 : -1;
+  int bx = TH1D::Fill(amp, sign);
+  double n = GetBinContent(bx);
 
-//   // if it currently equals 1 and we just filled it, 
-//   // then it must previously have been empty
-//   fNumNonEmptyBins += n == 1 ? 1 : 0;
+  // if it currently equals 1 and we just filled it, 
+  // then it must previously have been empty
+  fNumNonEmptyBins += n == 1 ? 1 : 0;
 
-//   SetBinError(bx, TMath::Sqrt(n));
-//   if(bx > 0 && bx <= NUM_BINS){
-//     binValues[bx-1] = n;
-//     squaredBinErrors[bx-1] = binValues[bx-1];
-//   }
-//   fNumEvents += sign;
-//   return bx;
-// }
+  SetBinError(bx, TMath::Sqrt(n));
+  if(bx > 0 && bx <= NUM_BINS){
+    binValues[bx-1] = n;
+    squaredBinErrors[bx-1] = binValues[bx-1];
+  }
+  fNumEvents += sign;
+  return bx;
+}
 
 
 bool Acclaim::RayleighHist::add(double newAmp){
 
   // first we remove the old value, should be zero if unused
   
-  // bool needRemoveOld = amplitudes.numElements() == amplitudes.size();
-
-  // double oldAmp = amplitudes.insert(newAmp);
-  // if(needRemoveOld){
-  //   Fill(oldAmp, -1); // remove old event from hist
-  // }
-  // Fill(newAmp);
-  bool removedOld = RingBufferHist::add(newAmp);
+  // first we remove the old value, should be zero if unused
+  
+  bool needRemoveOld = amplitudes.numElements() == amplitudes.size();
+  double oldAmp = amplitudes.insert(newAmp);
+  bool removedOld = false;
+  if(needRemoveOld){
+    Fill(oldAmp, -1); // remove old event from hist
+    removedOld = true;    
+  }
+  Fill(newAmp);
 
   // fNumEvents = amplitudes.numElements();
 

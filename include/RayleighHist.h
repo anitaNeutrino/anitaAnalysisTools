@@ -3,18 +3,21 @@
 
 #include "TH1D.h"
 #include "RingBuffer.h"
-#include "RingBufferHist.h"
 #include <Math/Minimizer.h>
 #include <Math/Factory.h>
 #include <Math/Functor.h>
 #include "TF1.h"
+
 
 class TGraph;
 
 namespace Acclaim{
   class FourierBuffer;
 
-  class RayleighHist : public RingBufferHist {
+  /*!
+    A class to histogram frequency amplitudes on the fly and "fit" a Rayleigh distribution to the result
+  */
+  class RayleighHist : public TH1D {
 
     friend class FourierBuffer;
 
@@ -66,7 +69,16 @@ namespace Acclaim{
     inline double getAmplitude() const {return fRayleighAmplitude;}
     
   protected:
-    // RingBuffer amplitudes; //!< Tracks all the amplitudes
+    RingBuffer amplitudes; //!< Tracks all the amplitudes
+    
+    virtual int Fill(double amp, double sign=1); //!< Fill the histogram, this is called by add(double)
+    Int_t fNumNonEmptyBins; //!< Cache number of non empty bins
+    Int_t fNx; //!< The number of bins (faster than GetNbinsX())
+    Int_t fNumEvents; //!< Tracks the number of events in the RingBuffer/histogram (faster than integral)    
+    std::vector<double> binCentres;
+    std::vector<double> squaredBinCentres;    
+    std::vector<int> binValues; // cache histogram bin contents, should be integers
+    std::vector<double> squaredBinErrors;    
     
 
 
