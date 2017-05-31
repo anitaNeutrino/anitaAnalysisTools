@@ -123,7 +123,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       putInCoherentMap(wfDeconvolvedFiltered[pol], peakInd, deconvolvedFilteredWave);
       fillWaveformInfo(eventSummary->deconvolved_filtered[pol][peakInd], deconvolvedFilteredWave);
 
-      AnalysisWaveform* deconvolvedWave = coherentlySum(&fEvDeco, h);
+      AnalysisWaveform* deconvolvedWave = coherentlySum(&fEvMinDeco, h);
       putInCoherentMap(wfDeconvolved[pol], peakInd, deconvolvedWave);
       fillWaveformInfo(eventSummary->deconvolved[pol][peakInd], deconvolvedWave);
       
