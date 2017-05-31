@@ -6,7 +6,17 @@ ClassImp(Acclaim::PayloadBlastCut);
 ClassImp(Acclaim::NumPointsCut);
 
 
-
+/** 
+ * @brief Applies all the event quality cuts in succession, this should be the primary interface
+ *
+ * Each cut sets a different flag inside the AnitaEventSummary,
+ * however this function also sets the master flag "isGood" if the event passes all of the cuts.
+ * 
+ * @param usefulEvent is the event whose quality we which to check
+ * @param sum is the AnitaEventSummary, the isGood flag is set if the event passes all quality cuts
+ * 
+ * @return returns true if the event passes all quality cuts, false otherwise.
+ */
 Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaEventSummary* sum){
       
   SurfSaturationCut ssc;
@@ -26,7 +36,11 @@ Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaE
 }
 
 
-
+/** 
+ * @brief Constructor for the SurfSaturation cut, sets some hard coded default values
+ *
+ * If the values are changed please increment the ClassDef counter in the header file.
+ */
 Acclaim::SurfSaturationCut::SurfSaturationCut(){
   maxLimit = 2000;
   minLimit = -2000;
@@ -50,7 +64,15 @@ Acclaim::SurfSaturationCut::SurfSaturationCut(){
     
 
 
-// void Acclaim::SurfSaturationCut::apply(FilteredAnitaEvent* fEv){
+/** 
+ * @brief Applies the SurfSaturation cut
+ *
+ * If the event does not pass this quality cut the summary flag isVarner is set to true.
+ * (This wasn't the original use of this flag in Abby's analysis, but I'm coopting the flag for this purpose)
+ * 
+ * @param useful is the event whose quality we wish to characterise
+ * @param sum is the AnitaEventSummary
+ */
 void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){  
 
   maxVolts = 0;
@@ -94,15 +116,15 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
   else{
     eventPassesCut = true;
   }
-
+  
   if(sum!=NULL){
     if(eventPassesCut){
-      sum->flags.isPayloadBlast = 0;
+      sum->flags.isVarner = 0;
     }
     else{
-      sum->flags.isPayloadBlast = 1;
+      sum->flags.isVarner = 1;
     }
-  }  
+  }
 }
 
 
@@ -114,6 +136,13 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
 
 
 
+
+/** 
+ * Constructor for the payload blast cut, contains some hard coded numbers
+ * 
+ * If the values are changed please increment the ClassDef counter in the header file.
+ * @return 
+ */
 Acclaim::PayloadBlastCut::PayloadBlastCut(){
   ratioCutHigh = 2.8;
   ratioCutLow = 1.14;
@@ -126,9 +155,15 @@ Acclaim::PayloadBlastCut::PayloadBlastCut(){
 }
 
 
-
+/** 
+ * Applies the payload blast cut. 
+ *
+ * Sets the pre-existings flag isPayloadBlast to true if the event does not pass the cut
+ * 
+ * @param useful is the event whose quality we wish to characterise
+ * @param sum is the AnitaEventSummary
+ */
 void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
-// void Acclaim::PayloadBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
@@ -185,16 +220,23 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
   }
   if(sum!=NULL){
     if(eventPassesCut){
-      sum->flags.isVarner = 0;
+      sum->flags.isPayloadBlast = 0;
     }
     else{
-      sum->flags.isVarner = 1;
+      sum->flags.isPayloadBlast = 1;
     }
-  }
+  }  
 }
 
 
 
+
+
+/** 
+ * @brief Constructor for the number of points cut, contains some hard coded numbers
+ *
+ * If the values are changed please increment the ClassDef counter in the header file.
+ */
 Acclaim::NumPointsCut::NumPointsCut(){
   // This wasn't chosen particularly carefully
   // I just want to stop core dumps with old root when there aren't enough points for interpolation
@@ -204,6 +246,18 @@ Acclaim::NumPointsCut::NumPointsCut(){
 }
 
 
+
+
+
+/** 
+ * @brief Apply the number of points cut
+ *
+ * This cut was really only designed to prevent core dumps when the gsl akima interpolator than ROOT wraps fails,
+ * The failure occurs when n < 5. 
+ *  
+ * @param useful is the event whose quality we wish to characterise
+ * @param sum is the AnitaEventSummary
+ */
 void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
   eventPassesCut = true;
   for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
@@ -224,4 +278,3 @@ void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSumm
     }
   }
 }
-

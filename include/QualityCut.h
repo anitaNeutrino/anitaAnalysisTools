@@ -20,8 +20,11 @@
 
 namespace Acclaim{
 
-  /**
-   * Event selection cut
+  /** 
+   * @class QualityCut
+   * @brief Base class from which all my quality cuts inherit
+   *
+   * Contains a description, boolian to indicate pass/fail and apply function which must be implemented in descendents
    */
   class QualityCut : public TObject {
 
@@ -40,6 +43,12 @@ namespace Acclaim{
 
 
 
+  /** 
+   * @class SurfSaturationCut
+   * @brief Tries to find unphysical spikes in a waveform that are characteristic of a kind of digitiser corruption
+   *
+   * Currently comparses the maximum, minimum voltages and the difference in their magnitude to try to find spikes
+   */
   class SurfSaturationCut : public QualityCut {
     ClassDef(Acclaim::SurfSaturationCut, 1);
 
@@ -71,7 +80,14 @@ namespace Acclaim{
 
 
   
-
+  /** 
+   * @class PayloadBlastCut
+   * @brief Tries to determine whether an event is a payload blast
+   *
+   * Payload blasts tend to have lots of power in the bottom ring, but not the top.
+   * The cut comparse the peak-to-peak voltages in the top and bottom rings in matching phi-sectors
+   * 
+   */
   class PayloadBlastCut : public QualityCut {
     ClassDef(Acclaim::PayloadBlastCut, 1);    
     
