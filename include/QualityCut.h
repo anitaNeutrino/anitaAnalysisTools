@@ -72,8 +72,8 @@ namespace Acclaim{
 
   
 
-  class SelfTriggeredBlastCut : public QualityCut {
-    ClassDef(Acclaim::SelfTriggeredBlastCut, 1);    
+  class PayloadBlastCut : public QualityCut {
+    ClassDef(Acclaim::PayloadBlastCut, 1);    
     
   protected:
     double ratioCutHigh;
@@ -85,8 +85,8 @@ namespace Acclaim{
     AnitaPol::AnitaPol_t maxRatioPol;
 
   public:
-    SelfTriggeredBlastCut();   
-    virtual ~SelfTriggeredBlastCut(){;}
+    PayloadBlastCut();   
+    virtual ~PayloadBlastCut(){;}
     // virtual void apply(FilteredAnitaEvent* fEv);
     virtual void apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum = NULL);
   };

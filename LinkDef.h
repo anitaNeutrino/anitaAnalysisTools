@@ -29,7 +29,7 @@
 
 #pragma link C++ class Acclaim::QualityCut+;
 #pragma link C++ class Acclaim::SurfSaturationCut+;
-#pragma link C++ class Acclaim::SelfTriggeredBlastCut+;
+#pragma link C++ class Acclaim::PayloadBlastCut+;
 #pragma link C++ class Acclaim::NumPointsCut+;
 
 #endif

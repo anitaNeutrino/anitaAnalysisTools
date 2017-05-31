@@ -2,7 +2,7 @@
 
 ClassImp(Acclaim::QualityCut);
 ClassImp(Acclaim::SurfSaturationCut);
-ClassImp(Acclaim::SelfTriggeredBlastCut);
+ClassImp(Acclaim::PayloadBlastCut);
 ClassImp(Acclaim::NumPointsCut);
 
 
@@ -12,7 +12,7 @@ Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaE
   SurfSaturationCut ssc;
   ssc.apply(usefulEvent, sum);
 
-  SelfTriggeredBlastCut stbc;
+  PayloadBlastCut stbc;
   stbc.apply(usefulEvent, sum);
 
   NumPointsCut npc;
@@ -114,7 +114,7 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
 
 
 
-Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
+Acclaim::PayloadBlastCut::PayloadBlastCut(){
   ratioCutHigh = 2.8;
   ratioCutLow = 1.14;
   maxRatio = 0;
@@ -127,8 +127,8 @@ Acclaim::SelfTriggeredBlastCut::SelfTriggeredBlastCut(){
 
 
 
-void Acclaim::SelfTriggeredBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
-// void Acclaim::SelfTriggeredBlastCut::apply(FilteredAnitaEvent* fEv){  
+void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
+// void Acclaim::PayloadBlastCut::apply(FilteredAnitaEvent* fEv){  
 
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
