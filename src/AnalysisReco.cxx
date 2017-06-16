@@ -28,12 +28,45 @@ void Acclaim::AnalysisReco::putInCoherentMap(std::map<Int_t, AnalysisWaveform*>&
   theMap[peakInd] = coherentWave;
 }
 
-void Acclaim::AnalysisReco::fillWaveformInfo(AnitaEventSummary::WaveformInfo& info, AnalysisWaveform* coherentWave) const{
-  // TODO, fill more of the info...
+
+
+
+void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
+                                             Int_t peakInd,
+                                             AnitaEventSummary::WaveformInfo& info,
+                                             const FilteredAnitaEvent* fEv,
+                                             std::map<Int_t, AnalysisWaveform*>* waveStore,
+                                             InterferometricMap* h) const {
   
+  AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
+  putInCoherentMap(waveStore[false], peakInd, coherentWave);
+
+
+  // hilbert peak
   const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
-  info.peakHilbert = TMath::MaxElement(grHilbert->GetN(),
-                                       grHilbert->GetY());
+  info.peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
+  
+
+  // stokes parameters
+  
+  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, h, true);
+  putInCoherentMap(waveStore[1], peakInd, coherentWave);
+  
+  const TGraphAligned* gr = coherentWave->even();
+  const TGraphAligned* grX = xPolCoherentWave->even();
+
+  const TGraphAligned* grH = coherentWave->hilbertTransform()->even();
+  const TGraphAligned* grHX = xPolCoherentWave->hilbertTransform()->even();
+  
+  FFTtools::stokesParameters(gr->GetN(),
+                             gr->GetY(),  grH->GetY(),
+                             grX->GetY(), grHX->GetY(),
+                             &(info.I), &(info.Q), &(info.U), &(info.V));
+
+
+
+  
+
 }
 
 
@@ -61,6 +94,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
   FilteredAnitaEvent fEvMinDeco(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
   FilteredAnitaEvent fEvDeco(fEv, fMinDecoFilter); // extra deconvolution
 
+  // const int numFilters = 4;
+  // const FilteredAnitaEvent* fEvs[numFilters]                 = {fEv,                 &fEvMin, &fEvDeco, &fEvMinDeco};  
+  // AnitaEventSummary::WaveformInfo* waveSummaries[numFilters] = {eventSummary->
 
   // FilteredAnitaEvent fEvMinDeco(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false);
 
@@ -79,7 +115,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
     std::vector<Double_t> coarseMapPeakValues;
     std::vector<Double_t> coarseMapPeakPhiDegs;
-    std::vector<Double_t> coarseMapPeakThetaDegs;    
+    std::vector<Double_t> coarseMapPeakThetaDegs;
     coarseMaps[pol]->findPeakValues(thisNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
 
     eventSummary->nPeaks[pol] = thisNumPeaks;
@@ -105,32 +141,15 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       // based on Cosmin's comments in AnitaAnalysisSummary.h
       eventSummary->peak[pol][peakInd].phi_separation = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
 
-
       // coherent
       // coherent_filtered
       // deconvolved
       // deconvolved_filtered
       
-      AnalysisWaveform* coherentFilteredWave = coherentlySum(fEv, h);
-      putInCoherentMap(wfCoherentFiltered[pol], peakInd, coherentFilteredWave);
-      fillWaveformInfo(eventSummary->coherent_filtered[pol][peakInd], coherentFilteredWave);
-
-      AnalysisWaveform* coherentWave = coherentlySum(&fEvMin, h);
-      putInCoherentMap(wfCoherent[pol], peakInd, coherentWave);
-      fillWaveformInfo(eventSummary->coherent[pol][peakInd], coherentWave);
-
-      AnalysisWaveform* deconvolvedFilteredWave = coherentlySum(&fEvDeco, h);
-      putInCoherentMap(wfDeconvolvedFiltered[pol], peakInd, deconvolvedFilteredWave);
-      fillWaveformInfo(eventSummary->deconvolved_filtered[pol][peakInd], deconvolvedFilteredWave);
-
-      AnalysisWaveform* deconvolvedWave = coherentlySum(&fEvMinDeco, h);
-      putInCoherentMap(wfDeconvolved[pol], peakInd, deconvolvedWave);
-      fillWaveformInfo(eventSummary->deconvolved[pol][peakInd], deconvolvedWave);
-      
-      // for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      //   rm->response(pol,ant)->deconvolveInPlace(getWf(fEv,ant,pol), dm);
-      //   rm->response(pol,ant)->deconvolveInPlace(getWf(fEvMin,ant,pol), dm);
-      // }
+      fillWaveformInfo(pol, peakInd, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol],    h);
+      fillWaveformInfo(pol, peakInd, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol],            h);
+      fillWaveformInfo(pol, peakInd, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol], h);
+      fillWaveformInfo(pol, peakInd, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol],         h);
       
       if(usefulPat != NULL){
       
@@ -300,7 +319,7 @@ void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
 
   if(!cc){
     cc = new CrossCorrelator();
-    spawnedCrossCorrelator = true;    
+    spawnedCrossCorrelator = true;
   }
   
   dtCache.init(cc, this, true);
@@ -476,10 +495,30 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
 }
 
 
-AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h) const{
+
+
+
+void Acclaim::AnalysisReco::swapPol(AnitaPol::AnitaPol_t& pol) const{
+  if(pol==AnitaPol::kHorizontal){
+    pol = AnitaPol::kVertical;
+  }
+  else if(pol==AnitaPol::kHorizontal){
+    pol = AnitaPol::kHorizontal;      
+  }
+  else{
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unknown polarisation!" << std::endl;
+  }  
+}
+
+
+
+
+AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h, bool doSwapPol) const{
 
   Int_t peakPhiSector = h->getPeakPhiSector();
   AnitaPol::AnitaPol_t pol = h->getPol();
+
+  if(doSwapPol) swapPol(pol);
 
   Int_t biggest = -1;
   Double_t largestPeakToPeak = 0;
@@ -531,18 +570,18 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   h->getPeakInfo(ip, phiDeg, thetaDeg);
   Double_t phiWave = phiDeg*TMath::DegToRad();
   Double_t thetaWave = thetaDeg*TMath::DegToRad();  
-    
+
   std::vector<Double_t> dts(1, 0); // 0 offset for biggest antenna
 
   for(unsigned i=0; i < ants.size(); i++){
     if(ants[i]!=biggest){
     
-      Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);      
+      Double_t dt = getDeltaTExpected(pol, biggest, ants[i], phiWave, thetaWave);
       dts.push_back(dt);
-      // std::cout << dts.size() << "\t" << ants[i] << std::endl;      
-    }    
+      // std::cout << dts.size() << "\t" << ants[i] << std::endl;
+    }
   }
-					   
+
   // std::cerr << "return " << __PRETTY_FUNCTION__ << std::endl;
   return coherentlySum(waves, dts);
 }
@@ -571,14 +610,14 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
 
   // std::cerr << "here 1\t"  << dts.size() << "\t" << waves.size() << std::endl;
   AnalysisWaveform* coherentWave = new AnalysisWaveform((*waves[0]));
-  // std::cerr << "here 2\t"  << coherentWave << std::endl;  
+  // std::cerr << "here 2\t"  << coherentWave << std::endl;
   
   TGraphAligned* grCoherent = coherentWave->updateEven();
   for(UInt_t i=1; i < waves.size(); i++){
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
       grCoherent->GetY()[samp] += waves[i]->evalEven(t + dts[i]);
-    };    
+    };
   }
 
   for(int samp=0; samp < grCoherent->GetN(); samp++){

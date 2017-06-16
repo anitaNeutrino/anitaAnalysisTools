@@ -70,7 +70,7 @@ class AnalysisReco : public TObject, public AnitaEventReconstructor {
   void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg) const;
 
   AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) const;
-  AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h) const;
+  AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, const InterferometricMap* h, bool swapPol = false) const;
     
   static Int_t directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol);
   void insertPhotogrammetryGeometry();
@@ -88,15 +88,20 @@ class AnalysisReco : public TObject, public AnitaEventReconstructor {
   mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
 
   void putInCoherentMap(std::map<Int_t, AnalysisWaveform*>& theMap, Int_t peakInd, AnalysisWaveform* coherentWave) const;
-  void fillWaveformInfo(AnitaEventSummary::WaveformInfo& info, AnalysisWaveform* coherentWave) const;
+  void fillWaveformInfo(AnitaPol::AnitaPol_t pol,
+                        Int_t peakInd,
+                        AnitaEventSummary::WaveformInfo& info,
+                        const FilteredAnitaEvent* fEv,
+                        std::map<Int_t, AnalysisWaveform*>* waveStore,
+                        InterferometricMap* h) const;
   
   mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
-  mutable std::map<Int_t, AnalysisWaveform*> wfCoherentFiltered[AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfCoherent[AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolved[AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolvedFiltered[AnitaPol::kNotAPol];
+  mutable std::map<Int_t, AnalysisWaveform*> wfCoherentFiltered[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
+  mutable std::map<Int_t, AnalysisWaveform*> wfCoherent[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
+  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolved[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
+  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
 
-  mutable AnitaEventSummary summary; //   
+  mutable AnitaEventSummary summary;
   // lazily generates CrossCorrelator when process() is called
   // (plan to add attachment function for external cross correlator)
   // if spawns one, sets the bool to true and deletes the cross correlator in destructor
@@ -110,6 +115,9 @@ class AnalysisReco : public TObject, public AnitaEventReconstructor {
   FilterStrategy* fMinFilter; //!< Would be no filters, but for ANITA-3 data we need an ALFA filter
   FilterStrategy* fMinDecoFilter; //!< Minimum filter + deconvolution filter
 
+
+  void swapPol(AnitaPol::AnitaPol_t& pol) const;
+  
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
   ANALYSIS_SETTING(Int_t, WhichResponseDir);
   ANALYSIS_SETTING(Int_t, UseOffAxisDelay);
