@@ -24,23 +24,40 @@ class TGraphAligned;
 
 namespace Acclaim
 {
-
+  /** @namespace Filters
+   * @brief Contains all my filter classes, some of which have less than obvious names
+   *
+   * All frequencies contained in here are in GHz unless otherwise stated in a variable name.
+   * (Sometimes the GHz is stated anyway for good measure).
+   *
+   */
   namespace Filters
   {
+
+  /** @namespace Bands
+   * @brief Hard coded frequencies in GHz which can get used in any given filter
+   *
+   */  
     namespace Bands {
       // zero everything outside of these
       const double anitaHighPassGHz = 0.2;
       const double anitaLowPassGHz = 1.2;
       const double alfaLowPassGHz = 0.7;
     }
-
-    void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false); //!< Utility function for MagicDisplay
+  
+    void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false);
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
     FilterStrategy* findDefaultStrategy(const TString& stratName);
 
     void makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs);
 
-    // base notch class
+
+
+  /** 
+   * @Class Notch
+   * @brief Filters contiguous frequency bins in the FourierDomain
+   * 
+   */
     class Notch: public UniformFilterOperation
     {
     protected:
@@ -68,8 +85,13 @@ namespace Acclaim
 
 
 
-    // just tracks the amplitudes of frequencies but doesn't do anything else
-    // probably to be inherited from...
+
+  /** 
+   * @Class RayleighMonitor
+   * @brief Tracks the amplitudes of frequencies but doesn't do anything else, to be inherited from
+   *
+   * (Actually all the hard work is done by the FourierBuffer class, which is a rather complicated beastie.)
+   */  
     class RayleighMonitor : public UniformFilterOperation {
     protected:
       int fNumEvents;
@@ -97,8 +119,16 @@ namespace Acclaim
       // const FourierBuffer& getFourierBuffer() const{return fourierBuffer;}
       const FourierBuffer* getFourierBuffer() const{return &fourierBuffer;}
     };
-    
 
+
+  
+  /** 
+   * @Class RayleigFilter
+   * @brief Tracks the amplitudes of frequencies, how well they track a Rayleigh distribution and filters if they do not 
+   *
+   * As with RayleighMonitor, most all the hard work in tracking these amplitudes is done by the FourierBuffer class.
+   * However, the process function extracts the numbers from FourierBuffer and applies the filtering logic there.  
+   */    
     class RayleighFilter : public RayleighMonitor {
     public:
       explicit RayleighFilter(double channelChiSquareCdfThresh, double chiSquarePerDofThresh, Int_t numEvents);
@@ -116,6 +146,14 @@ namespace Acclaim
     };
 
 
+  /** 
+   * @Class SpectrumMagnitude
+   * @brief Silly filtering class, don't use it.
+   *
+   * Forces magnitude of each frequency bin to match the TSpectrum derived magnitudes inside FourierBuffer
+   * (thereby deweighting CW frequency bins). 
+   * Don't use this.
+   */      
     class SpectrumMagnitude : public RayleighMonitor
     {
     public:
@@ -130,7 +168,13 @@ namespace Acclaim
     
     
 
-
+  /** 
+   * @Class UniformMagnitude
+   * @brief Silly filtering class, don't use it.
+   *
+   * Forces magnitude of each frequency bin to be equal (thereby deweighting CW frequency bins).
+   * Don't use this.
+   */      
     class UniformMagnitude : public UniformFilterOperation {
     public:
       explicit UniformMagnitude();
@@ -144,28 +188,6 @@ namespace Acclaim
 
     
 
-    class SpikeSuppressor : public UniformFilterOperation {
-    protected:
-      double fSpikeThresh_dB;
-      int fNumEvents;
-      TRandom3 fRandy;
-      TString fDescription;
-      FourierBuffer fourierBuffer;
-
-      TGraphAligned suppressSpikes(const TGraphAligned* grPower);
-      TGraphAligned suppressSpikes(const TGraphAligned* grPower, const TGraphAligned* grBackground);      
-      double interpolate_dB(double x, double xLow, double xHigh, double yLow, double yHigh);
-      
-    public:
-      void setSeed(UInt_t seed){fRandy.SetSeed(seed);}
-      
-      SpikeSuppressor(double spikeThresh_dB, int numEvents);
-      
-      virtual const char * tag () const {return "SpikeSuppressor";};
-      virtual const char * description () const {return fDescription.Data();}
-      virtual void processOne(AnalysisWaveform* wave);
-      virtual void process(FilteredAnitaEvent* fEv);
-    };
   }
 }
 

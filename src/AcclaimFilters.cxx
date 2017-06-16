@@ -12,11 +12,14 @@
 
 static std::map<TString, FilterStrategy*> acclaimDefaults;
 
-/** 
- * Checks all operations in the Filter Strategy and forces the strategy to load history the before it processes the next event
- * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Checks all operations and forces the first FourierBuffer to load history the before it processes the next event
  *
- * @param fs is the FilterStrategy
+ * This is useful for breaking up analysis runs into multiple jobs wthout disturbing the rolling averages.
+ * The FourierBuffer is a memeber of the RayleighMonitor class and its descendents.
+ *
+ * @param fs is the FilterStrategy in which to look for FourierBuffers
  */
 void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* fs){
   // load history if needed
@@ -31,8 +34,17 @@ void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* 
 
 
 
-/** 
- * This function adds my custom strategies to a map of TString to strategies...
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Adds my custom strategies to a map of TString to strategies
+ *
+ * My analysis will only use a handful of filters strategies.
+ * This function appends the "defaultStrategies" to a TString/FilterStrategy* map like what is used in MagidDisplay.
+ * This function allows the strategies to be loaded painlessly into MagicDisplay and analysis scripts
+ * Note that the strategies are initialized once so adding the saveOutput bool will currently only work on the first call.
+ *
+ * @param filterStrats is a the TString/FilterStrategy* map.
+ * @param saveOutput is passed to the filterStrategies when they are created.
  */
 void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
 
@@ -87,12 +99,33 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
   }  
 }
 
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Wrapper function to find a strategy from the defaults
+ *
+ * This function is pretty dumb and doesn't do any error checking and could fail with undefined behaviour.
+ *
+ * @param stratName is the name of the strategy (i.e. the key in the TString/FilterStrategy* map. 
+ */
+
 FilterStrategy* Acclaim::Filters::findDefaultStrategy(const TString& stratName){
 
   appendFilterStrategies(acclaimDefaults, false);
   return findStrategy(acclaimDefaults, stratName);
 }
 
+
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Wrapper function to do a std::map::iterator lookup of a TString/filterStrategy* map
+ *
+ * @param filterStrats is the map of filterStrategies
+ * @param stratName is the name of the strategy (i.e. the key in the TString/FilterStrategy* map. 
+ */
 FilterStrategy* Acclaim::Filters::findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName){
 
   FilterStrategy* fs = NULL;
@@ -112,6 +145,13 @@ FilterStrategy* Acclaim::Filters::findStrategy(const std::map<TString, FilterStr
 
 
 
+
+/** 
+ * @brief Constructor for notch
+ *
+ * @param lowEdgeGHz is the frequency in GHz of the low edge of the notch (i.e. the high pass frequency)
+ * @param highEdgeGHz is the frequency in GHz of the high edge of the notch (i.e. the low pass frequency)
+ */
 Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz){
 
   // Freq bins are currently in 0.1 GHz steps
@@ -130,10 +170,15 @@ Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz){
 }
 
 
+/** 
+ * @brief applies the notch to a single waveform
+ * 
+ * @param g is the waveform to which the notch filters should be applied
+ */
 void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g){
   // add small offset to frequencies to avoid inconsistent notch edges due to
   // floating point error...
-  const double floatPointError = 1e-10; // plently 
+  const double floatPointError = 1e-10; // plenty 
       
   const double deltaF_GHz = g->deltaF();
   const int nf = g->Nfreq();
@@ -148,6 +193,13 @@ void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g){
 }
 
 
+/** 
+ * @brief Applies the notch to all waveforms in an event
+ *
+ * Also stores the power removed from each channel
+ * 
+ * @param ev is the event to which the notch should be applied to all channels
+ */
 void Acclaim::Filters::Notch::process(FilteredAnitaEvent * ev) 
 {
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
@@ -191,233 +243,25 @@ void Acclaim::Filters::Notch::process(FilteredAnitaEvent * ev)
 
 
 
-Acclaim::Filters::SpikeSuppressor::SpikeSuppressor(double spikeThresh_dB, int numEvents) : fRandy(1234), fourierBuffer(numEvents) {
-  fSpikeThresh_dB = spikeThresh_dB;
-  fNumEvents = numEvents;
-  fDescription = Form("Finds spikes (as I define them) greater than %4.2lf dB and removes them, replacing them with noise", fSpikeThresh_dB);
-}
 
-void Acclaim::Filters::SpikeSuppressor::processOne(AnalysisWaveform* wave){
-  (void) wave;
-  std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", I need more information, this filter is designed to be called with process(FilteredAnitaEvent*) instead!" << std::endl;
-}
 
 
 
-void Acclaim::Filters::SpikeSuppressor::process(FilteredAnitaEvent* fEv){
 
-  setSeed(fEv->getHeader()->eventNumber); // for deterministic randomness
-
-  fourierBuffer.add(fEv);
-  
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){      
-      AnalysisWaveform* wave = getWf(fEv, ant, pol);
-
-      TGraphAligned* grAvePowSpec_dB = fourierBuffer.getAvePowSpec_dB(ant, pol);
-
-      const double cosminFactor = 1000*50*grAvePowSpec_dB->GetN(); // from the fft normlization option in AnalysisWaveform
-      
-
-      // TGraphAligned grFiltered_dB = suppressSpikes(grAvePowSpec_dB);
-
-
-      TGraphAligned* grBackground_dB = fourierBuffer.getBackground_dB(ant, pol);
-      TGraphAligned grFiltered_dB = suppressSpikes(grAvePowSpec_dB, grBackground_dB);      
-      TGraphAligned grFiltered_not_dB = grFiltered_dB;
-      grFiltered_not_dB.undBize();
-
-
-      FFTWComplex* fft = wave->updateFreq();
-      for(int i=0; i < grFiltered_not_dB.GetN(); i++){
-	if(grFiltered_dB.GetY()[i] != grAvePowSpec_dB->GetY()[i]){
-
-	  double mag = TMath::Sqrt(grFiltered_not_dB.GetY()[i]*cosminFactor);
-	  double phase = TMath::TwoPi()*fRandy.Uniform();
-	  fft[i].setMagPhase(mag, phase);
-	}
-      }
-
-      delete grAvePowSpec_dB;
-      grAvePowSpec_dB = NULL;
-      
-      delete grBackground_dB;
-      grBackground_dB = NULL;
-      
-    }
-  }
-}
-
-
-
-
-TGraphAligned Acclaim::Filters::SpikeSuppressor::suppressSpikes(const TGraphAligned* grPower, const TGraphAligned* grBackground){
-  // expecting both in dB...  
-
-  
-  TGraphAligned grFilteredSpec = (*grPower);
-  
-  for(int i=0; i < grPower->GetN(); i++){
-    double x = grPower->GetX()[i];
-
-    double y = grPower->GetY()[i];    
-
-    double yBack = grBackground->Eval(x);
-
-    if(y - yBack > fSpikeThresh_dB){
-      grFilteredSpec.GetY()[i] = yBack;
-    }
-  }
-
-  return grFilteredSpec;
-}
-
-
-
-
-
-
-
-TGraphAligned Acclaim::Filters::SpikeSuppressor::suppressSpikes(const TGraphAligned* grPower){
-  
-  std::vector<int> extremaSamps;
-
-  // this will leave out the edges, which is fine.
-  for(Int_t samp=1; samp < grPower->GetN()-1; samp++){
-    Double_t y0 = grPower->GetY()[samp-1];
-    Double_t y1 = grPower->GetY()[samp];
-    Double_t y2 = grPower->GetY()[samp+1];
-
-
-    if(y0 > y1 && y1 < y2){
-      // Is a local minimum
-      extremaSamps.push_back(samp);
-    }
-    else if(y0 < y1 && y1 > y2){
-      // Is a local maximum
-      extremaSamps.push_back(samp);
-    }
-  }
-
-  std::vector<double> x0s;
-  std::vector<double> x2s;
-
-  std::vector<double> y0s;
-  std::vector<double> y2s;
-    
-  if(extremaSamps.size() <=1) {
-    // this shouldn't be true but there might be a weird waveform somewhere...	
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "You have a very strange waveform, this was unexpected..." << std::endl;
-  }
-  else{
-	
-    for(unsigned i=1; i < extremaSamps.size() - 1; i++){	
-      int samp0 = extremaSamps.at(i-1);
-      int samp1 = extremaSamps.at(i);
-      int samp2 = extremaSamps.at(i+1);
-
-      double y0 = grPower->GetY()[samp0];
-      double y1 = grPower->GetY()[samp1];
-      double y2 = grPower->GetY()[samp2];
-
-      // it's a maxima
-      if(y0 < y1 && y1 > y2){
-
-	// now we figure out the spike width...
-	// using the next local minima as the spike edges isn't good enough...
-	// try defining the width as the distance from the from the closest minima
-	// to the peak (extended to the other side)	    
-	    
-	double x0 = grPower->GetX()[samp0];
-	double x1 = grPower->GetX()[samp1];
-	double x2 = grPower->GetX()[samp2];
-
-	double halfDx = TMath::Min(x1 - x0, x2 - x1);
-
-	// redefine spike edges using halfDx
-	x0 = x1 - halfDx;
-	x2 = x1 + halfDx;
-
-	y0 = grPower->Eval(x0);
-	y2 = grPower->Eval(x2);
-
-	double yInterp = interpolate_dB(x1, x0, x2, y0, y2);
-
-
-
-	double spikeSize_dB = y1 - yInterp;
-
-
-	// std::cout << fSpikeThresh_dB << "\t" << spikeSize_dB << "\t" << yInterp << "\t" << y1 << std::endl;
-
-	if(spikeSize_dB > fSpikeThresh_dB){
-	  x0s.push_back(x0);
-	  x2s.push_back(x2);
-	  y0s.push_back(y0);
-	  y2s.push_back(y2);
-	}
-      }	  
-    }
-  }
-   
-
-  // std::cout << " I found " << y2s.size() << " spikes!" << std::endl;
-  
-  // std::cout << "I found spikes at: " << std::endl;
-  // for(unsigned spike = 0; spike < x0s.size(); spike++){
-  //   std::cout << 1e3*x0s.at(spike) << ", " << 1e3*x2s.at(spike) << std::endl;
-  // }
-
-  TGraphAligned grFilteredSpec = (*grPower);
-  // std::vector<int> modified(grFilteredSpec.GetN(), 0);
-  for(unsigned spike = 0; spike < x0s.size(); spike++){
-
-    double x0 = x0s.at(spike);
-    double x2 = x2s.at(spike);
-    
-    double y0 = y0s.at(spike);
-
-    double y2 = y2s.at(spike);
-
-    for(int i=0; i < grFilteredSpec.GetN(); i++){
-
-      double x1 = grFilteredSpec.GetX()[i];
-
-      if(x1 >= x0 && x1 < x2){
-	double yInterp = interpolate_dB(x1, x0, x2, y0, y2);
-	grFilteredSpec.GetY()[i] = yInterp;
-	// modified.at(i) = 1;	
-      }
-      // std::cout << modified.at(i) << ", ";
-    }
-  }
-
-  return grFilteredSpec;
-}
-
-
-
-double Acclaim::Filters::SpikeSuppressor::interpolate_dB(double x, double xLow, double xHigh, double yLow, double yHigh){
-
-  double deltaX = xHigh - xLow;
-  double deltaY = pow(10, yHigh) - pow(10, yLow);
-  double gradient = deltaY/deltaX;
-  // std::cout << deltaY << "\t" << deltaX << std::endl;
-  // y = mx + c
-  double yInterp = (x - xLow)*gradient + pow(10, yLow);
-  yInterp = TMath::Log10(yInterp);
-
-  return yInterp;
-}
-
-
-
-
-
+/** 
+ * @brief Constructor for uniform magnitude
+ */
 Acclaim::Filters::UniformMagnitude::UniformMagnitude(){
 }
 
+
+/** 
+ * @brief Sets each frequency bin to have identical magnitude, without disturbing the phase
+ *
+ * Pretty dumb really.
+ *  
+ * @param wf is the waveform to be filtered
+ */
 void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
 
   FFTWComplex* fft = wf->updateFreq();  
@@ -427,10 +271,25 @@ void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
 }
 
 
+
+
+
+/** 
+ * @brief Constructor for SoectrumMagnitude filter
+ * 
+ * @param numEvents is the number of events over which to derived the TSpectrum averaged amplitudes
+ */
 Acclaim::Filters::SpectrumMagnitude::SpectrumMagnitude(Int_t numEvents) : RayleighMonitor(numEvents){
-  fDescription = "Sets the magnitude of each frequency bin equal to the fourier buffer spectrum";
+  fDescription = TString::Format("Sets the magnitude of each frequency bin equal to the fourier buffer TSpectrum, averaged over %d events", numEvents);
 }
 
+
+
+/** 
+ * @brief Set each frequency bin of each waveform to the FourierBuffer derived TSpectrum amplitude, without chaning the phase.
+ * 
+ * @param fEv is the event to be filtered
+ */
 void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
   RayleighMonitor::process(fEv);
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
@@ -477,7 +336,12 @@ void Acclaim::Filters::SpectrumMagnitude::process(FilteredAnitaEvent* fEv){
 
 
 
-
+ /** 
+ * @brief Constructor for theh RayleighMonitor
+ *
+ * This class is the mother of all filter classes which interface with the FourierBuffer.
+ * @param numEvents is the number of events over which the FourierBuffer is to track frequency amplitudes
+ */
 Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffer(numEvents) {
   fNumEvents = numEvents;
   fDescription = TString::Format("Decides whether or not to filter events based on characteristics of the event amplitude and Rayleigh distribution over %d events", fNumEvents);
@@ -487,13 +351,29 @@ Acclaim::Filters::RayleighMonitor::RayleighMonitor(int numEvents) : fourierBuffe
 }
 
 
+
+
+/** 
+ * @brief Wrapper for FourierBuffer::add(FilteredAnitaEvent*)
+ * 
+ * @param fEv is the event to pass to FourierBuffer
+ */
 void Acclaim::Filters::RayleighMonitor::process(FilteredAnitaEvent* fEv){  
   fourierBuffer.add(fEv);
 }
 
 
 
-
+/** 
+ * @brief returns the number of doubles each output array 
+ *
+ * Since the FourierBuffer produces a high density of output, the standard FilterOperation i/o is not particularly useful.
+ * Therefore the associated functions are not well tested.
+ *
+ * @param i is the element of the output array
+ * 
+ * @return the length of the output 
+ */
 unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
   (void) i;
   if(i==0){
@@ -507,6 +387,13 @@ unsigned Acclaim::Filters::RayleighMonitor::outputLength(unsigned i) const{
 
 
 
+/** 
+ * @brief maps the output array index to a name
+ * 
+ * @param i is the output index.
+ * 
+ * @return a pointer to a c-style string containing the name of the output, or NULL if i is invalid.
+ */
 const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
   // so what do I want to output?
   switch(i){
@@ -528,6 +415,14 @@ const char* Acclaim::Filters::RayleighMonitor::outputName(unsigned i) const{
 }
 
 
+
+
+/** 
+ * @brief puts the ith output buffer into the array v.
+ * 
+ * @param i us the output index
+ * @param v points to the array into which the output should be written
+ */
 void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
   if(i==0){
@@ -606,6 +501,26 @@ void Acclaim::Filters::RayleighMonitor::fillOutput(unsigned i, double* v) const{
 
 
 
+/** 
+ * @brief Constructor for the RayleighFilter
+ *
+ * This filter operation actually takes some action based on the values calculated by the FourierBuffer.
+ * This is by far the most developed filter in this library (although, again, the hard work is all inside FourierBuffer).
+ *
+ * The parameters passed in the constructor here too complicated to be explained in a single comment line, so here goes:
+ * @param channelChiSquareCdfThresh
+ * If one divides each frequency bin amplitude squared, by the rayleigh amplitude squared and histograms them
+ * (and the amplitudes are well behaved) you should find the distibution is a chi-square with 2 degrees of freedom.
+ * (This is because underlying the Rayleigh distribution you have two gaussian distributed degrees of freedom)
+ * By histogramming all the frequency amplitudes in a channel one can find outliers.
+ 
+ * @param chiSquarePerDofThreshold:
+ * The rayleigh amplitude chi square per degree of freedom is evaluated assuming the TSpectrum amplitude.
+ * If the distribution of amplitudes is not well described by a Rayligh distribution with a amplitude equal
+ * to the TSpectrum amplitude, that frequency bin is filtered.
+ *
+ * @param numEvents is the number of events over which to track frequency amplitudes in the FourierBuffer
+ */
 Acclaim::Filters::RayleighFilter::RayleighFilter(double channelChiSquareCdfThresh, double chiSquarePerDofThreshold, int numEvents) : RayleighMonitor(numEvents), fChiSquarePerDofThreshold(chiSquarePerDofThreshold), fChanChiSquareCdfThreshold(channelChiSquareCdfThresh)
 {
   fRandy = new TRandom3(1234); // seed will be reset on a per event basis using the eventNumber
@@ -614,6 +529,10 @@ Acclaim::Filters::RayleighFilter::RayleighFilter(double channelChiSquareCdfThres
   fChanChiSquareThreshold = -2*TMath::Log(1 - fChanChiSquareCdfThreshold);
 }
 
+
+/** 
+ * @brief Destructor
+ */
 Acclaim::Filters::RayleighFilter::~RayleighFilter()
 {
   if(fRandy){
@@ -623,6 +542,11 @@ Acclaim::Filters::RayleighFilter::~RayleighFilter()
 }
 
 
+/** 
+ * Applies the RayleighFilter operation
+ * 
+ * @param fEv is the event to filter
+ */
 void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 
   UInt_t eventNumber = fEv->getHeader()->eventNumber;  
@@ -639,7 +563,6 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
       double varChanChiSquare = 0;
       fourierBuffer.getMeanVarChanChiSquares(ant, pol, meanChanChiSquare, varChanChiSquare);
 
-      // thisEventChiSquareThreshold =
       double thisChannelExtraThreshold = meanChanChiSquare > 2 ? meanChanChiSquare - 2 : 0;
       double thisChannelChiChiSquareThreshold = fChanChiSquareThreshold + thisChannelExtraThreshold;
       // fChanChiSquareCdfThreshold
@@ -670,7 +593,8 @@ void Acclaim::Filters::RayleighFilter::process(FilteredAnitaEvent* fEv){
 	  theFreqs[freqInd].im = 0;
 	}        
       }
-      
+
+      // some debugging statements
       int nZero=0;
       for(int freqInd=0; freqInd < nf; freqInd++){
         if(theFreqs[freqInd].re == 0 && theFreqs[freqInd].im == 0){

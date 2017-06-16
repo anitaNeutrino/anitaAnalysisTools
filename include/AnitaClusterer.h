@@ -31,19 +31,17 @@
 
 
 #define nDim 3
-//#include "KMeansRex/src/KMeansRexCore.h"
 
 
 namespace Acclaim{
 
-
-
   //--------------------------------------------------------------------------------------------------------
   /**
    * @class ClusteredAnitaEvent
-   * @ Per-event output, perhaps a little gratuitous
+   * @brief Stores summary information about clustering for each event
+   *
+   * Stores event level information about reconstructed event position and how that relates to clustering
    */
-
   class ClusteredAnitaEvent{
   public:
     UInt_t eventNumber;
@@ -95,8 +93,8 @@ namespace Acclaim{
 
 
   /**
-   * @class AnitaCluster
-   * @brief A class to cluster locations on the Antarctic ice as reconstructed by ANITA.
+   * @class AnitaClusterer
+   * @brief Clusters event locations together
    *
    */
   class AnitaClusterer{
@@ -191,7 +189,12 @@ namespace Acclaim{
     };
 
 
-
+    /** 
+     * @class MCPoint
+     * @brief Holds the position of monte carlo generated event
+     * 
+     * Requires a little more information than a data point to keep track of the neutrino energy and weight
+     */
     class MCPoint : public Point{
     public:
       Double_t weight;
@@ -211,7 +214,7 @@ namespace Acclaim{
     //--------------------------------------------------------------------------------------------------------
     /**
      * @class Cluster
-     * @ Where the events are clustered
+     * @brief Where the events are clustered
      */
     class Cluster{
     public:

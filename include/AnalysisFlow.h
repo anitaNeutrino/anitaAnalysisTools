@@ -19,13 +19,20 @@
 
 namespace Acclaim
 {
+
+/**
+ * @class AnalysisFlow
+ * @brief High level interface to join up the various bits of the analysis
+ *
+ * AnalysisFlow takes care of event selection, loading input data, saving output data, and contains a template function to loop over said data while performing the analysis reconstruction
+ */
   class AnalysisFlow {
 
   public:
 
     enum selection{
       kAll             = 0,
-      kWaisPulser      = 1,    
+      kWaisPulser      = 1,
       kDecimated       = 2,
       kQuietTime       = 3
     };
@@ -40,13 +47,12 @@ namespace Acclaim
     void prepareOutputFiles();
     Bool_t shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
 
-  private:
+  protected:
     int fRun;
     selection fSelection;
     AnitaDataset::BlindingStrategy fBlindStrat;
     int fDivision;
     int fNumDivisions;
-
 
     AnitaDataset* fData;
     Long64_t fFirstEntry;

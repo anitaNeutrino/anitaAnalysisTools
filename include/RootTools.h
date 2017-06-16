@@ -36,19 +36,27 @@
 #include "Adu5Pat.h"
 
 
+/** @mainpage
+ * Yes, the name ACCLAIM is kind of lame, but passed a certain point anitaAnalysisTools was a a bit generic, and it was the best I could do in a lunch break.
+ * A lot has changed since I last made a concerted effort to document my code.
+ * Significant restructuring makes the code fit in better with the AnalysisFramework originally designed back in Chicago back in 2015, and the code is much better modularised.
+ */
+
+
+/** @namespace Acclaim
+ * @brief Namespace which wraps everything in the library
+ *
+ * 
+ */
+
 namespace Acclaim
 {
   /** @namespace RootTools
    * @brief My commonly used, general functions to manipulate ROOT objects; so I only ever write them once.
    *
-   * This lovingly curated namespace can be imported into CINT with gSystem->Load('libBensAnitaTools.so").
-   * I find myself often writing little routines to modify things like TGraphs over and over again.
-   * Functions that do little jobs, too simple to deserve a dedicated class of their own go in this namespace.
-   * The idea that I only spend any time coding up a particular function once.
-   * Expect this namespace to be referenced a lot in my code.
+   * This lovingly curated namespace can be imported into cint/cling with gSystem->Load('anitaAnalysisTools.so"), replace .so with .dylib if you're on a Mac.
+   * This namespace is a collection of little routines to modify things like TGraphs in a general way, for things that are too simple to deserve a dedicated class of their own.
    */
-
-
 
   namespace RootTools{
 

@@ -33,8 +33,12 @@ namespace Acclaim
   
   /**
    * @class FourierBuffer
-   * @brief A class to hold frequency domain info in memory
-   * I've removed the mag/phase info for now as it's probably a bit gratuitous
+   * @brief A a glorified ring buffer of frequency amplitudes with a TSpectrum to look for CW spikes
+   *
+   * More specifically, it holds an array of specialised histograms (RayleighHist), one for each channel.
+   * Each of those histograms has an internal RingBuffer, the histogram is updated as events are added/removed.
+   * The RayleighHists can try to fit a Rayleigh distribution, or can quantify how well the distribution matches a given frequency,
+   *
    */
   class FourierBuffer {
 
@@ -227,7 +231,13 @@ namespace Acclaim
     }    
   };
 
-  // little class for some GUI i/o magic
+
+
+
+  /**
+   * @class TGraphFB 
+   * @brief A little class for some GUI magic (for MagicDisplay)
+   */
   class TGraphFB : public TGraphAligned {
     friend class FourierBuffer;
   public:
@@ -239,7 +249,15 @@ namespace Acclaim
       kDrawRayleigh,
       kDrawCopy
     };
-    
+
+    /** 
+     * @brief Constructor
+     * 
+     * @param theFb the fourier buffer, the parent of this TGraphFB
+     * @param theAnt is the antenna number (0-47)
+     * @param thePol is the polarisation
+     * @param n is the number of points to construct the TGraphFB with
+     */
     TGraphFB(const FourierBuffer* theFb=NULL, Int_t theAnt=-1, AnitaPol::AnitaPol_t thePol=AnitaPol::kNotAPol,
 	     int n=0) : TGraphAligned(n), fDoubleClickOption(kDrawCopy), fDerivedFrom(NULL)
     {
@@ -248,13 +266,19 @@ namespace Acclaim
       ant = theAnt;
       pol = thePol;
     }
+
+    /** 
+     * @brief Creates a copy of the passed TGraphFB
+     * 
+     * @param gr is the TGraphFB to copy 
+     */    
     explicit TGraphFB(const TGraphFB* gr) : TGraphAligned(gr->GetN(), gr->GetX(), gr->GetY()), fDoubleClickOption(gr->fDoubleClickOption), fDerivatives(gr->fDerivatives)
     {
       fb = gr->fb;
       ant = gr->ant;
       pol = gr->pol;
       SetLineColor(gr->GetLineColor());
-      SetLineStyle(gr->GetLineStyle());      
+      SetLineStyle(gr->GetLineStyle());
       fDerivedFrom = gr->fDerivedFrom;
     }
     virtual ~TGraphFB(){;}
@@ -272,9 +296,5 @@ namespace Acclaim
     std::vector<TGraphFB*> fDerivatives; // amplitudes point to spectrum
     ClassDef(Acclaim::TGraphFB, 0);
   };
-
 }
-
-
-
 #endif //FOURIERBUFFER_H

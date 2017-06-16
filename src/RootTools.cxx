@@ -1,6 +1,18 @@
 #include "RootTools.h"
 
 
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Silly test function to generate a UsefulAnitaEvent
+ *
+ * All channels have gaussian distributed voltage values with a mean of 0, rms of 1, with dt = 1/2.6 ns
+ * This isn't a good fake event but may be useful for testing things.
+ *
+ * @param eventNumber is used as the event number in the fake event and the seed for a TRandom3
+ * @returns a pointer to a UsefulAnitaEvent
+*/
+
 UsefulAnitaEvent* Acclaim::RootTools::makeGaussianEvent(UInt_t eventNumber){
 
   TRandom3 randy(eventNumber);

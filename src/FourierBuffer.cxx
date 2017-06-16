@@ -22,6 +22,13 @@
 #define IS_ROOT_6_06_08 (ROOT_VERSION_CODE >= ROOT_VERSION(6,6,8))
 
 
+
+
+/** 
+ * @brief Constructor for FourierBuffer
+ * 
+ * @param theBufferSize is the number of events to average over
+ */
 Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize ) :
     doneVectorInit(false), fCurrentlyLoadingHistory(false), fForceLoadHistory(false), eventsInBuffer(0), fMinFitFreq(Filters::Bands::anitaHighPassGHz), fMaxFitFreq(Filters::Bands::anitaLowPassGHz), fNumSkipped(0){
   
@@ -35,6 +42,7 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize ) :
     summaryPads[ant] = NULL;
   }
 
+  
 #if IS_ROOT_6_06_08
   fRay = new TF1("fRay", rayleighFuncText, 0, 1e4, TF1::EAddToList::kNo);
 #else
@@ -43,6 +51,12 @@ Acclaim::FourierBuffer::FourierBuffer(Int_t theBufferSize ) :
 }
 
 
+
+
+/** 
+ * @brief Initialise an internal vector and TGraphFB with with an appropriate set of default values
+ * 
+ */
 void Acclaim::FourierBuffer::initGraphAndVector(std::vector<double> vec[][NUM_SEAVEYS],
 						std::vector<TGraphFB>* gr,
 						int n, double df, double defaultVal){
@@ -66,13 +80,19 @@ void Acclaim::FourierBuffer::initGraphAndVector(std::vector<double> vec[][NUM_SE
 	  gr[pol][ant].GetY()[freqBin] = defaultVal;
 	}
       }
-      
     }    
   }
 }
 
 
 
+
+/** 
+ * @brief Initialise all internal vectors
+ * 
+ * @param n is the number of frequency bins
+ * @param df is the width of the frequench bins in GHz
+ */
 void Acclaim::FourierBuffer::initVectors(int n, double df){
 
   initGraphAndVector(spectrumAmplitudes, grSpectrumAmplitudes, n, df, 0);
@@ -137,6 +157,11 @@ void Acclaim::FourierBuffer::initVectors(int n, double df){
 
 
 
+
+
+/** 
+ * @brief Destructor
+ */
 Acclaim::FourierBuffer::~FourierBuffer(){
 
   if(fSpectrum){
@@ -167,8 +192,21 @@ Acclaim::FourierBuffer::~FourierBuffer(){
 
 
 
-size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
+/** 
+ * @brief Adds an event to the FourierBuffer
+ *
+ * This is the workhorse function...
+ * Finds all the frequency bin amplitudes for each channel in the event,
+ * and adds them to the approprate RayleighHist.
+ * Maybe tells the RayleighHists to fit for the rayleigh amplitude.
+ * Generates a bunch of goodness of fit (chi-square) measures for the event.
+ * 
+ * @param fEv is the event to add
+ * 
+ * @return the number of events in the FourierBuffer
+ */
+size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
   // do dynamic initialization, need this first in case we return from this function before the end
@@ -325,10 +363,10 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
         varChanChiSquare[pol][ant] = 0;
       }
 
-      if(!fCurrentlyLoadingHistory){
-        // std::cout << pol << "\t" << ant << "\t" << sumChanChiSquares << "\t" << sumSquaredChanChiSquares << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
-        // std::cout << pol << "\t" << ant << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
-      }
+      // if(!fCurrentlyLoadingHistory){
+      //   // std::cout << pol << "\t" << ant << "\t" << sumChanChiSquares << "\t" << sumSquaredChanChiSquares << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
+      //   // std::cout << pol << "\t" << ant << "\t" << meanChanChiSquare[pol][ant] << "\t" << varChanChiSquare[pol][ant] << "\t" << n << std::endl;
+      // }
       // if(!fCurrentlyLoadingHistory){
       //   std::cout << pol << "\t" << ant << "\t" << hChanChiSquares[pol][ant]->GetMean() << "\t" << hChanChiSquares[pol][ant]->GetRMS() << std::endl;
       // }
@@ -338,7 +376,7 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
     }
   }
 
-
+  // update the spectral amplitudes if we updated the rayleigh distributions
   if(anyUpdated){
     int firstSpecInd = 0; 
 
@@ -384,6 +422,24 @@ size_t Acclaim::FourierBuffer::add(const FilteredAnitaEvent* fEv){
 
 
 
+
+
+/** 
+ * @brief Histogram the event frequency bin amplitudes squared, divided by the rayleigh distribution amplitude squared
+ *
+ * Creates a histogram of the chi-square distribution of the event rayleigh amplitude squared, divided by the rayleigh distribution amplitude squared.
+ * This give a chi-square distribution with two degrees of freedom due to the two underlying gaussian distributed d.o.f. in the rayleigh distribution.
+ * This is assuming that the underlying gaussian distributions have a mean of zero, which is a good assumption given that even the CW bins are well
+ * described by a rayleigh distribution
+ * 
+ *
+ * @param pol is the polarisation of the amplitudes to histogram
+ * @param ant is the antenna of the amplitudes to histogram
+ * @param pad is a pointer to the TPad to draw on
+ * @param drawOpt is the ROOT draw option
+ * 
+ * @return the created histogram
+ */
 TH1D* Acclaim::FourierBuffer::makeChanChisquareHist(AnitaPol::AnitaPol_t pol, Int_t ant, TPad* pad, const char* drawOpt) const{
 
   TString hName = TString::Format("hChanChiSquare_%d_%d", pol, ant);  
@@ -405,6 +461,13 @@ TH1D* Acclaim::FourierBuffer::makeChanChisquareHist(AnitaPol::AnitaPol_t pol, In
 }
 
 
+
+
+/** 
+ * @brief Remove data from the dequeues while their size is greater than the buffer size
+ * 
+ * @return the number of events removed
+ */
 Int_t Acclaim::FourierBuffer::removeOld(){
 
   Int_t nPopped = 0;
@@ -429,7 +492,11 @@ Int_t Acclaim::FourierBuffer::removeOld(){
 }
 
 
-
+/** 
+ * @brief Function which loops through old events so that the FourierBuffer is filled
+ * 
+ * @param fEv 
+ */
 void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* fEv){
 
   fCurrentlyLoadingHistory = true;

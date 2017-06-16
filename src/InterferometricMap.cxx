@@ -7,7 +7,7 @@
 #include <iostream>
 #include "TString.h"
 
-ClassImp(Acclaim::InterferometricMap)
+ClassImp(Acclaim::InterferometricMap);
 
 std::vector<Double_t> coarseBinEdgesPhi; // has size NUM_BINS_PHI+1
 std::vector<Double_t> fineBinEdgesPhi; // has size NUM_BINS_PHI_ZOOM_TOTAL+1

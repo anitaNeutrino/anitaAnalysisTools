@@ -6,14 +6,19 @@
 #include "AcclaimFilters.h"
 
 /** 
- * Constructor, sets up some of the options for the analysis 
-* 
+ * @brief Constructor
+ *
+ * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
+ * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
+ * This allows for easy cluster scripting.
+ * 
  * @param run is the run to analyse
  * @param selection is the event selection to apply
  * @param blindStrat is the blinding strategy to use
- * @param division selects which subset of the run to do, goes from 0 -> numDivisions -1, default is 0.
- * @param numDivisions is the number of bits we're splitting the event into
+ * @param division selects which sub division of the run to do. The run is divied into numDivisions divisions, so division goes from 0 -> numDivisions-1, default is 0.
+ * @param numDivisions divides the run into pieces. 
  */
+
 Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
 
   fOutFileBaseName = TString::Format("%s", outFileBaseName);
@@ -80,7 +85,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
 
 
 /** 
- * Destructor
+ * @brief Destructor
  * 
  */
 Acclaim::AnalysisFlow::~AnalysisFlow(){
@@ -118,8 +123,9 @@ Acclaim::AnalysisFlow::~AnalysisFlow(){
 
 
 /** 
- * Create the data set.
- * 
+ * @brief Create the data set if not already done
+ *
+ * Creates an instance of the AnitaDataset class and finds the first/last entries to process using the division/numDivision member variables.
  */
 void Acclaim::AnalysisFlow::prepareDataSet(){
 
@@ -144,7 +150,10 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 
 
 /** 
- * Coax the OutputConvention class into making an appropriately named output files
+ * @brief Coax the OutputConvention class into creating appropriately named output files
+ *
+ * The OutputConvention class was written some time ago to convert the cpp default main arguments (argc/argv) into an output file with a helpful name.
+ * This function goes around the houses to generate some fake argc/argv variables and passes them to an OutputConvention object. 
  */
 void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
@@ -199,7 +208,7 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
 /** 
- * Applies event selection
+ * @brief Applies high level event selection
  * 
  * @param header is the RawAnitaHeader for this event
  * @param usefulPat is the UsefulAdu5Pat for the event
