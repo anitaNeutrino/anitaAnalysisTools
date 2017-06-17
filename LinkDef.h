@@ -12,8 +12,6 @@
 #pragma link C++ class Acclaim::AveragePowerSpectrum+;
 #pragma link C++ class Acclaim::AnitaAveragePowerSpectrum+;
 #pragma link C++ class Acclaim::AntarcticaMapPlotter+;
-#pragma link C++ class Acclaim::AnalysisCuts+;
-#pragma link C++ enum Acclaim::AnalysisCuts::Status_t;
 #pragma link C++ class Acclaim::AnitaClusterer+;
 #pragma link C++ class Acclaim::AnitaClusterer::Point+;
 #pragma link C++ class Acclaim::AnitaClusterer::Cluster+;
