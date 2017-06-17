@@ -16,7 +16,6 @@
 #include <deque>
 #include "AnitaConventions.h"
 #include "TObject.h"
-#include "RingBufferHist.h"
 
 class TSpectrum;
 class FilteredAnitaEvent;
