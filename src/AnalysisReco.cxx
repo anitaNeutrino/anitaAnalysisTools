@@ -737,12 +737,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
     TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
-    std::map<Int_t, AnalysisWaveform*>::iterator it2 = wfCoherentFiltered[pol].find(peakInd);
+    std::map<Int_t, AnalysisWaveform*>::iterator it2 = wfCoherentFiltered[pol][peakInd].find(peakInd);
     // std::map<Int_t, AnalysisWaveform*>::iterator it3 = wfCoherent[pol].find(peakInd);
-    std::map<Int_t, AnalysisWaveform*>::iterator it3 = wfDeconvolved[pol].find(peakInd);    
+    std::map<Int_t, AnalysisWaveform*>::iterator it3 = wfDeconvolved[pol][peakInd].find(peakInd);    
     
     // if(it2!=wfCoherentFiltered[pol].end() && it3!=wfCoherent[pol].end()){
-    if(it2!=wfCoherentFiltered[pol].end() && it3!=wfDeconvolved[pol].end()){      
+    if(it2!=wfCoherentFiltered[pol][peakInd].end() && it3!=wfDeconvolved[pol][peakInd].end()){      
       AnalysisWaveform* coherentWave = it2->second;
       AnalysisWaveform* coherentUnfilteredWave = it3->second;
       if(coherentWave && coherentUnfilteredWave){
