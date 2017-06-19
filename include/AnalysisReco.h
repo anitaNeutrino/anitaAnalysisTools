@@ -87,20 +87,15 @@ class AnalysisReco : public TObject, public AnitaEventReconstructor {
   // and it is the user's responsbility to delete
   mutable InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
 
-  void putInCoherentMap(std::map<Int_t, AnalysisWaveform*>& theMap, Int_t peakInd, AnalysisWaveform* coherentWave) const;
-  void fillWaveformInfo(AnitaPol::AnitaPol_t pol,
-                        Int_t peakInd,
-                        AnitaEventSummary::WaveformInfo& info,
-                        const FilteredAnitaEvent* fEv,
-                        std::map<Int_t, AnalysisWaveform*>* waveStore,
-                        InterferometricMap* h) const;
+  void fillWaveformInfo(AnitaPol::AnitaPol_t pol, AnitaEventSummary::WaveformInfo& info, const FilteredAnitaEvent* fEv,
+                        AnalysisWaveform** waveStore, InterferometricMap* h) const;
   
-  mutable std::map<Int_t, InterferometricMap*> fineMaps[AnitaPol::kNotAPol]; // map of peak index to finely binned InterferometricMap
-  mutable std::map<Int_t, AnalysisWaveform*> wfCoherentFiltered[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfCoherent[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolved[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
-  mutable std::map<Int_t, AnalysisWaveform*> wfDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaPol::kNotAPol];
-
+  mutable InterferometricMap* fineMaps[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; // map of peak index to finely binned InterferometricMap
+  mutable AnalysisWaveform* wfCoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
+  mutable AnalysisWaveform* wfCoherent[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
+  mutable AnalysisWaveform* wfDeconvolved[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
+  mutable AnalysisWaveform* wfDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
+  
   mutable AnitaEventSummary summary;
   // lazily generates CrossCorrelator when process() is called
   // (plan to add attachment function for external cross correlator)

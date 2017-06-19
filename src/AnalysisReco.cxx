@@ -18,55 +18,50 @@ Acclaim::AnalysisReco::~AnalysisReco(){
 }
 
 
-void Acclaim::AnalysisReco::putInCoherentMap(std::map<Int_t, AnalysisWaveform*>& theMap, Int_t peakInd, AnalysisWaveform* coherentWave) const{
-  std::map<Int_t, AnalysisWaveform*>::iterator it = theMap.find(peakInd);
-  if(it!=theMap.end()){
-    if(it->second != NULL){
-      delete it->second;
-    }
-  }
-  theMap[peakInd] = coherentWave;
-}
-
 
 
 
 void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
-                                             Int_t peakInd,
                                              AnitaEventSummary::WaveformInfo& info,
                                              const FilteredAnitaEvent* fEv,
-                                             std::map<Int_t, AnalysisWaveform*>* waveStore,
+                                             AnalysisWaveform** waveStore,
                                              InterferometricMap* h) const {
   
   AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
-  putInCoherentMap(waveStore[false], peakInd, coherentWave);
-
+  if(waveStore[0]){
+    delete waveStore[0];
+  }
+  waveStore[0] = coherentWave;
 
   // hilbert peak
   const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
   info.peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
-  
 
   // stokes parameters
-  
   AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, h, true);
-  putInCoherentMap(waveStore[1], peakInd, coherentWave);
+  if(waveStore[1]){
+    delete waveStore[1];
+  }
+  waveStore[1] = xPolCoherentWave;
   
   const TGraphAligned* gr = coherentWave->even();
   const TGraphAligned* grX = xPolCoherentWave->even();
 
   const TGraphAligned* grH = coherentWave->hilbertTransform()->even();
   const TGraphAligned* grHX = xPolCoherentWave->hilbertTransform()->even();
-  
-  FFTtools::stokesParameters(gr->GetN(),
-                             gr->GetY(),  grH->GetY(),
-                             grX->GetY(), grHX->GetY(),
-                             &(info.I), &(info.Q), &(info.U), &(info.V));
 
-
-
-  
-
+  if(pol==AnitaPol::kHorizontal){
+    FFTtools::stokesParameters(gr->GetN(),
+                               gr->GetY(),  grH->GetY(),
+                               grX->GetY(), grHX->GetY(),
+                               &(info.I), &(info.Q), &(info.U), &(info.V));
+  }
+  else{
+    FFTtools::stokesParameters(gr->GetN(),
+                               gr->GetY(),  grH->GetY(),
+                               grX->GetY(), grHX->GetY(),
+                               &(info.I), &(info.Q), &(info.U), &(info.V));    
+  }
 }
 
 
@@ -123,12 +118,10 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     for(Int_t peakInd=0; peakInd < thisNumPeaks; peakInd++){
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
-      std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
-      InterferometricMap* h = NULL;
-      if(it!=fineMaps[pol].end()){
-	h = it->second;
-      }
-      else{
+      
+      
+      InterferometricMap* h = fineMaps[pol][peakInd];
+      if(!h){
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
       }
 
@@ -146,10 +139,10 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       // deconvolved
       // deconvolved_filtered
       
-      fillWaveformInfo(pol, peakInd, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol],    h);
-      fillWaveformInfo(pol, peakInd, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol],            h);
-      fillWaveformInfo(pol, peakInd, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol], h);
-      fillWaveformInfo(pol, peakInd, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol],         h);
+      fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol][peakInd],    h);
+      fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol][peakInd],            h);
+      fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h);
+      fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol][peakInd],         h);
       
       if(usefulPat != NULL){
       
@@ -200,8 +193,18 @@ void Acclaim::AnalysisReco::initializeInternals(){
     }
   }
 
-  coarseMaps[AnitaPol::kHorizontal] = NULL;//new InterferometricMap("h0H", "h0H", InterferometricMap::getBin0PhiDeg());
-  coarseMaps[AnitaPol::kVertical] = NULL; //new InterferometricMap("h0V", "h0V", InterferometricMap::getBin0PhiDeg());
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    coarseMaps[polInd] = NULL;
+    for(int peakInd=0; peakInd < AnitaEventSummary::maxDirectionsPerPol; peakInd++){
+      fineMaps[polInd][peakInd] = NULL;
+      for(int xPol=0; xPol < AnitaPol::kNotAPol; xPol++){
+        wfCoherentFiltered[polInd][peakInd][xPol] = NULL;
+        wfCoherent[polInd][peakInd][xPol] = NULL;
+        wfDeconvolved[polInd][peakInd][xPol] = NULL;
+        wfDeconvolvedFiltered[polInd][peakInd][xPol] = NULL;
+      }
+    }
+  }
 
   fUseOffAxisDelay = 1;
   fCoherentDeltaPhi = 2; // +/- this many phi-sectors when coherently summing waves
@@ -345,15 +348,7 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getMap(AnitaPol::AnitaPol_t 
 
 Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd){
 
-  InterferometricMap* h = NULL;
-
-  std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find((int)peakInd);
-  if(it!=fineMaps[pol].end()){
-    // could still be null though!
-    h = it->second;
-    it->second = NULL;
-  }
-
+  InterferometricMap* h = fineMaps[pol][peakInd];
   if(h==NULL){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find fineMap with pol " << pol 
 	      << " for peakInd = " << peakInd << " about to return NULL." << std::endl;
@@ -415,26 +410,10 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
 
   // std::cout << h->GetName() << std::endl;
   
-  std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakIndex);
-  if(it!=fineMaps[pol].end() && it->second != NULL){
-    // std::cerr << "trying to delete... " << it->first << "\t" << it->second << std::endl;
-    delete it->second;
-    fineMaps[pol].erase (it);
-    // delete it->second;
-    // it->second = NULL;
+  if(fineMaps[pol][peakIndex]){
+    delete fineMaps[pol][peakIndex];
   }
-
-  // for(it=fineMaps[pol].begin(); it!=fineMaps[pol].end(); ++it){
-  //   std::cout << "the fineMaps[ " << pol << "] contains " << it->first << "\t" << it->second << std::endl;
-  // }
-
   fineMaps[pol][peakIndex] = h;
-  
-  // for(it=fineMaps[pol].begin(); it!=fineMaps[pol].end(); ++it){
-  //   std::cout << "the fineMaps[ " << pol << "] contains " << it->first << "\t" << it->second << std::endl;
-  // }
-
-
 }
 
 
@@ -499,14 +478,15 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
 
 
 void Acclaim::AnalysisReco::swapPol(AnitaPol::AnitaPol_t& pol) const{
+
   if(pol==AnitaPol::kHorizontal){
     pol = AnitaPol::kVertical;
   }
-  else if(pol==AnitaPol::kHorizontal){
+  else if(pol==AnitaPol::kVertical){
     pol = AnitaPol::kHorizontal;      
   }
   else{
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unknown polarisation!" << std::endl;
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unknown polarisation!\t" << pol << std::endl;
   }  
 }
 
@@ -692,133 +672,120 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   std::vector<TGraphAligned*> drawnCoherent;
   Double_t coherentMax = -1e9, coherentMin = 1e9;
   
-  const int nFine = fineMaps[pol].size();
+  const int nFine = 3; // maybe discover this dynamically?
   for(int peakInd = 0; peakInd < nFine; peakInd++){
     double yUp = 1 - double(peakInd)/nFine;
     double yLow = yUp - double(1)/nFine;    
     TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
+
     
-    std::map<Int_t, InterferometricMap*>::iterator it = fineMaps[pol].find(peakInd);
-    if(it!=fineMaps[pol].end()){
-      InterferometricMap* h = it->second;
-      if(h){
-	h->SetTitleSize(1);
-	h->GetXaxis()->SetTitleSize(0.01);
-	h->GetYaxis()->SetTitleSize(0.01);        
+    InterferometricMap* h = fineMaps[pol][peakInd];
+    if(h){
+      h->SetTitleSize(1);
+      h->GetXaxis()->SetTitleSize(0.01);
+      h->GetYaxis()->SetTitleSize(0.01);        
 
-	h->Draw("col");
-	drawnFineMaps.push_back(h);
+      h->Draw("col");
+      drawnFineMaps.push_back(h);
 
 	
-	TGraph& gr = h->getPeakPointGraph();
-	gr.Draw("psame");
+      TGraph& gr = h->getPeakPointGraph();
+      gr.Draw("psame");
 
-	TGraph& gr2 = h->getEdgeBoxGraph();
+      TGraph& gr2 = h->getEdgeBoxGraph();
 
-	gr2.Draw("lsame");
-	gr.SetMarkerColor(peakColors[pol][peakInd]);
-	gr.SetMarkerStyle(8); // dot
-	gr2.SetLineColor(peakColors[pol][peakInd]);
-	gr2.SetLineWidth(4);
+      gr2.Draw("lsame");
+      gr.SetMarkerColor(peakColors[pol][peakInd]);
+      gr.SetMarkerStyle(8); // dot
+      gr2.SetLineColor(peakColors[pol][peakInd]);
+      gr2.SetLineWidth(4);
 	
 
 	
 	
-	coarseMapPad->cd();
-	TGraph* gr3 = (TGraph*) gr2.Clone();
-	gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
+      coarseMapPad->cd();
+      TGraph* gr3 = (TGraph*) gr2.Clone();
+      gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
 	
-	gr3->SetLineWidth(2);
-	// gr.Draw("psame");
-	gr3->Draw("lsame");	
-      }
+      gr3->SetLineWidth(2);
+      // gr.Draw("psame");
+      gr3->Draw("lsame");	
     }
 
     TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
     TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
-    std::map<Int_t, AnalysisWaveform*>::iterator it2 = wfCoherentFiltered[pol][peakInd].find(peakInd);
-    // std::map<Int_t, AnalysisWaveform*>::iterator it3 = wfCoherent[pol].find(peakInd);
-    std::map<Int_t, AnalysisWaveform*>::iterator it3 = wfDeconvolved[pol][peakInd].find(peakInd);    
-    
-    // if(it2!=wfCoherentFiltered[pol].end() && it3!=wfCoherent[pol].end()){
-    if(it2!=wfCoherentFiltered[pol][peakInd].end() && it3!=wfDeconvolved[pol][peakInd].end()){      
-      AnalysisWaveform* coherentWave = it2->second;
-      AnalysisWaveform* coherentUnfilteredWave = it3->second;
-      if(coherentWave && coherentUnfilteredWave){
+    AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
+    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    if(coherentWave && coherentUnfilteredWave){
 	
-	const char* opt = "al";
+      const char* opt = "al";
 
-	// don't want to be able to edit it by accident so copy it...
-	const TGraphAligned* gr = coherentWave->even();
-	TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
+      // don't want to be able to edit it by accident so copy it...
+      const TGraphAligned* gr = coherentWave->even();
+      TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
 
-	// don't want to be able to edit it by accident so copy it...
-	const TGraphAligned* gr3 = coherentUnfilteredWave->even();
-	TGraphAligned* gr4 = (TGraphAligned*) gr3->Clone();
+      // don't want to be able to edit it by accident so copy it...
+      const TGraphAligned* gr3 = coherentUnfilteredWave->even();
+      TGraphAligned* gr4 = (TGraphAligned*) gr3->Clone();
         
 
-	gr2->SetFillColor(0);
-	gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-	gr4->SetFillColor(0);
-	gr4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+      gr2->SetFillColor(0);
+      gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+      gr4->SetFillColor(0);
+      gr4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
         
-	TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
-	gr4->SetTitle(title);
-	gr2->SetLineColor(peakColors[pol][peakInd]);
-	gr4->SetLineColor(kRed);
-	gr4->SetLineStyle(3);
+      TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
+      gr4->SetTitle(title);
+      gr2->SetLineColor(peakColors[pol][peakInd]);
+      gr4->SetLineColor(kRed);
+      gr4->SetLineStyle(3);
 
-	coherentPad->cd();
-	gr4->Draw(opt);
-	gr2->Draw("lsame");
+      coherentPad->cd();
+      gr4->Draw(opt);
+      gr2->Draw("lsame");
 
-	drawnCoherent.push_back(gr2);
-	drawnCoherent.push_back(gr4);
+      drawnCoherent.push_back(gr2);
+      drawnCoherent.push_back(gr4);
 
-        double max2, min2;
-        Acclaim::RootTools::getMaxMin(gr2, max2, min2);
-        double max4, min4;
-        Acclaim::RootTools::getMaxMin(gr4, max4, min4);
+      double max2, min2;
+      Acclaim::RootTools::getMaxMin(gr2, max2, min2);
+      double max4, min4;
+      Acclaim::RootTools::getMaxMin(gr4, max4, min4);
 
-        double min = min2 < min4 ? min2 : min4;
-        double max = max2 > max4 ? max2 : max4;
+      double min = min2 < min4 ? min2 : min4;
+      double max = max2 > max4 ? max2 : max4;
 
-        min = min < 0 ? min*1.1 : min*0.9;
-        max = max > 0 ? max*1.1 : max*0.9;
+      min = min < 0 ? min*1.1 : min*0.9;
+      max = max > 0 ? max*1.1 : max*0.9;
         
-        coherentMax = coherentMax > max ? coherentMax : max;
-        coherentMin = coherentMin < min ? coherentMin : min;
+      coherentMax = coherentMax > max ? coherentMax : max;
+      coherentMin = coherentMin < min ? coherentMin : min;
 	
-	const TGraphAligned* grPower = coherentWave->powerdB();
-	TGraphAligned* grPower2 = (TGraphAligned*) grPower->Clone();
-	grPower2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-	title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
-	grPower2->SetTitle(title);
-	grPower2->SetLineColor(peakColors[pol][peakInd]);
+      const TGraphAligned* grPower = coherentWave->powerdB();
+      TGraphAligned* grPower2 = (TGraphAligned*) grPower->Clone();
+      grPower2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+      title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
+      grPower2->SetTitle(title);
+      grPower2->SetLineColor(peakColors[pol][peakInd]);
 
 
-	const TGraphAligned* grPower3 = coherentUnfilteredWave->powerdB();
-	TGraphAligned* grPower4 = (TGraphAligned*) grPower3->Clone();
-	grPower4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-	title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
-	grPower4->SetTitle(title);
-	grPower4->SetLineColor(kRed);
+      const TGraphAligned* grPower3 = coherentUnfilteredWave->powerdB();
+      TGraphAligned* grPower4 = (TGraphAligned*) grPower3->Clone();
+      grPower4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
+      title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
+      grPower4->SetTitle(title);
+      grPower4->SetLineColor(kRed);
         
-	coherentFftPad->cd();
-	grPower4->Draw(opt);
-	grPower2->Draw("lsame");        
+      coherentFftPad->cd();
+      grPower4->Draw(opt);
+      grPower2->Draw("lsame");        
 
-	// std::cout << "here \t" << summaryGraphs.size() << std::endl;
-      }
-      else{
-	std::cerr << "missing coherent pointer?\t" << pol << "\t" << peakInd << std::endl;
-      }
+      // std::cout << "here \t" << summaryGraphs.size() << std::endl;
     }
     else{
-      std::cerr << "missing coherent in map?\t" << pol << "\t" << peakInd << std::endl;
+      std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << coherentWave << "\t" << coherentUnfilteredWave << std::endl;
     }
-
   }
 
   if(drawnFineMaps.size() > 0){
