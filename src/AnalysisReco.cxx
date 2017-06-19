@@ -43,25 +43,29 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
     delete waveStore[1];
   }
   waveStore[1] = xPolCoherentWave;
+
+  AnalysisWaveform* hWave = pol == AnitaPol::kHorizontal ? coherentWave : xPolCoherentWave;
+  AnalysisWaveform* vWave = pol == AnitaPol::kHorizontal ? xPolCoherentWave : coherentWave;  
+
+  const TGraphAligned* grV = vWave->even();
+  const TGraphAligned* grH = hWave->even();  
+
+  const TGraphAligned* grV_hilbert = vWave->hilbertTransform()->even();
+  const TGraphAligned* grH_hilbert = hWave->hilbertTransform()->even();  
   
-  const TGraphAligned* gr = coherentWave->even();
-  const TGraphAligned* grX = xPolCoherentWave->even();
+  // Stokes params (I,Q,U,V) - from the wikipedia https://en.wikipedia.org/wiki/Stokes_parameters#Examples
+  // (1,  1,  0,  0) HPol linearly polarised
+  // (1, -1,  0,  0) VPol linearly polarised
+  // (1,  0,  1,  0) +45 deg linearly polarised
+  // (1,  0, -1,  0) -45 deg linearly polarised
+  // (1,  0,  0,  1) Right hand circularaly polarised
+  // (1,  0,  0, -1) Left hand circularaly polarised
+  // (1,  0,  0,  0) Unpolarised
 
-  const TGraphAligned* grH = coherentWave->hilbertTransform()->even();
-  const TGraphAligned* grHX = xPolCoherentWave->hilbertTransform()->even();
-
-  if(pol==AnitaPol::kHorizontal){
-    FFTtools::stokesParameters(gr->GetN(),
-                               gr->GetY(),  grH->GetY(),
-                               grX->GetY(), grHX->GetY(),
-                               &(info.I), &(info.Q), &(info.U), &(info.V));
-  }
-  else{
-    FFTtools::stokesParameters(gr->GetN(),
-                               gr->GetY(),  grH->GetY(),
-                               grX->GetY(), grHX->GetY(),
-                               &(info.I), &(info.Q), &(info.U), &(info.V));    
-  }
+  FFTtools::stokesParameters(grH->GetN(),
+                             grH->GetY(),  grH_hilbert->GetY(),
+                             grV->GetY(), grV_hilbert->GetY(),
+                             &(info.I), &(info.Q), &(info.U), &(info.V));
 }
 
 
@@ -632,10 +636,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
   const int numColsForNow = 3;
   EColor peakColors[AnitaPol::kNotAPol][numColsForNow] = {{kBlack, EColor(kMagenta+2), EColor(kViolet+2)},
-							  {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}};
-  
-  
-
+							  {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}}; 
 
   if(wholePad==NULL){
     UInt_t eventNumber = cc->eventNumber[pol];

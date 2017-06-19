@@ -110,7 +110,6 @@ class AnalysisReco : public TObject, public AnitaEventReconstructor {
   FilterStrategy* fMinFilter; //!< Would be no filters, but for ANITA-3 data we need an ALFA filter
   FilterStrategy* fMinDecoFilter; //!< Minimum filter + deconvolution filter
 
-
   void swapPol(AnitaPol::AnitaPol_t& pol) const;
   
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
