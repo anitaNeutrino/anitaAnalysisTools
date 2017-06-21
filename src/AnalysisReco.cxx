@@ -3,6 +3,7 @@
 #include "InterferometryCache.h"
 #include "AcclaimFilters.h"
 #include "ResponseManager.h"
+#include <numeric>
 
 ClassImp(Acclaim::AnalysisReco);
 
@@ -21,37 +22,80 @@ Acclaim::AnalysisReco::~AnalysisReco(){
 
 
 
+
+/**
+ * Calculate relevant quantities and fill the waveform info in the AnitaEventSummary
+ *
+ * This section may change rapidly as the analysis continues...
+ *
+ * @param pol is the polarisation
+ * @param info is the selected WaveformInfo in the ANITA event summary
+ * @param fEv is the FilteredAnitaEvent from which we are coherently summing
+ * @param waveStore is the internal storage in the AnalysisReco class (used to save a copy for MagicDisplay)
+ * @param h is the InterferometricMap which contains the peak direction in which we want to coherently sum
+ */
 void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                                              AnitaEventSummary::WaveformInfo& info,
                                              const FilteredAnitaEvent* fEv,
                                              AnalysisWaveform** waveStore,
                                              InterferometricMap* h) const {
+
+  // This section will fill the WaveformInfo as rapidly as I can keep up...
+  // Some variables are marked with TODO, because they haven't been implemented yet.
+
+
+
+  ////////////////////////////////////////////////////////////////
+  // Double_t snr; ///Signal to Noise of waveform
+  // Double_t peakHilbert; /// peak of hilbert envelope
+  // Double_t peakVal;  /// peak value
+  // Double_t xPolPeakVal;  // Peak of xpol trace
+  // Double_t xPolPeakHilbert;  // Peak of xpol hilbert Envelope
+
+  // Double_t I,Q,U,V;  // Stokes Parameters
+
+  // Double_t totalPower;  ///Total power in waveform
+  // Double_t totalPowerXpol;  ///Total power in xPol waveform
+
   
   AnalysisWaveform* coherentWave = coherentlySum(fEv, h);
-  if(waveStore[0]){
-    delete waveStore[0];
-  }
+
+  // Internal storage
+  if(waveStore[0]) delete waveStore[0];
   waveStore[0] = coherentWave;
 
-  // hilbert peak
+  
+  info.snr = 0; // TODO
+  
   const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
   info.peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
 
-  // stokes parameters
-  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, h, true);
-  if(waveStore[1]){
-    delete waveStore[1];
-  }
+  const TGraphAligned* gr = coherentWave->even();
+  info.peakVal = TMath::MaxElement(gr->GetN(), gr->GetY());
+
+
+  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, h, true); // cross polarisation
+
+  // Internal storage
+  if(waveStore[1]) delete waveStore[1];
   waveStore[1] = xPolCoherentWave;
 
+  const TGraphAligned* grHilbertX = xPolCoherentWave->hilbertEnvelope();
+  info.xPolPeakHilbert = TMath::MaxElement(grHilbertX->GetN(), grHilbertX->GetY());
+
+  const TGraphAligned* grX = xPolCoherentWave->even();
+  info.xPolPeakVal = TMath::MaxElement(grX->GetN(), grX->GetY());
+
+
+  // Calculate Stokes parameter's, some kind of windowing around the peak time will probably have to be implemented
   AnalysisWaveform* hWave = pol == AnitaPol::kHorizontal ? coherentWave : xPolCoherentWave;
   AnalysisWaveform* vWave = pol == AnitaPol::kHorizontal ? xPolCoherentWave : coherentWave;  
 
   const TGraphAligned* grV = vWave->even();
-  const TGraphAligned* grH = hWave->even();  
+  const TGraphAligned* grH = hWave->even();
 
   const TGraphAligned* grV_hilbert = vWave->hilbertTransform()->even();
-  const TGraphAligned* grH_hilbert = hWave->hilbertTransform()->even();  
+  const TGraphAligned* grH_hilbert = hWave->hilbertTransform()->even();
   
   // Stokes params (I,Q,U,V) - from the wikipedia https://en.wikipedia.org/wiki/Stokes_parameters#Examples
   // (1,  1,  0,  0) HPol linearly polarised
@@ -66,6 +110,51 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                              grH->GetY(),  grH_hilbert->GetY(),
                              grV->GetY(), grV_hilbert->GetY(),
                              &(info.I), &(info.Q), &(info.U), &(info.V));
+
+
+  const TGraphAligned* grPow = coherentWave->power();
+  info.totalPower = std::accumulate(grPow->GetY(), grPow->GetY() + grPow->GetN(), 0);
+
+  const TGraphAligned* grPowX = xPolCoherentWave->power();
+  info.totalPowerXpol = std::accumulate(grPowX->GetY(), grPowX->GetY() + grPowX->GetN(), 0);
+
+
+
+  // //Shape parameters, computed using hilbert envelope
+  // // This should probably taken out into its own class
+  // Double_t riseTime_10_90;  /// Rise time of hilbert env from 10% to 90% of peak
+  // Double_t riseTime_10_50;  /// Rise time of hilbert env from 10% to 50% of peak
+  // Double_t fallTime_90_10;  /// Fall time of hilbert env from 90% to 10% of peak
+  // Double_t fallTime_50_10;  /// Fall time of hilbert env from 50% to 10% of peak
+  // Double_t width_50_50;   /// Width from first envelope crossing of 50 percent of peak to last
+  // Double_t width_10_10;  /// Width from first envelope crossing of 10 percent of peak to last
+  // Double_t power_10_10;  /// Power enclosed within 10_10 width
+  // Double_t power_50_50;  /// Power enclosed within 50_50 width
+  // Double_t peakTime;  // Time that peak hilbert env occurs
+  // Double_t peakMoments[5];  // moments about Peak  (1st - 5th moments)
+
+  int maxIndex = std::find(grHilbert->GetY(), grHilbert->GetY() + grHilbert->GetN(), info.peakHilbert) - grHilbert->GetY();
+  if(maxIndex >= grHilbert->GetN()){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__
+              << ", unable to find time of Hilbert envelope peak using std::find()."
+              << "peakHilbert = " << info.peakHilbert << ", numPoints = " << grHilbert->GetN()
+              << ", maxIndex = " << maxIndex << std::endl;
+  }
+  info.peakTime = grHilbert->GetX()[maxIndex];
+
+  grHilbert->getMoments(sizeof(info.peakMoments)/sizeof(double), info.peakTime, info.peakMoments);
+
+  ///////////////////////////////////////////////////////////////////////////////////
+  // CURRENTLY NOT USING THESE...
+  //
+  // //spectrum info
+  // Double_t bandwidth[peaksPerSpectrum];  /// bandwidth of each peak (implementation defined, may not be comparable between analyses) 
+  // Double_t peakFrequency[peaksPerSpectrum]; //peak frequency of power spectrum 
+  // Double_t peakPower[peaksPerSpectrum]; //power within +/- bandwidth of each peak 
+  // Double_t spectrumSlope;  ///  Slope of line fit to spectrum (in log-space, so this is spectral-index) 
+  // Double_t spectrumIntercept; /// Intercept of line fit to spectrum (in log-space) 
+
+
 }
 
 
