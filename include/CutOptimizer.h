@@ -23,12 +23,26 @@ namespace Acclaim{
 class CutOptimizer{
 
  public:
-  CutOptimizer(const TString& signalTreeWildCards, const TString& backgroundTree);
+  CutOptimizer(const TString& outFileName, const TString& signalTreeWildCards, const TString& backgroundTree);
   void optimize();
 
  protected:
-  TChain* fSignalChain;
-  TChain* fBackgroundChain;
+  void makeOutputFile();
+  void getSignalAndBackgroundTrees();
+  
+  TString fOutFileName;  
+  TString fSignalName;
+  TString fBackgroundName;
+  TFile* fOutFile;
+
+  TFile* fSignalFile;
+  TTree* fSignalTree;
+
+  TFile* fBackgroundFile;
+  TTree* fBackgroundTree;
+
+
+  
   
 };
 
