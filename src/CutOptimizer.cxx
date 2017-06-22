@@ -2,11 +2,14 @@
 #include "OutputConvention.h"
 #include "TObject.h"
 
+
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,10,0)
 #include "TMVA/Factory.h"
 #include "TMVA/DataLoader.h"
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodFisher.h"
 #include "TXMLEngine.h"
+#endif
 
 bool debug = false;
 
