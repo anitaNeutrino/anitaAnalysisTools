@@ -12,6 +12,8 @@
 
 #include "TString.h"
 #include "TChain.h"
+#include "TXMLEngine.h"
+#include "TH1D.h"
 
 namespace Acclaim{
 
@@ -23,12 +25,15 @@ namespace Acclaim{
 class CutOptimizer{
 
  public:
+  static void setDebug(bool db);
+  
   CutOptimizer(const TString& outFileName, const TString& signalTreeWildCards, const TString& backgroundTree);
   void optimize();
 
  protected:
   void makeOutputFile();
   void getSignalAndBackgroundTrees();
+
   
   TString fOutFileName;  
   TString fSignalName;
@@ -41,6 +46,25 @@ class CutOptimizer{
   TFile* fBackgroundFile;
   TTree* fBackgroundTree;
 
+
+  class FisherResult {
+
+    typedef std::map<int, double> WeightMap;
+    typedef std::map<int, TString> ExpressionMap;
+    
+   public:
+    FisherResult(const TString& fileName){
+      getResultFromXML(fileName.Data());
+    }
+    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col=kBlack) const;
+    
+   protected:
+    void getResultFromXML(const char* filename);
+    void parseNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
+    
+    ExpressionMap fExpressions;
+    WeightMap fWeights;
+  };
 
   
   
