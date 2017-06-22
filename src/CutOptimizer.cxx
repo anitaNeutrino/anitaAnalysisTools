@@ -13,7 +13,7 @@
 
 bool debug = false;
 
-static void setDebug(bool db){
+void Acclaim::CutOptimizer::setDebug(bool db){
   debug = db;
 }
 
@@ -23,7 +23,7 @@ TH1D* Acclaim::CutOptimizer::FisherResult::makeHist(int nBinsX, const TString& h
 
   TString command;
 
-  for(int i=0; i < fWeights.size(); i++){
+  for(int i=0; i < (int)fWeights.size(); i++){
     WeightMap::const_iterator wit = fWeights.find(i);
     if(wit!=fWeights.end()){
       TString w = TString::Format("%lf", wit->second);
