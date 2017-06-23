@@ -46,6 +46,8 @@ int main(int argc, char* argv[]){
 
     p.inc(entry, n);
   }
+
+  t->BuildIndex("run", "eventNumber");
   
   f->Write();
   f->Close();
