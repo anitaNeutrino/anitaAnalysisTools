@@ -502,7 +502,7 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
   fCurrentlyLoadingHistory = true;
   bool loadedHistory = false;
 
-  const int safetyMargin = 100; // we don't add self triggered blasts or SURF saturated events, but I don't know how many there are before I try
+  const int safetyMargin = 200; // we don't add self triggered blasts or SURF saturated events, but I don't know how many there are before I try
   const int numEventsToLoopOver = bufferSize + safetyMargin; // so do a little more than the minimum
 
   Int_t run = fEv->getHeader()->run;
@@ -578,11 +578,13 @@ void Acclaim::FourierBuffer::automagicallyLoadHistory(const FilteredAnitaEvent* 
 	// std::cout << thisEntry << "\t" << entry << "\t" << d->header()->eventNumber << "\t" << std::endl;
       
 	if(thisEntry > 0){
-	
-	  FilteredAnitaEvent fEv2(d->useful(), (FilterStrategy*) fEv->getStrategy(), d->gps(), d->header(), false);
-	  if(needToAddManually){
-	    add(&fEv2);
-	  }
+          bool isSafe = Acclaim::QualityCut::applyAll(d->useful(), NULL);
+          if(isSafe){
+            FilteredAnitaEvent fEv2(d->useful(), (FilterStrategy*) fEv->getStrategy(), d->gps(), d->header(), false);
+            if(needToAddManually){
+              add(&fEv2);
+            }
+          }
 	}
 	p.inc(eventsDone, eventsInQueue);
 	eventsDone++;
