@@ -52,9 +52,9 @@ Bool_t Acclaim::QualityCut::passedAll(const AnitaEventSummary* sum, bool describ
     const char* p = "passed";
     const char* f = "failed";
     std::cout << "Event Summary run " << sum->run << " eventNumber " << sum->eventNumber << " failed a quality cut: " << std::endl;
-    std::cout << "SURF Saturation cut = " << (sum->flags.isVarner ? p : f) << ", ";
-    std::cout << "Payload Blast cut = " << (sum->flags.isPayloadBlast ? p : f) << ", ";
-    std::cout << "Num points cut = " << (sum->flags.isPayloadBlast ? p : f) << std::endl;
+    std::cout << "SURF Saturation cut = " << (sum->flags.isVarner ? f : p) << ", ";
+    std::cout << "Payload Blast cut = " << (sum->flags.isPayloadBlast ? f : p) << ", ";
+    std::cout << "Num points cut = " << (sum->flags.isVarner2 ? f : p) << std::endl;
   }  
   return isGood;
 }
