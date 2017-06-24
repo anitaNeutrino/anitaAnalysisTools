@@ -20,6 +20,7 @@
 
 namespace Acclaim{
 
+
   /** 
    * @class QualityCut
    * @brief Base class from which all my quality cuts inherit
@@ -34,6 +35,8 @@ namespace Acclaim{
 
   public:
     static Bool_t applyAll(const UsefulAnitaEvent* usefulEvent, AnitaEventSummary* sum=NULL); // static utility function, applies all cuts defined here
+    static Bool_t passedAll(const AnitaEventSummary* sum, bool describe = false); // static utility function, reads flags in AnitaEventSummary, returns true if event passed
+    
 
     
     QualityCut(){;}

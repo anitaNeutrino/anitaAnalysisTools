@@ -36,6 +36,30 @@ Bool_t Acclaim::QualityCut::applyAll(const UsefulAnitaEvent* usefulEvent, AnitaE
 }
 
 
+
+/** 
+ * @brief Reads the flags set in AnitaEventSummary, returns true if the event passed all quality cuts
+ * 
+ * @param sum points to the AnitaEventSummary to evalutate
+ * @param describe if true prints a message to stdout describing the reason the event failed a quality cut (default false)
+ * 
+ * @return returns true if the event passes all quality cuts, false otherwise.
+ */
+Bool_t Acclaim::QualityCut::passedAll(const AnitaEventSummary* sum, bool describe){
+      
+  Bool_t isGood = sum->flags.isGood;
+  if(describe){
+    const char* p = "passed";
+    const char* f = "failed";
+    std::cout << "Event Summary run " << sum->run << " eventNumber " << sum->eventNumber << " failed a quality cut: " << std::endl;
+    std::cout << "SURF Saturation cut = " << (sum->flags.isVarner ? p : f) << ", ";
+    std::cout << "Payload Blast cut = " << (sum->flags.isPayloadBlast ? p : f) << ", ";
+    std::cout << "Num points cut = " << (sum->flags.isPayloadBlast ? p : f) << std::endl;
+  }  
+  return isGood;
+}
+
+
 /** 
  * @brief Constructor for the SurfSaturation cut, sets some hard coded default values
  *

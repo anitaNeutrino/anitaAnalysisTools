@@ -4,6 +4,7 @@
 #include "AnitaEventSummary.h"
 
 #include "TH2D.h"
+#include "QualityCut.h"
 
 using namespace Acclaim;
 
@@ -51,7 +52,10 @@ int main(int argc, char* argv[]){
       ss.getEntry(entry);
       AnitaEventSummary* sum = ss.summary();
 
-      // h.Fill(sum->realTime, sum->higherPeak().value);
+      if(QualityCut::passedAll(sum, true)){
+
+        // h.Fill(sum->realTime, sum->higherPeak().value);
+      }
       h.Fill(sum->eventNumber, sum->higherPeak().value);
 
       p.inc(entry, N);
