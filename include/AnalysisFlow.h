@@ -46,7 +46,7 @@ namespace Acclaim
     void prepareDataSet();
     void prepareOutputFiles();
     Bool_t shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
-
+    
   protected:
     int fRun;
     selection fSelection;
@@ -67,7 +67,7 @@ namespace Acclaim
     TFile* fOutFile;
     TTree* fSumTree;
 
-    
+    ANALYSIS_SETTING(Int_t, DoAll);
   };
 
 }

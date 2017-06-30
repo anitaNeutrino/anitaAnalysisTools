@@ -318,7 +318,7 @@ void Acclaim::AnalysisFlow::doAnalysis(){
       eventSummary = new AnitaEventSummary(header, &usefulPat);
       Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, eventSummary);
 
-      if(isGoodEvent){
+      if(isGoodEvent || fDoAll){
 	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
 	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
