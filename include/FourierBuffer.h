@@ -154,6 +154,8 @@ namespace Acclaim
 			    std::vector<TGraphFB>* gr,
 			    int n, double df, double defaultVal);
 
+    TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const;
+
     
     // vectors of frequency bins
     std::vector<double> sumPowers[AnitaPol::kNotAPol][NUM_SEAVEYS];
@@ -210,27 +212,7 @@ namespace Acclaim
     mutable std::vector<TGraphFB> grProbs[AnitaPol::kNotAPol]; // for drawSummary
     
     
-    TGraphFB* getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const{
-      switch(choice){
-      case None:
-	return NULL;
-      case Chisquare:
-	return &grChiSquares[pol][ant];
-      case ReducedChisquare:
-	// return &grReducedChiSquares[pol][ant];
-	return &grReducedChiSquaresRelativeToSpectrum[pol][ant];	
-      case NDF:
-	return &grNDFs[pol][ant];
-      case RayleighAmplitude:
-      	// return &grAmplitudes[pol][ant];
-      	return &grLastAmps[pol][ant];        
-      case Prob:
-	return &grProbs[pol][ant];
-      }
-    }    
   };
-
-
 
 
   /**

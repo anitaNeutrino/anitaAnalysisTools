@@ -639,6 +639,27 @@ Acclaim::TGraphFB* Acclaim::FourierBuffer::getAvePowSpec(Int_t ant, AnitaPol::An
 
 
 
+Acclaim::TGraphFB* Acclaim::FourierBuffer::getSelectedGraphForSummary(SummaryOption_t choice, int ant, AnitaPol::AnitaPol_t pol) const
+{
+  switch(choice){
+    case None:
+      return NULL;
+    case Chisquare:
+      return &grChiSquares[pol][ant];
+    case ReducedChisquare:
+      // return &grReducedChiSquares[pol][ant];
+      return &grReducedChiSquaresRelativeToSpectrum[pol][ant];
+    case NDF:
+      return &grNDFs[pol][ant];
+    case RayleighAmplitude:
+      // return &grAmplitudes[pol][ant];
+      return &grLastAmps[pol][ant];
+    case Prob:
+      return &grProbs[pol][ant];
+  }
+}
+
+
 Acclaim::TGraphFB* Acclaim::FourierBuffer::getBackground_dB(Int_t ant, AnitaPol::AnitaPol_t pol, int lastNEvents) const{
   
   TGraphFB* gr = getBackground(ant, pol, lastNEvents);
