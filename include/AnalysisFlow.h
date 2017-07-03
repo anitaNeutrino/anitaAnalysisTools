@@ -58,8 +58,7 @@ namespace Acclaim
     Long64_t fFirstEntry;
     Long64_t fLastEntry;
 
-
-    AnalysisReco* fReco;  
+    AnalysisReco* fReco;
     FilterStrategy* fFilterStrat;
     AnalysisSettings* fSettings;
   
@@ -68,6 +67,8 @@ namespace Acclaim
     TTree* fSumTree;
 
     ANALYSIS_SETTING(Int_t, DoAll);
+    ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
+    ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
   };
 
 }

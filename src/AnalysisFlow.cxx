@@ -4,6 +4,7 @@
 #include "FilterStrategy.h"
 #include "QualityCut.h"
 #include "AcclaimFilters.h"
+#include "NoiseMonitor.h"
 
 /** 
  * @brief Constructor
@@ -265,6 +266,7 @@ void Acclaim::AnalysisFlow::doAnalysis(){
 
   if(!fSettings){
     fSettings = new AnalysisSettings();
+    fSettings->apply(dynamic_cast<TObject*>(this));
   }
 
   if(!fReco){
@@ -297,6 +299,9 @@ void Acclaim::AnalysisFlow::doAnalysis(){
   }
 
   UInt_t lastEventConsidered = 0;
+  NoiseMonitor::WaveOption waveOpt = fNoiseEvenWaveforms > 0 ? NoiseMonitor::kEven : NoiseMonitor::kUneven;
+  NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, waveOpt, fOutFile);
+  
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
     fData->getEntry(entry);
@@ -321,8 +326,9 @@ void Acclaim::AnalysisFlow::doAnalysis(){
       if(isGoodEvent || fDoAll){
 	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
 	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
+
 	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
-	fReco->process(&filteredEvent, &usefulPat, eventSummary);
+	fReco->process(&filteredEvent, &usefulPat, eventSummary, &noiseMonitor);
       }
 
       fSumTree->Fill();
