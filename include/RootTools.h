@@ -60,6 +60,27 @@ namespace Acclaim
 
   namespace RootTools{
 
+  /** 
+   * Return the opposite polarisation, prints an error if there is non-sensical input
+   * Useful for getting the cross-polarisation.
+   * 
+   * @param pol is the polarisation to swap
+   * 
+   * @return the other polarisation if valid input, kNotAPol otherwise
+   */
+    inline AnitaPol::AnitaPol_t swapPol(AnitaPol::AnitaPol_t pol){
+      switch(pol){
+        case AnitaPol::kHorizontal:
+          return AnitaPol::kVertical;
+        case AnitaPol::kVertical:
+          return AnitaPol::kHorizontal;
+        default:
+          std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unknown polarisation!\t" << pol << std::endl;        
+          return AnitaPol::kNotAPol;
+      }
+    }
+
+  
     void writeTGraph(TGraph* gr, TString name);
     void printArray(int n, double* array, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
     void printYVals(TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
