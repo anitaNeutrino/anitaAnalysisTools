@@ -26,7 +26,7 @@ namespace Acclaim
  *
  * AnalysisFlow takes care of event selection, loading input data, saving output data, and contains a template function to loop over said data while performing the analysis reconstruction
  */
-  class AnalysisFlow {
+class AnalysisFlow : public TObject{
 
   public:
 
