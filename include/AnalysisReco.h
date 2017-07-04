@@ -49,8 +49,8 @@ class AnalysisReco : public TObject {
   InterferometricMap* getMap(AnitaPol::AnitaPol_t pol);
   InterferometricMap* getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd=0);
   
-  void reconstruct(AnitaPol::AnitaPol_t pol);
-  void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg);
+  void reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat = NULL);
+  void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, const Adu5Pat* pat = NULL);
 
   AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol, const std::vector<Int_t>& theAnts, Double_t peakPhiDeg, Double_t peakThetaDeg);
   AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts);
@@ -90,7 +90,6 @@ class AnalysisReco : public TObject {
   // (plan to add attachment function for external cross correlator)
   // if spawns one, sets the bool to true and deletes the cross correlator in destructor
   CrossCorrelator* fCrossCorr;
-
   bool spawnedCrossCorrelator;
   
   // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
@@ -102,6 +101,7 @@ class AnalysisReco : public TObject {
   void chooseAntennasForCoherentlySumming(int coherentDeltaPhi);
   
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
+  Int_t fLastCoherentDeltaPhi; // for checking whether recalculation is needed
   ANALYSIS_SETTING(Int_t, WhichResponseDir);
   ANALYSIS_SETTING(Int_t, UseOffAxisDelay);
   ANALYSIS_SETTING(Int_t, ResponseNPad);

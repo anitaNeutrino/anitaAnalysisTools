@@ -6,6 +6,7 @@
 #include "TMath.h"
 #include <iostream>
 #include "TString.h"
+#include "UsefulAdu5Pat.h"
 
 ClassImp(Acclaim::InterferometricMap);
 
@@ -204,6 +205,7 @@ void Acclaim::InterferometricMap::setNameAndTitle(){
 
 
 Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
+    : fUsefulPat(NULL)
 {
   fIsZoomMap = true;
   peakPhiSector = phiSector;
@@ -237,7 +239,7 @@ Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, 
 
 
 
- Acclaim::InterferometricMap::InterferometricMap(){
+Acclaim::InterferometricMap::InterferometricMap() : fUsefulPat(NULL){
   fIsZoomMap = false;
   peakPhiSector = -1;
   minPhiBin = -1;
@@ -248,9 +250,40 @@ Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, 
   const std::vector<double> coarseBinsTheta = Acclaim::InterferometricMap::getCoarseBinEdgesTheta();
   SetBins(coarseBinsPhi.size()-1, &coarseBinsPhi[0], coarseBinsTheta.size()-1, &coarseBinsTheta[0]);
 
-  initializeInternals();
-  
+  initializeInternals();  
 }
+
+
+
+/** 
+ * Default destructor
+ */
+Acclaim::InterferometricMap::~InterferometricMap(){
+  deletePat();
+}
+
+
+void Acclaim::InterferometricMap::deletePat(){
+  if(fUsefulPat) {
+    delete fUsefulPat;
+  }
+  fUsefulPat = NULL;  
+}
+
+
+
+void Acclaim::InterferometricMap::addGpsInfo(const UsefulAdu5Pat* usefulPat){
+  addGpsInfo(dynamic_cast<const Adu5Pat*>(usefulPat));
+}
+
+
+void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
+  deletePat();
+
+  fUsefulPat = new UsefulAdu5Pat(pat);
+}
+
+
 
 
 
@@ -633,6 +666,27 @@ TGraph& Acclaim::InterferometricMap::getPeakPointGraph(){
   return grs["grPeak"];
   
 }
+
+
+TGraph& Acclaim::InterferometricMap::getSunGraph(){
+
+  TGraph& grSun = findOrMakeGraph("grSun");
+
+  if(fUsefulPat){
+    Double_t phiDeg, thetaDeg;
+    fUsefulPat->getSunPosition(phiDeg, thetaDeg);
+
+    const double phi0 = getBin0PhiDeg();
+    phiDeg = phiDeg < phi0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+    phiDeg = phiDeg >= phi0 + DEGREES_IN_CIRCLE ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
+    thetaDeg*=-1;
+
+    grSun.SetPoint(0, phiDeg, thetaDeg);
+  }
+  return grs["grSun"];
+  
+}
+
 
 TGraph& Acclaim::InterferometricMap::getEdgeBoxGraph(){
 

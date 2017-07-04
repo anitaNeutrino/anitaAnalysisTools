@@ -67,7 +67,9 @@
 #include "TGraph.h"
 #include <map>
 
-
+class Adu5Pat;
+class UsefulAdu5Pat;
+    
 namespace Acclaim
 {
   
@@ -80,12 +82,16 @@ namespace Acclaim
   public:
     InterferometricMap(); //!< Coarse map constructor (also default constructor for ROOT)
     InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t centrePhi, Double_t phiRange, Double_t centreTheta, Double_t thetaRange); ///!< Fine map constructor
-
+    virtual ~InterferometricMap();
 
     void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
     void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const;
     void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = imagePeak, phiDeg = peakPhiDeg, thetaDeg = peakThetaDeg;}
     void ExecuteEvent(int event, int x, int y);
+
+    void addGpsInfo(const Adu5Pat* pat);
+    void addGpsInfo(const UsefulAdu5Pat* usefulPat);
+    
 
   
     inline Int_t GetNbinsPhi() const {return GetNbinsX();}
@@ -95,6 +101,7 @@ namespace Acclaim
 
     TGraph& getPeakPointGraph(); // for plotting
     TGraph& getEdgeBoxGraph(); // for plotting
+    TGraph& getSunGraph(); // for plotting    
 
     bool isAZoomMap() const {return fIsZoomMap;}
     Int_t getPeakPhiSector() const {return peakPhiSector;}
@@ -102,6 +109,9 @@ namespace Acclaim
 
     
   protected:
+
+    UsefulAdu5Pat* fUsefulPat;
+    void deletePat();
 
     TGraph& findOrMakeGraph(TString name);
   

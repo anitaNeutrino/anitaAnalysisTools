@@ -257,6 +257,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     std::vector<Double_t> coarseMapPeakPhiDegs;
     std::vector<Double_t> coarseMapPeakThetaDegs;
     coarseMaps[pol]->findPeakValues(fNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
+    coarseMaps[pol]->addGpsInfo(fEv->getGPS());
 
     eventSummary->nPeaks[pol] = fNumPeaks;
 
@@ -268,6 +269,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
       }
 
+      h->addGpsInfo(fEv->getGPS());
       h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
 
       // fill in difference between rough and fine
@@ -350,7 +352,9 @@ void Acclaim::AnalysisReco::initializeInternals(){
   }
 
   fUseOffAxisDelay = 1;
-  fCoherentDeltaPhi = 2; // +/- this many phi-sectors when coherently summing waves
+  fCoherentDeltaPhi = 2;
+  fLastCoherentDeltaPhi = -1;
+  fNumPeaks = 3;
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -394,10 +398,10 @@ Double_t Acclaim::AnalysisReco::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) 
 
   // ... in a const array
   const Int_t numPowers = 13;
-  const Double_t params[numPowers] = {0.00000e+00, 0.00000e+00, -1.68751e-05, 0.00000e+00,
-				      2.77815e-08,  0.00000e+00, -8.29351e-12,  0.00000e+00,
-				      1.15064e-15,  0.00000e+00, -7.71170e-20,  0.00000e+00,
-				      1.99661e-24};
+  static const Double_t params[numPowers] = {0.00000e+00, 0.00000e+00, -1.68751e-05, 0.00000e+00,
+                                             2.77815e-08,  0.00000e+00, -8.29351e-12,  0.00000e+00,
+                                             1.15064e-15,  0.00000e+00, -7.71170e-20,  0.00000e+00,
+                                             1.99661e-24};
   
   // Sum up the powers in off boresight angle.
   Double_t offBoresightDelay = 0;
@@ -547,7 +551,7 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
  * 
  * @param pol is the polarisation to reconstruct
  */
-void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol) {
+void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat) {
 
   if(coarseMaps[pol]==NULL)
   {
@@ -565,6 +569,10 @@ void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol) {
     }
   }
 
+  if(pat){
+    coarseMaps[pol]->addGpsInfo(pat);
+  }
+
   coarseMaps[pol]->Fill(pol, fCrossCorr, &dtCache);
 }
 
@@ -579,7 +587,7 @@ void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol) {
  * @param zoomCenterPhiDeg 
  * @param zoomCenterThetaDeg 
  */
-void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg) {
+void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, const Adu5Pat* pat) {
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
   if(zoomCenterPhiDeg < -500 || zoomCenterThetaDeg < -500 ||
@@ -599,6 +607,9 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);
 
   InterferometricMap* h = new InterferometricMap(peakIndex, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
+  if(pat){
+    h->addGpsInfo(pat);
+  }
   h->Fill(pol, fCrossCorr, &dtCache);  
 
   // std::cout << h->GetName() << std::endl;
@@ -694,9 +705,14 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
  */
 void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDeltaPhi){
 
-  if(coherentDeltaPhi!=fCoherentDeltaPhi){
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
+
+  if(coherentDeltaPhi!=fLastCoherentDeltaPhi){
+
     for(int peakPhiSector = 0; peakPhiSector < NUM_PHI; peakPhiSector++){
-      phiSectorToAnts[peakPhiSector].clear();
+      phiSectorToAnts[peakPhiSector] = std::vector<Int_t>();
+
+      // phiSectorToAnts[peakPhiSector].clear();
       for(int deltaPhiSect=-fCoherentDeltaPhi; deltaPhiSect <= fCoherentDeltaPhi; deltaPhiSect++){
 
         Int_t phiSector = peakPhiSector + deltaPhiSect;
@@ -705,10 +721,11 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
 
         for(int ring = 0; ring < AnitaRing::kNotARing; ring++){
           int ant = AnitaGeomTool::getAntFromPhiRing(phiSector, AnitaRing::AnitaRing_t(ring));
-          phiSectorToAnts[peakPhiSector].push_back(ant);      
+          phiSectorToAnts[peakPhiSector].push_back(ant);
         }
       }
     }
+    fLastCoherentDeltaPhi = fCoherentDeltaPhi;
   }
 }
 
@@ -885,6 +902,9 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   InterferometricMap* hCoarse = coarseMaps[pol];
   if(hCoarse){
     hCoarse->Draw("colz");
+    TGraph& grSun = hCoarse->getSunGraph();
+    grSun.Draw("psame");
+    grSun.SetMarkerStyle(kOpenCircle);
   }
 
   // std::vector<TGraph> grPeaks;
@@ -911,7 +931,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       h->Draw("col");
       drawnFineMaps.push_back(h);
 
-	
+
       TGraph& gr = h->getPeakPointGraph();
       gr.Draw("psame");
 
@@ -922,8 +942,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       gr.SetMarkerStyle(8); // dot
       gr2.SetLineColor(peakColors[pol][peakInd]);
       gr2.SetLineWidth(4);
-	
 
+      TGraph& grSun = h->getSunGraph();
+
+      grSun.Draw("psame");
+      grSun.SetMarkerStyle(kOpenCircle);
 	
 	
       coarseMapPad->cd();
