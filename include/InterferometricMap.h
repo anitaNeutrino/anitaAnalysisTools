@@ -9,15 +9,9 @@
 #ifndef INTERFEROMETRIC_MAP_H
 #define INTERFEROMETRIC_MAP_H
 
-// #define NUM_BINS_THETA 60
-// #define NUM_BINS_THETA 180
-// #define NUM_BINS_PHI 50
-// #define NUM_BINS_THETA 35
-// #define NUM_BINS_PHI 9
 #define NUM_BINS_THETA 70
 #define NUM_BINS_PHI 9
 
-// #define THETA_RANGE 150
 #define MIN_THETA -55
 #define MAX_THETA 35
 #define PHI_RANGE 22.5
@@ -28,23 +22,6 @@
 #define MAX_NUM_PEAKS 5
 #define PEAK_PHI_DEG_RANGE 10
 #define PEAK_THETA_DEG_RANGE 10
-
-// Image definitions
-// #define NUM_BINS_THETA 100
-// #define NUM_BINS_PHI 15
-// #define THETA_RANGE 150
-// #define PHI_RANGE 22.5
-
-
-// #define NUM_BINS_THETA_ZOOM 200
-// #define NUM_BINS_PHI_ZOOM 200
-// #define ZOOM_BINS_PER_DEGREE_PHI 20
-// #define ZOOM_BINS_PER_DEGREE_THETA 20
-
-// #define NUM_BINS_THETA_ZOOM 100
-// #define NUM_BINS_PHI_ZOOM 200
-// #define ZOOM_BINS_PER_DEGREE_PHI 20
-// #define ZOOM_BINS_PER_DEGREE_THETA 20
 
 #define NUM_BINS_THETA_ZOOM 40
 #define NUM_BINS_PHI_ZOOM 40
@@ -61,15 +38,14 @@
 
 #include "AnitaConventions.h"
 
-
-
 #include "TH2D.h"
 #include "TGraph.h"
 #include <map>
 
 class Adu5Pat;
 class UsefulAdu5Pat;
-    
+class TProfile2D;
+
 namespace Acclaim
 {
   
@@ -91,9 +67,9 @@ namespace Acclaim
 
     void addGpsInfo(const Adu5Pat* pat);
     void addGpsInfo(const UsefulAdu5Pat* usefulPat);
-    
 
-  
+    void project(TProfile2D* proj, double horizonKilometers);
+
     inline Int_t GetNbinsPhi() const {return GetNbinsX();}
     inline Int_t GetNbinsTheta() const {return GetNbinsY();}  
     inline const TAxis* GetPhiAxis() const {return GetXaxis();}
@@ -142,7 +118,7 @@ namespace Acclaim
 
     std::map<TString, TGraph> grs;
 
-    ClassDef(InterferometricMap, 1);
+    ClassDef(InterferometricMap, 2);
 
     // static members, may end up elsewhere at some point
   public:
