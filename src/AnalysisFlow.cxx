@@ -6,6 +6,8 @@
 #include "AcclaimFilters.h"
 #include "NoiseMonitor.h"
 
+ClassImp(Acclaim::AnalysisFlow);
+
 /** 
  * @brief Constructor
  *

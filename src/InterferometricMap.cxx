@@ -309,12 +309,12 @@ void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilome
   Int_t nx = proj->GetNbinsX();
   Int_t ny = proj->GetNbinsY();
 
-  const double phiMin = getBin0PhiDeg();
-  const double phiMax = phiMin + DEGREES_IN_CIRCLE;
+  const int nPhi = GetNbinsPhi();
+  const double phiMin = fXaxis.GetBinLowEdge(1);
+  const double phiMax = fXaxis.GetBinLowEdge(nPhi);
 
   const double thetaMin = fYaxis.GetBinLowEdge(1);
   const double thetaMax = fYaxis.GetBinLowEdge(GetNbinsTheta());
-  const int nPhi = GetNbinsPhi();
   const double floatPointErrorEpsilon = 0.0001;
   for(int by=1; by <= ny; by++){
     double northing = proj->GetYaxis()->GetBinLowEdge(by);
@@ -334,49 +334,51 @@ void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilome
         Double_t thetaDeg = -1*thetaWave*TMath::RadToDeg();
 
         if(thetaDeg >= thetaMin && thetaDeg <= thetaMax){
-
           Double_t phiDeg = phiWave*TMath::RadToDeg();
-
           phiDeg = phiDeg <  phiMin ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
           phiDeg = phiDeg >= phiMax ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
 
-          // my axis binning is that the low edge of the bin is the actual value
-          // so can't use TH2::Interpolate, which (sensibly) uses the bin centres
-          // so here's my implementation.
+          if(phiDeg >= phiMin && phiDeg <= phiMax){
 
-          // Get the grid points and values
-          Int_t phiBinLow = fXaxis.FindBin(phiDeg);
-          Int_t thetaBinLow = fYaxis.FindBin(thetaDeg);
-          Int_t phiBinHigh = phiBinLow == nPhi ? 1 : phiBinLow + 1;
 
-          double x1 = fXaxis.GetBinLowEdge(phiBinLow);
-          double x2 = fXaxis.GetBinLowEdge(phiBinHigh);
+            // my axis binning is that the low edge of the bin is the actual value
+            // so can't use TH2::Interpolate, which (sensibly) uses the bin centres
+            // so here's my implementation.
 
-          double y1 = fYaxis.GetBinLowEdge(thetaBinLow);
-          double y2 = fYaxis.GetBinLowEdge(thetaBinLow+1);
+            // Get the grid points and values
+            Int_t phiBinLow = fXaxis.FindBin(phiDeg);
+            Int_t thetaBinLow = fYaxis.FindBin(thetaDeg);
+            Int_t phiBinHigh = phiBinLow == nPhi ? 1 : phiBinLow + 1;
 
-          double v11 = GetBinContent(phiBinLow, thetaBinLow);
-          double v12 = GetBinContent(phiBinLow, thetaBinLow+1);
-          double v21 = GetBinContent(phiBinHigh, thetaBinLow);
-          double v22 = GetBinContent(phiBinHigh, thetaBinLow+1);
+            double x1 = fXaxis.GetBinLowEdge(phiBinLow);
+            double x2 = fXaxis.GetBinLowEdge(phiBinHigh);
 
-          // this image is very helpful to visualize what's going on here
-          // https://en.wikipedia.org/wiki/Bilinear_interpolation#/media/File:Comparison_of_1D_and_2D_interpolation.svg
-          // need to do three linear interpolations...
-          double dx = phiDeg - x1;
-          double dy = thetaDeg - y1;
-          double deltaX = x2 - x1 > 0 ? x2 - x1 : DEGREES_IN_CIRCLE + x2 - x1;
-          double deltaY = y2 - y1;
+            double y1 = fYaxis.GetBinLowEdge(thetaBinLow);
+            double y2 = fYaxis.GetBinLowEdge(thetaBinLow+1);
 
-          double v11_v21_interp = v11 + dx*(v21 - v11)/(deltaX);
-          double v12_v22_interp = v12 + dx*(v22 - v12)/(deltaX);
-          double val = v11_v21_interp + dy*(v12_v22_interp - v11_v21_interp)/(deltaY);
+            double v11 = GetBinContent(phiBinLow, thetaBinLow);
+            double v12 = GetBinContent(phiBinLow, thetaBinLow+1);
+            double v21 = GetBinContent(phiBinHigh, thetaBinLow);
+            double v22 = GetBinContent(phiBinHigh, thetaBinLow+1);
 
-          // std::cout << x1  << "\t" << x2  << "\t" << y1  << "\t" <<  y2 << std::endl;
-          // std::cout << v11 << "\t" << v12 << "\t" << v21 << "\t" << v22 << std::endl;
-          // std::cout << v11_v21_interp << "\t" << v12_v22_interp << "\t" << val << std::endl;
+            // this image is very helpful to visualize what's going on here
+            // https://en.wikipedia.org/wiki/Bilinear_interpolation#/media/File:Comparison_of_1D_and_2D_interpolation.svg
+            // need to do three linear interpolations...
+            double dx = phiDeg - x1;
+            double dy = thetaDeg - y1;
+            double deltaX = x2 - x1 > 0 ? x2 - x1 : DEGREES_IN_CIRCLE + x2 - x1;
+            double deltaY = y2 - y1;
 
-          proj->Fill(easting+floatPointErrorEpsilon, northing+floatPointErrorEpsilon, val);
+            double v11_v21_interp = v11 + dx*(v21 - v11)/(deltaX);
+            double v12_v22_interp = v12 + dx*(v22 - v12)/(deltaX);
+            double val = v11_v21_interp + dy*(v12_v22_interp - v11_v21_interp)/(deltaY);
+
+            // std::cout << x1  << "\t" << x2  << "\t" << y1  << "\t" <<  y2 << std::endl;
+            // std::cout << v11 << "\t" << v12 << "\t" << v21 << "\t" << v22 << std::endl;
+            // std::cout << v11_v21_interp << "\t" << v12_v22_interp << "\t" << val << std::endl;
+
+            proj->Fill(easting+floatPointErrorEpsilon, northing+floatPointErrorEpsilon, val);
+          }
         }
       }
     }

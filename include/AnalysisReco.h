@@ -48,6 +48,7 @@ class AnalysisReco : public TObject {
   // Get the maps generated during the reconstruction 
   InterferometricMap* getMap(AnitaPol::AnitaPol_t pol);
   InterferometricMap* getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd=0);
+  TProfile2D* getHeatMap(AnitaPol::AnitaPol_t pol){return heatMaps[pol];}
   
   void reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat = NULL);
   void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, const Adu5Pat* pat = NULL);
@@ -69,16 +70,15 @@ class AnalysisReco : public TObject {
  protected:
 
   void initializeInternals();
-  
-  // I delete maps left in memory next time process() is called
-  // if getMap() or getZoomMap() is called, I set the internal pointer to NULL
-  // and it is the user's responsbility to delete
-  InterferometricMap* coarseMaps[AnitaPol::kNotAPol]; // these guys do the whole 360 az, and defined elevation...
+
+  InterferometricMap* coarseMaps[AnitaPol::kNotAPol];
+  InterferometricMap* fineMaps[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol];
+  TProfile2D* heatMaps[AnitaPol::kNotAPol];
+  TProfile2D* makeHeatMap(const TString& name, const TString& title);
 
   void fillWaveformInfo(AnitaPol::AnitaPol_t pol, AnitaEventSummary::WaveformInfo& info, const FilteredAnitaEvent* fEv,
                         AnalysisWaveform** waveStore, InterferometricMap* h, NoiseMonitor* noiseMonitor);
   
-  InterferometricMap* fineMaps[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol];
   AnalysisWaveform* wfCoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
   AnalysisWaveform* wfCoherent[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
   AnalysisWaveform* wfDeconvolved[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
@@ -86,13 +86,8 @@ class AnalysisReco : public TObject {
   std::vector<Int_t> phiSectorToAnts[NUM_PHI]; //!< Vector of antennas to use in coherently summed waveforms
   
   AnitaEventSummary summary;
-  // lazily generates CrossCorrelator when process() is called
-  // (plan to add attachment function for external cross correlator)
-  // if spawns one, sets the bool to true and deletes the cross correlator in destructor
   CrossCorrelator* fCrossCorr;
   bool spawnedCrossCorrelator;
-  
-  // in theory this could change if I end up making some settings dynamic, e.g. for MagicDisplay.
   InterferometryCache dtCache;
   
   FilterStrategy* fMinFilter; //!< Would be no filters, but for ANITA-3 data we need an ALFA filter
@@ -105,7 +100,9 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Int_t, WhichResponseDir);
   ANALYSIS_SETTING(Int_t, UseOffAxisDelay);
   ANALYSIS_SETTING(Int_t, ResponseNPad);
-  ANALYSIS_SETTING(Int_t, NumPeaks);  
+  ANALYSIS_SETTING(Int_t, NumPeaks);
+  ANALYSIS_SETTING(Int_t, DoHeatMap);
+  ANALYSIS_SETTING(Double_t, HeatMapHorizonKm);  
   ClassDef(AnalysisReco, 0)
 
 };

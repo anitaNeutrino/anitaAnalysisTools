@@ -69,6 +69,8 @@ class AnalysisFlow : public TObject{
     ANALYSIS_SETTING(Int_t, DoAll);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
     ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
+
+    ClassDef(AnalysisFlow, 0);
   };
 
 }

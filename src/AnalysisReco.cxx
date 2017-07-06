@@ -119,7 +119,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   const TGraphAligned* grX = xPolCoherentWave->even();
   info.xPolPeakVal = TMath::MaxElement(grX->GetN(), grX->GetY());
 
-
   AnalysisWaveform* hWave = pol == AnitaPol::kHorizontal ? coherentWave : xPolCoherentWave;
   AnalysisWaveform* vWave = pol == AnitaPol::kHorizontal ? xPolCoherentWave : coherentWave;  
 
@@ -149,7 +148,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
   const TGraphAligned* grPowX = xPolCoherentWave->power();
   info.totalPowerXpol = std::accumulate(grPowX->GetY(), grPowX->GetY() + grPowX->GetN(), 0);
-
 
 
   // //Shape parameters, computed using hilbert envelope
@@ -214,7 +212,18 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat
 }
 
 
+TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TString& title){
 
+  const int coarseness = 10;
+  Int_t nx, ny;
+  RampdemReader::getNumXY(nx, ny);
+  nx/=coarseness;
+  ny/=coarseness;
+  Double_t xMin, xMax, yMin, yMax;
+  RampdemReader::getMapCoordinates(xMin, yMin, xMax, yMax);
+
+  return new TProfile2D(name, title, nx, xMin, xMax, ny, yMin, yMax);    
+}
 
 
 /** 
@@ -250,7 +259,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
     fCrossCorr->correlateEvent(fEv, pol);
 
-    // do the coarsely grained reconstruction
+    // do the coarsely binned reconstruction
     reconstruct(pol);
 
     std::vector<Double_t> coarseMapPeakValues;
@@ -259,17 +268,23 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     coarseMaps[pol]->findPeakValues(fNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
     coarseMaps[pol]->addGpsInfo(fEv->getGPS());
 
+    if(fDoHeatMap > 0){
+      if(!heatMaps[pol]){
+        const char polChar[2] = {polAsChar(pol), '\0'};
+        TString name = TString::Format("heatMap%s", polChar);
+        heatMaps[pol] = makeHeatMap(name, name);
+      }
+      coarseMaps[pol]->project(heatMaps[pol], fHeatMapHorizonKm);
+    }
+
     eventSummary->nPeaks[pol] = fNumPeaks;
 
     for(Int_t peakInd=0; peakInd < fNumPeaks; peakInd++){
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
       InterferometricMap* h = fineMaps[pol][peakInd];
-      if(!h){
-	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find finely binned histogram for peak " << peakInd << std::endl;
-      }
-
       h->addGpsInfo(fEv->getGPS());
+      
       h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
 
       // fill in difference between rough and fine
@@ -340,6 +355,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
 
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     coarseMaps[polInd] = NULL;
+    heatMaps[polInd] = NULL;
     for(int peakInd=0; peakInd < AnitaEventSummary::maxDirectionsPerPol; peakInd++){
       fineMaps[polInd][peakInd] = NULL;
       for(int xPol=0; xPol < AnitaPol::kNotAPol; xPol++){
@@ -355,6 +371,8 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fCoherentDeltaPhi = 2;
   fLastCoherentDeltaPhi = -1;
   fNumPeaks = 3;
+  fDoHeatMap = 0;
+  fHeatMapHorizonKm = 800;
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -863,8 +881,6 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
 
 
 
-
-
 /** 
  * Function for MagicDisplay
  * 
@@ -899,7 +915,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   wholeTitle->Draw();
   
   TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
+  
   InterferometricMap* hCoarse = coarseMaps[pol];
+  // if(fDoHeatMap > 0 && heatMaps[pol]){
+  //   heatMaps[pol]->Draw("colz");
+  // }  
+  // else{
   if(hCoarse){
     hCoarse->Draw("colz");
     TGraph& grSun = hCoarse->getSunGraph();
