@@ -222,30 +222,28 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
 
   Bool_t doEvent = false;
 
-  // for the WAIS selection
-  const Double_t maxDeltaTriggerTimeNs = 1200;  
-  UInt_t triggerTimeNsExpected = usefulPat->getWaisDivideTriggerTimeNs();
-  UInt_t triggerTimeNs = header->triggerTimeNs;
-  Int_t deltaTriggerTimeNs = Int_t(triggerTimeNs) - Int_t(triggerTimeNsExpected);
-
   switch (fSelection){
 
-  case kWaisPulser:
-    doEvent = TMath::Abs(deltaTriggerTimeNs) < maxDeltaTriggerTimeNs ? true : false;
-    break;
+    case kWaisPulser:
+      doEvent = isPulserWAIS(header, usefulPat);
+      break;
 
-  case kDecimated:
-    doEvent = true;
-    break;
+    case kDecimated:
+      doEvent = true;
+      break;
 
-  case kAll:
-    doEvent = true;
-    break;
-    
-  default:
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unknown event selection." << std::endl;
-    doEvent = false;
-    break;
+    case kAll:
+      doEvent = true;
+      break;
+
+    case kWaisPulserAndNonRF:
+      doEvent = isPulserWAIS(header, usefulPat) || !(header->getTriggerBitRF());
+      break;
+      
+    default:
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unknown event selection." << std::endl;
+      doEvent = false;
+      break;
   }
 
   return doEvent;
@@ -253,6 +251,86 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
 
 
 
+/** 
+ * Applies my WAIS pulser selection
+ * 
+ * @param header is the event header
+ * @param usefulPat is a usefulAdu5Pat object
+ * 
+ * @return true if the event matches the timing criteria
+ */
+Bool_t Acclaim::AnalysisFlow::isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
+
+  const UInt_t triggerTimeNsExpected = usefulPat->getWaisDivideTriggerTimeNs();
+  const int maxSeparationMeters = 1e6; // 1000 km
+  const double c_ns = 0.3; // speed of light in nano-seconds
+  Bool_t isWais = false;
+  if(triggerTimeNsExpected < c_ns*maxSeparationMeters){
+  
+    const Double_t maxDeltaTriggerTimeNs = 1200;
+    UInt_t triggerTimeNs = header->triggerTimeNs;
+    Int_t deltaTriggerTimeNs = Int_t(triggerTimeNs) - Int_t(triggerTimeNsExpected);
+
+    isWais = TMath::Abs(deltaTriggerTimeNs) < maxDeltaTriggerTimeNs;
+  }
+  return isWais;  
+}
+
+
+
+/** 
+ * Applies Linda's LDB pulser selection, I've not actually tested this in a while
+ * 
+ * @param header is the event header
+ * @param usefulPat is a usefulAdu5Pat object
+ * 
+ * @return true if the event matches the timing criteria
+ */
+Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
+
+  const UInt_t triggerTimeNsExpected = usefulPat->getLDBTriggerTimeNs();
+  const int maxSeparationMeters = 1e6; // 1000 km
+  const double c_ns = 0.3; // speed of light in nano-seconds
+  Bool_t isLDB = false;
+
+  if(triggerTimeNsExpected < c_ns*maxSeparationMeters){
+  
+    const double cutTimeNs = 1200;
+    Int_t delay=0;
+  
+    if (fRun<150){ // LDB VPOL 
+      delay =  25000000; // V-POL pulse at 25 ms runs 145-149
+    }
+    else if (fRun<154){ // LDB HPOL
+      delay =  50000000; // H-POL pulse at 50 ms
+    }
+    else if (fRun<172){ // LDB VPOL
+      delay =  50000000; // V-POL pulse at 50 ms runs 154-171    
+    }
+
+    const Int_t delayGenerator = 199996850; // delay generator was not exactly 200 ms
+    const Int_t constdelay = 500;
+
+    Int_t deltaTriggerTimeNs    = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected);
+    deltaTriggerTimeNs    = deltaTriggerTimeNs%(delayGenerator) - delay - constdelay;
+
+    isLDB = TMath::Abs(deltaTriggerTimeNs) < cutTimeNs;
+  }
+  return isLDB;
+}
+
+
+
+void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum){
+
+  if(isPulserWAIS(header, usefulPat)){
+    sum->flags.pulser = AnitaEventSummary::EventFlags::WAIS;
+  }
+  else if(isPulserLDB(header, usefulPat)){
+    sum->flags.pulser = AnitaEventSummary::EventFlags::LDB;    
+  }
+  
+}
 
 
 
@@ -275,6 +353,13 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     fReco = new AnalysisReco();
     fSettings->apply(fReco);
   }
+
+  UInt_t lastEventConsidered = 0;  
+  // NoiseMonitor::WaveOption waveOpt = fNoiseEvenWaveforms > 0 ? NoiseMonitor::kEven : NoiseMonitor::kUneven;
+  // NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, waveOpt, fOutFile);
+  TString noiseFileName = TString::Format("~/filteredEventNoise%d.root", fRun);
+  std::cout << noiseFileName << std::endl;
+  NoiseMonitor noiseMonitor(noiseFileName); 
 
   if(!fOutFile){
     prepareOutputFiles();
@@ -299,10 +384,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     // empty strategy does nothing
     fFilterStrat = new FilterStrategy();
   }
-
-  UInt_t lastEventConsidered = 0;
-  NoiseMonitor::WaveOption waveOpt = fNoiseEvenWaveforms > 0 ? NoiseMonitor::kEven : NoiseMonitor::kUneven;
-  NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, waveOpt, fOutFile);
   
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
 
@@ -326,9 +407,14 @@ void Acclaim::AnalysisFlow::doAnalysis(){
       Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, eventSummary);
 
       if(isGoodEvent || fDoAll){
+
+        setPulserFlags(header, &usefulPat, eventSummary);
+        
 	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
 	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
+        noiseMonitor.update(&filteredEvent);
+        
 	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
 	fReco->process(&filteredEvent, &usefulPat, eventSummary, &noiseMonitor);
       }

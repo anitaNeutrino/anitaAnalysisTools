@@ -66,7 +66,7 @@ namespace Acclaim
     void ExecuteEvent(int event, int x, int y);
 
     void addGpsInfo(const Adu5Pat* pat);
-    void addGpsInfo(const UsefulAdu5Pat* usefulPat);
+    // void addGpsInfo(const UsefulAdu5Pat* usefulPat);
 
     void project(TProfile2D* proj, double horizonKilometers);
 

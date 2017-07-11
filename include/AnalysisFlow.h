@@ -31,13 +31,12 @@ class AnalysisFlow : public TObject{
   public:
 
     enum selection{
-      kAll             = 0,
-      kWaisPulser      = 1,
-      kDecimated       = 2,
-      kQuietTime       = 3
+      kAll                = 0,
+      kWaisPulser         = 1,
+      kDecimated          = 2,
+      kQuietTime          = 3,
+      kWaisPulserAndNonRF = 4 // I need min bias events for SNR estimates with the noise monitor class
     };
-
-
 
     AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1);
     ~AnalysisFlow();
@@ -46,6 +45,9 @@ class AnalysisFlow : public TObject{
     void prepareDataSet();
     void prepareOutputFiles();
     Bool_t shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
+    Bool_t isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
+    Bool_t isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);    
+    void setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum);  
     
   protected:
     int fRun;

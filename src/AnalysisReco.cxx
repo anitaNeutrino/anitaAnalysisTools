@@ -82,11 +82,13 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   
   info.snr = 0;
   if(noiseMonitor){  
-    double noise = 0;  
+    double noise = 0;
     for(unsigned antInd = 0; antInd < theAnts.size(); antInd++){
       int ant = theAnts[antInd];
       double thisRMS = noiseMonitor->getNoise(pol, ant);
+
       noise += thisRMS;
+      
     }
     noise /= theAnts.size();
 
@@ -214,7 +216,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat
 
 TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TString& title){
 
-  const int coarseness = 10;
+  const int coarseness = 20;
   Int_t nx, ny;
   RampdemReader::getNumXY(nx, ny);
   nx/=coarseness;
@@ -283,54 +285,55 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
       InterferometricMap* h = fineMaps[pol][peakInd];
-      h->addGpsInfo(fEv->getGPS());
+      if(h){
+        h->addGpsInfo(fEv->getGPS());
       
-      h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
+        h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
 
-      // fill in difference between rough and fine
-      eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
-      eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseMapPeakThetaDegs.at(peakInd);
+        // fill in difference between rough and fine
+        eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
+        eventSummary->peak[pol][peakInd].dtheta_rough = eventSummary->peak[pol][peakInd].theta - coarseMapPeakThetaDegs.at(peakInd);
 
-      // based on Cosmin's comments in AnitaAnalysisSummary.h
-      eventSummary->peak[pol][peakInd].phi_separation = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
+        // based on Cosmin's comments in AnitaAnalysisSummary.h
+        eventSummary->peak[pol][peakInd].phi_separation = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
 
-      // coherent
-      // coherent_filtered
-      // deconvolved
-      // deconvolved_filtered
+        // coherent
+        // coherent_filtered
+        // deconvolved
+        // deconvolved_filtered
       
-      fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
-      fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
-      fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
-      fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
       
-      if(usefulPat != NULL){
+        if(usefulPat != NULL){
       
-	Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
-	Double_t thetaWave = -1*TMath::DegToRad()*eventSummary->peak[pol][peakInd].theta;
+          Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
+          Double_t thetaWave = -1*TMath::DegToRad()*eventSummary->peak[pol][peakInd].theta;
 
-	// *   Returns 0 if never hits the ground, even with maximum adjustment
-	// *   Returns 1 if hits the ground with no adjustment
-	// *   Returns 2 if it hits the ground with adjustment
-	int success = usefulPat->traceBackToContinent(phiWave, thetaWave, 
-						      &eventSummary->peak[pol][peakInd].latitude,
-						      &eventSummary->peak[pol][peakInd].longitude,
-						      &eventSummary->peak[pol][peakInd].altitude,
-						      &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
+          // *   Returns 0 if never hits the ground, even with maximum adjustment
+          // *   Returns 1 if hits the ground with no adjustment
+          // *   Returns 2 if it hits the ground with adjustment
+          int success = usefulPat->traceBackToContinent(phiWave, thetaWave, 
+                                                        &eventSummary->peak[pol][peakInd].latitude,
+                                                        &eventSummary->peak[pol][peakInd].longitude,
+                                                        &eventSummary->peak[pol][peakInd].altitude,
+                                                        &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
 
-	if(success==0){
-	  eventSummary->peak[pol][peakInd].latitude = -9999;
-	  eventSummary->peak[pol][peakInd].longitude = -9999;
-	  eventSummary->peak[pol][peakInd].altitude = -9999;
-	  eventSummary->peak[pol][peakInd].distanceToSource = -9999;
-	}
-	else{
-	  eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat->getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
-														      eventSummary->peak[pol][peakInd].longitude,
-														      eventSummary->peak[pol][peakInd].altitude);	
-	}
+          if(success==0){
+            eventSummary->peak[pol][peakInd].latitude = -9999;
+            eventSummary->peak[pol][peakInd].longitude = -9999;
+            eventSummary->peak[pol][peakInd].altitude = -9999;
+            eventSummary->peak[pol][peakInd].distanceToSource = -9999;
+          }
+          else{
+            eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat->getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
+                                                                                                                        eventSummary->peak[pol][peakInd].longitude,
+                                                                                                                        eventSummary->peak[pol][peakInd].altitude);	
+          }
+        }
       }
-
     }
   }
 

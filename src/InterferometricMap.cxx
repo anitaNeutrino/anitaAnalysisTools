@@ -260,25 +260,29 @@ Acclaim::InterferometricMap::InterferometricMap() : fUsefulPat(NULL){
  * Default destructor
  */
 Acclaim::InterferometricMap::~InterferometricMap(){
+  // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << fUsefulPat << std::endl;  
   deletePat();
 }
 
 
 void Acclaim::InterferometricMap::deletePat(){
+  // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << fUsefulPat << std::endl;
   if(fUsefulPat) {
+    // std::cerr << fUsefulPat->heading << "\t" << std::endl;
     delete fUsefulPat;
   }
-  fUsefulPat = NULL;  
+  fUsefulPat = NULL;
 }
 
 
 
-void Acclaim::InterferometricMap::addGpsInfo(const UsefulAdu5Pat* usefulPat){
-  addGpsInfo(dynamic_cast<const Adu5Pat*>(usefulPat));
-}
+// void Acclaim::InterferometricMap::addGpsInfo(const UsefulAdu5Pat* usefulPat){
+//   addGpsInfo(dynamic_cast<const Adu5Pat*>(usefulPat));
+// }
 
 
 void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
+  // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << pat << std::endl;
   deletePat();
 
   fUsefulPat = new UsefulAdu5Pat(pat);
