@@ -313,6 +313,9 @@ void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilome
   Int_t nx = proj->GetNbinsX();
   Int_t ny = proj->GetNbinsY();
 
+  const double closeNorthing = proj->GetYaxis()->GetBinLowEdge(2) - proj->GetYaxis()->GetBinLowEdge(1);
+  const double closeEasting = proj->GetXaxis()->GetBinLowEdge(2) - proj->GetXaxis()->GetBinLowEdge(1);
+
   const int nPhi = GetNbinsPhi();
   const double phiMin = fXaxis.GetBinLowEdge(1);
   const double phiMax = fXaxis.GetBinLowEdge(nPhi);
@@ -333,55 +336,72 @@ void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilome
       double dist_km = 1e-3*fUsefulPat->getDistanceFromSource(lat, lon, alt);
       if(dist_km < horizonKilometers){
 
+        // first get the theta/phi at the payload
         Double_t thetaWave, phiWave;
         fUsefulPat->getThetaAndPhiWave(lon, lat, alt, thetaWave, phiWave);
-        Double_t thetaDeg = -1*thetaWave*TMath::RadToDeg();
 
-        if(thetaDeg >= thetaMin && thetaDeg <= thetaMax){
-          Double_t phiDeg = phiWave*TMath::RadToDeg();
-          phiDeg = phiDeg <  phiMin ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
-          phiDeg = phiDeg >= phiMax ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
+        // this is a naive collision detection...
+        // I'm going to trace those theta/phi back to the continent
+        // if it hits the same place (or very close) then we will go ahead
+        double lat2, lon2,  alt2, theta_adj;
+        fUsefulPat->traceBackToContinent(phiWave, thetaWave, &lat2, &lon2, &alt2, &theta_adj);
 
-          if(phiDeg >= phiMin && phiDeg <= phiMax){
+        double easting2, northing2;
+        RampdemReader::LonLatToEastingNorthing(lon2, lat2, easting2, northing2);
+
+        const double deltaEasting = TMath::Abs(easting2 - easting);
+        const double deltaNorthing = TMath::Abs(northing2 - northing);
+
+        if(deltaEasting < closeEasting && deltaNorthing < closeNorthing){
+
+          Double_t thetaDeg = -1*thetaWave*TMath::RadToDeg();
+
+          if(thetaDeg >= thetaMin && thetaDeg <= thetaMax){
+            Double_t phiDeg = phiWave*TMath::RadToDeg();
+            phiDeg = phiDeg <  phiMin ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+            phiDeg = phiDeg >= phiMax ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
+
+            if(phiDeg >= phiMin && phiDeg <= phiMax){
 
 
-            // my axis binning is that the low edge of the bin is the actual value
-            // so can't use TH2::Interpolate, which (sensibly) uses the bin centres
-            // so here's my implementation.
+              // my axis binning is that the low edge of the bin is the actual value
+              // so can't use TH2::Interpolate, which (sensibly) uses the bin centres
+              // so here's my implementation.
 
-            // Get the grid points and values
-            Int_t phiBinLow = fXaxis.FindBin(phiDeg);
-            Int_t thetaBinLow = fYaxis.FindBin(thetaDeg);
-            Int_t phiBinHigh = phiBinLow == nPhi ? 1 : phiBinLow + 1;
+              // Get the grid points and values
+              Int_t phiBinLow = fXaxis.FindBin(phiDeg);
+              Int_t thetaBinLow = fYaxis.FindBin(thetaDeg);
+              Int_t phiBinHigh = phiBinLow == nPhi ? 1 : phiBinLow + 1;
 
-            double x1 = fXaxis.GetBinLowEdge(phiBinLow);
-            double x2 = fXaxis.GetBinLowEdge(phiBinHigh);
+              double x1 = fXaxis.GetBinLowEdge(phiBinLow);
+              double x2 = fXaxis.GetBinLowEdge(phiBinHigh);
 
-            double y1 = fYaxis.GetBinLowEdge(thetaBinLow);
-            double y2 = fYaxis.GetBinLowEdge(thetaBinLow+1);
+              double y1 = fYaxis.GetBinLowEdge(thetaBinLow);
+              double y2 = fYaxis.GetBinLowEdge(thetaBinLow+1);
 
-            double v11 = GetBinContent(phiBinLow, thetaBinLow);
-            double v12 = GetBinContent(phiBinLow, thetaBinLow+1);
-            double v21 = GetBinContent(phiBinHigh, thetaBinLow);
-            double v22 = GetBinContent(phiBinHigh, thetaBinLow+1);
+              double v11 = GetBinContent(phiBinLow, thetaBinLow);
+              double v12 = GetBinContent(phiBinLow, thetaBinLow+1);
+              double v21 = GetBinContent(phiBinHigh, thetaBinLow);
+              double v22 = GetBinContent(phiBinHigh, thetaBinLow+1);
 
-            // this image is very helpful to visualize what's going on here
-            // https://en.wikipedia.org/wiki/Bilinear_interpolation#/media/File:Comparison_of_1D_and_2D_interpolation.svg
-            // need to do three linear interpolations...
-            double dx = phiDeg - x1;
-            double dy = thetaDeg - y1;
-            double deltaX = x2 - x1 > 0 ? x2 - x1 : DEGREES_IN_CIRCLE + x2 - x1;
-            double deltaY = y2 - y1;
+              // this image is very helpful to visualize what's going on here
+              // https://en.wikipedia.org/wiki/Bilinear_interpolation#/media/File:Comparison_of_1D_and_2D_interpolation.svg
+              // need to do three linear interpolations...
+              double dx = phiDeg - x1;
+              double dy = thetaDeg - y1;
+              double deltaX = x2 - x1 > 0 ? x2 - x1 : DEGREES_IN_CIRCLE + x2 - x1;
+              double deltaY = y2 - y1;
 
-            double v11_v21_interp = v11 + dx*(v21 - v11)/(deltaX);
-            double v12_v22_interp = v12 + dx*(v22 - v12)/(deltaX);
-            double val = v11_v21_interp + dy*(v12_v22_interp - v11_v21_interp)/(deltaY);
+              double v11_v21_interp = v11 + dx*(v21 - v11)/(deltaX);
+              double v12_v22_interp = v12 + dx*(v22 - v12)/(deltaX);
+              double val = v11_v21_interp + dy*(v12_v22_interp - v11_v21_interp)/(deltaY);
 
-            // std::cout << x1  << "\t" << x2  << "\t" << y1  << "\t" <<  y2 << std::endl;
-            // std::cout << v11 << "\t" << v12 << "\t" << v21 << "\t" << v22 << std::endl;
-            // std::cout << v11_v21_interp << "\t" << v12_v22_interp << "\t" << val << std::endl;
+              // std::cout << x1  << "\t" << x2  << "\t" << y1  << "\t" <<  y2 << std::endl;
+              // std::cout << v11 << "\t" << v12 << "\t" << v21 << "\t" << v22 << std::endl;
+              // std::cout << v11_v21_interp << "\t" << v12_v22_interp << "\t" << val << std::endl;
 
-            proj->Fill(easting+floatPointErrorEpsilon, northing+floatPointErrorEpsilon, val);
+              proj->Fill(easting+floatPointErrorEpsilon, northing+floatPointErrorEpsilon, val);
+            }
           }
         }
       }
