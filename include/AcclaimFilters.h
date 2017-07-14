@@ -34,6 +34,13 @@ namespace Acclaim
   namespace Filters
   {
 
+  /**
+   * Returns a c-style string containing the name of Cosmin's current favourite sine sub filter.
+   * What this actually is, may change with time.
+   * @return Cosmin's fave.
+   */
+  const char* getCosminsFavouriteSineSubName(){return "sinsub_10_3_ad_2";}
+
   /** @namespace Bands
    * @brief Hard coded frequencies in GHz which can get used in any given filter
    *
