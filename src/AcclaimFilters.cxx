@@ -12,6 +12,18 @@
 
 static std::map<TString, FilterStrategy*> acclaimDefaults;
 
+
+/**
+ * Returns a c-style string containing the name of Cosmin's current favourite sine sub filter.
+ * What this actually is, may change with time.
+ * @return Cosmin's fave.
+ */
+const char* Acclaim::Filters::getCosminsFavouriteSineSubName()
+{
+  return "sinsub_10_3_ad_2";
+}
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Checks all operations and forces the first FourierBuffer to load history the before it processes the next event
