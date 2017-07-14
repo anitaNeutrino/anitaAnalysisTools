@@ -321,6 +321,15 @@ Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat*
 
 
 
+
+
+/**
+ * Set the pulser flags in the AnitaEventSummary
+ *
+ * @param header is the event header
+ * @param usefulPat is the ANITA gps data
+ * @param sum is the AnitaEventSummary in which to set the flag
+ */
 void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum){
 
   if(isPulserWAIS(header, usefulPat)){
@@ -354,16 +363,12 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     fSettings->apply(fReco);
   }
 
-  UInt_t lastEventConsidered = 0;  
-  // NoiseMonitor::WaveOption waveOpt = fNoiseEvenWaveforms > 0 ? NoiseMonitor::kEven : NoiseMonitor::kUneven;
-  // NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, waveOpt, fOutFile);
-  TString noiseFileName = TString::Format("~/filteredEventNoise%d.root", fRun);
-  std::cout << noiseFileName << std::endl;
-  NoiseMonitor noiseMonitor(noiseFileName); 
-
   if(!fOutFile){
     prepareOutputFiles();
   }
+
+  UInt_t lastEventConsidered = 0;
+  NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, NoiseMonitor::kUneven, fOutFile);
 
   if(!fSumTree){
     fSumTree = new TTree("sumTree", "Tree of AnitaEventSummaries");
@@ -415,7 +420,6 @@ void Acclaim::AnalysisFlow::doAnalysis(){
 
         noiseMonitor.update(&filteredEvent);
         
-	// fReco->reconstructEvent(&filteredEvent, usefulPat, eventSummary);
 	fReco->process(&filteredEvent, &usefulPat, eventSummary, &noiseMonitor);
       }
 

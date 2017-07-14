@@ -27,6 +27,14 @@ Acclaim::AnalysisReco::~AnalysisReco(){
   if(spawnedCrossCorrelator && fCrossCorr){
     delete fCrossCorr;
   }
+
+
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    if(heatMaps[polInd]){
+      delete heatMaps[polInd];
+      heatMaps[polInd] = NULL;
+    }
+  }
 }
 
 
@@ -214,6 +222,15 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat
 }
 
 
+
+/**
+ * Creates the histogram with the easting/northing dimensions for Antarctica
+ *
+ * @param name is the histogram name
+ * @param title is the histogram title
+ *
+ * @return a pointer to the newly created histogram
+ */
 TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TString& title){
 
   const int coarseness = 20;
@@ -229,7 +246,7 @@ TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TStrin
 
 
 /** 
- * Reconstructs the FilteredAnitaEvent and fills a AnitaEventSummary
+ * Reconstructs the FilteredAnitaEvent and fills the pointing and coherent bits of the AnitaEventSummary
  * 
  * @param fEv is the FilteredAnitaEvent to reconstruct
  * @param usefulPat is the useful version of the ANITA gps object, can trace direction to the ground
@@ -272,8 +289,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
     if(fDoHeatMap > 0){
       if(!heatMaps[pol]){
-        const char polChar[2] = {polAsChar(pol), '\0'};
-        TString name = TString::Format("heatMap%s", polChar);
+        TString name = pol == AnitaPol::kHorizontal ? "heatMapH" : "heatMapV";
         heatMaps[pol] = makeHeatMap(name, name);
       }
       coarseMaps[pol]->project(heatMaps[pol], fHeatMapHorizonKm);
@@ -342,6 +358,13 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 }
 
 
+
+
+
+/**
+ * Set default values and zero pointers for dynamically initialised heap dwelling members
+ *
+ */
 void Acclaim::AnalysisReco::initializeInternals(){
 
   fCrossCorr = NULL;
