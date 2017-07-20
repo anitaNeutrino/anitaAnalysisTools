@@ -265,15 +265,16 @@ Bool_t Acclaim::AnalysisFlow::isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat
   const int maxSeparationMeters = 1e6; // 1000 km
   const double c_ns = 0.3; // speed of light in nano-seconds
   Bool_t isWais = false;
-  if(triggerTimeNsExpected < c_ns*maxSeparationMeters){
+  if(triggerTimeNsExpected < maxSeparationMeters/c_ns){
   
     const Double_t maxDeltaTriggerTimeNs = 1200;
     UInt_t triggerTimeNs = header->triggerTimeNs;
     Int_t deltaTriggerTimeNs = Int_t(triggerTimeNs) - Int_t(triggerTimeNsExpected);
 
     isWais = TMath::Abs(deltaTriggerTimeNs) < maxDeltaTriggerTimeNs;
+    // std::cerr << __PRETTY_FUNCTION__ << "\t" << isWais << "\t" << triggerTimeNs << "\t" << triggerTimeNsExpected << std::endl;
   }
-  return isWais;  
+  return isWais;
 }
 
 
@@ -293,7 +294,7 @@ Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat*
   const double c_ns = 0.3; // speed of light in nano-seconds
   Bool_t isLDB = false;
 
-  if(triggerTimeNsExpected < c_ns*maxSeparationMeters){
+  if(triggerTimeNsExpected < maxSeparationMeters/c_ns){
   
     const double cutTimeNs = 1200;
     Int_t delay=0;
@@ -338,7 +339,7 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
   else if(isPulserLDB(header, usefulPat)){
     sum->flags.pulser = AnitaEventSummary::EventFlags::LDB;    
   }
-  
+  // std::cerr << __PRETTY_FUNCTION__ << ": I just set the flags to be " << sum->flags.pulser << std::endl;
 }
 
 
