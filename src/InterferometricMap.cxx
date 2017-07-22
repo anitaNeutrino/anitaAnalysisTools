@@ -4,6 +4,8 @@
 
 #include "TAxis.h"
 #include "TMath.h"
+#include "TMatrixD.h"
+
 #include <iostream>
 #include "TString.h"
 #include "UsefulAdu5Pat.h"
@@ -18,6 +20,92 @@ std::vector<Double_t> coarseBinEdgesTheta; // has size NUM_BINS_THETA+1
 std::vector<Double_t> fineBinEdgesTheta; // has size NUM_BINS_THETA_ZOOM_TOTAL+1
 Double_t bin0PhiDeg = -9999;
 
+TDecompSVD theSVD;
+bool doneInitSVD = false;
+
+
+
+
+/** 
+ * Utility function for quadratic peak interpolation.
+ * 
+ * Get the grid definition for the SVD method once and only once.
+ * 
+ * @param dPhiBinLow is the number of bins below the peak bin in the phi direction
+ * @param dPhiBinHigh is the number of bins above the peak bin in the phi direction
+ * @param dThetaBinLow is the number of bins below the peak bin in the theta direction
+ * @param dThetaBinHigh is the number of bins below the peak bin in the theta direction
+ */
+
+void Acclaim::InterferometricMap::getDeltaBinRangeSVD(Int_t& dPhiBinLow, Int_t& dPhiBinHigh, Int_t& dThetaBinLow, Int_t& dThetaBinHigh){
+  dPhiBinLow = -NUM_BINS_QUAD_FIT_PHI/2;
+  dPhiBinHigh = dPhiBinLow + NUM_BINS_QUAD_FIT_PHI;
+  dThetaBinLow = -NUM_BINS_QUAD_FIT_THETA/2;
+  dThetaBinHigh = dThetaBinLow + NUM_BINS_QUAD_FIT_THETA;  
+}
+
+
+
+
+
+/** 
+ * @brief Lazily prepares the SVD solver for the quadratic peak interpolation.
+ * 
+ * We are using the SVD method to find the best bit of the peak to a 2D quadratic.
+ * There are 6 coefficients for a 2D quadratic which I imaginitvely call a,b,c,d,e,f
+ * F(x,y) = ax^{2} + by^{2} + cxy + dx + ey + f
+ * We have a bunch of values for F(x, y) which is the zoomed map values.
+ * Currently the size of the grid is hard coded in the header with the NUM_BINS_QUAD_FIT values.
+ * 
+ * @return the populated SVD object
+ */
+const TDecompSVD& Acclaim::InterferometricMap::getSVD(){
+
+  if(!doneInitSVD){
+
+    // 2D quadratic defined by ax^{2} + by^{2} + cxy + dx + ey + f, so 6 coefficients
+    const int nCoeffs = 6;
+
+    // get grid offsets
+    int firstBinPhi, lastBinPhi, firstBinTheta, lastBinTheta;    
+    getDeltaBinRangeSVD(firstBinPhi, lastBinPhi, firstBinTheta, lastBinTheta);
+
+    // one row per data point, one column per coefficient    
+    TMatrixD A(NUM_BINS_QUAD_FIT_PHI*NUM_BINS_QUAD_FIT_THETA, nCoeffs);
+
+    int row=0;
+    for(int i=firstBinPhi; i < lastBinPhi; i++){
+      const double dPhi = ZOOM_BIN_SIZE_PHI * i;
+      for(int j=firstBinTheta; j < lastBinTheta; j++){
+        const double dTheta = ZOOM_BIN_SIZE_THETA * j;
+        A(row, 0) = dPhi*dPhi;
+        A(row, 1) = dTheta*dTheta;
+        A(row, 2) = dPhi*dTheta;
+        A(row, 3) = dPhi;
+        A(row, 4) = dTheta;
+        A(row, 5) = 1;
+        row++;
+      }
+    }
+    theSVD.SetMatrix(A);
+    doneInitSVD = true;
+  }
+  return theSVD;
+}
+
+
+
+
+
+
+/** 
+ * Method required by ROOT interative behaviour.
+ * Draws a copy of the map when double clicked.
+ * 
+ * @param event is the interactive event
+ * @param x is the mouse position in x
+ * @param y is the mouse position in y
+ */
 void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
  
   if(event == kButton1Double){
@@ -25,10 +113,28 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
     (void) y;
     new TCanvas();
     Draw("colz");
+
+    TGraph& grPeak = getPeakPointGraph();
+    grPeak.Draw("psame");
+
+    if(fUsefulPat){
+      
+      TGraph& grSun = getSunGraph();
+      grSun.Draw("psame");
+    }
+    
+    
   }  
 }
 
 
+
+
+/** 
+ * Get the position of the first bin in phi
+ * 
+ * @return the position of the first bin in phi in degrees
+ */
 Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
 
   if(bin0PhiDeg == -9999){
@@ -51,7 +157,11 @@ Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
 
 
 
-// static member function
+/** 
+ * Lazily populate the bin edges in theta for the coarse map.
+ * Currently the bin sizes are scales by sin(theta) where theta=0 is the horizontal
+ * @return the coase map bin edges in theta.
+ */
 const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesTheta(){
 
   if(coarseBinEdgesTheta.size()==0) // then not initialized so do it here...
@@ -81,32 +191,23 @@ const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesTheta
 }
 
 
+/** 
+ * Lazily populate the bin edges in theta for the fine map.
+ * Currently the bin sizes are just integer units of theta in degrees.
+ * @return the fine map bin edges in theta.
+ */
 const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesTheta(){
 
   if(fineBinEdgesTheta.size()==0) // then not initialized so do it here...
   {
 
-    // funk up the theta bin spacing...  
     UInt_t nBinsTheta = NUM_BINS_THETA_ZOOM_TOTAL;
     Double_t minTheta = MIN_THETA - THETA_RANGE_ZOOM/2;
     Double_t maxTheta = MAX_THETA + THETA_RANGE_ZOOM/2;
-    // Double_t maxTheta = MAX_THETA;
   
-    // calculate the bin spaces in sin(theta)
-    // Double_t sinThetaMin = sin(minTheta*TMath::DegToRad());
-    // Double_t sinThetaMax = sin(maxTheta*TMath::DegToRad());
-    // Double_t sinThetaRange = sinThetaMax - sinThetaMin;
-    // Double_t dSinTheta = sinThetaRange/nBinsTheta;
-
-
     Double_t dTheta = (maxTheta - minTheta) / nBinsTheta;
-    // std::vector<Double_t> binEdges(nBinsTheta+1);
     fineBinEdgesTheta.reserve(nBinsTheta+1);
     for(unsigned bt = 0; bt <= nBinsTheta; bt++){
-      // Double_t thisSinTheta = sinThetaMin + bt*dSinTheta;
-      // Double_t thisTheta = TMath::RadToDeg()*TMath::ASin(thisSinTheta);
-      // Double_t thisSinTheta = sinThetaMin + bt*dSinTheta;
-      
       double thisTheta = minTheta + bt*dTheta;
       fineBinEdgesTheta.push_back(thisTheta);
     }
@@ -115,12 +216,18 @@ const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesTheta()
 }
 
 
+
+
+
+/** 
+ * Lazily populate the bin edges in phi for the coarse map.
+ * 
+ * @return the coarse map bin edges in phi.
+ */
 const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesPhi(){
 
   if(coarseBinEdgesPhi.size()==0) // then not initialized so do it here...
   {
-
-    // funk up the theta bin spacing...  
     UInt_t nBinsPhi = NUM_BINS_PHI*NUM_PHI;
     Double_t minPhi = getBin0PhiDeg();
     Double_t dPhi = double(DEGREES_IN_CIRCLE)/nBinsPhi;
@@ -135,6 +242,12 @@ const std::vector<Double_t>& Acclaim::InterferometricMap::getCoarseBinEdgesPhi()
 }
 
 
+
+/** 
+ * Lazily populate the bin edges in phi for the fine map.
+ * 
+ * @return the fine map bin edges in phi.
+ */
 const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesPhi(){
 
   if(fineBinEdgesPhi.size()==0) // then not initialized so do it here...
@@ -159,6 +272,10 @@ const std::vector<Double_t>& Acclaim::InterferometricMap::getFineBinEdgesPhi(){
 
 
 
+/** 
+ * Sets the name of the histogram from an incrementing counter.
+ * This avoids warnings in ROOT about things histograms having the same name.
+ */
 void Acclaim::InterferometricMap::setDefaultName(){
 
   static unsigned defaultCounter = 0;
@@ -167,6 +284,10 @@ void Acclaim::InterferometricMap::setDefaultName(){
 }
 
 
+
+/** 
+ * Sets an informative name and title using the member variables.
+ */
 void Acclaim::InterferometricMap::setNameAndTitle(){
 
 
@@ -197,19 +318,25 @@ void Acclaim::InterferometricMap::setNameAndTitle(){
 
 
 
-// class members functions
 
 
 
 
-
-
-
+/** 
+ * Fine map constructor
+ * 
+ * @param peakInd is the index of the peak in the coarse map (0 is the largest, 1 the second largest, etc.)
+ * @param phiSector is the closest phi-sector to the centered zoom peak
+ * @param zoomCentrePhi is the position on which to centre the map in phi (degrees)
+ * @param phiRange is the size of the zoom map in phi (degrees)
+ * @param zoomCentreTheta is the position on which to centre the map in theta (degrees)
+ * @param thetaRange is the size of the zoom map in theta (degrees)
+ */
 Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
     : fUsefulPat(NULL)
 {
   fIsZoomMap = true;
-  peakPhiSector = phiSector;
+  fPeakPhiSector = phiSector;
   peakIndex = peakInd;
   Double_t minPhiDesired = zoomCentrePhi - phiRange/2;
   Double_t maxPhiDesired = zoomCentrePhi + phiRange/2;
@@ -239,10 +366,12 @@ Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, 
 
 
 
-
+/** 
+ * Default constructor, which creates a coarse map
+ */
 Acclaim::InterferometricMap::InterferometricMap() : fUsefulPat(NULL){
   fIsZoomMap = false;
-  peakPhiSector = -1;
+  fPeakPhiSector = -1;
   minPhiBin = -1;
   minThetaBin = -1;
   peakIndex = -1;
@@ -265,6 +394,9 @@ Acclaim::InterferometricMap::~InterferometricMap(){
 }
 
 
+/** 
+ * If we have a copy of the usefulAdu5Pat, then delete it nicely.
+ */
 void Acclaim::InterferometricMap::deletePat(){
   // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << fUsefulPat << std::endl;
   if(fUsefulPat) {
@@ -276,11 +408,11 @@ void Acclaim::InterferometricMap::deletePat(){
 
 
 
-// void Acclaim::InterferometricMap::addGpsInfo(const UsefulAdu5Pat* usefulPat){
-//   addGpsInfo(dynamic_cast<const Adu5Pat*>(usefulPat));
-// }
-
-
+/** 
+ * Create an internal UsefulAdu5Pat from the raw gps data
+ * 
+ * @param pat is a pointer to the Adu5Pat
+ */
 void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
   // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << pat << std::endl;
   deletePat();
@@ -289,11 +421,15 @@ void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
 }
 
 
+
+
+
+
 /**
  * @brief For making a heat map.
  * Loops over the TProfile2D projection bins (easting/northing).
  * For each bin, gets theta/phi at the payload and does bilinear interpolation of the map value.
- * Currently no collision detection happens, so this could be improved.
+ * This is currently VERY slow, and so I'm not recommending its use.
  *
  * @param proj should be a histogram of Antarctica in Easting/Northing
  * @param horizonKilometers is a cut-off distance at which to stop in km.
@@ -412,16 +548,21 @@ void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilome
 
 
 
+
+
+
+/** 
+ * Workhorse function to turn cross-correlations into an interferometric map.
+ * 
+ * @param thePol is the polarisation of the map to make
+ * @param cc points to the cross-correlator which contains the cross-correlations
+ * @param dtCache is a pointer to the object containing the cached set of deltaTs.
+ */
 void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrelator* cc, InterferometryCache* dtCache){
 
   pol = thePol;
   eventNumber = cc->eventNumber[pol];
   setNameAndTitle();
-  // for(int bx=1; bx <= GetNbinsX(); bx++){
-  // for(int bx=1; bx <= GetNbinsX(); bx++){
-    
-  // }
-  // std::cout << fIsZoomMap << "\t" << eventNumber << "\t" << cc->eventNumber[0] << "\t" << cc->eventNumber[1] << std::endl;
   
   if(!fIsZoomMap){
     
@@ -465,22 +606,25 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 	  Double_t val = GetBinContent(phiBin+1, thetaBin+1);
 	  SetBinContent(phiBin+1, thetaBin+1, val/normFactor);
 
-	  if(val > imagePeak){	
-	    imagePeak = val;
-	    peakPhiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
-	    peakThetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);
-	    peakPhiSector = phiSector;
+	  if(val > fPeakBinValue){	
+            fPeakBinValue = val;
+            // peakPhiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
+            // peakThetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);	  
+            fPeakBinPhi = phiBin;
+            fPeakBinTheta = thetaBin;
+	    fPeakPhiSector = phiSector;
 	  }
 	}
       }
     }
+    setPeakInfoJustFromPeakBin(fPeakBinPhi, fPeakBinTheta);
   }
 
   else{
-    // std::cerr << "zmps " << peakPhiSector << std::endl;
-    cc->doUpsampledCrossCorrelations(pol, peakPhiSector);    
+    // std::cerr << "zmps " << fPeakPhiSector << std::endl;
+    cc->doUpsampledCrossCorrelations(pol, fPeakPhiSector);    
     
-    std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[peakPhiSector];
+    std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[fPeakPhiSector];
 
     const Int_t offset = cc->numSamplesUpsampled/2;
     for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
@@ -507,10 +651,6 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 	  int p21 = dtCache->part21sIndex(pol, combo, zoomPhiInd);
 	  Double_t offsetLowDouble = dtFactor*(partBA - dtCache->part21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
 
-	  // Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);
-	  // Double_t offsetLowDouble = dtFactor*(partBA - part21sZoom[pol][combo][zoomPhiInd]);	
-	  // offsetLowDouble += kUseOffAxisDelay > 0 ? offAxisDelaysDivided[pol][combo][zoomPhiInd] : 0;
-	  // offsetLowDouble += dtCache->kUseOffAxisDelay > 0 ? dtCache->offAxisDelaysDivided[p21] : 0;
 	  offsetLowDouble += dtCache->kUseOffAxisDelay > 0 ? dtCache->offAxisDelaysDivided[p21] : 0;	  
 	
 	  offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
@@ -519,12 +659,6 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 
 	  // hack for floor()
 	  Int_t offsetLow = (int) offsetLowDouble - (offsetLowDouble < (int) offsetLowDouble);
-	  // Double_t deltaT = getDeltaTExpected(pol, ant1, ant2, zoomPhiWave, zoomThetaWave);
-
-	  // Int_t offsetLow = floor(deltaT/cc->correlationDeltaT);
-	  // offsetLow += offset;
-
-	  // deltaT -= offsetLow*cc->correlationDeltaT;
 
 	  Double_t deltaT = (offsetLowDouble - offsetLow);
 	  offsetLow += offset;
@@ -532,20 +666,9 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 	  Double_t c2 = cc->crossCorrelationsUpsampled[pol][combo][offsetLow+1];
 	  Double_t cInterp = deltaT*(c2 - c1) + c1;
 
-	  
-	  // if(thetaBin==0 && phiBin == 0 && comboInd==0){
-	  //   std::cout << "inside I got " << "\t" << p21 << "\t" << offsetLowDouble << "\t" << cInterp << std::endl;	    
-	  // }
-
-	  // std::cout << pol << "\t" << peakIndex << "\t"
-	  // 	  << thetaBin << "\t" << phiBin << "\t"
-	  // 	  << zoomThetaWave << "\t" << zoomPhiWave << "\t"
-	  // 	  << deltaT << "\t" << c1 << std::endl;
-	  // fineMap[pol][peakIndex][thetaBin][phiBin] += c1;
-	  Int_t bin = (thetaBin+1)*(GetNbinsPhi()+2) + phiBin+1;
+          Int_t bin = (thetaBin+1)*(GetNbinsPhi()+2) + phiBin+1;
 	  AddBinContent(bin, cInterp);
 	  fEntries++;
-	  // fineMap[pol][peakIndex][thetaBin][phiBin] += cInterp;
 	}
       }
     }
@@ -555,27 +678,120 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
     normFactor*=(cc->numSamples*cc->numSamples);
 
     // set peak finding variables
-    imagePeak = -DBL_MAX;
+    fPeakBinValue = -DBL_MAX;
   
     for(Int_t thetaBin = 0; thetaBin < GetNbinsTheta(); thetaBin++){
       for(Int_t phiBin = 0; phiBin < GetNbinsPhi(); phiBin++){
 	Double_t val = GetBinContent(phiBin+1, thetaBin+1);
 	val /= normFactor;
 	SetBinContent(phiBin+1, thetaBin+1, val);
-	if(val > imagePeak){	
-	  imagePeak = val;
-	  peakPhiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
-	  peakThetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);	  
+	if(val > fPeakBinValue){	
+	  fPeakBinValue = val;
+	  // peakPhiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
+	  // peakThetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);	  
+	  fPeakBinPhi = phiBin;
+	  fPeakBinTheta = thetaBin;
 	}
       }
     }
-
+    fitPeakWithQuadratic(fPeakBinPhi, fPeakBinTheta);
     
   }
-
-  // std::cerr << "end of filling" << std::endl;
   
 }
+
+
+
+/** 
+ * Useful if we're not fitting, or something goes wrong with the fit procedure.
+ * 
+ * @param peakPhiBin is the phi bin on which to centre the 2D quadratic
+ * @param peakThetaBin is the theta bin on which to centre the 2D quadratic
+ */
+void Acclaim::InterferometricMap::setPeakInfoJustFromPeakBin(Int_t peakPhiBin, Int_t peakThetaBin){
+  fPeakPhi = GetPhiAxis()->GetBinLowEdge(peakPhiBin+1);
+  fPeakTheta = GetThetaAxis()->GetBinLowEdge(peakThetaBin+1);
+  fPeakValue = GetBinContent(peakPhiBin+1, peakThetaBin+1);
+}
+
+
+/** 
+ * @brief Fit a 2D quadratic function to the bins around the peak of the map.
+ * Only implemented for zoomed maps.
+ * 
+ * @param peakPhiBin is the phi bin on which to centre the 2D quadratic
+ * @param peakThetaBin is the theta bin on which to centre the 2D quadratic
+ */
+
+void Acclaim::InterferometricMap::fitPeakWithQuadratic(Int_t peakPhiBin, Int_t peakThetaBin){
+
+  if(!fIsZoomMap){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", not implemented for coarse map." << std::endl;    
+    return;
+  }
+  
+  // Get range and check we're not too close to the edge...  
+  int minDeltaPhiBin, maxDeltaPhiBin, minDeltaThetaBin, maxDeltaThetaBin;
+  getDeltaBinRangeSVD(minDeltaPhiBin, maxDeltaPhiBin, minDeltaThetaBin, maxDeltaThetaBin);
+
+  int firstPhiBin = minDeltaPhiBin + peakPhiBin;
+  int lastPhiBin = maxDeltaPhiBin + peakPhiBin;
+  int firstThetaBin = minDeltaThetaBin + peakThetaBin;
+  int lastThetaBin = maxDeltaThetaBin + peakThetaBin;  
+
+  if(firstPhiBin < 0 || lastPhiBin >= GetNbinsPhi() || firstThetaBin < 0 || lastThetaBin >= GetNbinsTheta()){
+    // don't warn as this happens a lot and gets very verbose...
+    // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", too close to to the edge to do quadratic peak fit" << std::endl;
+    setPeakInfoJustFromPeakBin(peakPhiBin, peakThetaBin);    
+    return;    
+  }
+
+
+  // put bin values around peak into a vector for the matrix equation we're about to solve
+  TVectorD peakData(NUM_BINS_QUAD_FIT_PHI*NUM_BINS_QUAD_FIT_THETA);
+  int row=0;
+  for(int phiBin=firstPhiBin; phiBin < lastPhiBin; phiBin++){
+    for(int thetaBin=firstThetaBin; thetaBin < lastThetaBin; thetaBin++){
+      peakData[row] = GetBinContent(phiBin+1, thetaBin+1);
+      row++;
+    }
+  }
+    
+  // solve for the quadratic coefficients a,b,c,d,e,f
+  TDecompSVD& svd = (TDecompSVD&) getSVD(); // cast away const-ness
+  Bool_t ok = false;
+  TVectorD quadraticCoefficients = svd.Solve(peakData, ok);
+  if(!ok){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__  << ": something went wrong with the peak interpolation. Will just use peak bin." << std::endl;
+    setPeakInfoJustFromPeakBin(peakPhiBin, peakThetaBin);
+    return;
+  }
+
+  // pick 2D quadratic coefficients out from the results vector
+  double a = quadraticCoefficients(0);
+  double b = quadraticCoefficients(1);
+  double c = quadraticCoefficients(2);
+  double d = quadraticCoefficients(3);
+  double e = quadraticCoefficients(4);
+  double f = quadraticCoefficients(5);
+
+
+  // do some algebra to determine the centre position and peak value
+  const double denom = (4*a*b - c*c);
+  const double x_c = (-2*b*d + c*e)/denom;
+  const double y_c = (-2*a*e + c*d)/denom;
+  const double p_c = a*x_c*x_c + b*y_c*y_c + c*x_c*y_c + d*x_c + e*y_c + f;
+
+  // Put fit results into member variables containing the results
+  fPeakPhi = x_c + GetPhiAxis()->GetBinLowEdge(peakPhiBin+1);
+  fPeakTheta = y_c + GetThetaAxis()->GetBinLowEdge(peakThetaBin+1);
+  fPeakValue = p_c;
+
+  // std::cerr << a << "\t" << b << "\t" << c << "\t" << d << "\t" << e << "\t" << f << std::endl;
+  // std::cerr << fPeakPhi << "\t" << fPeakTheta << "\t" << fPeakValue << "\t" << GetBinContent(peakPhiBin+1, peakThetaBin+1) << std::endl;
+}
+
+
 
 
 
@@ -719,6 +935,9 @@ void Acclaim::InterferometricMap::initializeInternals(){
   fThetaAxisInSinTheta = true;
   pol = AnitaPol::kNotAPol;
   eventNumber = 0;
+  fPeakPhi = -9999;
+  fPeakTheta = -9999;
+  fPeakValue = -1;
   setDefaultName();
 }
 
@@ -786,7 +1005,7 @@ TGraph& Acclaim::InterferometricMap::getPeakPointGraph(){
 
   TGraph& gr = findOrMakeGraph("grPeak");
   if(gr.GetN()==0){
-    gr.SetPoint(0, peakPhiDeg, peakThetaDeg);
+    gr.SetPoint(0, fPeakPhi, fPeakTheta);
   }
   return grs["grPeak"];
   

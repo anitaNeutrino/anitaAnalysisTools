@@ -36,11 +36,15 @@
 #define NUM_BINS_PHI_ZOOM_TOTAL (DEGREES_IN_CIRCLE*ZOOM_BINS_PER_DEGREE_PHI + NUM_BINS_PHI_ZOOM)
 #define NUM_BINS_THETA_ZOOM_TOTAL ((MAX_THETA - MIN_THETA)*ZOOM_BINS_PER_DEGREE_THETA + NUM_BINS_THETA_ZOOM)
 
+#define NUM_BINS_QUAD_FIT_PHI 5
+#define NUM_BINS_QUAD_FIT_THETA 5
+
 #include "AnitaConventions.h"
 
 #include "TH2D.h"
 #include "TGraph.h"
 #include <map>
+#include "TDecompSVD.h"
 
 class Adu5Pat;
 class UsefulAdu5Pat;
@@ -62,7 +66,7 @@ namespace Acclaim
 
     void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
     void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const;
-    void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = imagePeak, phiDeg = peakPhiDeg, thetaDeg = peakThetaDeg;}
+    void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = fPeakBinValue, phiDeg = fPeakPhi, thetaDeg = fPeakTheta;}
     void ExecuteEvent(int event, int x, int y);
 
     void addGpsInfo(const Adu5Pat* pat);
@@ -71,23 +75,25 @@ namespace Acclaim
     void project(TProfile2D* proj, double horizonKilometers);
 
     inline Int_t GetNbinsPhi() const {return GetNbinsX();}
-    inline Int_t GetNbinsTheta() const {return GetNbinsY();}  
+    inline Int_t GetNbinsTheta() const {return GetNbinsY();}
     inline const TAxis* GetPhiAxis() const {return GetXaxis();}
-    inline const TAxis* GetThetaAxis() const {return GetYaxis();}  
+    inline const TAxis* GetThetaAxis() const {return GetYaxis();}
 
     TGraph& getPeakPointGraph(); // for plotting
     TGraph& getEdgeBoxGraph(); // for plotting
-    TGraph& getSunGraph(); // for plotting    
+    TGraph& getSunGraph(); // for plotting
 
     bool isAZoomMap() const {return fIsZoomMap;}
-    Int_t getPeakPhiSector() const {return peakPhiSector;}
-    AnitaPol::AnitaPol_t getPol() const {return pol;}  
-
+    Int_t getPeakPhiSector() const {return fPeakPhiSector;}
+    AnitaPol::AnitaPol_t getPol() const {return pol;}
     
   protected:
 
     UsefulAdu5Pat* fUsefulPat;
     void deletePat();
+
+    void fitPeakWithQuadratic(Int_t peakPhiBin, Int_t peakThetaBin);
+    void setPeakInfoJustFromPeakBin(Int_t peakPhiBin, Int_t peakThetaBin);
 
     TGraph& findOrMakeGraph(TString name);
   
@@ -104,7 +110,7 @@ namespace Acclaim
     // doing the zoomed in maps requires knowing a little more information
     // isZoomMap = false, and all other = -1 if doing a coarse map
     bool fIsZoomMap;
-    int peakPhiSector;
+    int fPeakPhiSector;
     int minThetaBin;
     int minPhiBin;
     int peakIndex;  // for name and title of zoomed map only
@@ -112,9 +118,14 @@ namespace Acclaim
     // Get the appropriate bin edges for the zoom map
     void getIndicesOfEdgeBins(const std::vector<double>& binEdges, Double_t lowVal, Double_t highVal, Int_t& lowIndex, Int_t& highIndex); 
 
-    Double_t imagePeak;
-    Double_t peakPhiDeg;
-    Double_t peakThetaDeg;
+    Double_t fPeakBinValue; //!< The value of the highest bin in the map
+    Int_t fPeakBinPhi; //!< The bin in phi (counting from 0) containing the peak value
+    Int_t fPeakBinTheta; //!< The bin in theta (counting from 0) containing the peak value
+
+    Double_t fPeakValue; //!< Value of the peak of quadratic fit to the region around the peak bin
+    Double_t fPeakPhi; //!< Location in phi of the peak of the quadratic fit to the region around the peak bin
+    Double_t fPeakTheta; //!< Location in theta of the peak of the quadratic fit to the region around the peak bin
+    
 
     std::map<TString, TGraph> grs;
 
@@ -125,11 +136,12 @@ namespace Acclaim
     static const std::vector<Double_t>& getCoarseBinEdgesTheta();
     static const std::vector<Double_t>& getFineBinEdgesTheta();
     static const std::vector<Double_t>& getCoarseBinEdgesPhi();
-    static const std::vector<Double_t>& getFineBinEdgesPhi();  
-  
+    static const std::vector<Double_t>& getFineBinEdgesPhi();
     static Double_t getBin0PhiDeg();
-  
-     
+   private:
+    static const TDecompSVD& getSVD();
+    static void getDeltaBinRangeSVD(Int_t& dPhiBinLow, Int_t& dPhiBinHigh, Int_t& dThetaBinLow, Int_t& dThetaBinHigh);
+    
   };
 }
 
