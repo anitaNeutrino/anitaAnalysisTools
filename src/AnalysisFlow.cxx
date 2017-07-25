@@ -350,9 +350,16 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
  * Does the main analysis loop
  */
 void Acclaim::AnalysisFlow::doAnalysis(){
-    
+
   if(!fData){
     prepareDataSet();
+  }
+
+  if(fRun >= 257 && fRun <= 263){
+    if(AnitaVersion::get()==3){
+      std::cerr << "No data for run " << fRun << " so won't do analysis" << std::endl;
+      return;
+    }
   }
 
   if(!fSettings){
