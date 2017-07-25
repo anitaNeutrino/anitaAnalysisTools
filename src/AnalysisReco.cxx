@@ -26,6 +26,7 @@ Acclaim::AnalysisReco::~AnalysisReco(){
 
   if(spawnedCrossCorrelator && fCrossCorr){
     delete fCrossCorr;
+    fCrossCorr = NULL;
   }
 
 
@@ -35,9 +36,25 @@ Acclaim::AnalysisReco::~AnalysisReco(){
       heatMaps[polInd] = NULL;
     }
   }
+
+  nicelyDeleteInternalFilteredEvents();  
 }
 
 
+void Acclaim::AnalysisReco::nicelyDeleteInternalFilteredEvents(){
+  if(fEvMin != NULL){
+    delete fEvMin;
+    fEvMin = NULL;
+  }
+  if(fEvMinDeco != NULL){
+    delete fEvMinDeco;
+    fEvMinDeco = NULL;
+  }
+  if(fEvDeco != NULL){
+    delete fEvDeco;
+    fEvDeco = NULL;  
+  }  
+}
 
 
 
@@ -264,9 +281,13 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     dtCache.init(fCrossCorr, this);
   }
 
-  FilteredAnitaEvent fEvMin(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false); // just the minimum filter
-  FilteredAnitaEvent fEvMinDeco(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
-  FilteredAnitaEvent fEvDeco(fEv, fMinDecoFilter); // extra deconvolution
+  // FilteredAnitaEvent fEvMin(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false); // just the minimum filter
+  // FilteredAnitaEvent fEvMinDeco(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
+  // FilteredAnitaEvent fEvDeco(fEv, fMinDecoFilter); // extra deconvolution
+  nicelyDeleteInternalFilteredEvents();
+  fEvMin = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false); // just the minimum filter
+  fEvMinDeco = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
+  fEvDeco = new FilteredAnitaEvent(fEv, fMinDecoFilter); // extra deconvolution  
 
   eventSummary->eventNumber = fEv->getHeader()->eventNumber;
 
@@ -319,9 +340,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
         // deconvolved_filtered
       
         fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
-        fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    &fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
-        fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], &fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
-        fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          &fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
       
         if(usefulPat != NULL){
       
@@ -411,6 +432,10 @@ void Acclaim::AnalysisReco::initializeInternals(){
   if(!fMinDecoFilter){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minDecoFiltName << std::endl;
   }
+
+  fEvMin = NULL;
+  fEvMinDeco = NULL;
+  fEvDeco = NULL;  
   
 }
 
@@ -772,6 +797,8 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
     fLastCoherentDeltaPhi = fCoherentDeltaPhi;
   }
 }
+
+
 
 
 
@@ -1150,4 +1177,119 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   
   wholePad->SetBorderSize(2);
     
+}
+
+
+
+/** 
+ * @brief Coherently summed filtered (un-deconvolved) waveform accessor for external processes. 
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @param pol is the polarisation
+ * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
+ * @param xPol direct or cross polarisation compared to pol.
+ * 
+ * @return pointer to the AnalysisWaveform
+ */
+AnalysisWaveform* Acclaim::AnalysisReco::getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
+  AnalysisWaveform* wf = wfCoherentFiltered[pol][peakInd][xPol];
+  wfCoherentFiltered[pol][peakInd][xPol] = NULL;
+  return wf;  
+}
+
+
+/** 
+ * @brief Coherently summed (un-filtered, un-deconvolved) waveform accessor for external processes. 
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @param pol is the polarisation
+ * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
+ * @param xPol direct or cross polarisation compared to pol.
+ * 
+ * @return pointer to the AnalysisWaveform
+ */
+AnalysisWaveform* Acclaim::AnalysisReco::getCoherent(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
+  AnalysisWaveform* wf = wfCoherent[pol][peakInd][xPol];
+  wfCoherent[pol][peakInd][xPol] = NULL;
+  return wf;  
+}
+
+
+
+/** 
+ * @brief Coherently summed (un-filtered) deconvolved waveform accessor for external processes. 
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @param pol is the polarisation
+ * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
+ * @param xPol direct or cross polarisation compared to pol.
+ * 
+ * @return pointer to the AnalysisWaveform
+ */
+AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolved(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
+  AnalysisWaveform* wf = wfDeconvolved[pol][peakInd][xPol];
+  wfDeconvolved[pol][peakInd][xPol] = NULL;
+  return wf;
+}
+
+
+
+/** 
+ * @brief Coherently summed filtered deconvolved waveform accessor for external processes. 
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @param pol is the polarisation
+ * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
+ * @param xPol direct or cross polarisation compared to pol.
+ * 
+ * @return pointer to the AnalysisWaveform
+ */
+
+AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolvedFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
+  AnalysisWaveform* wf = wfDeconvolvedFiltered[pol][peakInd][xPol];
+  wfDeconvolvedFiltered[pol][peakInd][xPol] = NULL;
+  return wf;
+}
+
+
+
+
+/** 
+ * Access for internally produce minimally filtered event
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @return The minimally filtered version of the event
+ */
+FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMin(){
+  FilteredAnitaEvent* f = fEvMin;
+  fEvMin = NULL;
+  return f;
+}
+
+
+
+/** 
+ * Access for internally produced minimally filtered, deconvolved event
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @return The minimally filtered, deconvolved version of the event
+ */
+FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMinDeco(){
+  FilteredAnitaEvent* f = fEvMinDeco;
+  fEvMinDeco = NULL;
+  return f;
+}
+
+
+
+/** 
+ * Access for internally produced filtered, deconvolved event
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @return The deconvolved version of the event
+ */
+FilteredAnitaEvent* Acclaim::AnalysisReco::getEvDeco(){
+  FilteredAnitaEvent* f = fEvDeco;
+  fEvDeco = NULL;
+  return f;
 }

@@ -24,7 +24,7 @@ ClassImp(Acclaim::AnalysisFlow);
 
 Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
 
-  fOutFileBaseName = TString::Format("%s", outFileBaseName);
+  fOutFileBaseName = outFileBaseName ? TString::Format("%s", outFileBaseName) : "";
   fSelection = selection;
   fFilterStrat = filterStrat;
   fBlindStrat = blindStrat;
@@ -35,7 +35,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   // assuming this wasn't explicitly set...
   const char* sgeTaskId = "SGE_TASK_ID";
   const char* sgeTaskIdEnv = getenv(sgeTaskId);
-  if(sgeTaskIdEnv && numDivisions==1){
+  if(sgeTaskIdEnv && numDivisions==1){    
     // we have runs 130-439
     // I'm going to set the job array like:
     // 130-439 for 1 job per run = 309 jobs
@@ -63,7 +63,8 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
       exit(1);
     }
 
-    std::cout << "Found " << sgeTaskId << " " << sgeTaskIdEnv
+    std::cout << "Info in " << __PRETTY_FUNCTION__ << ". "
+              << "Found " << sgeTaskId << " " << sgeTaskIdEnv
 	      << ", so the jobArrayIndex = " << jobArrayIndex
 	      << ", set fRun = " << fRun
 	      << ", fNumDivisions = " << fNumDivisions
@@ -161,7 +162,7 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
-  if(fOutFile==NULL){
+  if(fOutFile==NULL && fOutFileBaseName!=""){
 
     // The output convention was originally designed to take argc and argv from the start of main
     // so here I reconstruct what they might have been.
@@ -349,7 +350,7 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
 /** 
  * Does the main analysis loop
  */
-void Acclaim::AnalysisFlow::doAnalysis(){
+void Acclaim::AnalysisFlow::doAnalysis(UInt_t justThisEvent){
 
   if(!fData){
     prepareDataSet();
@@ -379,13 +380,17 @@ void Acclaim::AnalysisFlow::doAnalysis(){
   UInt_t lastEventConsidered = 0;
   NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, NoiseMonitor::kUneven, fOutFile);
 
-  if(!fSumTree){
+  AnitaEventSummary* eventSummary = NULL;  
+  if(fOutFile && !fSumTree){
     fSumTree = new TTree("sumTree", "Tree of AnitaEventSummaries");
+    fSumTree->Branch("sum", &eventSummary);    
   }
 
-  AnitaEventSummary* eventSummary = NULL;
-  fSumTree->Branch("sum", &eventSummary);
 
+  if(justThisEvent > 0){
+    fFirstEntry = fData->getEvent(justThisEvent);
+    fLastEntry = fFirstEntry + 1;
+  }  
   const Long64_t numEntries = fLastEntry-fFirstEntry;
   ProgressBar p(numEntries);
 
@@ -432,7 +437,9 @@ void Acclaim::AnalysisFlow::doAnalysis(){
 	fReco->process(&filteredEvent, &usefulPat, eventSummary, &noiseMonitor);
       }
 
-      fSumTree->Fill();
+      if(fSumTree){
+        fSumTree->Fill();
+      }
       delete eventSummary;
       eventSummary = NULL;
     }
@@ -441,5 +448,3 @@ void Acclaim::AnalysisFlow::doAnalysis(){
     p.inc(entry, numEntries);
   }
 }
-
-

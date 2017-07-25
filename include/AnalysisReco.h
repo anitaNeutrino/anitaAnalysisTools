@@ -66,6 +66,14 @@ class AnalysisReco : public TObject {
   std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
   std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
   
+  AnalysisWaveform* getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
+  AnalysisWaveform* getCoherent(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
+  AnalysisWaveform* getDeconvolved(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
+  AnalysisWaveform* getDeconvolvedFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
+
+  FilteredAnitaEvent* getEvMin();
+  FilteredAnitaEvent* getEvMinDeco();
+  FilteredAnitaEvent* getEvDeco();
   
  protected:
 
@@ -93,7 +101,12 @@ class AnalysisReco : public TObject {
   FilterStrategy* fMinFilter; //!< Would be no filters, but for ANITA-3 data we need an ALFA filter
   FilterStrategy* fMinDecoFilter; //!< Minimum filter + deconvolution filter
 
+  FilteredAnitaEvent* fEvMin;
+  FilteredAnitaEvent* fEvMinDeco;
+  FilteredAnitaEvent* fEvDeco;
+
   void chooseAntennasForCoherentlySumming(int coherentDeltaPhi);
+  void nicelyDeleteInternalFilteredEvents();
   
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
   Int_t fLastCoherentDeltaPhi; // for checking whether recalculation is needed

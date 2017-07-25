@@ -41,15 +41,18 @@ class AnalysisFlow : public TObject{
     AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1);
     ~AnalysisFlow();
 
-    void doAnalysis();  
+    void doAnalysis(UInt_t justThisEvent=0);
+    AnalysisReco* getReco(){return fReco;}
+
+ protected:
+
     void prepareDataSet();
     void prepareOutputFiles();
     Bool_t shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
     Bool_t isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
     Bool_t isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);    
     void setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum);  
-    
-  protected:
+
     int fRun;
     selection fSelection;
     AnitaDataset::BlindingStrategy fBlindStrat;
