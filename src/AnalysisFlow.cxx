@@ -202,6 +202,7 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     OutputConvention oc(fakeArgc, &fakeArgv[0]);
 
     fOutFile = oc.makeFile();
+    fOutFile->SetCompressionLevel(fOutFileCompressionLevel);
 
     // std::cout << fOutFile << "\t" << fOutFile->GetName() << std::endl;
   }  

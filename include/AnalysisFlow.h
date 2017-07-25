@@ -71,6 +71,7 @@ class AnalysisFlow : public TObject{
     ANALYSIS_SETTING(Int_t, DoAll);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
     ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
+    ANALYSIS_SETTING(Int_t, OutFileCompressionLevel);
 
     ClassDef(AnalysisFlow, 0);
   };
