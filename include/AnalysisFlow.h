@@ -47,6 +47,7 @@ class AnalysisFlow : public TObject{
     AnitaEventSummary* doEntry(Long64_t entry);
     AnitaEventSummary* doEvent(UInt_t eventNumber);
     AnalysisReco* getReco(){return fReco;}
+    const AnitaDataset* getData(){return fData;}
 
  protected:
 

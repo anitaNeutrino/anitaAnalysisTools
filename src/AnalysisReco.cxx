@@ -604,6 +604,7 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find fineMap with pol " << pol 
 	      << " for peakInd = " << peakInd << " about to return NULL." << std::endl;
   }
+  fineMaps[pol][peakInd] = NULL;
 
   return h;
 }
@@ -682,7 +683,7 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
   h->Fill(pol, fCrossCorr, &dtCache);  
 
   // std::cout << h->GetName() << std::endl;
-  
+  // std::cout << "in " << __PRETTY_FUNCTION__ << ": " << fineMaps[pol][peakIndex] << std::endl;
   if(fineMaps[pol][peakIndex]){
     delete fineMaps[pol][peakIndex];
   }

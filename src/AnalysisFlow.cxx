@@ -458,7 +458,6 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
       FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
 
       fNoiseMonitor->update(&filteredEvent);
-        
       fReco->process(&filteredEvent, &usefulPat, fEventSummary, fNoiseMonitor);
     }
 

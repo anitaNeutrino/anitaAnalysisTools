@@ -81,7 +81,8 @@ class AnalysisReco : public TObject {
 
   const std::vector<int>& phiSectorToCoherentAnts(int peakPhiSector){return phiSectorToAnts[peakPhiSector];}
   void wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs);
-  
+
+  CrossCorrelator* getCrossCorrelator(){return fCrossCorr;}
  protected:
 
   void initializeInternals();
