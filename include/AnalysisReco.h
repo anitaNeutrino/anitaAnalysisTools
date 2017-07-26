@@ -74,6 +74,13 @@ class AnalysisReco : public TObject {
   FilteredAnitaEvent* getEvMin();
   FilteredAnitaEvent* getEvMinDeco();
   FilteredAnitaEvent* getEvDeco();
+
+
+  void directionAndAntennasToDeltaTs(const std::vector<Int_t>& theAnts, AnitaPol::AnitaPol_t pol,
+                                     Double_t peakPhiDeg, Double_t peakThetaDeg, std::vector<double>& dts);
+
+  const std::vector<int>& phiSectorToCoherentAnts(int peakPhiSector){return phiSectorToAnts[peakPhiSector];}
+  void wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs);
   
  protected:
 
@@ -84,6 +91,7 @@ class AnalysisReco : public TObject {
   TProfile2D* heatMaps[AnitaPol::kNotAPol];
   TProfile2D* makeHeatMap(const TString& name, const TString& title);
 
+  size_t checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts);
   void fillWaveformInfo(AnitaPol::AnitaPol_t pol, AnitaEventSummary::WaveformInfo& info, const FilteredAnitaEvent* fEv,
                         AnalysisWaveform** waveStore, InterferometricMap* h, NoiseMonitor* noiseMonitor);
   

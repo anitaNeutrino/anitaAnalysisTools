@@ -95,7 +95,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // Double_t totalPowerXpol;  ///Total power in xPol waveform
 
   Int_t peakPhiSector = h->getPeakPhiSector();
-  const std::vector<Int_t>& theAnts = phiSectorToAnts[peakPhiSector];
+  const std::vector<Int_t>& theAnts = phiSectorToCoherentAnts(peakPhiSector);
 
   Double_t peak, phiDeg, thetaDeg;
   h->getPeakInfo(peak, phiDeg, thetaDeg);
@@ -800,6 +800,28 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
 
 
 
+/** 
+ * Modularising the coherently summed waveforms
+ * 
+ * @param theAnts are the antenna indices
+ * @param pol is the polarisation
+ * @param peakPhiDeg is the phi angle relative to ADU5 aft-fore (degrees)
+ * @param peakThetaDeg is the theta angle (0 = horizontal, +ve theta is up)
+ * @param dts is a vector which gets filled with the time offsets
+ */
+void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_t>& theAnts, AnitaPol::AnitaPol_t pol,
+                                                          Double_t peakPhiDeg, Double_t peakThetaDeg, std::vector<double>& dts) {
+
+  dts.clear(); // first empty the vector
+  Double_t phiWave = peakPhiDeg*TMath::DegToRad();
+  Double_t thetaWave = peakThetaDeg*TMath::DegToRad();
+  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
+    int ant = theAnts.at(antInd);
+    Double_t dt = getDeltaTExpected(pol, theAnts.at(0), ant, phiWave, thetaWave);
+    dts.push_back(dt);
+  }
+}
+
 
 
 
@@ -845,29 +867,21 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   }
 
   // now we've found the channel with the biggest peak-to-peak
-  // coherently sum the waves with this channel first
+  // prepare to coherently sum the waves with this channel first
   std::vector<const AnalysisWaveform*> waves;
   waves.push_back(fEv->getFilteredGraph(biggest, pol));
+  std::vector<int> orderedAnts(1, biggest);
   for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
     int ant = theAnts.at(antInd);
     if(ant != biggest){
       waves.push_back(fEv->getFilteredGraph(ant, pol));
+      orderedAnts.push_back(ant);
     }
   }
 
-  Double_t phiWave = peakPhiDeg*TMath::DegToRad();
-  Double_t thetaWave = peakThetaDeg*TMath::DegToRad();
-
-  std::vector<Double_t> dts(1, 0); // 0 offset for biggest antenna
-
-  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
-    int ant = theAnts.at(antInd);
-    if(ant!=biggest){
-      Double_t dt = getDeltaTExpected(pol, biggest, ant, phiWave, thetaWave);
-      dts.push_back(dt);
-    }
-  }
-
+  std::vector<double> dts;
+  directionAndAntennasToDeltaTs(orderedAnts, pol, peakPhiDeg, peakThetaDeg, dts);
+  
   return coherentlySum(waves, dts);
 }
 
@@ -875,6 +889,27 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
 
 
 
+
+size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
+  size_t s = waves.size();
+  if(s < 1){    
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum." << std::endl;
+  }  
+  else if(s != dts.size()){    
+    const char* action = dts.size() < waves.size() ? "padding" : "trimming";
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
+	      << action << " dts..." << std::endl;
+    while(s != dts.size()){
+      if(dts.size() < s){
+	dts.push_back(0);
+      }
+      else{
+	dts.pop_back();	
+      }
+    }
+  }
+  return s;
+}
 
 
 /** 
@@ -886,28 +921,16 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
  * @return a newly created AnalysisWaveform, created by coherently summing the input waves
  */
 AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
-  
-  if(waves.size() < 1){    
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum.. about to return NULL" << std::endl;
+
+  if(checkWavesAndDtsMatch(waves, dts)==0){
+    std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
     return NULL;
   }  
-  else if(waves.size() != dts.size()){    
-    const char* action = dts.size() < waves.size() ? "padding" : "trimming";
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
-	      << action << " dts..." << std::endl;
-    while(waves.size() != dts.size()){
-      if(dts.size() < waves.size()){
-	dts.push_back(0);
-      }
-      else{
-	dts.pop_back();	
-      }
-    }
-  }
 
   AnalysisWaveform* coherentWave = new AnalysisWaveform((*waves[0]));
   
   TGraphAligned* grCoherent = coherentWave->updateEven();
+
   for(UInt_t i=1; i < waves.size(); i++){
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
@@ -920,6 +943,31 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   };    
 
   return coherentWave;
+}
+
+
+
+
+/** 
+ * Generate the waveforms that do into the coherent sum
+ * 
+ * @param waves is a set of waveforms to coherently sum
+ * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
+ * 
+ * @return a newly created AnalysisWaveform, created by coherently summing the input waves
+ */
+void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs){
+
+  for(unsigned w=0; w < waves.size(); w++){
+    const TGraphAligned* grOld = waves[w]->even();
+    TGraphAligned* gr = new TGraphAligned(grOld->GetN(), grOld->GetX(), grOld->GetY());
+
+    for(int i=0; i < gr->GetN(); i++){
+      gr->GetX()[i] -= dts[w];
+    }
+    
+    grs.push_back(gr);
+  }
 }
 
 

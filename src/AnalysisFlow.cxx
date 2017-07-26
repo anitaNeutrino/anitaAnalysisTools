@@ -82,6 +82,13 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fReco = NULL;
   fOutFile = NULL;
   fSettings = NULL;
+  fEventSummary = NULL;
+
+  fFirstEntry=0;
+  fLastEntry=0;
+  fLastEventConsidered = 0;
+
+  prepareEverything();
 }
 
 
@@ -346,21 +353,21 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
 
 
 
-
 /** 
- * Does the main analysis loop
+ * Set up all I/O
+ * 
  */
-void Acclaim::AnalysisFlow::doAnalysis(UInt_t justThisEvent){
-
-  if(!fData){
-    prepareDataSet();
-  }
+void Acclaim::AnalysisFlow::prepareEverything(){
 
   if(fRun >= 257 && fRun <= 263){
     if(AnitaVersion::get()==3){
-      std::cerr << "No data for run " << fRun << " so won't do analysis" << std::endl;
+      std::cerr << "No ANITA-3 data for run " << fRun << " so won't do analysis" << std::endl;
       return;
     }
+  }
+  
+  if(!fData){
+    prepareDataSet();
   }
 
   if(!fSettings){
@@ -377,22 +384,11 @@ void Acclaim::AnalysisFlow::doAnalysis(UInt_t justThisEvent){
     prepareOutputFiles();
   }
 
-  UInt_t lastEventConsidered = 0;
-  NoiseMonitor noiseMonitor(fNoiseTimeScaleSeconds, NoiseMonitor::kUneven, fOutFile);
-
-  AnitaEventSummary* eventSummary = NULL;  
+  fEventSummary = NULL;
   if(fOutFile && !fSumTree){
     fSumTree = new TTree("sumTree", "Tree of AnitaEventSummaries");
-    fSumTree->Branch("sum", &eventSummary);    
+    fSumTree->Branch("sum", &fEventSummary);    
   }
-
-
-  if(justThisEvent > 0){
-    fFirstEntry = fData->getEvent(justThisEvent);
-    fLastEntry = fFirstEntry + 1;
-  }  
-  const Long64_t numEntries = fLastEntry-fFirstEntry;
-  ProgressBar p(numEntries);
 
   if(fFilterStrat){
     // this doesn't necessarily mean the output will be saved
@@ -402,49 +398,97 @@ void Acclaim::AnalysisFlow::doAnalysis(UInt_t justThisEvent){
   else{
     // empty strategy does nothing
     fFilterStrat = new FilterStrategy();
+  }  
+  
+  fNoiseMonitor = new NoiseMonitor(fNoiseTimeScaleSeconds, NoiseMonitor::kUneven, fOutFile);
+  fLastEventConsidered = 0;
+}
+
+
+
+/** 
+ * Does my analysis on a single eventNumber in the run
+ * 
+ * @param eventNumber is the event to process, must be in the run and event selection!
+ * 
+ * @return the generated AnitaEventSummary, it is the caller's responsibility to delete this.
+ */
+AnitaEventSummary* Acclaim::AnalysisFlow::doEvent(UInt_t eventNumber){
+  int entry = fData->getEvent(eventNumber);
+  return entry > 0 ? doEntry(entry) : NULL;
+}
+
+
+
+/** 
+ * Does my analysis on a single entry in the run
+ * 
+ * @param entry is the entry to process
+ * 
+ * @return the generated AnitaEventSummary, it is the caller's responsibility to delete this.
+ */
+AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
+
+  fData->getEntry(entry);
+  RawAnitaHeader* header = fData->header();
+  UsefulAnitaEvent* usefulEvent = fData->useful();
+
+  // make FourierBuffer filters behave as if we were considering sequential events
+  // this is useful for the decimated data set...
+  if(fLastEventConsidered + 1 != header->eventNumber){
+    Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
   }
+
+  Adu5Pat* pat = fData->gps();
+  UsefulAdu5Pat usefulPat(pat);
+
+  Bool_t needToReconstruct = shouldIDoThisEvent(header, &usefulPat);
+
+  fEventSummary = NULL;
+  
+  if(needToReconstruct){
+    fEventSummary = new AnitaEventSummary(header, &usefulPat);
+    Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, fEventSummary);
+
+    if(isGoodEvent || fDoAll){
+
+      setPulserFlags(header, &usefulPat, fEventSummary);
+        
+      // since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
+      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
+
+      fNoiseMonitor->update(&filteredEvent);
+        
+      fReco->process(&filteredEvent, &usefulPat, fEventSummary, fNoiseMonitor);
+    }
+
+    if(fSumTree){
+      fSumTree->Fill();
+    }
+  }
+    
+  fLastEventConsidered = header->eventNumber;
+  return fEventSummary;
+
+}
+
+
+
+/** 
+ * Does the main analysis loop for all specified events
+ */
+void Acclaim::AnalysisFlow::doAnalysis(){
+
+  fLastEventConsidered = 0;
+
+  const Long64_t numEntries = fLastEntry-fFirstEntry;
+  ProgressBar p(numEntries);
   
   for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
-
-    fData->getEntry(entry);
-    RawAnitaHeader* header = fData->header();
-    UsefulAnitaEvent* usefulEvent = fData->useful();
-
-    // make FourierBuffer filters behave as if we were considering sequential events
-    // this is useful for the decimated data set...
-    if(lastEventConsidered + 1 != header->eventNumber){
-      Filters::makeFourierBuffersLoadHistoryOnNextEvent(fFilterStrat);
+    AnitaEventSummary* sum = doEntry(entry);
+    if(sum){
+      delete sum;
     }
-
-    Adu5Pat* pat = fData->gps();
-    UsefulAdu5Pat usefulPat(pat);
-
-    Bool_t needToReconstruct = shouldIDoThisEvent(header, &usefulPat);
-
-    if(needToReconstruct){
-      eventSummary = new AnitaEventSummary(header, &usefulPat);
-      Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, eventSummary);
-
-      if(isGoodEvent || fDoAll){
-
-        setPulserFlags(header, &usefulPat, eventSummary);
-        
-	// since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
-	FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
-
-        noiseMonitor.update(&filteredEvent);
-        
-	fReco->process(&filteredEvent, &usefulPat, eventSummary, &noiseMonitor);
-      }
-
-      if(fSumTree){
-        fSumTree->Fill();
-      }
-      delete eventSummary;
-      eventSummary = NULL;
-    }
-    
-    lastEventConsidered = header->eventNumber;
     p.inc(entry, numEntries);
   }
 }

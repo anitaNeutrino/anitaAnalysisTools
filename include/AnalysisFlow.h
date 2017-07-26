@@ -16,6 +16,8 @@
 #include "TFile.h"
 #include "FilterStrategy.h"
 
+class AnitaEventSummary;
+class NoiseMonitor;
 
 namespace Acclaim
 {
@@ -41,7 +43,9 @@ class AnalysisFlow : public TObject{
     AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1);
     ~AnalysisFlow();
 
-    void doAnalysis(UInt_t justThisEvent=0);
+    void doAnalysis();
+    AnitaEventSummary* doEntry(Long64_t entry);
+    AnitaEventSummary* doEvent(UInt_t eventNumber);
     AnalysisReco* getReco(){return fReco;}
 
  protected:
@@ -66,10 +70,15 @@ class AnalysisFlow : public TObject{
     AnalysisReco* fReco;
     FilterStrategy* fFilterStrat;
     AnalysisSettings* fSettings;
+    AnitaEventSummary* fEventSummary;
+    NoiseMonitor* fNoiseMonitor;
+    UInt_t fLastEventConsidered;
   
     TString fOutFileBaseName;
     TFile* fOutFile;
     TTree* fSumTree;
+
+    void prepareEverything();
 
     ANALYSIS_SETTING(Int_t, DoAll);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
