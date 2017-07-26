@@ -99,7 +99,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
   Double_t peak, phiDeg, thetaDeg;
   h->getPeakInfo(peak, phiDeg, thetaDeg);
-  AnalysisWaveform* coherentWave = coherentlySum(fEv, pol, theAnts, phiDeg, thetaDeg);
+  Double_t largestPeakToPeak = 0;
+  AnalysisWaveform* coherentWave = coherentlySum(fEv, pol, theAnts, phiDeg, thetaDeg, &largestPeakToPeak);
 
   // Internal storage
   if(waveStore[0]) delete waveStore[0];
@@ -116,14 +117,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
       
     }
     noise /= theAnts.size();
-
-    const TGraphAligned* gr = coherentWave->even();
-    double maxVolts, maxTime, minVolts, minTime;
-    RootTools::getLocalMaxToMin(gr, maxVolts, maxTime, minVolts, minTime);
-
-    double signal = maxVolts - minVolts;
     
-    info.snr = signal/(2*noise);
+    info.snr = largestPeakToPeak/(2*noise);
   }
   
   
@@ -134,7 +129,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   info.peakVal = TMath::MaxElement(gr->GetN(), gr->GetY());
 
   AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
-  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg); // cross polarisation
+  Double_t largestPeakToPeakXPol = 0;
+  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol); // cross polarisation
 
   // Internal storage
   if(waveStore[1]) delete waveStore[1];
@@ -839,7 +835,7 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
  */
 AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol,
                                                        const std::vector<Int_t>& theAnts,
-                                                       Double_t peakPhiDeg, Double_t peakThetaDeg) {
+                                                       Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak) {
 
   Int_t biggest = -1;
   Double_t largestPeakToPeak = 0;
@@ -860,6 +856,10 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
       std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the waveform max/min aren't sensible?" << std::endl;
       std::cerr << vMax << "\t" << vMin << "\t" << tMax << "\t" << tMin << std::endl;
     }
+  }
+
+  if(biggestPeakToPeak){
+    (*biggestPeakToPeak) = largestPeakToPeak;
   }
 
   if(biggest < 0 || biggest >= NUM_SEAVEYS){

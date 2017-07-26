@@ -71,9 +71,16 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
     reco->wavesInCoherent(waves, dts, grs);
 
     for(UInt_t i=0; i < grs.size(); i++){
-      TString opt = i ==0 ? "al" : "lsame";    
+      TString opt = i ==0 ? "al" : "lsame";      
       grs[i]->Draw(opt);
       grs[i]->SetLineColor(i+1);
+      if(i==0){
+        grs[i]->SetMaximum(100);
+        grs[i]->SetMinimum(-100);
+        TString title = e == 0 ? "Not dedispersed" : "Dedispersed";
+        title += "; Time (ns); Amplitude (mV)";
+        grs[i]->SetTitle(title);        
+      }
     }
   }  
   
@@ -82,11 +89,11 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
   
 
   TCanvas* cWaves = new TCanvas("cWaves", "The coherent waveforms", 1200, 600);
-  cWaves->Divide(AnitaPol::kNotAPol);  
+  // cWaves->Divide(AnitaPol::kNotAPol);  
   AnalysisWaveform* coherentWaves[AnitaPol::kNotAPol];
   AnalysisWaveform* deconvolvedWaves[AnitaPol::kNotAPol];  
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    cWaves->cd(polInd+1);
+    // cWaves->cd(polInd+1);
     AnitaPol::AnitaPol_t pol = AnitaPol::AnitaPol_t(polInd);
     coherentWaves[pol] = reco->getCoherentFiltered(pol);
     TGraphAligned* gr = coherentWaves[pol]->updateEven();
@@ -96,6 +103,7 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
     TGraphAligned* gr2 = deconvolvedWaves[pol]->updateEven();
     gr2->SetLineColor(kRed);
     gr2->Draw("lsame");
+    break;
   }
 
   

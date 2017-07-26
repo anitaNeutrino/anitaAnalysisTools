@@ -53,7 +53,7 @@ class AnalysisReco : public TObject {
   void reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat = NULL);
   void reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, const Adu5Pat* pat = NULL);
 
-  AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol, const std::vector<Int_t>& theAnts, Double_t peakPhiDeg, Double_t peakThetaDeg);
+  AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol, const std::vector<Int_t>& theAnts, Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak=NULL);
   AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts);
 
 
