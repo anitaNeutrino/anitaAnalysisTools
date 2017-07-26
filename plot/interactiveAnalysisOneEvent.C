@@ -1,4 +1,6 @@
 #include "AnalysisFlow.h"
+#include "AcclaimFilters.h"
+#include "UCFilters.h"
 
 using namespace Acclaim;
 
@@ -13,8 +15,11 @@ using namespace Acclaim;
  */
 void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
 
-  AnalysisFlow flow(NULL, run, AnalysisFlow::kAll);
-  flow.doAnalysis(eventNumber);
+  FilterStrategy* strat = new FilterStrategy();  
+  UCorrelator::fillStrategyWithKey(strat,Acclaim::Filters::getCosminsFavouriteSineSubName());
+  
+  AnalysisFlow flow(NULL, run, AnalysisFlow::kAll, strat);
+  flow.doEvent(eventNumber);
   AnalysisReco* reco = flow.getReco(); // this object is what is in magic display
 
   
@@ -42,6 +47,39 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
     zoomMaps[polInd].at(0)->Draw("colz");
   }  
 
+
+  auto c = new TCanvas();
+  const int nEv = 2;
+  FilteredAnitaEvent* fEvs[nEv] = {reco->getEvMin(), reco->getEvDeco()};
+  c->Divide(nEv);
+  for(int e=0; e < nEv; e++){
+    c->cd(e+1);
+    FilteredAnitaEvent* fEv = fEvs[e];
+
+    
+    Int_t phiSect = zoomMaps[AnitaPol::kHorizontal][0]->getPeakPhiSector();
+    std::vector<int> ants = reco->phiSectorToCoherentAnts(phiSect);
+    double peakPhiDeg, peakThetaDeg, peakVal;
+    zoomMaps[AnitaPol::kHorizontal][0]->getPeakInfo(peakVal, peakPhiDeg, peakThetaDeg);
+    std::vector<double> dts;  
+    reco->directionAndAntennasToDeltaTs(ants, AnitaPol::kHorizontal, peakPhiDeg, peakThetaDeg, dts);
+    std::vector<const AnalysisWaveform *> waves;
+    for(auto& ant : ants){
+      waves.push_back(fEv->getFilteredGraph(ant, AnitaPol::kHorizontal));
+    }
+    std::vector<TGraphAligned*> grs;
+    reco->wavesInCoherent(waves, dts, grs);
+
+    for(UInt_t i=0; i < grs.size(); i++){
+      TString opt = i ==0 ? "al" : "lsame";    
+      grs[i]->Draw(opt);
+      grs[i]->SetLineColor(i+1);
+    }
+  }  
+  
+  // reco->wavesInCoherent(, std::vector<Double_t> &dts, std::vector<TGraphAligned *> &grs)
+  
+  
 
   TCanvas* cWaves = new TCanvas("cWaves", "The coherent waveforms", 1200, 600);
   cWaves->Divide(AnitaPol::kNotAPol);  
