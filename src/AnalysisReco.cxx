@@ -120,13 +120,24 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
     
     info.snr = largestPeakToPeak/(2*noise);
   }
-  
+
   
   const TGraphAligned* grHilbert = coherentWave->hilbertEnvelope();
   info.peakHilbert = TMath::MaxElement(grHilbert->GetN(), grHilbert->GetY());
 
   const TGraphAligned* gr = coherentWave->even();
   info.peakVal = TMath::MaxElement(gr->GetN(), gr->GetY());
+
+  Double_t localMaxVolts, localMinVolts, localMaxTime, localMinTime;
+  RootTools::getLocalMaxToMin(gr, localMaxVolts, localMaxTime, localMinVolts, localMinTime);
+  info.localMaxToMin = localMaxVolts - localMinVolts;
+  info.localMaxToMinTime = localMaxTime - localMinTime;
+
+  Int_t gMaxInd = TMath::LocMax(gr->GetN(), gr->GetY());
+  Int_t gMinInd = TMath::LocMin(gr->GetN(), gr->GetY());
+  info.globalMaxToMin = gr->GetY()[gMaxInd] - gr->GetY()[gMinInd];
+  info.globalMaxToMinTime = gr->GetX()[gMaxInd] - gr->GetX()[gMinInd];
+  
 
   AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
   Double_t largestPeakToPeakXPol = 0;
