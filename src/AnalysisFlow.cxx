@@ -83,6 +83,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fOutFile = NULL;
   fSettings = NULL;
   fEventSummary = NULL;
+  fEv = NULL;
 
   fFirstEntry=0;
   fLastEntry=0;
@@ -100,6 +101,11 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
  * 
  */
 Acclaim::AnalysisFlow::~AnalysisFlow(){
+
+  if(fEv){
+    delete fEv;
+    fEv = NULL;
+  }
 
   if(fData){
     delete fData;
@@ -455,10 +461,12 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
       setPulserFlags(header, &usefulPat, fEventSummary);
         
       // since we now have rolling averages make sure the filter strategy is sees every event before deciding whether or not to reconstruct
-      FilteredAnitaEvent filteredEvent(usefulEvent, fFilterStrat, pat, header, false);
-
-      fNoiseMonitor->update(&filteredEvent);
-      fReco->process(&filteredEvent, &usefulPat, fEventSummary, fNoiseMonitor);
+      if(fEv){
+        delete fEv;
+      }
+      fEv = new FilteredAnitaEvent(usefulEvent, fFilterStrat, pat, header, false);
+      fNoiseMonitor->update(fEv);
+      fReco->process(fEv, &usefulPat, fEventSummary, fNoiseMonitor);
     }
 
     if(fSumTree){

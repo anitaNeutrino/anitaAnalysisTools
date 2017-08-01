@@ -47,6 +47,7 @@ class AnalysisFlow : public TObject{
     AnitaEventSummary* doEntry(Long64_t entry);
     AnitaEventSummary* doEvent(UInt_t eventNumber);
     AnalysisReco* getReco(){return fReco;}
+    FilteredAnitaEvent* getEvent() {return fEv;}
     const AnitaDataset* getData(){return fData;}
     Long64_t firstEntry(){return fFirstEntry;}
     Long64_t lastEntry(){return fLastEntry;}
@@ -58,7 +59,7 @@ class AnalysisFlow : public TObject{
     Bool_t shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
     Bool_t isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);
     Bool_t isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat);    
-    void setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum);  
+    void setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum);
 
     int fRun;
     selection fSelection;
@@ -74,6 +75,7 @@ class AnalysisFlow : public TObject{
     FilterStrategy* fFilterStrat;
     AnalysisSettings* fSettings;
     AnitaEventSummary* fEventSummary;
+    FilteredAnitaEvent* fEv;
     NoiseMonitor* fNoiseMonitor;
     UInt_t fLastEventConsidered;
   
