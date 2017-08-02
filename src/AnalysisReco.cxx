@@ -103,7 +103,9 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   AnalysisWaveform* coherentWave = coherentlySum(fEv, pol, theAnts, phiDeg, thetaDeg, &largestPeakToPeak);
 
   // Internal storage
-  if(waveStore[0]) delete waveStore[0];
+  if(waveStore[0]){
+    delete waveStore[0];
+  }
   waveStore[0] = coherentWave;
   
   info.snr = 0;
@@ -144,7 +146,9 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol); // cross polarisation
 
   // Internal storage
-  if(waveStore[1]) delete waveStore[1];
+  if(waveStore[1]){
+    delete waveStore[1];
+  }
   waveStore[1] = xPolCoherentWave;
 
   const TGraphAligned* grHilbertX = xPolCoherentWave->hilbertEnvelope();
@@ -944,10 +948,20 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
   for(UInt_t i=1; i < waves.size(); i++){
-    for(int samp=0; samp < grCoherent->GetN(); samp++){
-      double t = grCoherent->GetX()[samp];
-      grCoherent->GetY()[samp] += waves[i]->evalEven(t + dts[i]);
-    };
+    const TGraphAligned* gr = waves[i]->even();
+    const double t0 = gr->GetX()[0];
+
+    if(gr->GetN() > 0){
+      const double tN = gr->GetX()[gr->GetN()-1];
+      for(int samp=0; samp < grCoherent->GetN(); samp++){
+        double t = grCoherent->GetX()[samp];
+        double tPlusDt = t + dts[i];
+        if(tPlusDt > t0 && tPlusDt < tN){
+          double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
+          grCoherent->GetY()[samp] += y;
+        }
+      };
+    }
   }
 
   for(int samp=0; samp < grCoherent->GetN(); samp++){
