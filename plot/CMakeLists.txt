@@ -1,5 +1,5 @@
 
-set(BINARIES peakVsTime)
+set(BINARIES initialDistributions)
 
 foreach(binary ${BINARIES})
   MESSAGE(STATUS "Process file: ${binary}")

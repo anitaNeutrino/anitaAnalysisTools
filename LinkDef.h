@@ -23,6 +23,7 @@
 
 #pragma link C++ class Acclaim::AnalysisFlow+;
 #pragma link C++ class Acclaim::AnalysisReco+;
+#pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::InterferometricMap+;
 #pragma link C++ class Acclaim::SummarySet+;
 #pragma link C++ class Acclaim::QualityCut+;
