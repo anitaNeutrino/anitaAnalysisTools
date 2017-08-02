@@ -20,11 +20,11 @@ ClassImp(Acclaim::AnalysisPlot);
  * @param yMax is the higher y-axis limit
  */
 Acclaim::AnalysisPlot::AnalysisPlot(const char* name, const char* title,
-                                    int nx, double xMin, double xMax,
-                                    int ny, double yMin, double yMax)
+                                    int nBinsX, double xMin, double xMax,
+                                    int nBinsY, double yMin, double yMax)
     : TNamed(name, title),
-      fNx(nx), fMinX(xMin), fMaxX(xMax),
-      fNy(ny), fMinY(yMin), fMaxY(yMax){
+      fNx(nBinsX), fMinX(xMin), fMaxX(xMax),
+      fNy(nBinsY), fMinY(yMin), fMaxY(yMax){
 
 }
 
@@ -49,7 +49,7 @@ Acclaim::AnalysisPlot::~AnalysisPlot(){
   ns.clear();
   indexMultipliers.clear();
   cutNames.clear();
-  cutFuncs.clear();
+  analysisCuts.clear();
   hDummies.clear();
 }
 
@@ -61,15 +61,17 @@ Acclaim::AnalysisPlot::~AnalysisPlot(){
  * 
  * This function adds a whole bunch of contained histograms, enough so that all combinations of listed cuts can be drawn.
  * The total number of histograms is the product of nRetVals for all added cuts.
+ * See the AnalysisCuts namespace for example cuts.
  * 
- * @param nRetVals is the number of possible return values, should be small i.e. 2,3,4
+ * @param AnalysisCut is a pointer to a function that actually implements the cut, returns an integer encoding the result
  * @param nameStr is appended to histogram names (along with the return value)
  * @param titleStr is appended to histogram titles (along with the return value)
- * @param AnalysisCut is a pointer to a function taking a AnitaEventSummary, and returning an int.
  * 
- * @return The number of cuts to be applied
+ * @return The number of cuts stored the AnalysisPlot object will proccess on a Fill() command 
  */
-size_t Acclaim::AnalysisPlot::addCut(int nRetVals, const char* nameStr, const char* titleStr, int(*AnalysisCut)(AnitaEventSummary*)){
+size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*), const char* nameStr, const char* titleStr){
+
+  const int nRetVals = AnalysisCut(nullptr);
 
   // if we haven't allocated any histograms yes
   if(hs.size()==0){
@@ -111,18 +113,30 @@ size_t Acclaim::AnalysisPlot::addCut(int nRetVals, const char* nameStr, const ch
   ns.push_back(nRetVals);
   indexMultipliers.push_back(ns.size() == 1 ? 1 : ns.at(ns.size()-1));  
   cutNames.push_back(nameStr);
-  cutFuncs.push_back(AnalysisCut);
+  analysisCuts.push_back(AnalysisCut);
 
-  return cutFuncs.size();
+  return analysisCuts.size();
 }
 
 
-int Acclaim::AnalysisPlot::Fill(AnitaEventSummary* sum, double xVal, double yVal, double zVal){
+
+
+/** 
+ * Apply all the cut functions added with addCut(), and fill the appropriate histogram
+ * 
+ * @param sum the AnitaEventSummary associated with the event
+ * @param x is the value to fill along the x-axis
+ * @param y is an event weight in the TH1D case, or is the value to fill along the y-axis in the TH2D case
+ * @param z does nothing in the TH1D case, or is an event weight in the TH2D case
+ * 
+ * @return the index of the bin filled, as returned by TH1D::Fill or TH2D::Fill
+ */
+int Acclaim::AnalysisPlot::Fill(const AnitaEventSummary* sum, double x, double y, double z){
 
   int index = 0;
-  for(UInt_t i=0; i < cutFuncs.size(); i++){
+  for(UInt_t i=0; i < analysisCuts.size(); i++){
 
-    int retVal = cutFuncs.at(i)(sum);
+    int retVal = analysisCuts.at(i)(sum);
 
     if(retVal < 0 || retVal > ns.at(i)){
       std::cerr << "Error in " << __PRETTY_FUNCTION__
@@ -137,11 +151,11 @@ int Acclaim::AnalysisPlot::Fill(AnitaEventSummary* sum, double xVal, double yVal
 
   if(fNy==0){
     TH1D* h1 = dynamic_cast<TH1D*>(hs[index]);
-    return h1->Fill(xVal, yVal);
+    return h1->Fill(x, y);
   }
   else{
     TH2D* h2 = dynamic_cast<TH2D*>(hs[index]);
-    return h2->Fill(xVal, yVal, zVal);
+    return h2->Fill(x, y, z);
   }
 }
 
@@ -164,6 +178,7 @@ void Acclaim::AnalysisPlot::Draw(Option_t* opt){
 /** 
  * Print out some useful information to the terminal
  * 
+ * @param opt is an optional string, if it contains "v" prints all the histogram names
  */
 void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
   TNamed::Print();
@@ -182,6 +197,13 @@ void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
 
 
 
+
+/** 
+ * Draw the information contained inside the histograms
+ * 
+ * @param opt is the ROOT draw option
+ * @param selection is a regexp to select the names of the histogram
+ */
 void Acclaim::AnalysisPlot::Draw(Option_t* opt, const TString& selection){
 
   TString name = TString::Format("%s_Draw%lu", fName.Data(), hDummies.size());

@@ -4,21 +4,10 @@
 #include "AnitaEventSummary.h"
 
 #include "TH2D.h"
-#include "QualityCut.h"
 #include "AnalysisPlot.h"
+#include "AnalysisCuts.h"
 
 using namespace Acclaim;
-
-
-int isAboveHorizontal(AnitaEventSummary* sum){
-  return sum->higherPeak().theta > 0 ? 1 : 0;
-}
-
-
-int isTaggedAsWaisPulser(AnitaEventSummary* sum){
-  return sum->flags.pulser == AnitaEventSummary::EventFlags::WAIS;
-}
-
 
 int main(int argc, char* argv[]){
 
@@ -31,18 +20,15 @@ int main(int argc, char* argv[]){
   TFile* fOut = oc.makeFile();
 
   const char* summaryTreeFileGlob = argv[1];
-
-  // make note of what we've done here...
   SummarySet ss(summaryTreeFileGlob);
 
   const Long64_t N = ss.N();
   std::cout << "Processing " << summaryTreeFileGlob << " with " << N << " entries." << std::endl;
 
-  TString peakVsTimeName = TString::Format("hHigherPeakVsEventNumber");
-  AnalysisPlot* hPeakVsTime = new AnalysisPlot("hPeakVsTime", "Higher map peak vs time", 1024, ss.getFirstTime(), ss.getLastTime(), 128, 0, 1);
-  hPeakVsTime->addCut(2, "isAboveHorizontal", "Above Horizontal", isAboveHorizontal);
-  hPeakVsTime->addCut(2, "isTaggedAsWaisPulser", "WAIS Pulser", isTaggedAsWaisPulser);  
-    
+  AnalysisPlot* hPeakVsTime = ss.bookTimeAnalysisPlot("hPeakVsTime", "Higher map peak vs time", 1024, 128, 0, 1);
+  hPeakVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
+  hPeakVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
+  
   ProgressBar p(N);
   for(Long64_t entry=0; entry < N; entry++){
 
