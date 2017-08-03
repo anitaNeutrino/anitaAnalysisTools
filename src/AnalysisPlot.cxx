@@ -117,7 +117,14 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
     }
   }
   ns.push_back(nRetVals);
-  indexMultipliers.push_back(ns.size() == 1 ? 1 : ns.at(ns.size()-1));  
+
+  int im = 1;
+  for(UInt_t i=1; i < ns.size(); i++){
+    im*= ns.at(i-1);
+  }
+  // std::cerr << nRetVals << "\t" << im << std::endl;
+  
+  indexMultipliers.push_back(im);
   cutNames.push_back(nameStr);
   analysisCuts.push_back(AnalysisCut);
 
@@ -203,7 +210,7 @@ void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
   TNamed::Print();
   std::cout << fName << " Cuts:" << std::endl;
   for(UInt_t i=0; i < cutNames.size(); i++){
-    std::cout << cutNames.at(i) << "\t" << ns.at(i) << std::endl;
+    std::cout << cutNames.at(i) << "\t" << ns.at(i) << " (" << indexMultipliers.at(i) << ")" << std::endl;
   }
   TString s(opt);
   if(s.Contains("v")){

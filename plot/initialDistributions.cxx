@@ -12,18 +12,18 @@ using namespace Acclaim;
 
 /** 
  * A script initially developed for looking at the 10% data set.
- * Although, I suppose it can look at any AnitaEventSummary files
+ * Although, I suppose it can look at any set of AnitaEventSummary files
  * 
  * @param summaryTreeFileGlob is a globbing expression for trees containing AnitaEventSummaries
  * (make sure you add a single quotes at the start and end to prevent the shell expanding your wildcard!)
  * 
- * @return 0 on success, 1 on bad arguments 
+ * @return 0 on success, 1 if too many arguments
  */
 
 int main(int argc, char* argv[]){
 
   if(argc!=2){
-    std::cerr << argv[0] << "summaryTreeFileGlob" << std::endl;
+    std::cerr << argv[0] << ": [summaryTreeFileGlob]" << std::endl;
     return 1;
   }
 
@@ -46,6 +46,11 @@ int main(int argc, char* argv[]){
   hDeltaAngleSun->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
   hDeltaAngleSun->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
 
+  AnalysisPlot* hPeakThetaVsTime = ss.bookTimeAnalysisPlot("hPeakThetaVsTime", "Higher map peak vs time; realTime; Map peak", 1024, 128, -90, 90);
+  hPeakThetaVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
+  hPeakThetaVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
+  hPeakThetaVsTime->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
+  
   ProgressBar p(N);
   for(Long64_t entry=0; entry < N; entry++){
 
@@ -54,7 +59,8 @@ int main(int argc, char* argv[]){
 
     hPeakVsTime->Fill(sum, sum->realTime, sum->higherPeak().value);
     hDeltaAngleSun->Fill(sum, sum->dPhiSun(), sum->dThetaSun(), sum->higherPeak().value);
-
+    hPeakThetaVsTime->Fill(sum, sum->realTime, sum->higherPeak().theta);
+    
     p.inc(entry, N);
   }
 
@@ -64,6 +70,9 @@ int main(int argc, char* argv[]){
   hDeltaAngleSun->Write();
   delete hDeltaAngleSun;
 
+  hPeakThetaVsTime->Write();
+  delete hPeakThetaVsTime;
+  
   
   fOut->Write();
   fOut->Close();
