@@ -83,6 +83,8 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
       TString title = TString::Format("%s %s=%d", fTitle.Data(), titleStr, retVal);
         
       TH1* h = makeHist(name, title);
+      h->SetDirectory(0);
+
       hs.push_back(h);
     }
   }
@@ -98,6 +100,7 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
     for(UInt_t i=oldNumHists; i < newNumHists; i++){
       int j = i % oldNumHists;
       hs[i] = (TH1*) hs[j]->Clone();
+      hs[i]->SetDirectory(0);
     }
 
     for(UInt_t i=0; i < newNumHists; i++){
@@ -110,7 +113,7 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
 
       TString oldTitle = hs[i]->GetTitle();
       TString newTitle = oldTitle + TString::Format(" %s=%d", titleStr, retVal);
-      hs[i]->SetTitle(newTitle);      
+      hs[i]->SetTitle(newTitle);
     }
   }
   ns.push_back(nRetVals);
@@ -125,17 +128,13 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
 
 
 /** 
- * Apply all the cut functions added with addCut(), and fill the appropriate histogram
+ * Execute all the cut functions and get the corresponding histogram index
  * 
- * @param sum the AnitaEventSummary associated with the event
- * @param x is the value to fill along the x-axis
- * @param y is an event weight in the TH1D case, or is the value to fill along the y-axis in the TH2D case
- * @param z does nothing in the TH1D case, or is an event weight in the TH2D case
+ * @param sum is the AnitaEventSummary to process
  * 
- * @return the index of the bin filled, as returned by TH1D::Fill or TH2D::Fill
+ * @return the histogram index
  */
-int Acclaim::AnalysisPlot::Fill(const AnitaEventSummary* sum, double x, double y, double z){
-
+int Acclaim::AnalysisPlot::getIndexFromCuts(const AnitaEventSummary* sum){
   int index = 0;
   for(UInt_t i=0; i < analysisCuts.size(); i++){
 
@@ -151,7 +150,24 @@ int Acclaim::AnalysisPlot::Fill(const AnitaEventSummary* sum, double x, double y
 
     index += indexMultipliers.at(i)*retVal;
   }
+  return index;
+}
 
+
+/** 
+ * Apply all the cut functions added with addCut(), and fill the appropriate histogram
+ * 
+ * @param sum the AnitaEventSummary associated with the event
+ * @param x is the value to fill along the x-axis
+ * @param y is an event weight in the TH1D case, or is the value to fill along the y-axis in the TH2D case
+ * @param z does nothing in the TH1D case, or is an event weight in the TH2D case
+ * 
+ * @return the index of the bin filled, as returned by TH1D::Fill or TH2D::Fill
+ */
+int Acclaim::AnalysisPlot::Fill(const AnitaEventSummary* sum, double x, double y, double z){
+
+  int index = getIndexFromCuts(sum);
+  
   if(fNy==0){
     TH1D* h1 = dynamic_cast<TH1D*>(hs[index]);
     return h1->Fill(x, y);
@@ -185,13 +201,13 @@ void Acclaim::AnalysisPlot::Draw(Option_t* opt){
  */
 void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
   TNamed::Print();
-  std::cout << "Cuts:" << std::endl;
+  std::cout << fName << " Cuts:" << std::endl;
   for(UInt_t i=0; i < cutNames.size(); i++){
     std::cout << cutNames.at(i) << "\t" << ns.at(i) << std::endl;
   }
   TString s(opt);
   if(s.Contains("v")){
-    std::cout << "Histograms:" << std::endl;
+    std::cout << fName << " Histograms:" << std::endl;
     for(UInt_t i=0; i < hs.size(); i++){
       std::cout << hs.at(i)->GetName() << std::endl;
     }
@@ -210,6 +226,7 @@ void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
 void Acclaim::AnalysisPlot::Draw(Option_t* opt, const TString& selection){
 
   TString name = TString::Format("%s_Draw%lu", fName.Data(), hDummies.size());
+  TString title = selection == "*" ? fTitle : selection;
   TH1* h = makeHist(name, selection);
   hDummies.push_back(h);
   
@@ -239,7 +256,7 @@ void Acclaim::AnalysisPlot::Draw(Option_t* opt, const TString& selection){
  * 
  * @return the newly constructed histogram cast as a pointer to a TH1
  */
-TH1* Acclaim::AnalysisPlot::makeHist(const char* name, const char* title){
+TH1* Acclaim::AnalysisPlot::makeHist(const char* name, const char* title) const{
   TH1* h = NULL;
   if(fNy){
     h = new TH2D(name, title, fNx, fMinX, fMaxX, fNy, fMinY, fMaxY);
@@ -275,6 +292,8 @@ Acclaim::AnalysisProf::AnalysisProf(const char* name, const char* title,
 }
 
 
+
+
 /** 
  * Utility function to construct another contained profile 
  * 
@@ -283,7 +302,7 @@ Acclaim::AnalysisProf::AnalysisProf(const char* name, const char* title,
  * 
  * @return the newly constructed profile cast as a pointer to a TH1
  */
-TH1* Acclaim::AnalysisProf::makeHist(const char* name, const char* title){
+TH1* Acclaim::AnalysisProf::makeHist(const char* name, const char* title) const{
   TH1* h = NULL;
   if(fNy){
     h = new TProfile2D(name, title, fNx, fMinX, fMaxX, fNy, fMinY, fMaxY);
@@ -293,6 +312,34 @@ TH1* Acclaim::AnalysisProf::makeHist(const char* name, const char* title){
   }
   return h;
 }
+
+
+
+
+/** 
+ * Apply all the cut functions added with addCut(), and fill the appropriate profile
+ * 
+ * @param sum the AnitaEventSummary associated with the event
+ * @param x is the value to fill along the x-axis
+ * @param y is the value to profile in the TProfile case, the y-axis value in the TProfile2D case
+ * @param z does nothing in the TProfile case, or is the value to profile in the TProfile2D case
+ * 
+ * @return the index of the bin filled, as returned by TProfile::Fill or TProfile2D::Fill
+ */
+int Acclaim::AnalysisProf::Fill(const AnitaEventSummary* sum, double x, double y, double z){
+
+  int index = getIndexFromCuts(sum);
+  
+  if(fNy==0){
+    TProfile* h1 = dynamic_cast<TProfile*>(hs[index]);
+    return h1->Fill(x, y);
+  }
+  else{
+    TProfile2D* h2 = dynamic_cast<TProfile2D*>(hs[index]);
+    return h2->Fill(x, y, z);
+  }
+}
+
 
 
 

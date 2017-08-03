@@ -45,14 +45,15 @@ class AnalysisPlot : public TNamed {
   // the first parameter is a pointer to a function that takes a const AnitaEventSummary* as an argument
   size_t addCut(int(*)(const AnitaEventSummary*), const char* nameStr, const char* titleStr);
 
-  int Fill(const AnitaEventSummary* sum, double xVal, double yVal=1, double zVal=1);
+  virtual int Fill(const AnitaEventSummary* sum, double xVal, double yVal=1, double zVal=1);
   void Draw(Option_t* opt="");
   void Draw(Option_t* opt, const TString& selection);
   void Print(Option_t* = "") const;
 
  protected:
 
-  TH1* makeHist(const char* name, const char* title);
+  virtual int getIndexFromCuts(const AnitaEventSummary* sum);
+  virtual TH1* makeHist(const char* name, const char* title) const;
 
   double fNx;
   double fMinX;
@@ -91,9 +92,10 @@ class AnalysisProf : public AnalysisPlot {
   AnalysisProf(){;}
   virtual ~AnalysisProf(){;}
   AnalysisProf(const char* name, const char* title, int nBinsX, double xMin, double xMax, int nBinsY=0, double yMin=0, double yMax=0);
+  virtual int Fill(const AnitaEventSummary* sum, double xVal, double yVal=1, double zVal=1);
   
  protected:
-  TH1* makeHist(const char* name, const char* title);
+  virtual TH1* makeHist(const char* name, const char* title) const;
   
   ClassDef(AnalysisProf, 1);
 };

@@ -43,6 +43,8 @@ void Acclaim::SummarySet::init(const char* pathToSummaryFiles, const char* treeN
     first();
     fFirstTime = fSum->realTime;
     fFirstEventNumber = fSum->eventNumber;
+
+    std::cerr << "Just called " << __PRETTY_FUNCTION__ << ", time range is " << fFirstTime << " to " << fLastTime << "\t eventNumber range is " << fFirstEventNumber << " to " << fLastEventNumber << std::endl;
   }
 }
 
@@ -52,8 +54,21 @@ Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
 
 
 
+Acclaim::AnalysisProf* Acclaim::SummarySet::bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
+  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
+  return h;
+}
+
+
+Acclaim::AnalysisProf* Acclaim::SummarySet::bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
+  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
+  return h;
+}
+
+
+
 Acclaim::AnalysisPlot* Acclaim::SummarySet::bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
+  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
   return h;
 }
 
