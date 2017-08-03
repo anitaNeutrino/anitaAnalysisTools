@@ -5,6 +5,7 @@
 #include "TProfile2D.h"
 #include "TProfile.h"
 #include "TRegexp.h"
+#include "TDirectory.h"
 
 ClassImp(Acclaim::AnalysisPlot);
 ClassImp(Acclaim::AnalysisProf);
@@ -29,6 +30,8 @@ Acclaim::AnalysisPlot::AnalysisPlot(const char* name, const char* title,
       fNx(nBinsX), fMinX(xMin), fMaxX(xMax),
       fNy(nBinsY), fMinY(yMin), fMaxY(yMax){
 
+  // Try to mimic the default ROOT behaviour with histograms by appending new instances to the current directory
+  gDirectory->Append(this);
 }
 
 

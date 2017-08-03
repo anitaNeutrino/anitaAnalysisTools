@@ -3,7 +3,7 @@
  Email: strutt@physics.ucla.edu
 
  Description:
-             Easily plot parameters falling into different cut bins
+             Efficiently plot histograms/profiles for arbitrary subdivisions of the data.
 ***********************************************************************************************************/
 
 #ifndef ANALYSIS_PLOT_H
@@ -19,20 +19,45 @@ namespace Acclaim{
 /** 
  * @class AnalysisPlot does the hard work of histogramming variables in the presence of cuts.
  * 
+ * Purpose:
+ * TChain::Draw is bloody slow even on the 10% ANITA data.
+ * Suppose you want to make a histogram with a set of cuts, and quickly look at the opposite set of cuts.
+ * Calling TChain::Draw N times, takes 5N mins (on my reletively fast laptop).
+ * This class is designed to produce a plot with many possible sets of cuts applied looping through the data once.
+ * The final desired histogram can be assembled from some combination of the produced subplots.
+ * 
+ * 
+ * How it works:
  * This class creates a set of histograms (either TH1D or TH2D) for a set of cuts it is told about.
  * The dimension of the histograms is determined in the constructor, if nBinsY = 0 it's a TH1D, TH2D otherwise.
  * The cuts take the form of functions, which take a const AnitaEventSummary* and return and int.
  * See the AnalysisCuts namespace for examples of functions to add with AnalysisPlot::addCut().
  * There are some STRICT rules the AnalysisCut functions must conform to for this class to work! See AnalysisCuts.h!
+ * 
+ * Drawing:
+ * This class then has it's own slightly different and hopefully useful implementation of Draw().
+ * Draw(Option_t*, const TString& selection) creates a new histogram and adds all the contained histograms with names matching
+ * the regexp contained in selection.
+ * The histogram names are produced programatically form the combination of cuts applied.
+ * Therefore by using an appropriate regexp one can draw the histogram matching your desired set of cuts. 
+ * For example, one could draw a histogram matching the sum of all the member histograms with Draw("colz", "*")
+ * (Actually this is the default behaviour of Draw("colz") if no argument is supplied).
+ * Cut labels can be inspected with Print(), which dumps the contained cut labels to the terminal.
+ * If that's not enough Print("v") prints the names of all the contained histograms too, although this list gets long for many cuts.
+ * 
+ * Behaviour:
  * AnalysisPlot objects can be saved in ROOT files.
+ * It is designed to mimic the default histogram behaviour by automagically being appended to the current ROOT directory.
+ * i.e. it should be saved to the current file without Write() being explicitly called.
  * 
- * Please note that a histogram is allocated for every combination of return values from the AnalysisCut functions.
+ * Notes:
+ * A histogram is allocated for every combination of cut function return values (from the AnalysisCut functions).
  * This means that memory requirements increase exponentially with added cuts so be careful!
- * 
- * For example, the memory required for typical 2D histogram with 1024 x 128 bins is
- * sizeof(double)*128*1024 = 1,048,576 ~ 1MB
- * For 6 cuts, I require 2^{6} = 64 of them, which is 64MB
- * For 10 cuts would be 2^{10} = 1024, so that would be 1GB...
+ * For example, the memory required for just the bins of a TH2D histogram with 1024 x 128 bins is approximately
+ * sizeof(double)*128*1024 = 1,048,576 ~ 1MB (yeah yeah over/underflow not accounted for I know)
+ * For 5 cuts with just 2 possible return values, I would require 2^{5} = 32 of them, which is 32MB
+ * For 10 cuts with just 2 possible return values, I would require 2^{10} = 1024, so that would be 1GB,
+ * For 20 cuts with just 2 possible return values, I would require 2^{20} = 1,048,576 so that would be 1TB!!!.
  */
 
 class AnalysisPlot : public TNamed {
