@@ -1,10 +1,17 @@
+/* -*- C++ -*-.*********************************************************************************************
+ Author: Ben Strutt
+ Email: strutt@physics.ucla.edu
+
+ Description:
+             Easily plot parameters falling into different cut bins
+***********************************************************************************************************/
+
 #ifndef ANALYSIS_PLOT_H
 #define ANALYSIS_PLOT_H
 
 #include "TNamed.h"
 
 class AnitaEventSummary;
-
 class TH1;
 
 namespace Acclaim{
@@ -67,7 +74,34 @@ class AnalysisPlot : public TNamed {
 
   ClassDef(AnalysisPlot, 1);
 };
+
+
+
+
+
+
+/** 
+ * @class AnalysisProf is the same an analysis plot, but replaces histograms with profiles
+ * i.e. TH1D -> TProfile, TH2D -> TProfile2D
+ *  */
+
+class AnalysisProf : public AnalysisPlot {
+
+ public:
+  AnalysisProf(){;}
+  virtual ~AnalysisProf(){;}
+  AnalysisProf(const char* name, const char* title, int nBinsX, double xMin, double xMax, int nBinsY=0, double yMin=0, double yMax=0);
+  
+ protected:
+  TH1* makeHist(const char* name, const char* title);
+  
+  ClassDef(AnalysisProf, 1);
+};
+
+
 }
+
+
 
 
 #endif

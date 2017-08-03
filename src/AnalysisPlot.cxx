@@ -2,9 +2,12 @@
 #include <iostream>
 #include "TH2D.h"
 #include "TH1D.h"
+#include "TProfile2D.h"
+#include "TProfile.h"
 #include "TRegexp.h"
 
 ClassImp(Acclaim::AnalysisPlot);
+ClassImp(Acclaim::AnalysisProf);
 
 
 /** 
@@ -138,7 +141,7 @@ int Acclaim::AnalysisPlot::Fill(const AnitaEventSummary* sum, double x, double y
 
     int retVal = analysisCuts.at(i)(sum);
 
-    if(retVal < 0 || retVal > ns.at(i)){
+    if(retVal < 0 || retVal >= ns.at(i)){
       std::cerr << "Error in " << __PRETTY_FUNCTION__
                 << ", unexpected return value from AnalysisCut function "
                 << cutNames.at(i) << ". Setting AnalysisCut return to 0."
@@ -246,4 +249,62 @@ TH1* Acclaim::AnalysisPlot::makeHist(const char* name, const char* title){
   }
   return h;
 }
+
+
+
+
+
+
+/** 
+ * Useful contructor for the derived AnalysisProf class
+ * 
+ * @param name is the name of the object, all contained profiles will have derived names
+ * @param title is the title of the object, all contained profiles will have derived titles
+ * @param nx is the number of x-axis bins
+ * @param xMin is lower x-axis limit
+ * @param xMax is the higher x-axis limit
+ * @param ny is the number of y-axis bins (if 0 then contained profiles will be of type TProfile, otherwise TProfile2D)
+ * @param yMin is the lower y-axis limit
+ * @param yMax is the higher y-axis limit
+ */
+Acclaim::AnalysisProf::AnalysisProf(const char* name, const char* title,
+                                    int nBinsX, double xMin, double xMax,
+                                    int nBinsY, double yMin, double yMax)
+    : AnalysisPlot(name, title, nBinsX, xMin, xMax, nBinsY, yMin, yMax){
+  
+}
+
+
+/** 
+ * Utility function to construct another contained profile 
+ * 
+ * @param name 
+ * @param title 
+ * 
+ * @return the newly constructed profile cast as a pointer to a TH1
+ */
+TH1* Acclaim::AnalysisProf::makeHist(const char* name, const char* title){
+  TH1* h = NULL;
+  if(fNy){
+    h = new TProfile2D(name, title, fNx, fMinX, fMaxX, fNy, fMinY, fMaxY);
+  }
+  else{
+    h = new TProfile(name, title, fNx, fMinX, fMaxX);
+  }
+  return h;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

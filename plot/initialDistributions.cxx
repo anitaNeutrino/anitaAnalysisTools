@@ -9,6 +9,17 @@
 
 using namespace Acclaim;
 
+
+/** 
+ * A script initially developed for looking at the 10% data set.
+ * Although, I suppose it can look at any AnitaEventSummary files
+ * 
+ * @param summaryTreeFileGlob is a globbing expression for trees containing AnitaEventSummaries
+ * (make sure you add a single quotes at the start and end to prevent the shell expanding your wildcard!)
+ * 
+ * @return 0 on success, 1 on bad arguments 
+ */
+
 int main(int argc, char* argv[]){
 
   if(argc!=2){
@@ -20,7 +31,7 @@ int main(int argc, char* argv[]){
   TFile* fOut = oc.makeFile();
 
   const char* summaryTreeFileGlob = argv[1];
-  SummarySet ss(summaryTreeFileGlob);
+  SummarySet ss(summaryTreeFileGlob);  
 
   const Long64_t N = ss.N();
   std::cout << "Processing " << summaryTreeFileGlob << " with " << N << " entries." << std::endl;
@@ -28,6 +39,10 @@ int main(int argc, char* argv[]){
   AnalysisPlot* hPeakVsTime = ss.bookTimeAnalysisPlot("hPeakVsTime", "Higher map peak vs time", 1024, 128, 0, 1);
   hPeakVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
   hPeakVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
+
+  AnalysisProf* hDeltaAngleSun = new AnalysisProf("hDeltaAngleSun", "Angle between peak and sun", 128, -5, 5, 128, -5, 5);
+  hDeltaAngleSun->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
+  hDeltaAngleSun->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
   
   ProgressBar p(N);
   for(Long64_t entry=0; entry < N; entry++){
@@ -36,7 +51,8 @@ int main(int argc, char* argv[]){
     AnitaEventSummary* sum = ss.summary();
 
     hPeakVsTime->Fill(sum, sum->realTime, sum->higherPeak().value);
-    
+    hDeltaAngleSun->Fill(sum, sum->dPhiSun(), sum->dThetaSun());
+
     p.inc(entry, N);
   }
 

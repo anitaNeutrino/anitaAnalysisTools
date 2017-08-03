@@ -23,9 +23,13 @@
 
 #pragma link C++ class Acclaim::AnalysisFlow+;
 #pragma link C++ class Acclaim::AnalysisReco+;
-#pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::InterferometricMap+;
+
 #pragma link C++ class Acclaim::SummarySet+;
+#pragma link C++ class Acclaim::AnalysisPlot+;
+#pragma link C++ class Acclaim::AnalysisProf+;
+#pragma link C++ namespace Acclaim::AnalysisCut;
+
 #pragma link C++ class Acclaim::QualityCut+;
 #pragma link C++ class Acclaim::SurfSaturationCut+;
 #pragma link C++ class Acclaim::PayloadBlastCut+;
