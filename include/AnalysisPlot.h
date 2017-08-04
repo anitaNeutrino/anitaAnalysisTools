@@ -10,6 +10,7 @@
 #define ANALYSIS_PLOT_H
 
 #include "TNamed.h"
+#include "AnalysisCuts.h"
 
 class AnitaEventSummary;
 class TH1;
@@ -30,9 +31,9 @@ namespace Acclaim{
  * How it works:
  * This class creates a set of histograms (either TH1D or TH2D) for a set of cuts it is told about.
  * The dimension of the histograms is determined in the constructor, if nBinsY = 0 it's a TH1D, TH2D otherwise.
- * The cuts take the form of functions, which take a const AnitaEventSummary* and return and int.
- * See the AnalysisCuts namespace for examples of functions to add with AnalysisPlot::addCut().
- * There are some STRICT rules the AnalysisCut functions must conform to for this class to work! See AnalysisCuts.h!
+ * The cuts take the form of minimalistic objects with an apply(const AnitaEventSummary*) function, which retuns an int.
+ * See AnalysisCuts.h/AnalysisCuts.cxx for examples.
+ * The AnalysisCuts must conform to some rules for this class to work! See AnalysisCuts.h for more info!
  * 
  * Drawing:
  * This class then has it's own slightly different and hopefully useful implementation of Draw().
@@ -67,8 +68,7 @@ class AnalysisPlot : public TNamed {
   AnalysisPlot(const char* name, const char* title, int nBinsX, double xMin, double xMax, int nBinsY=0, double yMin=0, double yMax=0);
   virtual ~AnalysisPlot();
 
-  // the first parameter is a pointer to a function that takes a const AnitaEventSummary* as an argument
-  size_t addCut(int(*)(const AnitaEventSummary*), const char* nameStr, const char* titleStr);
+  size_t addCut(const AnalysisCut* cut);
 
   virtual int Fill(const AnitaEventSummary* sum, double xVal, double yVal=1, double zVal=1);
   void Draw(Option_t* opt="");
@@ -88,12 +88,12 @@ class AnalysisPlot : public TNamed {
   double fMinY;
   double fMaxY;
   std::vector<TH1*> hs; /// Stores all the created histograms
-  std::vector<Int_t> ns; /// Stores the nRetVals for the cuts
+  std::vector<Int_t> ns; /// The maximum return values of the cuts
   std::vector<Int_t> indexMultipliers; /// Used to map cut to histogram index
   std::vector<TString> cutNames; /// the string to associate with the cut in histogram names
-  std::vector<int(*)(const AnitaEventSummary*)> analysisCuts; /// pointers to the functions to apply
 
-  // This object does not persist, and is only for ease of drawing histograms hence the !
+  // These don't persist (deliberately) due to the //! comment string
+  std::vector<const AnalysisCut*> analysisCuts; //! The cuts to apply, do not persist, the only data needed later are saved in cutNames
   std::vector<TH1*> hDummies; //! Dummy histograms for drawing, don't persist
   
 

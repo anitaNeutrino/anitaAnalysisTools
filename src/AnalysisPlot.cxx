@@ -75,9 +75,11 @@ Acclaim::AnalysisPlot::~AnalysisPlot(){
  * 
  * @return The number of cuts stored the AnalysisPlot object will proccess on a Fill() command 
  */
-size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*), const char* nameStr, const char* titleStr){
+size_t Acclaim::AnalysisPlot::addCut(const AnalysisCut* cut){
 
-  const int nRetVals = AnalysisCut(nullptr);
+  const int nRetVals = cut->getMaximumReturnValue();
+  const char* nameStr = cut->getName();
+  const char* titleStr = cut->getTitle();
 
   // if we haven't allocated any histograms yes
   if(hs.size()==0){
@@ -129,7 +131,7 @@ size_t Acclaim::AnalysisPlot::addCut(int(*AnalysisCut)(const AnitaEventSummary*)
   
   indexMultipliers.push_back(im);
   cutNames.push_back(nameStr);
-  analysisCuts.push_back(AnalysisCut);
+  analysisCuts.push_back(cut);
 
   return analysisCuts.size();
 }
@@ -148,17 +150,17 @@ int Acclaim::AnalysisPlot::getIndexFromCuts(const AnitaEventSummary* sum){
   int index = 0;
   for(UInt_t i=0; i < analysisCuts.size(); i++){
 
-    int retVal = analysisCuts.at(i)(sum);
+    int cutResult = analysisCuts.at(i)->apply(sum);
 
-    if(retVal < 0 || retVal >= ns.at(i)){
+    if(cutResult < 0 || cutResult >= analysisCuts.at(i)->getMaximumReturnValue()){
       std::cerr << "Error in " << __PRETTY_FUNCTION__
                 << ", unexpected return value from AnalysisCut function "
-                << cutNames.at(i) << ". Setting AnalysisCut return to 0."
+                << analysisCuts.at(i)->getName() << ". Setting AnalysisCut return to 0."
                 << std::endl;
-      retVal = 0;
+      cutResult = 0;
     }
 
-    index += indexMultipliers.at(i)*retVal;
+    index += indexMultipliers.at(i)*cutResult;
   }
   return index;
 }

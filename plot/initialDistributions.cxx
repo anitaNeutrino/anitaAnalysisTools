@@ -37,26 +37,26 @@ int main(int argc, char* argv[]){
   std::cout << "Processing " << summaryTreeFileGlob << " with " << N << " entries." << std::endl;
 
   AnalysisPlot* hPeakVsTime = ss.bookTimeAnalysisPlot("hPeakVsTime", "Higher map peak vs time; realTime; Map peak", 1024, 128, 0, 1);
-  hPeakVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
-  hPeakVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
-  hPeakVsTime->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
-  hPeakVsTime->addCut(AnalysisCuts::hasSourceLocation, "hasSourceLocation", "Has source location");
+  hPeakVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
+  hPeakVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
+  hPeakVsTime->addCut(&AnalysisCuts::higherPol);
+  hPeakVsTime->addCut(&AnalysisCuts::hasSourceLocation);
 
   AnalysisProf* hDeltaAngleSun = new AnalysisProf("hDeltaAngleSun", "Angle between peak and sun;#delta#phi (Degrees);#delta#theta (Degrees)", 128, -5, 5, 128, -5, 5);
-  hDeltaAngleSun->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
-  hDeltaAngleSun->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
+  hDeltaAngleSun->addCut(&AnalysisCuts::isAboveHorizontal);
+  hDeltaAngleSun->addCut(&AnalysisCuts::higherPol);
 
   AnalysisPlot* hPeakThetaVsTime = ss.bookTimeAnalysisPlot("hPeakThetaVsTime", "Peak elevation vs time; realTime; Peak #theta (Degrees)", 1024, 128, -90, 90);
-  hPeakThetaVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
-  hPeakThetaVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
-  hPeakThetaVsTime->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
-  hPeakThetaVsTime->addCut(AnalysisCuts::hasSourceLocation, "hasSourceLocation", "Has source location");
+  hPeakThetaVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
+  hPeakThetaVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
+  hPeakThetaVsTime->addCut(&AnalysisCuts::higherPol);
+  hPeakThetaVsTime->addCut(&AnalysisCuts::hasSourceLocation);
   
   AnalysisPlot* hPeakBearingVsTime = ss.bookTimeAnalysisPlot("hPeakBearingVsTime", "Bearing of map peak vs time; realTime; Peak #phi (Degrees)", 1024, 256, 0, 360);
-  hPeakBearingVsTime->addCut(AnalysisCuts::isAboveHorizontal, "isAboveHorizontal", "Above Horizontal");
-  hPeakBearingVsTime->addCut(AnalysisCuts::isTaggedAsWaisPulser, "isTaggedAsWaisPulser", "WAIS Pulser");
-  hPeakBearingVsTime->addCut(AnalysisCuts::higherPol, "higherPol", "Pol");
-  hPeakBearingVsTime->addCut(AnalysisCuts::hasSourceLocation, "hasSourceLocation", "Has source location");
+  hPeakBearingVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
+  hPeakBearingVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
+  hPeakBearingVsTime->addCut(&AnalysisCuts::higherPol);
+  hPeakBearingVsTime->addCut(&AnalysisCuts::hasSourceLocation);
   
   ProgressBar p(N);
   for(Long64_t entry=0; entry < N; entry++){

@@ -9,33 +9,84 @@
 #ifndef ANALYSIS_CUTS_H
 #define ANALYSIS_CUTS_H
 
+#include "TString.h"
+#include "AnitaConventions.h"
+
 class AnitaEventSummary;
 
 namespace Acclaim
 {
 
 
-/** 
- * @namespace AnalysisCuts is a set of cut functions designed for use with the AnalysisPlot class
- * 
- * In order to be of use for the AnalysisPlot class each function must:
- *    Return an int, that runs from 0 to some maximum value (that is hopefully small).
- *    Take a single argument, a pointer to a const AnitaEventSummary.
- *    In the case that a NULL pointer is passed, return the maximum possible return value.
+/**
+ * @class AnalysisCut is a class to perform a simple cut using the results stored in an AnitaEventSummary
+ *
+ * The base AnalysisCut class is designed to be inherited from.
+ * It contains a purely virtual apply(const AnitaEventSummary* sum) const function.
+ * The apply function is then overloaded in the derived classes where the actual cuts are implemented.
+ * To work properly with the AnalysisPlot class, apply must return an integer from 0 to fMaxRetVal-1 (inclusive).
+ * In addition to the expected return values, the name/title members are also used in the AnalysisPlot for histogram names and titles.
  */
 
-  namespace AnalysisCuts {
+  class AnalysisCut {
+   public:
+    AnalysisCut(const char* name, const char* title, int mrv);
+    virtual int apply(const AnitaEventSummary* sum) const = 0; // to be overloaded with actual cut
+    inline int getMaximumReturnValue() const {return fMaxRetVal;}
+    inline const char* getName() const {return fName.Data();}
+    inline const char* getTitle() const {return fTitle.Data();}
+   protected:
+    TString fName;
+    TString fTitle;
+    int fMaxRetVal;
+  };
+
+  class IsAboveHorizontal : public AnalysisCut
+  {
+   public:
+    IsAboveHorizontal() : AnalysisCut("isAboveHorizontal", "Above Horizontal", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class IsTaggedAsWaisPulser : public AnalysisCut
+  {
+   public:
+    IsTaggedAsWaisPulser() : AnalysisCut("isTaggedAsWaisPulser", "Tagged As WAIS Pulser", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class HigherPol : public AnalysisCut
+  {
+   public:
+    HigherPol() : AnalysisCut("higherPol", "Polarization", AnitaPol::kNotAPol) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns 0 for HPol, 1 for VPol
+  };
+
+  class HasSourceLocation : public AnalysisCut
+  {
+   public:
+    HasSourceLocation() : AnalysisCut("hasSourceLocation", "Has Source Location", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class IsOnContinent : public AnalysisCut
+  {
+   public:
+    IsOnContinent() : AnalysisCut("IsOnContinent", "Reconstructs to Land", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
 
 
-  int isAboveHorizontal(const AnitaEventSummary* sum); /// /// Returns false(0) or true(1)
-  int isTaggedAsWaisPulser(const AnitaEventSummary* sum); /// /// Returns false(0) or true(1)
-  int higherPol(const AnitaEventSummary* sum); /// Returns 0 for HPol, 1 for VPol 
-  int hasSourceLocation(const AnitaEventSummary* sum); /// Returns false(0) or true(1)
-  int isOnContinent(const AnitaEventSummary* sum); /// Returns false(0) or true(1)
 
 
-
-}
+  // const globals so you don't need to instantiate these yourself
+  namespace AnalysisCuts{
+    const IsAboveHorizontal isAboveHorizontal;
+    const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
+    const HigherPol higherPol;
+    const HasSourceLocation hasSourceLocation;
+    const IsOnContinent isOnContinent;
+  }
 }
 
 #endif
