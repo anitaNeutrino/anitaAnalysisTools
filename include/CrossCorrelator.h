@@ -58,7 +58,7 @@ namespace Acclaim
 
   /**
    * @class CrossCorrelator
-   * @brief A class to take in UsefulAnitaEvents or FiteredAnitaEvents and get interferometric maps with a single function.
+   * @brief A class to take in FiteredAnitaEvents and cross-correlate nearby channels
    *
    */
   class CrossCorrelator{
@@ -72,8 +72,8 @@ namespace Acclaim
     CrossCorrelator();
     ~CrossCorrelator();
 
-    void correlateEvent(const FilteredAnitaEvent* realEvent);
-    void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+    virtual void correlateEvent(const FilteredAnitaEvent* realEvent);
+    virtual void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
 
     void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
 
@@ -83,10 +83,10 @@ namespace Acclaim
 					   Int_t ant1, Int_t ant2);
 
 
-    Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+    virtual Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
 
     void initializeVariables();
-    void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
+    void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, bool raw = false);
     void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
     void doFFTs(AnitaPol::AnitaPol_t pol);
     void doCrossCorrelations(AnitaPol::AnitaPol_t pol);
@@ -140,6 +140,37 @@ namespace Acclaim
 
 
   };
+
+
+
+  /**
+   * @class TemplateCorrelator
+   * @brief Cross-correlate all channels of an event with a template
+   * 
+   * This class overloads a few member functions while repurposing some member variable
+   * so not really a case of straight forward inheritance...
+   */
+class TemplateCorrelator : public CrossCorrelator {
+
+ public:
+  TemplateCorrelator(Int_t run, UInt_t eventNumber);
+  virtual ~TemplateCorrelator();
+  void initTemplate(const FilteredAnitaEvent* fEv);
+  void initTemplate(Int_t run, UInt_t eventNumber);
+  virtual void correlateEvent(const FilteredAnitaEvent* fEv);
+  virtual void correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol);
+
+  TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant) const;
+  
+  Double_t getPeakCorrelation(AnitaPol::AnitaPol_t pol, Double_t minOffset=-100, Double_t maxOffset=100, Double_t stepSize=NOMINAL_SAMPLING_DELTAT) const;
+  
+  virtual Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t deltaT) const;
+
+ protected:
+  // double templateAllChannelRMS;
+  
+};
+
 }
 
 #endif

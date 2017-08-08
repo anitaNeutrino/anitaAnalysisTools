@@ -1,5 +1,8 @@
 #include "CrossCorrelator.h"
 
+#include "AnitaDataset.h"
+#include "FilterStrategy.h"
+
 Acclaim::CrossCorrelator::CrossCorrelator(){
   initializeVariables();
 }
@@ -33,6 +36,8 @@ void Acclaim::CrossCorrelator::initializeVariables(){
 
   do5PhiSectorCombinatorics();
 }
+
+
 
 
 void Acclaim::CrossCorrelator::do5PhiSectorCombinatorics(){
@@ -75,7 +80,7 @@ void Acclaim::CrossCorrelator::do5PhiSectorCombinatorics(){
 
 
 
-Double_t Acclaim::CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT){
+Double_t Acclaim::CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const{
 
   Int_t ant1 = comboToAnt1s[combo];
   Int_t ant2 = comboToAnt2s[combo];
@@ -104,10 +109,10 @@ Double_t Acclaim::CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol,
 
 
 void Acclaim::CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* fEv,
-						       AnitaPol::AnitaPol_t pol){
+                                                                AnitaPol::AnitaPol_t pol, bool raw){
 
   for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
-    const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);    
+    const AnalysisWaveform* wf = raw ? fEv->getRawGraph(ant, pol) : fEv->getFilteredGraph(ant, pol);
     const TGraphAligned* gr = wf->even();
     startTimes[pol][ant] = gr->GetX()[0];
     int n = gr->GetN();
@@ -152,30 +157,8 @@ void Acclaim::CrossCorrelator::doFFTs(AnitaPol::AnitaPol_t pol){
 
 
 void Acclaim::CrossCorrelator::renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant){
-
-  const int numFreqs = FancyFFTs::getNumFreqs(numSamples);
-  Double_t sumOfVSquared = 0;
-  for(int freqInd=0; freqInd < numFreqs; freqInd++){
-    Double_t re = ffts[pol][ant][freqInd].real();
-    Double_t im = ffts[pol][ant][freqInd].imag();
-    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
-    sumOfVSquared += factor*(re*re + im*im);
-  }
-
-  Double_t timeDomainVSquared = sumOfVSquared/(numSamples*numSamples/2);
-  Double_t norm = TMath::Sqrt(timeDomainVSquared);
-
-  for(int freqInd=0; freqInd < numFreqs; freqInd++){
-    Double_t re = ffts[pol][ant][freqInd].real();
-    Double_t im = ffts[pol][ant][freqInd].imag();
-
-    ffts[pol][ant][freqInd].real(re/norm);
-    ffts[pol][ant][freqInd].imag(im/norm);
-  }
+  FancyFFTs::normalizeFourierDomain(numSamples, ffts[pol][ant]);
 }
-
-
-
 
 
 
@@ -408,3 +391,247 @@ TGraph* Acclaim::CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::An
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** 
+ * Constructor, Initialize the template correlator
+ * 
+ * @param run the run of the event to use as a template
+ * @param eventNumber of the event to use as a template
+ */
+Acclaim::TemplateCorrelator::TemplateCorrelator(Int_t run, UInt_t eventNumber){
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  initializeVariables();  
+  initTemplate(run, eventNumber);
+}
+
+/** 
+ * Destructor (do nothing)
+ * 
+ */
+Acclaim::TemplateCorrelator::~TemplateCorrelator(){
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
+}
+
+
+
+
+/** 
+ * Initialize the template correlator
+ * 
+ * @param run the run of the event to use as a template
+ * @param eventNumber of the event to use as a template
+ */
+void Acclaim::TemplateCorrelator::initTemplate(Int_t run, UInt_t eventNumber){
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;  
+  AnitaDataset d(run);
+  d.getEvent(eventNumber);
+  FilterStrategy fs;
+  FilteredAnitaEvent fEv(d.useful(), &fs, d.gps(), d.header());
+  initTemplate(&fEv);
+}
+
+
+
+/** 
+ * Store the template waveforms
+ * 
+ * @param fEv is the FilteredAnitaEvent to use as the template
+ */
+void Acclaim::TemplateCorrelator::initTemplate(const FilteredAnitaEvent* fEv){
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
+
+  // std::cerr << fEv->getHeader()->run << "\t" << fEv->getHeader()->eventNumber << std::endl;
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    getNormalizedInterpolatedTGraphs(fEv, pol, true);
+    doFFTs(pol);
+
+    // for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    //   std::cerr << startTimes[pol][ant] << "\t" << interpRMS[pol][ant] << "\t" << interpRMS2[pol][ant] << "\t"
+    //             << (interpRMS[pol][ant]*interpRMS[pol][ant])/(interpRMS2[pol][ant]*interpRMS2[pol][ant]) << std::endl;
+    // }
+  }
+  
+}
+
+
+/** 
+ * Loop over polarisations and correlate the event
+ * 
+ * @param fEv is the FilteredAnitaEvent to correlate with the template
+ */
+void Acclaim::TemplateCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    this->correlateEvent(fEv, pol);
+  }
+}
+
+
+
+
+
+/** 
+ * Correlate the FilteredAnitaEvent to the template
+ * 
+ * @param fEv is the FilteredAnitaEvent to correlate with the template
+ * @param pol is the 
+*/
+void Acclaim::TemplateCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
+
+  const int nf = GET_NUM_FREQS(numSamples);
+  std::vector<std::complex<double> > fftTemp(nf);
+  std::vector<double> vTemp(numSamples);
+  std::vector<double> ccTemp(numSamples);
+  
+  
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
+    const TGraphAligned* gr = wf->even();
+
+    for(int i=0; i < gr->GetN(); i++){
+      vTemp[i] = gr->GetY()[i];
+    }
+    for(int i=gr->GetN(); i < numSamples; i++){
+      vTemp[i] = 0;
+    }
+    FancyFFTs::doFFT(numSamples, &vTemp[0], &fftTemp[0]);
+
+    // This doesn't get used in the template case,
+    // so repurpose this variable in TemplateCorrelator
+    interpRMS2[pol][ant] = gr->GetX()[0];
+    // const FFTWComplex* chanFFT = wf->freq();
+
+    FancyFFTs::normalizeFourierDomain(numSamples, &fftTemp[0]);
+
+    FancyFFTs::crossCorrelatePadded(numSamples,
+				    1,
+                                    &fftTemp[0],
+				    ffts[pol][ant],
+                                    &ccTemp[0],
+				    // crossCorrelations[pol][ant],
+				    true,
+				    0,
+				    false);
+    const int offset = numSamples/2;
+
+    // copies first half of original array (times >= 0) into second half of internal storage
+    for(Int_t samp=0; samp < numSamples/2; samp++){
+      crossCorrelations[pol][ant][samp+offset] = ccTemp[samp];
+    }
+    // copies second half of original array (times < 0) into first half of internal storage
+    for(Int_t samp=numSamples/2; samp < numSamples; samp++){
+      crossCorrelations[pol][ant][samp-offset] = ccTemp[samp];
+    }
+  }
+  // double meanVolts = sumVolts/n;
+  // double wholePolRMS = (sumSqVolts/n) - (meanVolts*meanVolts);
+  // double norm = 1.; ///(wholePolRMS*numSamples*numSamples);
+  double norm = 1./(numSamples*numSamples);
+  
+  for(int ant=0; ant < NUM_SEAVEYS; ant++){
+    for(Int_t samp=0; samp < numSamples; samp++){
+      crossCorrelations[pol][ant][samp]*=norm;
+    }
+  }
+}
+
+
+
+
+/** 
+ * Look at the correlation of the template with the channel of the event
+ * 
+ * @param pol 
+ * @param ant 
+ * 
+ * @return 
+ */
+TGraph* Acclaim::TemplateCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant) const{
+
+  double deltaT = 0;
+  deltaT += interpRMS2[pol][ant];
+  deltaT -= startTimes[pol][ant];
+
+  double offsetTime = -0.5*numSamples*NOMINAL_SAMPLING_DELTAT;
+
+  TGraph* gr = new TGraph(numSamples);
+  TString title = TString::Format("Template Cross-correlation - ant %d ", ant+1);
+  title += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
+  gr->SetTitle(title);
+  for(int i=0; i < numSamples; i++){
+    gr->SetPoint(i, offsetTime, crossCorrelations[pol][ant][i]);
+    offsetTime += NOMINAL_SAMPLING_DELTAT;
+  }
+
+  return gr;
+}
+
+
+
+
+
+
+
+Double_t Acclaim::TemplateCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t deltaT) const{
+
+  deltaT += interpRMS2[pol][ant];
+  deltaT -= startTimes[pol][ant];
+
+  Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
+  Double_t dt1 = offsetLow*nominalSamplingDeltaT;
+  Double_t interpPrefactor = (deltaT - dt1)/nominalSamplingDeltaT;
+  offsetLow += numSamples/2; // account for time ordering correlations in internal memory (i.e. dt=0 is half way thrugh the array)
+
+  Double_t c1 = crossCorrelations[pol][ant][offsetLow];
+  Double_t c2 = crossCorrelations[pol][ant][offsetLow+1];
+  Double_t cInterp = interpPrefactor*(c2 - c1) + c1;
+
+  return cInterp;
+}
+
+
+
+
+
+
+Double_t Acclaim::TemplateCorrelator::getPeakCorrelation(AnitaPol::AnitaPol_t pol, Double_t minOffset, Double_t maxOffset, Double_t stepSize) const{
+
+  double dt = minOffset;
+  double bestDt = 0;
+  double bestCorr = -DBL_MAX;
+  while(dt < maxOffset){
+
+    double thisCorr = 0;
+    for(int ant=0; ant < NUM_SEAVEYS; ant++){
+      thisCorr += this->getCrossCorrelation(pol, ant, dt);      
+    }
+
+    if(thisCorr > bestCorr){
+      bestCorr = thisCorr;
+      bestDt = dt;
+    }
+
+    dt += stepSize;
+  }
+
+  // std::cerr << pol << "\t" << bestDt << "\t" << bestCorr << std::endl;
+  return bestCorr;
+}

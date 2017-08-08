@@ -93,7 +93,7 @@ namespace Acclaim
 
     double* getRealArray(std::pair<Int_t, Int_t> key);
     std::complex<double>* getComplexArray(std::pair<Int_t, Int_t> key);
-
+    void normalizeFourierDomain(int n, std::complex<double>* fft);
   };
 
 }

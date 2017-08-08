@@ -755,3 +755,35 @@ std::complex<double>* Acclaim::FancyFFTs::getComplexArray(std::pair<Int_t, Int_t
   makeNewPlanIfNeeded(key.first, key.second);
   return fComplex[key];
 }
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief Set the amplitude of a frequency domain representation such that the time domain RMS = 1
+ * Used by CrossCorrelator
+ * 
+ * @param n is the length of the array in the TIME DOMAIN
+ * @param fft is a pointer to the array of complex numbers
+ */
+void Acclaim::FancyFFTs::normalizeFourierDomain(int n, std::complex<double>* fft){
+
+  const int numFreqs = getNumFreqs(n);
+  Double_t sumOfVSquared = 0;
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = fft[freqInd].real();
+    Double_t im = fft[freqInd].imag();
+    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
+    sumOfVSquared += factor*(re*re + im*im);
+  }
+
+  Double_t timeDomainVSquared = sumOfVSquared/(n*n/2);
+  Double_t norm = TMath::Sqrt(timeDomainVSquared);
+
+  for(int freqInd=0; freqInd < numFreqs; freqInd++){
+    Double_t re = fft[freqInd].real();
+    Double_t im = fft[freqInd].imag();
+
+    fft[freqInd].real(re/norm);
+    fft[freqInd].imag(im/norm);
+  }
+}
