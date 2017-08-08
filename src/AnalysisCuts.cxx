@@ -1,6 +1,7 @@
 #include "AnalysisCuts.h"
 #include "AnitaEventSummary.h"
 #include "RampdemReader.h"
+#include "TMath.h"
 
 /**
  * Generic constructor, assigns name title and maximum return value
@@ -46,6 +47,19 @@ int Acclaim::IsTaggedAsWaisPulser::apply(const AnitaEventSummary* sum) const
 
 
 /**
+ * Was the event tagged as a LDB pulser (from timing info)
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsTaggedAsLDBPulser::apply(const AnitaEventSummary* sum) const
+{
+  return sum->flags.pulser == AnitaEventSummary::EventFlags::LDB;
+}
+
+
+/**
  * Get the higher polarisation, wraps the higherPeakPol() function
  *
  * @param sum is the AnitaEventSummary
@@ -66,7 +80,10 @@ int Acclaim::HigherPol::apply(const AnitaEventSummary* sum) const
  */
 int Acclaim::HasSourceLocation::apply(const AnitaEventSummary* sum) const
 {
-  bool didReconstruct = (sum->higherPeak().latitude < -900 || sum->higherPeak().theta_adjustment_needed > 0) ? false : true;
+  bool didReconstruct = (sum->higherPeak().latitude < -900 || TMath::Abs(sum->higherPeak().theta_adjustment_needed) > 0) ? false : true;
+  // if(!didReconstruct){
+  //   std::cerr << sum->higherPeak().latitude << "\t" << sum->higherPeak().theta_adjustment_needed << std::endl;
+  // }
   return didReconstruct;
 }
 
@@ -81,4 +98,31 @@ int Acclaim::HasSourceLocation::apply(const AnitaEventSummary* sum) const
 int Acclaim::IsOnContinent::apply(const AnitaEventSummary* sum) const
 {
   return RampdemReader::isOnContinent(sum->higherPeak().longitude, sum->higherPeak().latitude);
+}
+
+
+
+/**
+ * Did the reconstruction tag this event as a payload blast?
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsTaggedAsPayloadBlast::apply(const AnitaEventSummary* sum) const
+{
+  return sum->flags.isPayloadBlast != 0 ? true : false;
+}
+
+
+/**
+ * Did the reconstruction tag this event as a payload blast?
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum) const
+{
+  return TMath::Abs(sum->dPhiSun()) < 20 ? true : false;
 }

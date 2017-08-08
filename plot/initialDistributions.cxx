@@ -23,7 +23,8 @@ using namespace Acclaim;
 int main(int argc, char* argv[]){
 
   if(argc!=2){
-    std::cerr << argv[0] << ": [summaryTreeFileGlob]" << std::endl;
+    std::cerr << argv[0] << " 'globWithWildcardsLikeThis*.root'" << std::endl;
+    std::cerr << "(make sure you enclose the glob inside single quotes)" << std::endl;
     return 1;
   }
 
@@ -42,21 +43,35 @@ int main(int argc, char* argv[]){
   hPeakVsTime->addCut(&AnalysisCuts::higherPol);
   hPeakVsTime->addCut(&AnalysisCuts::hasSourceLocation);
 
-  AnalysisProf* hDeltaAngleSun = new AnalysisProf("hDeltaAngleSun", "Angle between peak and sun;#delta#phi (Degrees);#delta#theta (Degrees)", 128, -5, 5, 128, -5, 5);
-  hDeltaAngleSun->addCut(&AnalysisCuts::isAboveHorizontal);
+  AnalysisProf* hDeltaAngleSunProf = new AnalysisProf("hDeltaAngleSunProf", "Angle between peak and sun;#delta#phi (Degrees);#delta#theta (Degrees)", 128, -20, 20, 128, -20, 20);
+  hDeltaAngleSunProf->addCut(&AnalysisCuts::higherPol);
+
+  AnalysisPlot* hDeltaAngleSun = new AnalysisPlot("hDeltaAngleSun", "Angle between peak and sun;#delta#phi (Degrees);#delta#theta (Degrees)", 128, -180, 180);
   hDeltaAngleSun->addCut(&AnalysisCuts::higherPol);
 
+  
   AnalysisPlot* hPeakThetaVsTime = ss.bookTimeAnalysisPlot("hPeakThetaVsTime", "Peak elevation vs time; realTime; Peak #theta (Degrees)", 1024, 128, -90, 90);
-  hPeakThetaVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
   hPeakThetaVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
   hPeakThetaVsTime->addCut(&AnalysisCuts::higherPol);
-  hPeakThetaVsTime->addCut(&AnalysisCuts::hasSourceLocation);
   
   AnalysisPlot* hPeakBearingVsTime = ss.bookTimeAnalysisPlot("hPeakBearingVsTime", "Bearing of map peak vs time; realTime; Peak #phi (Degrees)", 1024, 256, 0, 360);
-  hPeakBearingVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
   hPeakBearingVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
   hPeakBearingVsTime->addCut(&AnalysisCuts::higherPol);
-  hPeakBearingVsTime->addCut(&AnalysisCuts::hasSourceLocation);
+
+  AnalysisPlot* hImagePeakVsCoherentHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentHilbertPeak", "Coherent Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
+  AnalysisPlot* hImagePeakVsCoherentFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentFilteredHilbertPeak", "Coherent Filtered Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
+  AnalysisPlot* hImagePeakVsDeconvolvedHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedHilbertPeak", "Deconvolved Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
+  AnalysisPlot* hImagePeakVsDeconvolvedFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedFilteredHilbertPeak", "Deconvolved Filtered Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
+  const int nWaves = 4;
+  AnalysisPlot* hs[nWaves] = {hImagePeakVsCoherentHilbertPeak, hImagePeakVsCoherentFilteredHilbertPeak, hImagePeakVsDeconvolvedHilbertPeak, hImagePeakVsDeconvolvedFilteredHilbertPeak};
+  for(int i=0; i < nWaves; i++){
+    hs[i]->addCut(&AnalysisCuts::isAboveHorizontal);
+    hs[i]->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
+    hs[i]->addCut(&AnalysisCuts::isTaggedAsPayloadBlast);
+    hs[i]->addCut(&AnalysisCuts::isWithin20DegreesOfSunInPhi);
+    hs[i]->addCut(&AnalysisCuts::higherPol);
+    hs[i]->addCut(&AnalysisCuts::hasSourceLocation);
+  }
   
   ProgressBar p(N);
   for(Long64_t entry=0; entry < N; entry++){
@@ -65,9 +80,17 @@ int main(int argc, char* argv[]){
     AnitaEventSummary* sum = ss.summary();
 
     hPeakVsTime->Fill(sum, sum->realTime, sum->higherPeak().value);
-    hDeltaAngleSun->Fill(sum, sum->dPhiSun(), sum->dThetaSun(), sum->higherPeak().value);
+
+    hDeltaAngleSunProf->Fill(sum, sum->dPhiSun(), sum->dThetaSun(), sum->higherPeak().value);
+    hDeltaAngleSun->Fill(sum, sum->dPhiSun());
+
     hPeakThetaVsTime->Fill(sum, sum->realTime, sum->higherPeak().theta);
     hPeakBearingVsTime->Fill(sum, sum->realTime, sum->peakBearing());
+
+    hImagePeakVsCoherentHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherCoherent().peakHilbert);
+    hImagePeakVsCoherentFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherCoherentFiltered().peakHilbert);
+    hImagePeakVsDeconvolvedHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolved().peakHilbert);
+    hImagePeakVsDeconvolvedFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolvedFiltered().peakHilbert);
     
     p.inc(entry, N);
   }

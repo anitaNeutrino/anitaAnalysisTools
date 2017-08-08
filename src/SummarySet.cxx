@@ -4,11 +4,13 @@
 #include <iostream>
 #include "TH2D.h"
 #include "AnalysisPlot.h"
+#include "TFile.h"
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName)
-    : fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0) {
+    : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
+      fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0) {
 
-  init(pathToSummaryFiles, treeName, summaryBranchName);
+  init();
 }
 
 
@@ -21,16 +23,26 @@ Acclaim::SummarySet::~SummarySet(){
     delete fSum;
   }
   fSum = NULL;
+
+  if(gFile && gFile->IsWritable()){
+    TString name = "";
+    TString title = "Acclaim::SummarySet(" + fPathToSummaryFiles + ", " + fTreeName + "," + fSummaryBranchName + ")";
+    TNamed note(name, title);
+    note.Write();
+  }
 }
 
 
-void Acclaim::SummarySet::init(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName){
 
 
-  fChain = new TChain(treeName);
-  fChain->Add(pathToSummaryFiles);
+
+void Acclaim::SummarySet::init(){
+
+
+  fChain = new TChain(fTreeName);
+  fChain->Add(fPathToSummaryFiles);
   fN = fChain->GetEntries();
-  fChain->SetBranchAddress(summaryBranchName, &fSum);
+  fChain->SetBranchAddress(fSummaryBranchName, &fSum);
 
   if(fN == 0){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", no entries in TChain of AnitaEventSummary" << std::endl;

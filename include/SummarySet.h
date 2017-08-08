@@ -1,4 +1,5 @@
 #include "TObject.h"
+#include "TString.h"
 
 class AnitaEventSummary;
 class TChain;
@@ -36,9 +37,14 @@ namespace Acclaim
    TH2D* bookTimeHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
    TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
+   TChain* getChain(){return fChain;}
+
   protected:
 
-   void init(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName);
+   void init();
+   TString fPathToSummaryFiles;
+   TString fTreeName;
+   TString fSummaryBranchName;
 
    TChain* fChain;
    Long64_t fN;

@@ -55,6 +55,13 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
   };
 
+  class IsTaggedAsLDBPulser : public AnalysisCut
+  {
+   public:
+    IsTaggedAsLDBPulser() : AnalysisCut("isTaggedAsLDBPulser", "Tagged As LDB Pulser", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
   class HigherPol : public AnalysisCut
   {
    public:
@@ -76,6 +83,19 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
   };
 
+  class IsTaggedAsPayloadBlast : public AnalysisCut
+  {
+   public:
+    IsTaggedAsPayloadBlast() : AnalysisCut("isTaggedAsPayloadBlast", "Tagged as Payload Blast", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class IsWithin20DegreesOfSunInPhi : public AnalysisCut{
+   public:
+    IsWithin20DegreesOfSunInPhi() : AnalysisCut("isWithin20DegreesOfSunInPhi", "|#delta#phi_{sun}| < 20", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
 
 
 
@@ -86,6 +106,8 @@ namespace Acclaim
     const HigherPol higherPol;
     const HasSourceLocation hasSourceLocation;
     const IsOnContinent isOnContinent;
+    const IsTaggedAsPayloadBlast isTaggedAsPayloadBlast;
+    const IsWithin20DegreesOfSunInPhi isWithin20DegreesOfSunInPhi;
   }
 }
 

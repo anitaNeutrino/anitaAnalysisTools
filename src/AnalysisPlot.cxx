@@ -237,24 +237,35 @@ void Acclaim::AnalysisPlot::Print(Option_t* opt) const{
  */
 void Acclaim::AnalysisPlot::Draw(Option_t* opt, const TString& selection){
 
-  TString name = TString::Format("%s_Draw%lu", fName.Data(), hDummies.size());
-  TString title = selection == "*" ? fTitle : selection;
-  TH1* h = makeHist(name, selection);
-  hDummies.push_back(h);
-  
+  std::vector<TH1*> selectedHists;
   TString boundedSelection = "*" + selection + "*";
   TRegexp reggie(boundedSelection.Data(), true);
-  
+
   for(UInt_t i=0; i < hs.size(); i++){
     TString histName = hs[i]->GetName();
     Int_t index = histName.Index(reggie);
     // std::cout << selection << "\t" << hs[i]->GetName() << "\t" << i << "\t" << index << std::endl;
     if(index!=-1){
       // std::cout << "here!" << std::endl;
-      h->Add(hs[i]);
-    }      
-  }  
-  h->Draw(opt);
+      selectedHists.push_back(hs[i]);
+    }
+  }
+  if(selectedHists.size()==0){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", no contained histograms matching " << selection << std::endl;
+  }
+  else{
+    static UInt_t numDrawn = 0;
+    TString name = TString::Format("%s_Draw%u", fName.Data(), numDrawn);
+    TH1* h = makeHist(name, fTitle);
+    for(UInt_t i=0; i < selectedHists.size(); i++){
+      h->Add(selectedHists[i]);
+    }
+    h->SetDirectory(0);
+    h->SetBit(kCanDelete);
+    h->Draw(opt);
+    numDrawn++;
+  }
+  
 }
 
 
