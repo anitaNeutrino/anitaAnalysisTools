@@ -40,6 +40,8 @@ int main(int argc, char* argv[]){
   AnalysisPlot* hPeakVsTime = ss.bookTimeAnalysisPlot("hPeakVsTime", "Higher map peak vs time; realTime; Map peak", 1024, 128, 0, 1);
   hPeakVsTime->addCut(&AnalysisCuts::isAboveHorizontal);
   hPeakVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
+  hPeakVsTime->addCut(&AnalysisCuts::isTaggedAsPayloadBlast);
+  hPeakVsTime->addCut(&AnalysisCuts::isGood);
   hPeakVsTime->addCut(&AnalysisCuts::higherPol);
   hPeakVsTime->addCut(&AnalysisCuts::hasSourceLocation);
 
@@ -58,16 +60,20 @@ int main(int argc, char* argv[]){
   hPeakBearingVsTime->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
   hPeakBearingVsTime->addCut(&AnalysisCuts::higherPol);
 
-  AnalysisPlot* hImagePeakVsCoherentHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentHilbertPeak", "Coherent Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
-  AnalysisPlot* hImagePeakVsCoherentFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentFilteredHilbertPeak", "Coherent Filtered Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
-  AnalysisPlot* hImagePeakVsDeconvolvedHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedHilbertPeak", "Deconvolved Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
-  AnalysisPlot* hImagePeakVsDeconvolvedFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedFilteredHilbertPeak", "Deconvolved Filtered Rotated Cross Correlation", 128, 0, 1, 512, 0, 500);
-  const int nWaves = 4;
-  AnalysisPlot* hs[nWaves] = {hImagePeakVsCoherentHilbertPeak, hImagePeakVsCoherentFilteredHilbertPeak, hImagePeakVsDeconvolvedHilbertPeak, hImagePeakVsDeconvolvedFilteredHilbertPeak};
+  AnalysisPlot* hImagePeakVsCoherentHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentHilbertPeak", "Coherent Rotated Cross Correlation", 128, 0, 1, 1024, 0, 1000);
+  AnalysisPlot* hImagePeakVsCoherentFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsCoherentFilteredHilbertPeak", "Coherent Filtered Rotated Cross Correlation", 128, 0, 1, 1024, 0, 1000);
+  AnalysisPlot* hImagePeakVsDeconvolvedHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedHilbertPeak", "Deconvolved Rotated Cross Correlation", 128, 0, 1, 1024, 0, 1000);
+  AnalysisPlot* hImagePeakVsDeconvolvedFilteredHilbertPeak = new AnalysisPlot("hImagePeakVsDeconvolvedFilteredHilbertPeak", "Deconvolved Filtered Rotated Cross Correlation", 128, 0, 1, 1024, 0, 1000);
+  AnalysisPlot* hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime = new AnalysisPlot("hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime", "Deconvolved Hilbert Peak Vs. Deconvolved Hilbert Peak Time", 128, 0, 100, 1024, 0, 1000);
+
+  const int nWaves = 5;
+  AnalysisPlot* hs[nWaves] = {hImagePeakVsCoherentHilbertPeak, hImagePeakVsCoherentFilteredHilbertPeak, hImagePeakVsDeconvolvedHilbertPeak, hImagePeakVsDeconvolvedFilteredHilbertPeak,
+                              hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime};
   for(int i=0; i < nWaves; i++){
     hs[i]->addCut(&AnalysisCuts::isAboveHorizontal);
     hs[i]->addCut(&AnalysisCuts::isTaggedAsWaisPulser);
     hs[i]->addCut(&AnalysisCuts::isTaggedAsPayloadBlast);
+    hs[i]->addCut(&AnalysisCuts::isGood);
     hs[i]->addCut(&AnalysisCuts::isWithin20DegreesOfSunInPhi);
     hs[i]->addCut(&AnalysisCuts::higherPol);
     hs[i]->addCut(&AnalysisCuts::hasSourceLocation);
@@ -91,7 +97,8 @@ int main(int argc, char* argv[]){
     hImagePeakVsCoherentFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherCoherentFiltered().peakHilbert);
     hImagePeakVsDeconvolvedHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolved().peakHilbert);
     hImagePeakVsDeconvolvedFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolvedFiltered().peakHilbert);
-    
+
+    hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime->Fill(sum, sum->higherDeconvolvedFiltered().peakTime, sum->higherDeconvolvedFiltered().peakHilbert);
     p.inc(entry, N);
   }
   

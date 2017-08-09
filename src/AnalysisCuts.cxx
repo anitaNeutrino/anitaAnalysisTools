@@ -126,3 +126,29 @@ int Acclaim::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum) co
 {
   return TMath::Abs(sum->dPhiSun()) < 20 ? true : false;
 }
+
+
+/**
+ * Did this event pass all quality cuts?
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsGood::apply(const AnitaEventSummary* sum) const
+{
+  return sum->flags.isGood != 0 ? true : false;
+}
+
+
+/**
+ * Bad GPS will give NaN...
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::GoodGPS::apply(const AnitaEventSummary* sum) const
+{
+  return !TMath::IsNaN(sum->dPhiSun());
+}

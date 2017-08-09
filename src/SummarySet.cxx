@@ -56,7 +56,7 @@ void Acclaim::SummarySet::init(){
     fFirstTime = fSum->realTime;
     fFirstEventNumber = fSum->eventNumber;
 
-    std::cerr << "Just called " << __PRETTY_FUNCTION__ << ", time range is " << fFirstTime << " to " << fLastTime << "\t eventNumber range is " << fFirstEventNumber << " to " << fLastEventNumber << std::endl;
+    // std::cerr << "Just called " << __PRETTY_FUNCTION__ << ", time range is " << fFirstTime << " to " << fLastTime << "\t eventNumber range is " << fFirstEventNumber << " to " << fLastEventNumber << std::endl;
   }
 }
 

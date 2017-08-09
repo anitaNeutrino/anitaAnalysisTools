@@ -17,9 +17,13 @@
 
 namespace Acclaim{
 
+class AnalysisCut;
+class SummarySet;
+
   /** 
    * @class CutOptimizer
-   * @brief A class to read in signal/background samples, feed them into a TMVA framework and separate
+   * @brief A class to parse AnitaEventSummary trees, extract quantities of interest,
+   *        feed them into a TMVA framework and separate them
    *
    */
 class CutOptimizer{
@@ -27,26 +31,45 @@ class CutOptimizer{
  public:
   static void setDebug(bool db);
   
-  CutOptimizer(const TString& outFileName, const TString& signalTreeWildCards, const TString& backgroundTree);
-  void optimize();
+  CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool save_trees = false);
+  virtual ~CutOptimizer();
+  void optimize(const std::vector<const Acclaim::AnalysisCut*>& signalSelection,
+                const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection,
+                const std::vector<const char*>& formulaStrings,
+                const char* outFileName = "");
+
 
  protected:
-  void makeOutputFile();
-  void getSignalAndBackgroundTrees();
 
-  
-  TString fOutFileName;  
-  TString fSignalName;
-  TString fBackgroundName;
-  TFile* fOutFile;
+  enum BranchType{
+    kUnassigned,
+    kInt,
+    kFloat
+  };
 
-  TFile* fSignalFile;
+  TFile* makeOutputFile(const char* outFileName);
+  void generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCut*>& signalSelection,
+                                        const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection,
+                                        const std::vector<const char*>& treeVars);
+  BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
+
+  TString fSignalGlob;
+  TString fBackgroundGlob;
+  TString fOutFileName;
   TTree* fSignalTree;
-
-  TFile* fBackgroundFile;
   TTree* fBackgroundTree;
+  Bool_t fSaveTrees;
+  std::vector<Float_t> fSignalFloatVals;
+  std::vector<Float_t> fBackgroundFloatVals;
+  std::vector<Int_t> fSignalIntVals;
+  std::vector<Int_t> fBackgroundIntVals;
 
 
+
+
+  /**
+   * @class Class to get the results of the Fisher Discriminant into a useful form
+   */
   class FisherResult {
 
     typedef std::map<int, double> WeightMap;
@@ -56,7 +79,7 @@ class CutOptimizer{
     FisherResult(const TString& fileName){
       getResultFromXML(fileName.Data());
     }
-    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col=kBlack) const;
+    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const;
     
    protected:
     void getResultFromXML(const char* filename);
@@ -66,7 +89,28 @@ class CutOptimizer{
     WeightMap fWeights;
   };
 
+
+
+
   
+
+  /** 
+   * @class Dummy class to hold the TTreeFormula and trick TChain into notifying all the formulas
+   */
+  class FormulaHolder : public TObject {
+   public:
+    FormulaHolder(TChain* c);
+    virtual ~FormulaHolder();
+    virtual Bool_t Notify();
+    virtual size_t add(const char* formulaString);
+    TTreeFormula* at(UInt_t i) {return fForms.at(i);}
+    const char* str(UInt_t i) const {return fFormStrs.at(i);}
+    size_t N(){return fForms.size();}
+   protected:
+    TChain* fChain;
+    std::vector<TTreeFormula*> fForms;
+    std::vector<const char*> fFormStrs;
+  };
   
 };
 

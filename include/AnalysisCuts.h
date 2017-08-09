@@ -96,6 +96,18 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
   };
 
+  class IsGood : public AnalysisCut{
+   public:
+    IsGood() : AnalysisCut("isGood", "Is Good", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+
+  class GoodGPS : public AnalysisCut{
+   public:
+    GoodGPS() : AnalysisCut("goodGPS", "Good GPS", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
 
 
 
@@ -108,6 +120,8 @@ namespace Acclaim
     const IsOnContinent isOnContinent;
     const IsTaggedAsPayloadBlast isTaggedAsPayloadBlast;
     const IsWithin20DegreesOfSunInPhi isWithin20DegreesOfSunInPhi;
+    const IsGood isGood;
+    const GoodGPS goodGPS;
   }
 }
 
