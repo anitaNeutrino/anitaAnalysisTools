@@ -8,6 +8,7 @@
 #include "TApplication.h"
 #include "TXMLEngine.h"
 #include "TMath.h"
+#include "TBranch.h"
 
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,10,0)
 #include "TMVA/Factory.h"
@@ -15,6 +16,8 @@
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodFisher.h"
 #endif
+
+ClassImp(Acclaim::CutOptimizer::FisherResult)
 
 bool debug = false;
 
@@ -24,11 +27,9 @@ void Acclaim::CutOptimizer::setDebug(bool db){
 }
 
 
-TH1D* Acclaim::CutOptimizer::FisherResult::makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const{
-
+TString Acclaim::CutOptimizer::FisherResult::getFisherFormula() const{
 
   TString command;
-
   for(int i=0; i < (int)fWeights.size(); i++){
     WeightMap::const_iterator wit = fWeights.find(i);
     if(wit!=fWeights.end()){
@@ -47,6 +48,37 @@ TH1D* Acclaim::CutOptimizer::FisherResult::makeHist(int nBinsX, const TString& h
       }
     }
   }
+  return command;
+}
+
+void Acclaim::CutOptimizer::FisherResult::Print(Option_t* opt) const{
+  (void) opt;
+  std::cout << "FisherResult:" << std::endl;
+  for(int i=0; i < (int)fWeights.size(); i++){
+    WeightMap::const_iterator wit = fWeights.find(i);
+    if(wit!=fWeights.end()){
+      TString w = TString::Format("%lf", wit->second);
+      if(i==0){
+        std::cout << "Variable " << i << " = constant, weight = " << wit->second << std::endl;
+      }
+      else{
+        ExpressionMap::const_iterator eit = fExpressions.find(i-1);
+        if(eit!=fExpressions.end()){
+          std::cout << "Variable " << i << " = " << eit->second << ", weight = " << w << std::endl;
+        }
+        else{
+          std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find expression " << i-1 << std::endl;
+        }
+      }
+    }
+  }
+}
+
+
+TH1D* Acclaim::CutOptimizer::FisherResult::makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const{
+
+
+  TString command = getFisherFormula();
 
   if(debug){
     std::cerr << command << std::endl;
@@ -102,6 +134,7 @@ void Acclaim::CutOptimizer::FisherResult::getResultFromXML(const char* filename)
       std::cout << it2->first << "\t" << it2->second << std::endl;
     }
   }
+  SetTitle(getFisherFormula());
 }
 
 
@@ -565,11 +598,28 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
     // std::cerr << cumulativeSignal << "\t" << cumulativeBackground << std::endl;
   }
 
+
+  // Activate all the branches!
+  // Branches unused by TMVA like run/eventNumber
+  // are switched off by the TMVA classes, which is slightly
+  // annoying when persusing the output trees.
+  const int nT = 2;
+  TTree* ts[nT] = {fSignalTree, fBackgroundTree};
+  for(int t=0; t < nT; t++){
+    TObjArray* bs = ts[t]->GetListOfBranches();
+    for(int b=0; b < bs->GetEntries(); b++){
+      TBranch* br = (TBranch*) bs->At(b);
+      ts[t]->SetBranchStatus(br->GetName(), 1);
+    }
+  }
+
   hSignal->Write();
   hSigInt->Write();
-  hBackground->Write();  
+  hBackground->Write();
   hBackInt->Write();
 
+  result.Write();
+  
   delete hSignal;
   delete hSigInt;
   delete hBackground;

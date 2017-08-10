@@ -26,7 +26,7 @@ Acclaim::SummarySet::~SummarySet(){
 
   if(gFile && gFile->IsWritable()){
     TString name = "";
-    TString title = "Acclaim::SummarySet(" + fPathToSummaryFiles + ", " + fTreeName + "," + fSummaryBranchName + ")";
+    TString title = "Acclaim::SummarySet ss(" + fPathToSummaryFiles + ", " + fTreeName + "," + fSummaryBranchName + ")";
     TNamed note(name, title);
     note.Write();
   }

@@ -29,6 +29,7 @@
 #pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::AnalysisProf+;
 #pragma link C++ namespace Acclaim::AnalysisCut;
+#pragma link C++ class Acclaim::CutOptimizer::FisherResult+;
 
 #pragma link C++ class Acclaim::QualityCut+;
 #pragma link C++ class Acclaim::SurfSaturationCut+;

@@ -1,8 +1,8 @@
 #include "TObject.h"
 #include "TString.h"
+#include "TChain.h"
 
 class AnitaEventSummary;
-class TChain;
 class TH2D;
 
 namespace Acclaim
@@ -37,7 +37,15 @@ namespace Acclaim
    TH2D* bookTimeHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
    TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
+
+   // If I keep adding these wrapper functions at some point it might make sense to inherit from TChain...
    TChain* getChain(){return fChain;}
+   Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
+     return fChain->Draw(varexp, selection, option, nentries, firstentry);
+   }
+   Long64_t Draw(const char* varexp,const char* selection, Option_t* option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
+     return fChain->Draw(varexp, selection, option, nentries, firstentry);
+   }
 
   protected:
 

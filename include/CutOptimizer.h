@@ -29,6 +29,34 @@ class SummarySet;
 class CutOptimizer{
 
  public:
+
+  /**
+   * @class Class to get the results of the Fisher Discriminant into a useful form
+   */
+  class FisherResult : public TNamed {
+
+    typedef std::map<int, double> WeightMap;
+    typedef std::map<int, TString> ExpressionMap;
+
+   public:
+    FisherResult(const char* fileName = "") : TNamed("FisherResult", fileName){
+      getResultFromXML(fileName);
+    }
+    TString getFisherFormula() const;
+    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const;
+    virtual void Print(Option_t* opt = "") const;
+
+   protected:
+    void getResultFromXML(const char* filename);
+    void parseNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
+
+    ExpressionMap fExpressions;
+    WeightMap fWeights;
+
+    ClassDef(FisherResult, 1);
+  };
+
+
   static void setDebug(bool db);
   
   CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool save_trees = false);
@@ -64,30 +92,6 @@ class CutOptimizer{
   std::vector<Int_t> fSignalIntVals;
   std::vector<Int_t> fBackgroundIntVals;
 
-
-
-
-  /**
-   * @class Class to get the results of the Fisher Discriminant into a useful form
-   */
-  class FisherResult {
-
-    typedef std::map<int, double> WeightMap;
-    typedef std::map<int, TString> ExpressionMap;
-    
-   public:
-    FisherResult(const TString& fileName){
-      getResultFromXML(fileName.Data());
-    }
-    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const;
-    
-   protected:
-    void getResultFromXML(const char* filename);
-    void parseNode(TXMLEngine* xml, XMLNodePointer_t node, Int_t level);
-    
-    ExpressionMap fExpressions;
-    WeightMap fWeights;
-  };
 
 
 
