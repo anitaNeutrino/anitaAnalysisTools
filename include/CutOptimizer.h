@@ -31,7 +31,7 @@ class CutOptimizer{
  public:
 
   /**
-   * @class Class to get the results of the Fisher Discriminant into a useful form
+   * @class Class to get the results of the Fisher Discriminant into a more useful form
    */
   class FisherResult : public TNamed {
 

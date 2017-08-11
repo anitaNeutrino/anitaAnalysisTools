@@ -43,7 +43,7 @@ namespace Acclaim
    Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
-   Long64_t Draw(const char* varexp,const char* selection, Option_t* option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
+   Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
 

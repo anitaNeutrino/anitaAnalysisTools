@@ -32,6 +32,7 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back("eventNumber"); // these get excluded from training by the CutOptimizer
 
   treeFormulas.push_back("sum.higherPeak().value"); // map values
+  treeFormulas.push_back("sum.higherPeakToPeakRatio()"); // ratio of first and second peak
 
   // Waveform info
   treeFormulas.push_back("sum.higherCoherent().peakHilbert");
