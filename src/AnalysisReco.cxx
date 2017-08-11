@@ -180,20 +180,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                              grV->GetY(), grV_hilbert->GetY(),
                              &(info.I), &(info.Q), &(info.U), &(info.V));
 
-  info.totalPower = 0;
-  TGraphAligned grPowTime(*coherentWave->even());
-  for(int i=0; i < grPowTime.GetN(); i++){
-    grPowTime.GetY()[i]*=grPowTime.GetY()[i];
-    info.totalPower += grPowTime.GetY()[i];
-  }
-  // RootTools::printTGraphInfo(&grPowTime);
-
-  TGraphAligned grPowXTime(*xPolCoherentWave->even());
-  info.totalPowerXpol = 0;
-  for(int i=0; i < grPowXTime.GetN(); i++){
-    grPowXTime.GetY()[i]*=grPowXTime.GetY()[i];
-    info.totalPowerXpol += grPowXTime.GetY()[i];
-  }
+  info.totalPower = RootTools::getTimeIntegratedPower(coherentWave->even());
+  info.totalPowerXpol = RootTools::getTimeIntegratedPower(xPolCoherentWave->even());
 
   // //Shape parameters, computed using hilbert envelope
   // // This should probably taken out into its own class
@@ -220,10 +208,15 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   grHilbert->getMoments(sizeof(info.peakMoments)/sizeof(double), info.peakTime, info.peakMoments);
 
   // define my own impulsivity measure, to do battle with Cosmin's
-  std::cout << "input: " << info.totalPower << "\t" << info.peakTime << std::endl;
-  std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(&grPowTime, fImpulsivityMeasurePowerFraction, info.totalPower, info.peakTime);  
-  info.impulsivityMeasure = window.second - window.first;
-  std::cout << "output: " << info.impulsivityMeasure << "\t" << window.first << "\t" << window.second << std::endl;
+
+  std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(grHilbert, fImpulsivityMeasurePowerFraction);  
+  info.impulsivityMeasure = window.second - window.first; // is the smallest width of the square of the hilbert envelope containing a certain fraction of the power
+  // if that doesn't contain the peak of the hilbert envelope, then something is weird and *= -1 (this may be a silly thing to do)
+  if(info.peakTime < window.first || info.peakTime > window.second){
+    info.impulsivityMeasure *= -1;
+  }
+
+  // std::cout << "output: " << info.impulsivityMeasure << "\t" << window.first << "\t" << window.second << std::endl;
 
   ///////////////////////////////////////////////////////////////////////////////////
   // CURRENTLY NOT USING THESE...
@@ -967,19 +960,24 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
   for(UInt_t i=0; i < waves.size(); i++){
-    const TGraphAligned* gr = waves[i]->uneven();
-    const double t0 = gr->GetX()[0];
-
-    if(gr->GetN() > 0){
-      const double tN = gr->GetX()[gr->GetN()-1];
-      for(int samp=0; samp < grCoherent->GetN(); samp++){
-        double t = grCoherent->GetX()[samp];
-        double tPlusDt = t + dts[i];
-        if(tPlusDt > t0 && tPlusDt < tN){
-          double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
-          grCoherent->GetY()[samp] += TMath::IsNaN(y) ? 0 : y;
+    const TGraphAligned* grU = waves[i]->even();
+    // std::cout << i << " here" << std::endl;
+    
+    const double t0 = grU->GetX()[0];
+    const double tN = grU->GetX()[grU->GetN()-1];
+    
+    for(int samp=0; samp < grCoherent->GetN(); samp++){
+      double t = grCoherent->GetX()[samp];
+      double tPlusDt = t + dts[i];
+      if(tPlusDt > t0 && tPlusDt < tN){
+        double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
+        if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
+          std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
         }
-      };
+        else{
+          grCoherent->GetY()[samp] += y;
+        }
+      }
     }
   }
 
@@ -1192,7 +1190,15 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
         
       coherentFftPad->cd();
       grPower4->Draw(opt);
-      grPower2->Draw("lsame");        
+      
+      grPower4->GetXaxis()->SetRangeUser(0, 1.3);
+      Double_t maxY, maxX, minY, minX, lowerLimit = 0, upperLimit = 1.3;
+      RootTools::getMaxMinWithinLimits(grPower4, maxY, maxX, minY, minX, lowerLimit, upperLimit);
+      maxY *= (1 + 0.3*(maxY/TMath::Abs(maxY)));
+      minY *= (1 - 0.3*(maxY/TMath::Abs(maxY)));
+      grPower4->GetYaxis()->SetRangeUser(minY, maxY);
+
+      grPower2->Draw("lsame");
 
       // std::cout << "here \t" << summaryGraphs.size() << std::endl;
     }

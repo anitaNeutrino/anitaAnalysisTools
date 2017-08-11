@@ -1544,8 +1544,69 @@ TPad* Acclaim::RootTools::makeSubPad(TPad* parentPad, double xlow, double ylow, 
 
 
 
+
+
 /** 
- * Find the smallest window around the peakTime containing a desired fraction of power
+ * Utility function to make sure getTimeIntegratedPower matches findSmallestWindowContainingFracOfPower
+ * NO BOUNDS CHECKING IS DONE!
+ * 
+ * @param gr is the graph
+ * @param samp is the sample
+ * 
+ * @return 
+ */
+double inline samplePower(const TGraph* gr, int samp){
+  return gr->GetY()[samp]*gr->GetY()[samp]*(gr->GetX()[samp+1]-gr->GetX()[samp]);
+}
+
+
+
+/** 
+ * @brief Does \sum_{i} V[i]*V[i]*(t[i+1] - t[i]).
+ * 
+ * To get the actual power, one would have to take into account units and impedance.
+ * So really this is some quantity proportional to the power.
+ * Ignores the last sample as there is no t[i+1]
+ * 
+ * @param gr is the wave to find the time integrated power
+ * @param firstSamp is the sample to begin the sum from (default = 0)
+ * @param lastSamp is the sample to end the sum on (default = gr->GetN()-1)
+ * 
+ * @return (quantity proportional to) the time integrated power
+ */
+double Acclaim::RootTools::getTimeIntegratedPower(const TGraph* gr, int firstSamp, int lastSamp){
+
+  // here actually set the lastSamp default, we can't reference the gr in the function prototype
+  lastSamp == -1 ? lastSamp = gr->GetN() - 1 : lastSamp;
+
+  if(firstSamp < 0 || firstSamp >= gr->GetN() ){
+    int newFirstSamp = 0;
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", firstSamp = " << firstSamp
+              << ", for " << gr->GetName() << " with " << gr->GetN()
+              << "samples, setting to " << newFirstSamp << std::endl;
+    firstSamp = newFirstSamp;
+  }
+
+  if(lastSamp < 0 || lastSamp >= gr->GetN()){
+    int newLastSamp = gr->GetN() - 1;
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", lastSamp = " << lastSamp
+              << ", for " << gr->GetName() << " with " << gr->GetN()
+              << "samples, setting to " << newLastSamp << std::endl;
+    lastSamp = newLastSamp;
+  }
+  
+  double totalPower = 0;
+  for(int samp=firstSamp; samp < lastSamp; samp++){    
+    totalPower += samplePower(gr, samp);
+  }
+  return totalPower;
+}
+
+
+
+
+/** 
+ * Find the smallest window containing a desired fraction of power
  * 
  * @param grPow is a time domain, squared waveform
  * @param fracOfPowerInWindow is the desired amount of power to find in the waveform
@@ -1553,63 +1614,105 @@ TPad* Acclaim::RootTools::makeSubPad(TPad* parentPad, double xlow, double ylow, 
  * 
  * @return a pair of times corresponding to the smallest window around the peak containing the desired fraction of power
  */
-std::pair<double, double> Acclaim::RootTools::findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow, double totalPower, double peakTime){
+std::pair<double, double> Acclaim::RootTools::findSmallestWindowContainingFracOfPower(const TGraph* gr, double fracOfPowerInWindow){
 
-  // find peak time, if unknown
-  int maxInd = TMath::LocMax(grPow->GetN(), grPow->GetY());
+  // A very naive implementation is O(N^{2}) which is actually quite slow for large N
+  // So I'm going to try to make this O(N) with a little harder-to-read code
   
-  if(peakTime==kUnknownPeakTime){
-    peakTime = grPow->GetX()[maxInd];
-  }
-  
-  // find total power, if unknown
-  if(totalPower==0){
-    getSumOfYVals(grPow);
-  }
+  // First, find total power and the power that we want
+  const double totalPower = getTimeIntegratedPower(gr);
   const double desiredPower = totalPower*fracOfPowerInWindow;
 
   double minWindowWidth = DBL_MAX;
-  double minWinStart = kUnknownPeakTime;
-  double minWinEnd = -kUnknownPeakTime;  
+  double minWinStart = kUnknownPeakTime; // this is negative
+  double minWinEnd = -kUnknownPeakTime; // this is positive
 
-  int lastJ = maxInd;
-  for(int i=0; i < maxInd; i++){
-    Bool_t foundFracWidthThisJ = false;
-    for(int j=lastJ; j < grPow->GetN(); j++){
-      double winStart = grPow->GetX()[i];
-      double winEnd = grPow->GetX()[j];
-      
-      if(winStart <= peakTime && winEnd >= peakTime){
-        // window contains peak
-        double windowPower = std::accumulate(&grPow->GetY()[i], &grPow->GetY()[j], 0);
+  // This little bit *=MUST=* match what is done in getTimeIntegratedPower()
+  // expand initial window until we find the desired fraction of power
+  int lastJ=0;
+  double windowPower = 0;
+  while(windowPower < desiredPower && lastJ <= gr->GetN() - 1){ // Add -1 here to account for not using last sample in getTimeIntegratedPower
+    windowPower += samplePower(gr, lastJ);
+    lastJ++;
+  }
 
-        // std::cerr << grPow->GetN() << "\t" << i << "\t" << j << "\t" << windowPower << "\t" << desiredPower << std::endl;        
+  // If we doun
+  if(windowPower >= desiredPower){
+    minWinStart = gr->GetX()[0];
+    minWinEnd = gr->GetX()[lastJ];
+    minWindowWidth = minWinEnd - minWinStart;
+  }
+  else{
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find initial window containing "
+              << 100*fracOfPowerInWindow << "% of the power. Giving up." << std::endl;
+    return std::pair<double, double>(minWinStart, minWinEnd);
+  }
 
-        if(windowPower >= desiredPower){
-          double windowWidth = winEnd - winStart;
+  // now we sweep through the remaining waveform,
+  // removing the first sample and expanding the window
+  // until we get back to the desired sample again
+  for(int i=0; i < gr->GetN() - 2; i++){
+    windowPower -= samplePower(gr, i);
 
-          if(windowWidth < minWindowWidth){
-            minWinStart = winStart;
-            minWinEnd = winEnd;
-            lastJ = j;
-            foundFracWidthThisJ = true;
-          }
-        }
+    while(windowPower < desiredPower && lastJ < gr->GetN() - 2){ // Add -1 here to account for not using last sample in getTimeIntegratedPower
+      windowPower += samplePower(gr, lastJ);
+      lastJ++;
+    }
+    if(windowPower >= desiredPower){
+      double windowWidth =  gr->GetX()[lastJ] - gr->GetX()[0];
+      if(windowWidth < minWindowWidth){
+        minWinStart = gr->GetX()[0];
+        minWinEnd = gr->GetX()[lastJ];
+        minWindowWidth = minWinEnd - minWinStart;
       }
-
-      if(foundFracWidthThisJ){
-        // no point checking higher values of j
-        break;
-      }
+    }
+    else{
+      // we've reached the end of the waveform
+      return std::pair<double, double>(minWinStart, minWinEnd);
     }
   }
 
-  if(minWinStart==kUnknownPeakTime && minWinEnd==-kUnknownPeakTime){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__
-              << ", couldn't find a window containing "
-              << fracOfPowerInWindow << " of the power."
-              << std::endl;
-  }
+  // stop the compiler complaining, but we shouldn't get here...
+  // I'll print a warning and move on
+  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", you shouldn't get here, something is wrong!" << std::endl;
+  std::cerr << windowPower << "\t" << totalPower << "\t" << gr->GetN() << "\t" << lastJ << "\t" << minWinStart << "\t" << minWinEnd << "\t" << std::endl;
   
   return std::pair<double, double>(minWinStart, minWinEnd);
+
+  // for(int i=0; i < gr->GetN() - 2; i++){ // Add -2 here to account for not using last sample in getTimeIntegratedPower, and have i < j
+  //   Bool_t foundFracWidthThisJ = false;
+  //   for(int j=lastJ; j < gr->GetN() - 1; j++){
+  //     double winStart = gr->GetX()[i];
+  //     double winEnd = gr->GetX()[j];
+
+  //     double windowPower = getTimeIntegratedPower(gr, i, j);
+
+  //     if(windowPower >= desiredPower){
+  //       double windowWidth = winEnd - winStart;
+
+  //       if(windowWidth < minWindowWidth){
+  //         minWinStart = winStart;
+  //         minWinEnd = winEnd;
+  //         lastJ = j;
+  //         foundFracWidthThisJ = true;
+  //         // std::cerr << i << "\t" << j << std::endl;
+  //       }
+  //     }
+
+  //     if(foundFracWidthThisJ){
+  //       // no point checking higher values of j
+  //       // since that window will be larger for the same i
+  //       break;
+  //     }
+  //   }
+  // }
+
+  // if(minWinStart==kUnknownPeakTime && minWinEnd==-kUnknownPeakTime){
+  //   std::cerr << "Warning in " << __PRETTY_FUNCTION__
+  //             << ", couldn't find a window containing "
+  //             << fracOfPowerInWindow << " of the power."
+  //             << std::endl;
+  // }
+
+  // return std::pair<double, double>(minWinStart, minWinEnd);
 }

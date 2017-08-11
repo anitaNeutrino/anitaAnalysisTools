@@ -177,7 +177,9 @@ namespace Acclaim
     enum {
       kUnknownPeakTime = -9999
     };
-    std::pair<double, double> findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow, double totalPower = 0, double peakTime = kUnknownPeakTime);
+    std::pair<double, double> findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow);
+    double getTimeIntegratedPower(const TGraph* gr, int firstSamp=0, int lastSamp=-1);
+
   }
 }
 
