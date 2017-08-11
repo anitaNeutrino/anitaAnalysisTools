@@ -124,7 +124,9 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Int_t, ResponseNPad);
   ANALYSIS_SETTING(Int_t, NumPeaks);
   ANALYSIS_SETTING(Int_t, DoHeatMap);
-  ANALYSIS_SETTING(Double_t, HeatMapHorizonKm);  
+  ANALYSIS_SETTING(Double_t, HeatMapHorizonKm);
+  ANALYSIS_SETTING(Double_t, ImpulsivityMeasurePowerFraction);
+  ANALYSIS_SETTING(Double_t, CoherentDtNs);
   ClassDef(AnalysisReco, 0)
 
 };

@@ -1,6 +1,6 @@
 #include "RootTools.h"
-
-
+#include <algorithm>
+#include <numeric>
 
 //---------------------------------------------------------------------------------------------------------
 /**
@@ -48,7 +48,7 @@ UsefulAnitaEvent* Acclaim::RootTools::makeGaussianEvent(UInt_t eventNumber){
  * @param gr is the TGraph you want to sum the y-axis values of.
  * @returns sum is a Double_t.
 */
-Double_t Acclaim::RootTools::getSumOfYVals(TGraph* gr){
+Double_t Acclaim::RootTools::getSumOfYVals(const TGraph* gr){
   Double_t sum = 0;
   for(int i=0; i<gr->GetN(); i++){
     sum += gr->GetY()[i];
@@ -113,7 +113,7 @@ void Acclaim::RootTools::printArray(int n, double* array, TString delimiter, TSt
  * @param end is for decoration, "}\n" by default, change as you please.
  * @sa Acclaim::RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
 */
-void Acclaim::RootTools::printYVals(TGraph* gr, TString delimiter, TString start, TString end){
+void Acclaim::RootTools::printYVals(const TGraph* gr, TString delimiter, TString start, TString end){
   printArray(gr->GetN(), gr->GetY(), delimiter, start, end);
 }
 
@@ -131,7 +131,7 @@ void Acclaim::RootTools::printYVals(TGraph* gr, TString delimiter, TString start
  * @param end is for decoration, "}\n" by default, change as you please.
  * @sa Acclaim::RootTools::printArray(int n, double* array, TString delimiter, TString start ,TString end)
 */
-void Acclaim::RootTools::printXVals(TGraph* gr, TString delimiter, TString start, TString end){
+void Acclaim::RootTools::printXVals(const TGraph* gr, TString delimiter, TString start, TString end){
   printArray(gr->GetN(), gr->GetX(), delimiter, start, end);
 }
 
@@ -146,7 +146,7 @@ void Acclaim::RootTools::printXVals(TGraph* gr, TString delimiter, TString start
  * @param gr is the TGraph from which to make the derivative
  * @returns Pointer to TGraph containing derivative of input gr.
 */
-TGraph* Acclaim::RootTools::makeDerivativeTGraph(TGraph* gr){
+TGraph* Acclaim::RootTools::makeDerivativeTGraph(const TGraph* gr){
   TGraph* grDer = new TGraph();
   Int_t nDer = gr->GetN()-1;
   grDer->Set(nDer);
@@ -169,7 +169,7 @@ TGraph* Acclaim::RootTools::makeDerivativeTGraph(TGraph* gr){
  * @param gr is the wrapped correlation graph.
  * @returns Pointer to TGraph containing unwrapped correlation graph.
 */
-TGraph* Acclaim::RootTools::makeUnwrappedCorrelationGraph(TGraph* gr){
+TGraph* Acclaim::RootTools::makeUnwrappedCorrelationGraph(const TGraph* gr){
   /* Unwraps a circularly correlated array so the n > 2 points get -ve values */
   Int_t n = gr->GetN();
   Double_t dt = gr->GetX()[1] - gr->GetX()[0];
@@ -506,7 +506,7 @@ std::vector<Int_t> Acclaim::RootTools::getIndicesOfNans(TGraph* gr){
  *
  * @param gr is the TGraph you want information about.
 */
-void Acclaim::RootTools::printTGraphInfo(TGraph* gr){
+void Acclaim::RootTools::printTGraphInfo(const TGraph* gr){
   std::cout << "******************************************************************************" << std::endl;
   std::cout << "Acclaim::RootTools::printTGraphValues(TGraph* gr = " << gr << "):" << std::endl;
   std::cout << "Name: " << gr->GetName() << std::endl;
@@ -1539,4 +1539,77 @@ TPad* Acclaim::RootTools::makeSubPad(TPad* parentPad, double xlow, double ylow, 
   subPad->Draw();
   subPad->cd();
   return subPad;
+}
+
+
+
+
+/** 
+ * Find the smallest window around the peakTime containing a desired fraction of power
+ * 
+ * @param grPow is a time domain, squared waveform
+ * @param fracOfPowerInWindow is the desired amount of power to find in the waveform
+ * @param peakTime is the time of the peak of power, if known
+ * 
+ * @return a pair of times corresponding to the smallest window around the peak containing the desired fraction of power
+ */
+std::pair<double, double> Acclaim::RootTools::findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow, double totalPower, double peakTime){
+
+  // find peak time, if unknown
+  int maxInd = TMath::LocMax(grPow->GetN(), grPow->GetY());
+  
+  if(peakTime==kUnknownPeakTime){
+    peakTime = grPow->GetX()[maxInd];
+  }
+  
+  // find total power, if unknown
+  if(totalPower==0){
+    getSumOfYVals(grPow);
+  }
+  const double desiredPower = totalPower*fracOfPowerInWindow;
+
+  double minWindowWidth = DBL_MAX;
+  double minWinStart = kUnknownPeakTime;
+  double minWinEnd = -kUnknownPeakTime;  
+
+  int lastJ = maxInd;
+  for(int i=0; i < maxInd; i++){
+    Bool_t foundFracWidthThisJ = false;
+    for(int j=lastJ; j < grPow->GetN(); j++){
+      double winStart = grPow->GetX()[i];
+      double winEnd = grPow->GetX()[j];
+      
+      if(winStart <= peakTime && winEnd >= peakTime){
+        // window contains peak
+        double windowPower = std::accumulate(&grPow->GetY()[i], &grPow->GetY()[j], 0);
+
+        // std::cerr << grPow->GetN() << "\t" << i << "\t" << j << "\t" << windowPower << "\t" << desiredPower << std::endl;        
+
+        if(windowPower >= desiredPower){
+          double windowWidth = winEnd - winStart;
+
+          if(windowWidth < minWindowWidth){
+            minWinStart = winStart;
+            minWinEnd = winEnd;
+            lastJ = j;
+            foundFracWidthThisJ = true;
+          }
+        }
+      }
+
+      if(foundFracWidthThisJ){
+        // no point checking higher values of j
+        break;
+      }
+    }
+  }
+
+  if(minWinStart==kUnknownPeakTime && minWinEnd==-kUnknownPeakTime){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__
+              << ", couldn't find a window containing "
+              << fracOfPowerInWindow << " of the power."
+              << std::endl;
+  }
+  
+  return std::pair<double, double>(minWinStart, minWinEnd);
 }

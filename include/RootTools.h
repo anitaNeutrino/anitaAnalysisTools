@@ -86,15 +86,15 @@ namespace Acclaim
   
     void writeTGraph(TGraph* gr, TString name);
     void printArray(int n, double* array, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
-    void printYVals(TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
-    void printXVals(TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
-    void printTGraphInfo(TGraph* gr);
+    void printYVals(const TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
+    void printXVals(const TGraph* gr, TString delimiter = ", ", TString start = "{" ,TString end = "}\n");
+    void printTGraphInfo(const TGraph* gr);
 
 
     /* Get info about input */
     Int_t getIndexOfMaximum(Int_t len, Double_t* arr);
     std::vector<Int_t> getIndicesOfNans(TGraph* gr);
-    Double_t getSumOfYVals(TGraph* gr);
+    Double_t getSumOfYVals(const TGraph* gr);
     void getMaxMin(TGraph* gr, Double_t& max, Double_t& min);
     void getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms);
     void getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX, Double_t& minY, Double_t& minX);
@@ -138,8 +138,8 @@ namespace Acclaim
     TGraph* makeNormalized(TGraph* gr, Double_t& mean, Double_t& rms);
     TGraph* makeSortedTGraph(TTree* tree, TString drawText, TString cutString, Double_t wrapValue);
     TGraph* makeLinearlyInterpolatedGraph(TGraph* grIn, Double_t dt);
-    TGraph* makeDerivativeTGraph(TGraph* gr);
-    TGraph* makeUnwrappedCorrelationGraph(TGraph* gr);
+    TGraph* makeDerivativeTGraph(const TGraph* gr);
+    TGraph* makeUnwrappedCorrelationGraph(const TGraph* gr);
     TGraph* interpolateWithStartTime(TGraph* grIn, Double_t startTime, Double_t dt, Int_t nSamp);
 
     TH1D* plotsZaxisDist(TH2* h2, TString hName, Int_t nBins, Double_t xMin, Double_t xMax);
@@ -173,6 +173,11 @@ namespace Acclaim
 
 
     Int_t isMinBiasSampleEvent(const RawAnitaHeader* header);
+
+    enum {
+      kUnknownPeakTime = -9999
+    };
+    std::pair<double, double> findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow, double totalPower = 0, double peakTime = kUnknownPeakTime);
   }
 }
 

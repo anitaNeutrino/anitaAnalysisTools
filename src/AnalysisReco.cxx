@@ -180,13 +180,20 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                              grV->GetY(), grV_hilbert->GetY(),
                              &(info.I), &(info.Q), &(info.U), &(info.V));
 
+  info.totalPower = 0;
+  TGraphAligned grPowTime(*coherentWave->even());
+  for(int i=0; i < grPowTime.GetN(); i++){
+    grPowTime.GetY()[i]*=grPowTime.GetY()[i];
+    info.totalPower += grPowTime.GetY()[i];
+  }
+  // RootTools::printTGraphInfo(&grPowTime);
 
-  const TGraphAligned* grPow = coherentWave->power();
-  info.totalPower = std::accumulate(grPow->GetY(), grPow->GetY() + grPow->GetN(), 0);
-
-  const TGraphAligned* grPowX = xPolCoherentWave->power();
-  info.totalPowerXpol = std::accumulate(grPowX->GetY(), grPowX->GetY() + grPowX->GetN(), 0);
-
+  TGraphAligned grPowXTime(*xPolCoherentWave->even());
+  info.totalPowerXpol = 0;
+  for(int i=0; i < grPowXTime.GetN(); i++){
+    grPowXTime.GetY()[i]*=grPowXTime.GetY()[i];
+    info.totalPowerXpol += grPowXTime.GetY()[i];
+  }
 
   // //Shape parameters, computed using hilbert envelope
   // // This should probably taken out into its own class
@@ -211,6 +218,12 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   info.peakTime = grHilbert->GetX()[maxIndex];
 
   grHilbert->getMoments(sizeof(info.peakMoments)/sizeof(double), info.peakTime, info.peakMoments);
+
+  // define my own impulsivity measure, to do battle with Cosmin's
+  std::cout << "input: " << info.totalPower << "\t" << info.peakTime << std::endl;
+  std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(&grPowTime, fImpulsivityMeasurePowerFraction, info.totalPower, info.peakTime);  
+  info.impulsivityMeasure = window.second - window.first;
+  std::cout << "output: " << info.impulsivityMeasure << "\t" << window.first << "\t" << window.second << std::endl;
 
   ///////////////////////////////////////////////////////////////////////////////////
   // CURRENTLY NOT USING THESE...
@@ -431,6 +444,8 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fNumPeaks = 3;
   fDoHeatMap = 0;
   fHeatMapHorizonKm = 800;
+  fImpulsivityMeasurePowerFraction = 0.5;
+  fCoherentDtNs = 0.05;
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -943,12 +958,16 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     return NULL;
   }  
 
-  AnalysisWaveform* coherentWave = new AnalysisWaveform((*waves[0]));
+  const TGraph* gr0 = waves[0]->even();
+  const double totalTime = gr0->GetX()[gr0->GetN()-1] - gr0->GetX()[0];
+  const int interpN = floor(totalTime/fCoherentDtNs);
   
+  std::vector<double> zeros(interpN, 0);
+  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0]);
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
-  for(UInt_t i=1; i < waves.size(); i++){
-    const TGraphAligned* gr = waves[i]->even();
+  for(UInt_t i=0; i < waves.size(); i++){
+    const TGraphAligned* gr = waves[i]->uneven();
     const double t0 = gr->GetX()[0];
 
     if(gr->GetN() > 0){
@@ -958,7 +977,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
         double tPlusDt = t + dts[i];
         if(tPlusDt > t0 && tPlusDt < tN){
           double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
-          grCoherent->GetY()[samp] += y;
+          grCoherent->GetY()[samp] += TMath::IsNaN(y) ? 0 : y;
         }
       };
     }
