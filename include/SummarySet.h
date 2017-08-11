@@ -2,6 +2,14 @@
 #include "TString.h"
 #include "TChain.h"
 
+// This is a guess at the version number, if this doesn't work for you
+// feel free to try harder to track down the change
+#if ROOT_VERSION_CODE < ROOT_VERSION(6,0,8)
+#define TCHAIN_NENTRIES_DEFAULT TChain::kBigNumber
+#else
+#define TCHAIN_NENTRIES_DEFAULT TChain::kMaxEntries
+#endif   
+
 class AnitaEventSummary;
 class TH2D;
 
@@ -40,10 +48,11 @@ namespace Acclaim
 
    // If I keep adding these wrapper functions at some point it might make sense to inherit from TChain...
    TChain* getChain(){return fChain;}
-   Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
+
+   Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0){
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
-   Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TChain::kMaxEntries, Long64_t firstentry = 0){
+   Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0){
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
 
