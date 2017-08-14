@@ -72,6 +72,9 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
     Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
 
+    Notch* brickWall260 = new Notch(0.23, 0.29);
+    Notch* brickWall370 = new Notch(0.34, 0.40);    
+
     // double log10ProbThresh = -100; //2.5;
     double reducedChiSquareThresh = 5;
     double channelChiSquareCdfThresh = 0.995;
@@ -90,6 +93,12 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     FilterStrategy* defaultOps = new FilterStrategy();
     defaultOps->addOperation(alfaFilter, saveOutput); // has internal check for ANITA version
     acclaimDefaults["Minimum"] = defaultOps;
+
+    FilterStrategy* brick = new FilterStrategy();
+    (*brick) = (*defaultOps);
+    brick->addOperation(brickWall260, saveOutput);
+    brick->addOperation(brickWall370, saveOutput);
+    acclaimDefaults["BrickWallSatellites"] = brick;
 
     // every operation is going to use these default strategies
     FilterStrategy* defaultDeco = new FilterStrategy();
@@ -164,13 +173,12 @@ FilterStrategy* Acclaim::Filters::findStrategy(const std::map<TString, FilterStr
  * @param lowEdgeGHz is the frequency in GHz of the low edge of the notch (i.e. the high pass frequency)
  * @param highEdgeGHz is the frequency in GHz of the high edge of the notch (i.e. the low pass frequency)
  */
-Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz){
+Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz)
+    : fLowEdgeGHz(lowEdgeGHz), fHighEdgeGHz(highEdgeGHz) {
 
-  // Freq bins are currently in 0.1 GHz steps
-  fTag = TString::Format("notch%.lfGHzto%.lfGHz", lowEdgeGHz, highEdgeGHz);
-  fDescription = TString::Format("Notch filter from %.lf GHz to %.lf GHz", lowEdgeGHz, highEdgeGHz);
-  fLowEdgeGHz = lowEdgeGHz;
-  fHighEdgeGHz = highEdgeGHz;
+  // Freq bins are currently in 0.01 GHz steps
+  fTag = TString::Format("notch%4.2lfGHzto%4.2lfGHz", lowEdgeGHz, highEdgeGHz);
+  fDescription = TString::Format("Notch filter from %4.2lf GHz to %4.2lf GHz", lowEdgeGHz, highEdgeGHz);
   // fLowNotchIndex = -1;
   // fHighNotchIndex = -1;  
 
