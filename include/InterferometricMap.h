@@ -138,6 +138,8 @@ namespace Acclaim
     static const std::vector<Double_t>& getCoarseBinEdgesPhi();
     static const std::vector<Double_t>& getFineBinEdgesPhi();
     static Double_t getBin0PhiDeg();
+    static Double_t getPhiSectorCenterPhiDeg(int phi);
+
    private:
     static const TDecompSVD& getSVD();
     static void getDeltaBinRangeSVD(Int_t& dPhiBinLow, Int_t& dPhiBinHigh, Int_t& dThetaBinLow, Int_t& dThetaBinHigh);

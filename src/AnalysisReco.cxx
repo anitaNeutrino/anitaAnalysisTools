@@ -351,12 +351,34 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
         // based on Cosmin's comments in AnitaAnalysisSummary.h
         eventSummary->peak[pol][peakInd].phi_separation = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
 
+        // hwAngle, is the angle between the peak and the nearest L3 phi-sector trigger of that polarisation
+        const RawAnitaHeader* header = fEv->getHeader();
+        eventSummary->peak[pol][peakInd].hwAngle = -9999;
+        for(int phi=0; phi < NUM_PHI; phi++){
+          int phiWasTriggered = header->isInL3Pattern(phi, pol);
+          if(phiWasTriggered > 0){
+            double phiSectorPhi = h->getPhiSectorCenterPhiDeg(phi);
+            double dPhi = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, phiSectorPhi);
+            if(TMath::Abs(dPhi) < TMath::Abs(eventSummary->peak[pol][peakInd].hwAngle)){
+              eventSummary->peak[pol][peakInd].hwAngle = dPhi;
+            }
+          }
+        }
+
+        int peakPhiSector = h->getPeakPhiSector();
+        AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
+        eventSummary->peak[pol][peakInd].triggered = header->isInL3Pattern(peakPhiSector, pol);
+        eventSummary->peak[pol][peakInd].triggered_xpol = header->isInL3Pattern(peakPhiSector, xPol);
+
+        eventSummary->peak[pol][peakInd].masked = header->isInPhiMaskOffline(peakPhiSector, pol) || header->isInL1MaskOffline(peakPhiSector, pol);
+        eventSummary->peak[pol][peakInd].masked_xpol = header->isInPhiMaskOffline(peakPhiSector, xPol) || header->isInL1MaskOffline(peakPhiSector, xPol);
+
         // coherent
         // coherent_filtered
         // deconvolved
         // deconvolved_filtered
       
-        fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,         wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
+        fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,        wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
@@ -454,7 +476,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
 
   fEvMin = NULL;
   fEvMinDeco = NULL;
-  fEvDeco = NULL;  
+  fEvDeco = NULL;
   
 }
 

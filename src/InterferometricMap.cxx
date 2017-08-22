@@ -24,6 +24,7 @@ TDecompSVD theSVD;
 bool doneInitSVD = false;
 
 
+std::vector<Double_t> phiCenterCenterDegs;
 
 
 /** 
@@ -131,14 +132,15 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
 
 
 /** 
- * Get the position of the first bin in phi
+ * Get the center of the phi-sectors relative to ADU5 aft-fore.
+ * For the purposes of the interferometric map they are exactly PHI_RANGE apart
  * 
- * @return the position of the first bin in phi in degrees
+ * @param phi is the phi-sector 0-15
+ * 
+ * @return the angle in degrees
  */
-Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
-
-  if(bin0PhiDeg == -9999){
-
+Double_t Acclaim::InterferometricMap::getPhiSectorCenterPhiDeg(int phi){
+  if(phiCenterCenterDegs.size()==0){
     AnitaGeomTool* geom = AnitaGeomTool::Instance();
     Double_t aftForeOffset = geom->aftForeOffsetAngleVertical*TMath::RadToDeg();
     
@@ -149,6 +151,26 @@ Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
     else if(phi0 >= DEGREES_IN_CIRCLE/2){
       phi0-=DEGREES_IN_CIRCLE;
     }
+    
+    for(int phi=0; phi < NUM_PHI; phi++){
+      phiCenterCenterDegs.push_back(phi0 + PHI_RANGE*phi);
+    }
+  }
+  
+  return phiCenterCenterDegs.at(phi);
+}
+
+
+
+/** 
+ * Get the position of the first bin in phi
+ * 
+ * @return the position of the first bin in phi in degrees
+ */
+Double_t Acclaim::InterferometricMap::getBin0PhiDeg(){
+
+  if(bin0PhiDeg == -9999){
+    double phi0 = getPhiSectorCenterPhiDeg(0);
     bin0PhiDeg = phi0 - PHI_RANGE/2;
   }
   return bin0PhiDeg;
