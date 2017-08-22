@@ -455,7 +455,7 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
   fEventSummary = NULL;
   
   if(needToReconstruct){
-    fEventSummary = new AnitaEventSummary(header, &usefulPat);
+    fEventSummary = new AnitaEventSummary(header, &usefulPat, fData->truth());
     Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, fEventSummary);
 
     if(isGoodEvent || fDoAll){

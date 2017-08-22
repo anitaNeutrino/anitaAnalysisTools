@@ -1,5 +1,30 @@
 #include "QualityCut.h"
 
+
+/** 
+ * Work around dodgy MC samples with 260 points, the last few of which are nonsense
+ * 
+ * @param n is the length of the timeArray
+ * @param x is a pointer to the timeArray
+ * 
+ * @return first point at which the time array is not monatonically increasing
+ */
+int quickFixMC(int n, const double* x){
+  // quick hack to fix this version of Linda's MC
+  double lastX = -DBL_MAX;
+  int firstBadPoint = n;
+  for(int i=0; i < n; i++){
+    double thisX = x[i];
+    if(thisX < lastX){
+      firstBadPoint = i;
+      break;
+    }
+    lastX = thisX;
+  }
+  return firstBadPoint;
+}
+
+
 ClassImp(Acclaim::QualityCut);
 ClassImp(Acclaim::SurfSaturationCut);
 ClassImp(Acclaim::PayloadBlastCut);
@@ -105,8 +130,8 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       const int chanIndex = AnitaGeomTool::getChanIndexFromAntPol(ant, (AnitaPol::AnitaPol_t) pol);
       const double* volts = useful->fVolts[chanIndex];
-      int n = useful->fNumPoints[chanIndex];
-      
+      const int n = useful->fNumPoints[chanIndex] == NUM_SAMP ? quickFixMC(NUM_SAMP, useful->fTimes[chanIndex]) : useful->fNumPoints[chanIndex];
+
       double maxThisChan = TMath::MaxElement(n, volts);
       double minThisChan = TMath::MinElement(n, volts);
 
@@ -179,6 +204,10 @@ Acclaim::PayloadBlastCut::PayloadBlastCut(){
 }
 
 
+
+
+
+
 /** 
  * Applies the payload blast cut. 
  *
@@ -205,9 +234,16 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
 
       int topAnt = phi;
       int bottomAnt = 2*NUM_PHI + phi;
-	
+
       TGraph* grTop = useful->getGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
       TGraph* grBottom = useful->getGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
+
+      // quick hack to fix this version of Linda's MC
+      const int nT = grTop->GetN() == NUM_SAMP ? quickFixMC(grTop->GetN(), grTop->GetX()) : grTop->GetN();
+      const int nB = grBottom->GetN() == NUM_SAMP ? quickFixMC(grBottom->GetN(), grBottom->GetX()) : grBottom->GetN();
+
+      while(grTop->GetN() > nT) grTop->RemovePoint(grTop->GetN()-1);
+      while(grBottom->GetN() > nB) grBottom->RemovePoint(grBottom->GetN()-1);
       
       // const AnalysisWaveform* waveTop = fEv->getRawGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
       // const TGraphAligned* grTop = waveTop->uneven();
@@ -229,8 +265,8 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
 	maxRatio = ratio;
 	maxRatioPhi = phi;
 	maxRatioPol = (AnitaPol::AnitaPol_t) pol;
-      }	
-    }	
+      }
+    }
   }
 
   if(maxRatio > ratioCutHigh || maxRatio < ratioCutLow){
@@ -245,9 +281,11 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
   if(sum!=NULL){
     if(eventPassesCut){
       sum->flags.isPayloadBlast = 0;
+      // std::cerr << sum->eventNumber << " passes \tmaxRatio = " << maxRatio << std::endl;
     }
     else{
       sum->flags.isPayloadBlast = 1;
+      // std::cerr << sum->eventNumber << " fails \tmaxRatio = " << maxRatio << std::endl;      
     }
   }  
 }
