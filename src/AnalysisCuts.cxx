@@ -137,6 +137,7 @@ int Acclaim::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum) co
  */
 int Acclaim::IsGood::apply(const AnitaEventSummary* sum) const
 {
+  // std::cerr << sum->flags.isGood << "\t" << sum->flags.isPayloadBlast << "\t" << sum->flags.isVarner << std::endl;
   return sum->flags.isGood != 0 ? true : false;
 }
 
@@ -151,4 +152,79 @@ int Acclaim::IsGood::apply(const AnitaEventSummary* sum) const
 int Acclaim::GoodGPS::apply(const AnitaEventSummary* sum) const
 {
   return !TMath::IsNaN(sum->dPhiSun());
+}
+
+
+/**
+ * Zero Stokes-I gives NaN linear/circular pol frac
+ * This is probably a reconstruction bug I need to handle
+ *
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::NonZeroStokesI::apply(const AnitaEventSummary* sum) const
+{
+  return (sum->higherDeconvolved().I > 0);
+}
+
+
+
+/**
+ * The first few events in the decimated sample will have NaN SNR
+ * Because there's no numbers in the noise tree...
+ * 
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::RealSNR::apply(const AnitaEventSummary* sum) const
+{
+  return !(TMath::IsNaN(sum->higherDeconvolved().snr) || isinf(sum->higherDeconvolved().snr));
+}
+
+
+/**
+ * The first few events in the decimated sample will have NaN SNR
+ * Because there's no numbers in the noise tree...
+ * 
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::Anita3QuietTime::apply(const AnitaEventSummary* sum) const
+{
+  return (sum->realTime >= 1419320000 && sum->realTime < 1420250000);
+}
+
+
+/**
+ * If an event is an MC event (weight >= 0)
+ * 
+ * @param sum is the AnitaEventSummary
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::CloseToMC::apply(const AnitaEventSummary* sum) const
+{  
+  if(sum->mc.weight <= 0){
+    return 1;
+  }
+  else{
+    // kinda arbitrary here... but should get use close enough
+    // I suppose I should record a signal sample
+    const double dPhiClose = 5;
+    const double dThetaClose = 3;
+    AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
+    for(int peakInd=0; peakInd < sum->nPeaks[pol]; peakInd++){
+      double dPhi = sum->dPhiMC(peakInd, (int)pol);
+      if(TMath::Abs(dPhi) < dPhiClose){
+        double dTheta = sum->dThetaMC(peakInd, (int)pol);
+        if(TMath::Abs(dTheta) < dThetaClose){
+          return peakInd+1;
+        }
+      }
+    }
+  }
+  return 0;
 }

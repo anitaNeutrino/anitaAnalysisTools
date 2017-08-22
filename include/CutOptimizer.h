@@ -13,7 +13,8 @@
 #include "TString.h"
 #include "TChain.h"
 #include "TXMLEngine.h"
-#include "TH1D.h"
+
+class TH2D;
 
 namespace Acclaim{
 
@@ -43,7 +44,7 @@ class CutOptimizer{
       getResultFromXML(fileName);
     }
     TString getFisherFormula() const;
-    TH1D* makeHist(int nBinsX, const TString& histName, const TString& histTitle, TTree* t, EColor col) const;
+    TH2D* makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd=0) const;
     virtual void Print(Option_t* opt = "") const;
 
    protected:
@@ -56,16 +57,19 @@ class CutOptimizer{
     ClassDef(FisherResult, 1);
   };
 
+  
+  typedef std::pair<const char*, bool> FormulaString;
+  
 
   static void setDebug(bool db);
+  static TString branchifyName(const char* formStr);
   
-  CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool save_trees = false);
+  CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool doAllPeaks = false, bool save_trees = false);
   virtual ~CutOptimizer();
   void optimize(const std::vector<const Acclaim::AnalysisCut*>& signalSelection,
                 const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection,
-                const std::vector<const char*>& formulaStrings,
+                const std::vector<FormulaString>& formulaStrings,
                 const char* outFileName = "");
-
 
  protected:
 
@@ -78,7 +82,7 @@ class CutOptimizer{
   TFile* makeOutputFile(const char* outFileName);
   void generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCut*>& signalSelection,
                                         const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection,
-                                        const std::vector<const char*>& treeVars);
+                                        const std::vector<FormulaString>& treeVars);
   BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
 
   TString fSignalGlob;
@@ -86,15 +90,12 @@ class CutOptimizer{
   TString fOutFileName;
   TTree* fSignalTree;
   TTree* fBackgroundTree;
+  Bool_t fDoAllPeaks;
   Bool_t fSaveTrees;
   std::vector<Float_t> fSignalFloatVals;
   std::vector<Float_t> fBackgroundFloatVals;
   std::vector<Int_t> fSignalIntVals;
   std::vector<Int_t> fBackgroundIntVals;
-
-
-
-
 
   
 

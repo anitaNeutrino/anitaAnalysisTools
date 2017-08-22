@@ -109,6 +109,30 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
   };
 
+  class NonZeroStokesI : public AnalysisCut{
+   public:
+    NonZeroStokesI() : AnalysisCut("nonZeroStokesI", "Non-zero Stokes I", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class RealSNR : public AnalysisCut{
+   public:
+    RealSNR() : AnalysisCut("realSNR", "Non-NaN SNR", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+
+  class Anita3QuietTime : public AnalysisCut{
+   public:
+    Anita3QuietTime() : AnalysisCut("quietTime", "Quiet Time", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns false(0) or true(1)
+  };
+
+  class CloseToMC : public AnalysisCut{
+   public:
+    CloseToMC() : AnalysisCut("closeToMC", "Near MC", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum) const; /// Returns the peakIndex + 1 if VPol 
+  };
 
 
   // const globals so you don't need to instantiate these yourself
@@ -122,6 +146,10 @@ namespace Acclaim
     const IsWithin20DegreesOfSunInPhi isWithin20DegreesOfSunInPhi;
     const IsGood isGood;
     const GoodGPS goodGPS;
+    const NonZeroStokesI nonZeroStokesI;
+    const RealSNR realSNR;
+    const Anita3QuietTime anita3QuietTime;
+    const CloseToMC closeToMC;
   }
 }
 
