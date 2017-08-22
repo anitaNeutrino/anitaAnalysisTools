@@ -21,7 +21,7 @@ namespace Acclaim
 
  class SummarySet {
   public:
-   SummarySet(const char* pathToSummaryFiles, const char* treeName = "sumTree", const char* summaryBranchName = "sum");
+   SummarySet(const char* pathToSummaryFiles, const char* treeName = "sumTree", const char* summaryBranchName = "sum", bool useProof = false);
    virtual ~SummarySet();
 
    Long64_t N() const {return fN;}
@@ -50,15 +50,21 @@ namespace Acclaim
    TChain* getChain(){return fChain;}
 
    Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0){
+     initProof();
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
    Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0){
+     initProof();
      return fChain->Draw(varexp, selection, option, nentries, firstentry);
    }
+
+   void SetUseProof(bool useProof=true) {fUseProof = useProof;}
+   Bool_t GetUseProof() {return fUseProof;}
 
   protected:
 
    void init();
+   void initProof();
    TString fPathToSummaryFiles;
    TString fTreeName;
    TString fSummaryBranchName;
@@ -72,7 +78,7 @@ namespace Acclaim
    UInt_t fFirstEventNumber;
    UInt_t fLastTime;
    UInt_t fLastEventNumber;
-
+   Bool_t fUseProof;
  };
 }
 

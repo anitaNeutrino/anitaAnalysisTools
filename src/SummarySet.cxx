@@ -5,10 +5,11 @@
 #include "TH2D.h"
 #include "AnalysisPlot.h"
 #include "TFile.h"
+#include "TProof.h"
 
-Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName)
+Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
-      fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0) {
+      fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0), fUseProof(useProof) {
 
   init();
 }
@@ -34,6 +35,22 @@ Acclaim::SummarySet::~SummarySet(){
 
 
 
+/** 
+ * Enable (disable) PROOF, if fUseProof is true (false)
+ */
+void Acclaim::SummarySet::initProof(){
+
+  if(fUseProof && !gProof){
+    TProof::Open("");
+    const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+    TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
+    gProof->Load(loadAnita);
+  }
+  
+  if(fChain){
+    fChain->SetProof(fUseProof);
+  }
+}
 
 
 void Acclaim::SummarySet::init(){

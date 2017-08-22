@@ -1,0 +1,9 @@
+{
+  gSystem->Load("libRootFftwWrapper.so");
+  gSystem->Load("libAnitaEvent.so");
+  gSystem->Load("libAnitaCorrelator.so");
+  gSystem->Load("libUCorrelator.so");
+  gSystem->Load("libAnitaMagicDisplay.so");
+  gSystem->Load("libAnitaAnalysisTools.so");
+  gSystem->Load("libAnitaAnalysis.so");
+}
