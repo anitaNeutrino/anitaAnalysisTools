@@ -6,6 +6,7 @@
 #include "AnalysisPlot.h"
 #include "TFile.h"
 #include "TProof.h"
+#include <stdlib.h>
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
