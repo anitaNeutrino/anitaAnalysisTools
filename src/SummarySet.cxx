@@ -83,6 +83,15 @@ Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
 }
 
 
+Long64_t Acclaim::SummarySet::Draw(const char* varexp, const TCut &selection, Option_t *option, Long64_t nentries, Long64_t firstentry){
+  initProof();
+  return fChain->Draw(varexp, selection, option, nentries, firstentry);
+}
+
+Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry){
+  initProof();
+  return fChain->Draw(varexp, selection, option, nentries, firstentry);
+}
 
 Acclaim::AnalysisProf* Acclaim::SummarySet::bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
   AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);

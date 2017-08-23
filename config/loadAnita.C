@@ -1,9 +1,20 @@
 {
-  gSystem->Load("libRootFftwWrapper.so");
-  gSystem->Load("libAnitaEvent.so");
-  gSystem->Load("libAnitaCorrelator.so");
-  gSystem->Load("libUCorrelator.so");
-  gSystem->Load("libAnitaMagicDisplay.so");
-  gSystem->Load("libAnitaAnalysisTools.so");
-  gSystem->Load("libAnitaAnalysis.so");
+  // two sets of nested brackets for the local scope,
+  // so we don't get things left in ROOT memory
+  {
+    const int nLibs = 7;
+    const char* libs[nLibs] = {"libRootFftwWrapper.so",
+                               "libAnitaEvent.so",
+                               "libAnitaCorrelator.so",
+                               "libAnitaAnalysis.so",
+                               "libAnitaAnalysisTools.so",
+                               "libUCorrelator.so",
+                               "libAnitaMagicDisplay.so"};
+    for(int i=0; i < nLibs; i++){
+      TString loaded = gSystem->GetLibraries();
+      if(!loaded.Contains(libs[i])){
+        gSystem->Load(libs[i]);
+      }
+    }
+  }
 }
