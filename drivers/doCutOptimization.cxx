@@ -38,24 +38,28 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("run", false));
   treeFormulas.push_back(CutOptimizer::FormulaString("eventNumber", false)); // these get excluded from training by the CutOptimizer
   treeFormulas.push_back(CutOptimizer::FormulaString("realTime", false)); // these get excluded from training by the CutOptimizer
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.weight()", false)); // Automatically filled with 1 if non-MC 
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.weight()", false)); // Automatically filled with 1 if non-MC
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mc.energy", false)); // Automatically filled with 1 if non-MC
+
+
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().hwAngle", true));  // definitionally can't do better than the hardware trigger, I think
 
   // map info
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCPeak(1).value", true)); // map values
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.dPhiSun(sum.bestMCPeakInd(1)))", true)); // delta phi sun
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", true)); // map values
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSource(wais))", true)); // delta phi sun
 
   // waveform info
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.bestMCDeconvolved(1).impulsivityMeasure)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::SignBit(sum.bestMCDeconvolved(1).impulsivityMeasure)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.bestMCDeconvolved(1).localMaxToMinTime)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.bestMCDeconvolved(1).globalMaxToMinTime)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCDeconvolved(1).peakHilbert", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCDeconvolved(1).linearPolFrac()", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCDeconvolved(1).circPolFrac()", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().impulsivityMeasure)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::SignBit(sum.mcDeconvolved().impulsivityMeasure)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().localMaxToMinTime)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().globalMaxToMinTime)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().linearPolFrac()", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().circPolFrac()", true));
 
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCDeconvolved(1).totalPower/sum.bestMCDeconvolvedFiltered(1).totalPower", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.bestMCDeconvolved(1).peakHilbert/sum.bestMCDeconvolvedFiltered(1).peakHilbert", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().totalPower/sum.mcDeconvolvedFiltered().totalPower", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert/sum.mcDeconvolvedFiltered().peakHilbert", true));
 
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);
 

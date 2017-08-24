@@ -63,6 +63,8 @@ namespace Acclaim{
 
 class AnalysisPlot : public TNamed {
 
+  friend class SummarySelector;
+  
  public:
   AnalysisPlot() {;}
   AnalysisPlot(const char* name, const char* title, int nBinsX, double xMin, double xMax, int nBinsY=0, double yMin=0, double yMax=0);
@@ -78,7 +80,7 @@ class AnalysisPlot : public TNamed {
  protected:
 
   virtual int getIndexFromCuts(const AnitaEventSummary* sum);
-  virtual TH1* makeHist(const char* name, const char* title) const;
+  virtual TH1* makeHist(const char* name, const char* title) const;  
 
   double fNx;
   double fMinX;

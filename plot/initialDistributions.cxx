@@ -85,20 +85,20 @@ int main(int argc, char* argv[]){
     ss.getEntry(entry);
     AnitaEventSummary* sum = ss.summary();
 
-    hPeakVsTime->Fill(sum, sum->realTime, sum->higherPeak().value);
+    hPeakVsTime->Fill(sum, sum->realTime, sum->highestPeak().value);
 
-    hDeltaAngleSunProf->Fill(sum, sum->dPhiSun(), sum->dThetaSun(), sum->higherPeak().value);
-    hDeltaAngleSun->Fill(sum, sum->dPhiSun());
+    hDeltaAngleSunProf->Fill(sum, sum->highestPeak().dPhiSun(), sum->highestPeak().dThetaSun(), sum->highestPeak().value);
+    hDeltaAngleSun->Fill(sum, sum->highestPeak().dPhiSun());
 
-    hPeakThetaVsTime->Fill(sum, sum->realTime, sum->higherPeak().theta);
-    hPeakBearingVsTime->Fill(sum, sum->realTime, sum->peakBearing());
+    hPeakThetaVsTime->Fill(sum, sum->realTime, sum->highestPeak().theta);
+    hPeakBearingVsTime->Fill(sum, sum->realTime, sum->highestPeak().bearing());
 
-    hImagePeakVsCoherentHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherCoherent().peakHilbert);
-    hImagePeakVsCoherentFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherCoherentFiltered().peakHilbert);
-    hImagePeakVsDeconvolvedHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolved().peakHilbert);
-    hImagePeakVsDeconvolvedFilteredHilbertPeak->Fill(sum, sum->higherPeak().value, sum->higherDeconvolvedFiltered().peakHilbert);
+    hImagePeakVsCoherentHilbertPeak->Fill(sum, sum->highestPeak().value, sum->highestCoherent().peakHilbert);
+    hImagePeakVsCoherentFilteredHilbertPeak->Fill(sum, sum->highestPeak().value, sum->highestCoherentFiltered().peakHilbert);
+    hImagePeakVsDeconvolvedHilbertPeak->Fill(sum, sum->highestPeak().value, sum->highestDeconvolved().peakHilbert);
+    hImagePeakVsDeconvolvedFilteredHilbertPeak->Fill(sum, sum->highestPeak().value, sum->highestDeconvolvedFiltered().peakHilbert);
 
-    hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime->Fill(sum, sum->higherDeconvolvedFiltered().peakTime, sum->higherDeconvolvedFiltered().peakHilbert);
+    hDeconvolvedPeakHilbertVsDeconvolvedPeakHilbertTime->Fill(sum, sum->highestDeconvolvedFiltered().peakTime, sum->highestDeconvolvedFiltered().peakHilbert);
     p.inc(entry, N);
   }
   
