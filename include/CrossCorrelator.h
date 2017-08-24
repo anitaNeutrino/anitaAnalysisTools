@@ -70,7 +70,7 @@ namespace Acclaim
     //--------------------------------------------------------------------------------------------------------
 
     CrossCorrelator();
-    ~CrossCorrelator();
+    virtual ~CrossCorrelator();
 
     virtual void correlateEvent(const FilteredAnitaEvent* realEvent);
     virtual void correlateEvent(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol);
