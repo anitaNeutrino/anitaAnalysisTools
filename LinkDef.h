@@ -26,6 +26,7 @@
 #pragma link C++ class Acclaim::InterferometricMap+;
 
 #pragma link C++ class Acclaim::SummarySet+;
+#pragma link C++ class Acclaim::SummarySelector+;
 #pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::AnalysisProf+;
 #pragma link C++ namespace Acclaim::AnalysisCut;

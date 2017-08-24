@@ -51,6 +51,8 @@ namespace Acclaim
    Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0);
    Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0);
 
+   Long64_t Process(TList* list); /// for PROOF with cusom TSelector
+
    void SetUseProof(bool useProof=true) {fUseProof = useProof;}
    Bool_t GetUseProof() {return fUseProof;}
 

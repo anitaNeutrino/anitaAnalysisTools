@@ -42,7 +42,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${UTIL_SHARE_DIR}/cmake/modules/")
 
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-find_package(ROOT REQUIRED COMPONENTS MathMore MathCore RIO Hist Tree Net Minuit Minuit2 Gui Geom Graf3d XMLIO Proof)
+find_package(ROOT REQUIRED COMPONENTS MathMore MathCore RIO Hist Tree Net Minuit Minuit2 Gui Geom Graf3d XMLIO Proof ProofPlayer)
 find_package(FFTW REQUIRED)
 find_package(ZLIB REQUIRED)
 
@@ -74,7 +74,7 @@ message("ROOT_INCLUDE_DIRS is set to ${ROOT_INCLUDE_DIRS}")
 
 
 include_directories(${PROJECT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/include ${FFTW_INCLUDES} ${ZLIB_INCLUDES} ${UTIL_INC_DIR})
-add_definitions(${ROOT_CXX_FLAGS})
+add_definitions(${ROOT_CXX_FLAGS} -DSummarySelector_cxx)
 
 file(GLOB HEADER_FILES
     "include/*.h"

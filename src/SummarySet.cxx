@@ -7,6 +7,8 @@
 #include "TFile.h"
 #include "TProof.h"
 #include <stdlib.h>
+#include "SummarySelector.h"
+#include "TCanvas.h"
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
@@ -52,6 +54,28 @@ void Acclaim::SummarySet::initProof(){
     fChain->SetProof(fUseProof);
   }
 }
+
+
+Long64_t Acclaim::SummarySet::Process(TList* things){
+  (void) things;
+  std::cout << fN << " entries" << std::endl;
+
+  initProof();
+  SummarySelector* sel = new SummarySelector();
+  // AnalysisPlot* p = new AnalysisPlot("h", "asd", 100, 0, 1);
+  TList* l = new TList();
+  // l->Add(p);
+  sel->SetInputList(l);
+  fChain->Process(sel);
+
+  TList* l2 = sel->GetOutputList();
+  std::cerr << "there are " << l2->GetEntries() << " outputs" << std::endl;
+  // const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+  // TString loadSelector = TString::Format("%s/share/Acclaim/SumSelector.C", anitaUtilInstallDir);
+  
+  return 0; //fChain->Process(loadSelector);  
+}
+
 
 
 void Acclaim::SummarySet::init(){
