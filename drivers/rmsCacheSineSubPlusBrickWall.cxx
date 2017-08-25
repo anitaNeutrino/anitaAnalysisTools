@@ -2,6 +2,8 @@
 #include "BasicFilters.h"
 #include "AcclaimFilters.h"
 #include "UCFilters.h"
+#include "AnitaDataset.h"
+#include "RawAnitaHeader.h"
 
 using namespace Acclaim;
 
@@ -32,8 +34,12 @@ int main(int argc, char* argv[]){
 
   
   // return 0;
-  NoiseMonitor nm;
-  nm.rmsProfile(run, strat);
+  NoiseMonitor nm(strat);
+  AnitaDataset d(run);
+
+  // this should force the generation
+  std::cout << nm.getRMS(AnitaPol::kHorizontal, 0, d.header()->realTime) << std::endl;
+
   
   return 0;
 }

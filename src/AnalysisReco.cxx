@@ -113,7 +113,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
     double noise = 0;
     for(unsigned antInd = 0; antInd < theAnts.size(); antInd++){
       int ant = theAnts[antInd];
-      double thisRMS = noiseMonitor->getNoise(pol, ant);
+      double thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
 
       noise += thisRMS;
       

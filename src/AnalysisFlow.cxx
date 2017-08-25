@@ -408,7 +408,7 @@ void Acclaim::AnalysisFlow::prepareEverything(){
     fFilterStrat = new FilterStrategy();
   }  
   
-  fNoiseMonitor = new NoiseMonitor(fNoiseTimeScaleSeconds, NoiseMonitor::kUneven, fOutFile);
+  fNoiseMonitor = new NoiseMonitor(fFilterStrat);
   fLastEventConsidered = 0;
 }
 
@@ -467,7 +467,6 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
         delete fEv;
       }
       fEv = new FilteredAnitaEvent(usefulEvent, fFilterStrat, pat, header, false);
-      fNoiseMonitor->update(fEv);
       fReco->process(fEv, &usefulPat, fEventSummary, fNoiseMonitor);
     }
 
