@@ -3,6 +3,21 @@
 #include "RampdemReader.h"
 #include "TMath.h"
 
+
+/** 
+ * I didn't realise isinf wasn't portable
+ * 
+ * @param x, is it infinite or not?
+ * 
+ * @return true if infinite, false otherwise
+ */
+bool portable_isinf(double x){
+  volatile double xPlus1 = x + 1;
+  return (x == xPlus1);
+}
+
+
+
 /**
  * Generic constructor, assigns name title and maximum return value
  *
@@ -185,8 +200,8 @@ int Acclaim::IsGood::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t po
 int Acclaim::GoodGPS::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
-  (void) peakInd;  
-  return !(TMath::IsNaN(sum->anitaLocation.heading) || isinf(sum->anitaLocation.heading));
+  (void) peakInd;
+  return !(TMath::IsNaN(sum->anitaLocation.heading) || portable_isinf(sum->anitaLocation.heading));
 }
 
 
@@ -221,7 +236,7 @@ int Acclaim::NonZeroStokesI::apply(const AnitaEventSummary* sum, AnitaPol::Anita
 int Acclaim::RealSNR::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);  
-  return !(TMath::IsNaN(sum->deconvolved[pol][peakInd].snr) || isinf(sum->deconvolved[pol][peakInd].snr));
+  return !(TMath::IsNaN(sum->deconvolved[pol][peakInd].snr) || portable_isinf(sum->deconvolved[pol][peakInd].snr));
 }
 
 
