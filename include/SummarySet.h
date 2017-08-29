@@ -60,6 +60,7 @@ namespace Acclaim
 
    void init();
    void initProof();
+   void renameProofCanvas(const char* varexp);
    TString fPathToSummaryFiles;
    TString fTreeName;
    TString fSummaryBranchName;

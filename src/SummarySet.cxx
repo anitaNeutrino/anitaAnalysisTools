@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "SummarySelector.h"
 #include "TCanvas.h"
+#include "TSeqCollection.h"
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
@@ -107,14 +108,57 @@ Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
 }
 
 
+
+void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
+  TCanvas* c = gPad->GetCanvas();
+  TString canName = c->GetName();
+  TString command = varexp;
+  TString histName = "htemp";
+  if(command.Contains(">>")){
+    TObjArray* tkns = command.Tokenize(">>");
+    TObjString* s1 = (TObjString*) tkns->At(1);
+    TString s1Str = s1->String();
+    TObjArray* tkns2 = s1Str.Tokenize("(");
+    TObjString* s2 = (TObjString*) tkns2->At(0);
+    histName = s2->String();
+    delete tkns;
+    delete tkns2;
+  }
+  if(canName==histName){
+    // rename it
+    TString defCanName = gROOT->GetDefCanvasName();
+    TSeqCollection* cans = gROOT->GetListOfCanvases();
+    bool alreadyHaveThisCanName = true;
+    int i=1;
+    TString newCanName;
+    while(alreadyHaveThisCanName){
+      newCanName = i == 1 ? defCanName : defCanName + TString::Format("_n%d", i);
+      alreadyHaveThisCanName = cans->Contains(newCanName);
+    }
+    c->SetName(newCanName);
+    c->SetTitle(newCanName);
+  }      
+}
+
+
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const TCut &selection, Option_t *option, Long64_t nentries, Long64_t firstentry){
   initProof();
-  return fChain->Draw(varexp, selection, option, nentries, firstentry);
+  Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
+
+  if(fUseProof){
+    renameProofCanvas(varexp);
+  }
+  return retVal;
+  
 }
 
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry){
   initProof();
-  return fChain->Draw(varexp, selection, option, nentries, firstentry);
+  Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
+  if(fUseProof){
+    renameProofCanvas(varexp);
+  }
+  return retVal;
 }
 
 Acclaim::AnalysisProf* Acclaim::SummarySet::bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
