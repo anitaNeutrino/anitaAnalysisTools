@@ -29,6 +29,7 @@ namespace Acclaim
 
   class AnalysisCut {
    public:
+
     AnalysisCut(const char* name, const char* title, int mrv);
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const = 0; // to be overloaded with actual cut
     inline int getMaximumReturnValue() const {return fMaxRetVal;}
@@ -36,11 +37,9 @@ namespace Acclaim
     inline const char* getTitle() const {return fTitle.Data();}
    protected:
     inline static void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd){
-      if(pol==AnitaPol::kVertical){
-        pol = sum->mcPol();
-      }
       if(peakInd==-1){
         peakInd = sum->mcPeakInd();
+        pol = sum->mcPol();
       }
     }
     TString fName;
@@ -141,6 +140,11 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
   };
 
+  class IsRfTrigger : public AnalysisCut{
+   public:
+    IsRfTrigger() : AnalysisCut("isRfTrigger", "RF trigger", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+  };
 
   // const globals so you don't need to instantiate these yourself
   namespace AnalysisCuts{
@@ -157,6 +161,7 @@ namespace Acclaim
     const RealSNR realSNR;
     const Anita3QuietTime anita3QuietTime;
     const CloseToMC closeToMC;
+    const CloseToMC isRfTrigger;
   }
 }
 

@@ -291,3 +291,20 @@ int Acclaim::CloseToMC::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t
   }
   return 0;
 }
+
+
+/**
+ * Was this an RF trigger?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  (void) pol;
+  (void) peakInd;
+  return (sum->flags.isRF != 0);
+}
