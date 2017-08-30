@@ -13,6 +13,9 @@
 #include "AnitaConventions.h"
 #include "AnitaEventSummary.h"
 
+#include <iostream>
+
+
 namespace Acclaim
 {
 
@@ -134,11 +137,19 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
   };
 
-  class CloseToMC : public AnalysisCut{
+
+class CloseToMC : public AnalysisCut{
    public:
     CloseToMC() : AnalysisCut("closeToMC", "Near MC", 2) {;}
-    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
   };
+
+  class CloseToWais : public AnalysisCut{
+   public:
+    CloseToWais() : AnalysisCut("closeToWais", "Near Wais", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+  };
+
 
   class IsRfTrigger : public AnalysisCut{
    public:
@@ -146,7 +157,21 @@ namespace Acclaim
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
   };
 
-  // const globals so you don't need to instantiate these yourself
+
+  class SmallDeltaRough : public AnalysisCut{
+   public:
+    SmallDeltaRough() : AnalysisCut("smallDeltaRough", "Small angle between coarse/fine maps", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+  };
+
+
+  class IsNotTaggedAsPulser : public AnalysisCut{
+   public:
+    IsNotTaggedAsPulser() : AnalysisCut("isNotTaggedAsPulser", "Not pulser", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+  };
+
+// const globals so you don't need to instantiate these yourself
   namespace AnalysisCuts{
     const IsAboveHorizontal isAboveHorizontal;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
@@ -161,7 +186,10 @@ namespace Acclaim
     const RealSNR realSNR;
     const Anita3QuietTime anita3QuietTime;
     const CloseToMC closeToMC;
-    const CloseToMC isRfTrigger;
+    const CloseToWais closeToWais;
+    const IsRfTrigger isRfTrigger;
+    const SmallDeltaRough smallDeltaRough;
+    const IsNotTaggedAsPulser isNotTaggedAsPulser;
   }
 }
 

@@ -109,12 +109,18 @@ Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
 
 
 
+
+/** 
+ * Little hack to make PROOF give me a histogram and canvas with different names
+ * 
+ * @param varexp the Draw expression
+ */
 void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
   TCanvas* c = gPad->GetCanvas();
   TString canName = c->GetName();
   TString command = varexp;
   TString histName = "htemp";
-  if(command.Contains(">>")){
+  if(command.Contains(">>")){ // then we have a histogram name, let's go get it
     TObjArray* tkns = command.Tokenize(">>");
     TObjString* s1 = (TObjString*) tkns->At(1);
     TString s1Str = s1->String();
@@ -124,8 +130,10 @@ void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
     delete tkns;
     delete tkns2;
   }
+
+  // for some reason, proof does this...
+  // and if I want the histogram on the command line, I need to rename the canvas
   if(canName==histName){
-    // rename it
     TString defCanName = gROOT->GetDefCanvasName();
     TSeqCollection* cans = gROOT->GetListOfCanvases();
     bool alreadyHaveThisCanName = true;

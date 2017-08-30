@@ -15,6 +15,7 @@
 #include "TXMLEngine.h"
 
 class TH2D;
+class TEfficiency;
 
 namespace Acclaim{
 
@@ -97,7 +98,12 @@ class CutOptimizer{
   std::vector<Int_t> fSignalIntVals;
   std::vector<Int_t> fBackgroundIntVals;
 
-  
+  static const int numEffVars = 2;
+  enum{
+    kSNR,
+    kEnergy
+  };
+  std::vector<TEfficiency*>fSignalEffs[numEffVars];
 
   /** 
    * @class Dummy class to hold the TTreeFormula and trick TChain into notifying all the formulas

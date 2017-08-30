@@ -184,7 +184,11 @@ int Acclaim::IsGood::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t po
 {
   (void) pol;
   (void) peakInd;
-  return sum->flags.isGood != 0 ? true : false;
+  // here we handle the fact that the QualityCut, which sets this flag during reconstruction,
+  // also check the clock channel, which is empty for MC generated events.
+  // The num points quality cut is encoded as isVarner2, so we skip that check for the MC case.
+  bool isGood = sum->mc.weight > 0 ? sum->flags.isVarner == 0 && sum->flags.isPayloadBlast == 0 : sum->flags.isGood == 1;
+  return isGood;
 }
 
 
@@ -245,8 +249,8 @@ int Acclaim::RealSNR::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t p
  * Because there's no numbers in the noise tree...
  * 
  * @param sum is the AnitaEventSummary
- * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
- * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * @param pol is the polarisation (unused)
+ * @param peakInd is the peak index (unused)
  *
  * @return 1 if true, 0 if false
  */
@@ -259,7 +263,7 @@ int Acclaim::Anita3QuietTime::apply(const AnitaEventSummary* sum, AnitaPol::Anit
 
 
 /**
- * If an event is an MC event (weight >= 0)
+ * If an event is data, not MC event (weight >= 0), returns false
  * 
  * @param sum is the AnitaEventSummary
  * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
@@ -270,26 +274,55 @@ int Acclaim::Anita3QuietTime::apply(const AnitaEventSummary* sum, AnitaPol::Anit
 int Acclaim::CloseToMC::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
-  if(sum->mc.weight <= 0){
-    return true;
-  }
-  else{
+  bool close = false;
+  if(sum->mc.weight > 0){ // for non-MC events, return false
+    close = false;
     // kinda arbitrary here... but should get use close enough
-    // I suppose I should record a signal sample
     const double dPhiClose = 5;
     const double dThetaClose = 3;
-    AnitaPol::AnitaPol_t pol = AnitaPol::kVertical;
-    for(int peakInd=0; peakInd < sum->nPeaks[pol]; peakInd++){
-      double dPhi = sum->peak[pol][peakInd].dPhiMC();
-      if(TMath::Abs(dPhi) < dPhiClose){
-        double dTheta = sum->peak[pol][peakInd].dThetaMC();
-        if(TMath::Abs(dTheta) < dThetaClose){
-          return peakInd+1;
-        }
+    
+    double dPhi = sum->peak[pol][peakInd].dPhiMC();
+    if(TMath::Abs(dPhi) < dPhiClose){
+      double dTheta = sum->peak[pol][peakInd].dThetaMC();
+      if(TMath::Abs(dTheta) < dThetaClose){
+        close = true;
       }
     }
   }
-  return 0;
+  return close;
+}
+
+
+
+
+/**
+ * If an event is data, not MC event (weight >= 0), returns false
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1+peakInd if true, 0 if false
+ */
+int Acclaim::CloseToWais::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  handleDefaults(sum, pol, peakInd);
+  bool close = false;
+  if(sum->mc.weight > 0){ // for non-MC events, return false
+    close = false;
+    // kinda arbitrary here... but should get use close enough
+    const double dPhiClose = 5;
+    const double dThetaClose = 3;
+    
+    double dPhi = sum->peak[pol][peakInd].dPhiWais();
+    if(TMath::Abs(dPhi) < dPhiClose){
+      double dTheta = sum->peak[pol][peakInd].dThetaWais();
+      if(TMath::Abs(dTheta) < dThetaClose){
+        close = true;
+      }
+    }
+  }
+  return close;
 }
 
 
@@ -307,4 +340,37 @@ int Acclaim::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol
   (void) pol;
   (void) peakInd;
   return (sum->flags.isRF != 0);
+}
+
+
+/**
+ * Was this an RF trigger?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (unused)
+ * @param peakInd is the peak index (unused)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::SmallDeltaRough::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  const double dAngleCut = 4;
+  return TMath::Abs(sum->peak[pol][peakInd].dphi_rough) < dAngleCut && TMath::Abs(sum->peak[pol][peakInd].dtheta_rough) < dAngleCut;
+}
+
+
+/**
+ * Was this not tagged as a pulser?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (unused)
+ * @param peakInd is the peak index (unused)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::IsNotTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  (void) pol;
+  (void) peakInd;
+  return sum->flags.pulser == 0;
 }

@@ -17,38 +17,65 @@ int main(int argc, char* argv[]){
 
   CutOptimizer co(signalGlob, backgroundGlob, true, true);
 
+
+
+
   std::vector<const Acclaim::AnalysisCut *> signalSelection;
-  // signalSelection.push_back(&AnalysisCuts::isTaggedAsWaisPulser); // match timing criteria
-  // signalSelection.push_back(&AnalysisCuts::isGood); // Remove payload blasts and SURF saturation
-  signalSelection.push_back(&AnalysisCuts::goodGPS); // // Apparently there are a few stray NaNs
-  signalSelection.push_back(&AnalysisCuts::nonZeroStokesI); // Apparently there are a few stray NaNs
-  // signalSelection.push_back(&AnalysisCuts::realSNR); // Apparently there are a few stray NaNs
-  signalSelection.push_back(&AnalysisCuts::closeToMC); // Need to get near other
+  TString sg = signalGlob;
+  if(sg.Contains("Wais")){
+    // extra data quality cuts
+    signalSelection.push_back(&AnalysisCuts::closeToWais); // Is this the right peak?
+  }
+  else{
+    signalSelection.push_back(&AnalysisCuts::closeToMC); // Is this the right peak?
+  }
   
+
   std::vector<const Acclaim::AnalysisCut *> backgroundSelection;
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
-  backgroundSelection.push_back(&AnalysisCuts::isGood); // Remove payload blasts and SURF saturation
-  backgroundSelection.push_back(&AnalysisCuts::goodGPS); // Apparently there are a few stray NaNs
-  backgroundSelection.push_back(&AnalysisCuts::nonZeroStokesI); // Apparently there are a few stray NaNs
-  // backgroundSelection.push_back(&AnalysisCuts::realSNR); // Apparently there are a few stray NaNs
-  backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet time
+  backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
+  backgroundSelection.push_back(&AnalysisCuts::isNotTaggedAsPulser); // not a pulser...
 
-  // meta-data for reviewing results
+  const int nGen = 6;
+  const AnalysisCut* genericDataQualityCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
+                                                     &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
+                                                     &AnalysisCuts::goodGPS, // do we have GPS data?
+                                                     &AnalysisCuts::nonZeroStokesI, // other badness
+                                                     &AnalysisCuts::realSNR, // other badness (should be fixed with new noise monitor)
+                                                     &AnalysisCuts::isRfTrigger}; // for hardware angle related stuff
+
+  for(unsigned i=0; i < nGen; i++){
+    signalSelection.push_back(genericDataQualityCuts[i]);
+    backgroundSelection.push_back(genericDataQualityCuts[i]);    
+  }
+
+
+
+
+
+
+  
+  
+  
   std::vector<CutOptimizer::FormulaString> treeFormulas;
   treeFormulas.push_back(CutOptimizer::FormulaString("run", false));
   treeFormulas.push_back(CutOptimizer::FormulaString("eventNumber", false)); // these get excluded from training by the CutOptimizer
   treeFormulas.push_back(CutOptimizer::FormulaString("realTime", false)); // these get excluded from training by the CutOptimizer
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.weight()", false)); // Automatically filled with 1 if non-MC
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mc.energy", false)); // Automatically filled with 1 if non-MC
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mc.energy", false)); // The MC energy
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().phi", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().theta", false)); // debugging
 
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().hwAngle", true));  // definitionally can't do better than the hardware trigger, I think
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngle()", true));  // definitionally can't do better than the hardware trigger, I think  
 
   // map info
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", true)); // map values
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSource(wais))", true)); // delta phi sun
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSun())", true)); // delta phi sun
+  
 
   // waveform info
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().snr", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().impulsivityMeasure)", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::SignBit(sum.mcDeconvolved().impulsivityMeasure)", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().localMaxToMinTime)", true));
@@ -56,7 +83,6 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().linearPolFrac()", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().circPolFrac()", true));
-
 
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().totalPower/sum.mcDeconvolvedFiltered().totalPower", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert/sum.mcDeconvolvedFiltered().peakHilbert", true));

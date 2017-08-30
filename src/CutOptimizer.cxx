@@ -13,6 +13,8 @@
 #include "RootTools.h"
 #include "TH2D.h"
 #include "TSystem.h"
+#include "TEfficiency.h"
+#include "TDirectory.h"
 
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,10,0)
 #include "TMVA/Factory.h"
@@ -86,10 +88,6 @@ TH2D* Acclaim::CutOptimizer::FisherResult::makeTimeHist(int nBinsX, int nBinsY, 
   TString histTitle;
   TString command;
 
-  if(debug){
-    std::cerr << command << std::endl;
-  }
-
   if(varInd==0){
     histName = TString::Format("h%sFisher", t->GetName());
     histTitle = TString::Format("%s: Fisher Discriminant", t->GetName());
@@ -108,6 +106,9 @@ TH2D* Acclaim::CutOptimizer::FisherResult::makeTimeHist(int nBinsX, int nBinsY, 
     histName = TString::Format("h%s_%s", t->GetName(), eit->second.Data());
     histTitle = eit->second + " (weight " + w + ")";
     command = eit->second;
+  }
+  if(command==""){
+    return NULL;
   }
 
   TH2D* h = new TH2D(histName, histTitle, nBinsX, RootTools::a3StartTime, RootTools::a3EndTime, nBinsY, 0, 1);
@@ -165,6 +166,10 @@ void Acclaim::CutOptimizer::FisherResult::getResultFromXML(const char* filename)
   }
   SetTitle(getFisherFormula());
 }
+
+
+
+
 
 
 
@@ -243,6 +248,9 @@ void Acclaim::CutOptimizer::FisherResult::parseNode(TXMLEngine* xml, XMLNodePoin
 
 
 
+
+
+
 /** 
  * Constructor
  * 
@@ -258,6 +266,8 @@ Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgrou
 
 
 
+
+
 /** 
  * Destructor
  */
@@ -265,6 +275,8 @@ Acclaim::CutOptimizer::~CutOptimizer()
 {
   
 }
+
+
 
 
 
@@ -291,6 +303,7 @@ TFile* Acclaim::CutOptimizer::makeOutputFile(const char* outFileName){
   TFile* f = oc.makeFile();
   return f;
 }
+
 
 
 
@@ -339,6 +352,10 @@ Acclaim::CutOptimizer::FormulaHolder::~FormulaHolder(){
   
 }
 
+
+
+
+
 /** 
  * Creates a TFormula object, and put it in the vector
  * 
@@ -369,6 +386,8 @@ size_t Acclaim::CutOptimizer::FormulaHolder::add(const char* formulaStr){
 
 
 
+
+
 /** 
  * Remove function/object like things from the formula string but make a recognisable branch name
  * 
@@ -383,12 +402,24 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   bName.ReplaceAll("(", "_"); // remove standalone open paren...
   bName.ReplaceAll(")", "_"); // ... and close paren
   bName.ReplaceAll(".", "_");  // remove remaining dots
-  bName.ReplaceAll("TMath::", "");  // Remove TMath function namespace
+  bName.ReplaceAll("TMath::", "");  // Remove TMath function namespace  
   //  bName.ReplaceAll("AnitaPol::", "");  // Remove AnitaPol function namespace
+
+  bName.ReplaceAll("/", "_over_");  // wordify arithmetic/logical operators
+  bName.ReplaceAll("+", "_plus_");  // wordify arithmetic/logical operators
+  bName.ReplaceAll("-", "_minus_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll("*", "_times_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll(">=", "_ge_"); // wordify arithmetic/logical operators 
+  bName.ReplaceAll("<=", "_le_"); // wordify arithmetic/logical operators 
+  bName.ReplaceAll(">", "_gt_"); // wordify arithmetic/logical operators 
+  bName.ReplaceAll("<", "_lt_"); // wordify arithmetic/logical operators 
   bName.ReplaceAll("__", "_");  // Remove double underscore if there is one
-  bName.Remove(TString::kTrailing, '_');
+  bName.Remove(TString::kTrailing, '_'); // Remove trailing underscore if there is one
   return bName;
 }
+
+
+
 
 
 /** 
@@ -435,7 +466,6 @@ Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TT
  */
 void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
 
-  
   // First generate the new signal and background trees
   if(fSignalTree){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing signal tree. Deleting and regenerating." << std::endl;
@@ -445,7 +475,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   fSignalTree = new TTree("signalTree",  "signalTree");
   if(!fSaveTrees){
     fSignalTree->SetDirectory(0);
-  }  
+  }
 
   if(fBackgroundTree){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing background tree. Deleting and regenerating." << std::endl;
@@ -477,7 +507,22 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   // and store the types we do figure out here...
   std::vector<BranchType> assignedSignalBranches(nFormStr, kUnassigned);
   std::vector<BranchType> assignedBackgroundBranches(nFormStr, kUnassigned);
-  
+
+  // book efficiencies
+  fSignalEffs[kSNR].reserve(signalSelection.size());
+  fSignalEffs[kEnergy].reserve(signalSelection.size());
+  bool defSumw2 = TH1::GetDefaultSumw2();
+  TH1::SetDefaultSumw2(true); // force tefficiency to have sumw2?
+  for(unsigned i=0; i < signalSelection.size(); i++){
+    TString cutName = signalSelection[i]->getName();
+    TString snrName = "eff_" + cutName + "_vs_SNR";
+    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, 200, 0, 100));
+
+    TString energyName = "eff_" + cutName + "_vs_Energy";
+    fSignalEffs[kEnergy].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
+  }
+  TH1::SetDefaultSumw2(defSumw2);
+
   for(UInt_t g=0; g < globs.size(); g++){
 
     Bool_t doSignal = g == 0 ? true : false;
@@ -502,40 +547,47 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
 
       // Is this a background event?
       // (Do this first since we probably have more background)
-      Bool_t matchBackgroundSelection = true;
-      for(UInt_t i=0; i < backgroundSelection.size(); i++){
-        if(!backgroundSelection.at(i)->apply(sum)){
-          matchBackgroundSelection = false;
-          break;
-        }
-      }
-      if(doBackground && matchBackgroundSelection){
-        for(UInt_t i=0; i < forms.N(); i++){
-          
-          if(assignedBackgroundBranches.at(i)==kUnassigned){
-            assignedBackgroundBranches.at(i) = setBranchFromFormula(fBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));
-          }
-          if(assignedBackgroundBranches.at(i)==kInt){
-            fBackgroundIntVals.at(i) = forms.at(i)->EvalInstance();
-          }
-          else{
-            fBackgroundFloatVals.at(i) = forms.at(i)->EvalInstance();
-          }
-        }
-        fBackgroundTree->Fill();
-      }
-      else {
-        // If it's not background, it might be signal...
-        Bool_t matchSignalSelection = true;
-        for(UInt_t i=0; i < signalSelection.size(); i++){
-          if(!signalSelection.at(i)->apply(sum)){
-            matchSignalSelection = false;
-            // std::cerr << i << std::endl;
+      if(doBackground){
+        Bool_t matchBackgroundSelection = true;
+        for(UInt_t i=0; i < backgroundSelection.size(); i++){
+          int thisCutVal = backgroundSelection.at(i)->apply(sum);
+          matchBackgroundSelection = matchBackgroundSelection && thisCutVal!=0;
+          if(!matchBackgroundSelection){
             break;
           }
         }
 
-        if(doSignal && matchSignalSelection){
+        if(matchBackgroundSelection){
+          for(UInt_t i=0; i < forms.N(); i++){
+
+            if(assignedBackgroundBranches.at(i)==kUnassigned){
+              assignedBackgroundBranches.at(i) = setBranchFromFormula(fBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));
+            }
+            if(assignedBackgroundBranches.at(i)==kInt){
+              fBackgroundIntVals.at(i) = forms.at(i)->EvalInstance();
+            }
+            else{
+              fBackgroundFloatVals.at(i) = forms.at(i)->EvalInstance();
+            }
+          }
+          fBackgroundTree->Fill();
+        }
+      }
+      else if(doSignal){
+        // If it's not background, it might be signal...
+        Bool_t matchSignalSelection = true;
+        for(UInt_t i=0; i < signalSelection.size(); i++){
+          int thisCutVal = signalSelection.at(i)->apply(sum);
+
+          // std::cerr << signalSelection.at(i)->getName() << "\t" << thisCutVal << std::endl;
+          
+          fSignalEffs[kSNR][i]->Fill(thisCutVal, sum->mcDeconvolved().snr, sum->weight());
+          fSignalEffs[kEnergy][i]->Fill(thisCutVal, TMath::Log10(sum->mc.energy), sum->weight());
+
+          matchSignalSelection = matchSignalSelection && (thisCutVal != 0);
+        }
+
+        if(matchSignalSelection){
           for(UInt_t i=0; i < forms.N(); i++){
             if(assignedSignalBranches.at(i)==kUnassigned){
               assignedSignalBranches.at(i) = setBranchFromFormula(fSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
@@ -549,6 +601,9 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
           }
           fSignalTree->Fill();
         }
+      }
+      else{
+        std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", not doing signal or background?" << std::endl;
       }
       p.inc(entry, nEntries);
     }
@@ -579,7 +634,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
   if(!fSignalTree || !fBackgroundTree){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "
               << "Can't optimize! Aborting!" << std::endl;
-    return;    
+    return;
   }
   if(fSignalTree->GetEntries() == 0 || fBackgroundTree->GetEntries() == 0){    
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", "
@@ -622,9 +677,9 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
 
   factory.BookMethod(&dl, TMVA::Types::EMVA::kFisher, methodTitle, "");
 
-  // If an inf/nan ends up in the training sample TMVA will throw an exception
-  // we want to still write the signal/background trees to find out what went wrong
-  // so wrap in a try/catch block
+  // If an inf/nan ends up in the training sample TMVA will throw an exception.
+  // We want to still write the signal/background trees to find out what went wrong,
+  // so let's wrap the attempt in a try/catch block
   try{
     factory.TrainAllMethods();
     factory.TestAllMethods();
@@ -651,8 +706,10 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
         if(bs > 0){
           nActive++;
           TH2D* h = result.makeTimeHist(nBinsX, nBinsY, ts[t], col, nActive);
-          h->Write();
-          delete h;
+          if(h){
+            h->Write();
+            delete h;
+          }
         }
 
         ts[t]->SetBranchStatus(br->GetName(), 1);                  
@@ -680,21 +737,24 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
       cumulativeSignal -= hSignal->GetBinContent(bx);
       cumulativeBackground -= hBackground->GetBinContent(bx);
 
-      // std::cerr << cumulativeSignal << "\t" << cumulativeBackground << std::endl;
     }
-    // double fbLow = hBackInt->GetXaxis()->GetBinLowEdge(1);
-    // double fbHigh = hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX());    
-    // double fsLow = hSigInt->GetXaxis()->GetBinLowEdge(1);
-    // double fsHigh = hSigInt->GetXaxis()->GetBinUpEdge(hSigInt->GetNbinsX());
-
-    // double fLow = TMath::Min(fbLow, fsLow);
-    // double fHigh = TMath::Min(fbHigh, fsHigh);
-    
     hSignal->Write();
     hSigInt->Write();
     hBackground->Write();
     hBackInt->Write();
 
+
+    for(unsigned i=0; i < signalSelection.size(); i++){
+      fSignalEffs[kSNR][i]->SetDirectory(gDirectory);
+      fSignalEffs[kEnergy][i]->SetDirectory(gDirectory);
+      
+      fSignalEffs[kSNR][i]->Write();
+      fSignalEffs[kEnergy][i]->Write();
+
+      delete fSignalEffs[kSNR][i];
+      delete fSignalEffs[kEnergy][i];
+      
+    }
     
 
     result.Write();
@@ -712,7 +772,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
   // Activate all the branches!
   // Branches unused by TMVA like run/eventNumber
   // are switched off by the TMVA classes, which is slightly
-  // annoying when persusing the output trees.
+  // annoying when looking through the output trees.
 
   const int nT = 2;
   TTree* ts[nT] = {fSignalTree, fBackgroundTree};
