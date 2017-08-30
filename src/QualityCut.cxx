@@ -221,6 +221,15 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
   maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
 
+  if(sum){
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      sum->flags.maxBottomToTopRatio[polInd] = -9999;
+      sum->flags.maxBottomToTopRatioSector[polInd] = -1;
+      sum->flags.minBottomToTopRatio[polInd] = 9999;
+      sum->flags.minBottomToTopRatioSector[polInd] = -1;
+    }
+  }
+
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){      
     for(int phi=0; phi < NUM_PHI; phi++){
 
@@ -230,7 +239,7 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
       }
       if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==4){
 	continue;
-      }	  
+      }
 
       int topAnt = phi;
       int bottomAnt = 2*NUM_PHI + phi;
@@ -261,6 +270,19 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
       
       double ratio = (maxYBottom - minYBottom)/(maxYTop - minYTop);
 
+
+      // If we were passed a summary, update the internal storage
+      if(sum){
+        if(ratio > sum->flags.maxBottomToTopRatio[pol]){
+          sum->flags.maxBottomToTopRatio[pol] = ratio;
+          sum->flags.maxBottomToTopRatioSector[pol] = phi;
+        }
+        if(ratio < sum->flags.minBottomToTopRatio[pol]){
+          sum->flags.minBottomToTopRatio[pol] = ratio;
+          sum->flags.minBottomToTopRatioSector[pol] = pol;
+        }
+      }
+
       if(ratio > maxRatio){
 	maxRatio = ratio;
 	maxRatioPhi = phi;
@@ -281,11 +303,9 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
   if(sum!=NULL){
     if(eventPassesCut){
       sum->flags.isPayloadBlast = 0;
-      // std::cerr << sum->eventNumber << " passes \tmaxRatio = " << maxRatio << std::endl;
     }
     else{
       sum->flags.isPayloadBlast = 1;
-      // std::cerr << sum->eventNumber << " fails \tmaxRatio = " << maxRatio << std::endl;      
     }
   }  
 }
