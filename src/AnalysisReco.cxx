@@ -6,6 +6,7 @@
 #include "NoiseMonitor.h"
 #include <numeric>
 #include "RootTools.h"
+#include "TGraphInteractive.h"
 
 ClassImp(Acclaim::AnalysisReco);
 
@@ -1099,7 +1100,6 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
 
   std::list<InterferometricMap*> drawnFineMaps;
-  std::vector<TGraphAligned*> drawnCoherent;
   Double_t coherentMax = -1e9, coherentMin = 1e9;
   
   const int nFine = 3; // maybe discover this dynamically?
@@ -1134,8 +1134,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
       grSun.Draw("psame");
       grSun.SetMarkerStyle(kOpenCircle);
-	
-	
+
       coarseMapPad->cd();
       TGraph* gr3 = (TGraph*) gr2.Clone();
       gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
@@ -1148,81 +1147,58 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
     TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
+    // TODO, make this selectable?
     AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
-    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
+    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
     if(coherentWave && coherentUnfilteredWave){
-	
+
       const char* opt = "al";
 
       // don't want to be able to edit it by accident so copy it...
-      const TGraphAligned* gr = coherentWave->even();
-      TGraphAligned* gr2 = (TGraphAligned*) gr->Clone();
-
-      // don't want to be able to edit it by accident so copy it...
-      const TGraphAligned* gr3 = coherentUnfilteredWave->even();
-      TGraphAligned* gr4 = (TGraphAligned*) gr3->Clone();
-        
+      TGraphAligned* gr2 = const_cast<TGraphAligned*>(coherentWave->even());
+      TGraphAligned* gr4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->even());
 
       gr2->SetFillColor(0);
-      gr2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
       gr4->SetFillColor(0);
-      gr4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-        
-      TString title = TString::Format("Coherently summed wave - peak %d", peakInd);
-      gr4->SetTitle(title);
       gr2->SetLineColor(peakColors[pol][peakInd]);
-      gr4->SetLineColor(kRed);
+      gr4->SetLineColor(kRed);      
       gr4->SetLineStyle(3);
 
-      coherentPad->cd();
-      gr4->Draw(opt);
-      gr2->Draw("lsame");
-
-      drawnCoherent.push_back(gr2);
-      drawnCoherent.push_back(gr4);
-
-      double max2, min2;
-      Acclaim::RootTools::getMaxMin(gr2, max2, min2);
-      double max4, min4;
-      Acclaim::RootTools::getMaxMin(gr4, max4, min4);
-
-      double min = min2 < min4 ? min2 : min4;
-      double max = max2 > max4 ? max2 : max4;
-
-      min = min < 0 ? min*1.1 : min*0.9;
-      max = max > 0 ? max*1.1 : max*0.9;
-        
-      coherentMax = coherentMax > max ? coherentMax : max;
-      coherentMin = coherentMin < min ? coherentMin : min;
-	
-      const TGraphAligned* grPower = coherentWave->powerdB();
-      TGraphAligned* grPower2 = (TGraphAligned*) grPower->Clone();
-      grPower2->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-      title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
-      grPower2->SetTitle(title);
-      grPower2->SetLineColor(peakColors[pol][peakInd]);
-
-
-      const TGraphAligned* grPower3 = coherentUnfilteredWave->powerdB();
-      TGraphAligned* grPower4 = (TGraphAligned*) grPower3->Clone();
-      grPower4->SetBit(kCanDelete, true); // let ROOT's garbage collector worry about it
-      title = TString::Format("PSD coherently summed wave - peak %d", peakInd);
-      grPower4->SetTitle(title);
-      grPower4->SetLineColor(kRed);
-        
-      coherentFftPad->cd();
-      grPower4->Draw(opt);
+      TGraphInteractive* gr = new TGraphInteractive(gr2);
+      gr->SetBit(kCanDelete); // Let ROOT track and handle deletion
       
-      grPower4->GetXaxis()->SetRangeUser(0, 1.3);
-      Double_t maxY, maxX, minY, minX, lowerLimit = 0, upperLimit = 1.3;
-      RootTools::getMaxMinWithinLimits(grPower4, maxY, maxX, minY, minX, lowerLimit, upperLimit);
-      maxY *= (1 + 0.3*(maxY/TMath::Abs(maxY)));
-      minY *= (1 - 0.3*(maxY/TMath::Abs(maxY)));
-      grPower4->GetYaxis()->SetRangeUser(minY, maxY);
+      TString title = "Coherent Filtered;Time (ns); Amplitiude (mV)";
+      gr->SetTitle(title);
 
-      grPower2->Draw("lsame");
+      gr4->SetTitle("Coherent Unfiltered");
+      gr->add(gr4);
+      
+      coherentPad->cd();
 
-      // std::cout << "here \t" << summaryGraphs.size() << std::endl;
+      gr->Draw(opt);
+
+      TGraphAligned* grPower2 = const_cast<TGraphAligned*>(coherentWave->powerdB());
+      TGraphAligned* grPower4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->powerdB());
+
+      grPower2->SetLineColor(peakColors[pol][peakInd]);
+      grPower4->SetLineColor(kRed);
+
+
+      TGraphInteractive* grPower = new TGraphInteractive(grPower2);
+      grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
+      grPower->GetXaxis()->SetRangeUser(0, 1.3);
+
+      title = "PSD Coherent Filtered;Time (ns);Power Spectral Density (dBm/MHz)";
+      grPower->SetTitle(title);
+      
+      grPower4->SetTitle("PSD Coherent Unfiltered");
+      grPower->add(grPower4);
+
+      coherentFftPad->cd();
+      grPower->Draw(opt);
+      
     }
     else{
       std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << coherentWave << "\t" << coherentUnfilteredWave << std::endl;
@@ -1249,13 +1225,6 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       drawnFineMaps.pop_back();
     }
     // std::cout << polMax << "\t" << polMin << std::endl;
-  }
-
-  if(drawnCoherent.size() > 0){
-    for(unsigned i=0; i < drawnCoherent.size(); i++){
-      drawnCoherent.at(i)->SetMaximum(coherentMax);
-      drawnCoherent.at(i)->SetMinimum(coherentMin);      
-    }
   }
 
 

@@ -256,8 +256,8 @@ void Acclaim::RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
  * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
 void Acclaim::RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX,
-				      Double_t& minY, Double_t& minX,
-				      Double_t lowerLimit, Double_t upperLimit){
+                                               Double_t& minY, Double_t& minX,
+                                               Double_t lowerLimit, Double_t upperLimit){
 
   // Macro values from <cfloat> header
   Double_t minPoss = -DBL_MAX;
