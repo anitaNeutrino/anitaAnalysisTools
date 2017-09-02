@@ -245,14 +245,14 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
  * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
  */
 
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor) {
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
 
   if(pat){
     UsefulAdu5Pat usefulPat(pat);
-    process(fEv, &usefulPat, eventSummary, noiseMonitor);
+    process(fEv, &usefulPat, eventSummary, noiseMonitor, truth);
   }
   else{
-    process(fEv, (UsefulAdu5Pat*)NULL, eventSummary, noiseMonitor);
+    process(fEv, (UsefulAdu5Pat*)NULL, eventSummary, noiseMonitor, truth);
   }
 }
 
@@ -289,7 +289,7 @@ TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TStrin
  * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
  */
 
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor) {
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
 
 
   // spawn a CrossCorrelator if we need one
@@ -325,6 +325,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
     std::vector<Double_t> coarseMapPeakThetaDegs;
     coarseMaps[pol]->findPeakValues(fNumPeaks, coarseMapPeakValues, coarseMapPeakPhiDegs, coarseMapPeakThetaDegs);
     coarseMaps[pol]->addGpsInfo(fEv->getGPS());
+    coarseMaps[pol]->addTruthInfo(truth);
 
     if(fDoHeatMap > 0){
       if(!heatMaps[pol]){
@@ -342,6 +343,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
       InterferometricMap* h = fineMaps[pol][peakInd];
       if(h){
         h->addGpsInfo(fEv->getGPS());
+        h->addTruthInfo(truth);
       
         h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
 
@@ -1090,9 +1092,13 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   // else{
   if(hCoarse){
     hCoarse->Draw("colz");
-    TGraph& grSun = hCoarse->getSunGraph();
-    grSun.Draw("psame");
-    grSun.SetMarkerStyle(kOpenCircle);
+    // TGraph& grSun = hCoarse->getSunGraph();
+    // grSun.Draw("psame");
+    // grSun.SetMarkerStyle(kOpenCircle);
+
+    // TGraph& grMc = hCoarse->getTruthGraph();
+    // grMc.Draw("psame");
+    // grMc.SetMarkerStyle(kFullStar);
   }
 
   // std::vector<TGraph> grPeaks;
@@ -1113,34 +1119,20 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     if(h){
       h->SetTitleSize(1);
       h->GetXaxis()->SetTitleSize(0.01);
-      h->GetYaxis()->SetTitleSize(0.01);        
+      h->GetYaxis()->SetTitleSize(0.01);
+      h->SetLineColor(peakColors[pol][peakInd]);
+      h->SetLineWidth(3);
 
       h->Draw("col");
-      drawnFineMaps.push_back(h);
-
-
-      TGraph& gr = h->getPeakPointGraph();
-      gr.Draw("psame");
+      drawnFineMaps.push_back(h);      
+      
+      coarseMapPad->cd();
 
       TGraph& gr2 = h->getEdgeBoxGraph();
-
-      gr2.Draw("lsame");
-      gr.SetMarkerColor(peakColors[pol][peakInd]);
-      gr.SetMarkerStyle(8); // dot
-      gr2.SetLineColor(peakColors[pol][peakInd]);
-      gr2.SetLineWidth(4);
-
-      TGraph& grSun = h->getSunGraph();
-
-      grSun.Draw("psame");
-      grSun.SetMarkerStyle(kOpenCircle);
-
-      coarseMapPad->cd();
       TGraph* gr3 = (TGraph*) gr2.Clone();
       gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
-	
+
       gr3->SetLineWidth(2);
-      // gr.Draw("psame");
       gr3->Draw("lsame");	
     }
 

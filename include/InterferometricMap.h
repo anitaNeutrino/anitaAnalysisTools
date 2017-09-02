@@ -49,6 +49,7 @@
 class Adu5Pat;
 class UsefulAdu5Pat;
 class TProfile2D;
+class TruthAnitaEvent;
 
 namespace Acclaim
 {
@@ -67,9 +68,11 @@ namespace Acclaim
     void Fill(AnitaPol::AnitaPol_t pol, CrossCorrelator* cc, InterferometryCache* dtCache);
     void findPeakValues(Int_t numPeaks, std::vector<Double_t>& peakValues, std::vector<Double_t>& phiDegs, std::vector<Double_t>& thetaDegs) const;
     void getPeakInfo(Double_t& peak, Double_t& phiDeg, Double_t& thetaDeg) const{peak = fPeakBinValue, phiDeg = fPeakPhi, thetaDeg = fPeakTheta;}
-    void ExecuteEvent(int event, int x, int y);
+    virtual void Draw(Option_t* opt);
+    virtual void ExecuteEvent(int event, int x, int y);
 
     void addGpsInfo(const Adu5Pat* pat);
+    void addTruthInfo(const TruthAnitaEvent* truth);
     // void addGpsInfo(const UsefulAdu5Pat* usefulPat);
 
     void project(TProfile2D* proj, double horizonKilometers);
@@ -82,6 +85,7 @@ namespace Acclaim
     TGraph& getPeakPointGraph(); // for plotting
     TGraph& getEdgeBoxGraph(); // for plotting
     TGraph& getSunGraph(); // for plotting
+    TGraph& getTruthGraph(); // for plotting    
 
     bool isAZoomMap() const {return fIsZoomMap;}
     Int_t getPeakPhiSector() const {return fPeakPhiSector;}
@@ -91,6 +95,9 @@ namespace Acclaim
 
     UsefulAdu5Pat* fUsefulPat;
     void deletePat();
+    Double_t truthLat;
+    Double_t truthLon;
+    Double_t truthAlt;
 
     void fitPeakWithQuadratic(Int_t peakPhiBin, Int_t peakThetaBin);
     void setPeakInfoJustFromPeakBin(Int_t peakPhiBin, Int_t peakThetaBin);

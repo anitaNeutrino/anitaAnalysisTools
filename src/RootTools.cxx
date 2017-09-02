@@ -200,7 +200,7 @@ TGraph* Acclaim::RootTools::makeUnwrappedCorrelationGraph(const TGraph* gr){
  * @param maxY is a reference to a Double_t, updated with the maximum y-axis value of the TGraph.
  * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
 */
-void Acclaim::RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
+void Acclaim::RootTools::getMaxMin(const TGraph* gr, Double_t& maxY, Double_t& minY){
 
   Double_t maxX=0, minX=0;
   Acclaim::RootTools::getMaxMin(gr, maxY, maxX, minY, minX);
@@ -219,7 +219,7 @@ void Acclaim::RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& minY){
  * @param minY is a reference to a Double_t, updated with the minimum y-axis value of the TGraph.
  * @param minX is a reference to a Double_t, updated with the x-axis value at the minY of the TGraph.
 */
-void Acclaim::RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
+void Acclaim::RootTools::getMaxMin(const TGraph* gr, Double_t& maxY, Double_t& maxX,
 			  Double_t& minY, Double_t& minX){
 
   maxY=gr->GetY()[0];
@@ -255,7 +255,7 @@ void Acclaim::RootTools::getMaxMin(TGraph* gr, Double_t& maxY, Double_t& maxX,
  * @param lowerLimit is a Double_t containing the lower value of the x-axis to search from.
  * @param upperLimit is a Double_t containing the upper value of the x-axis to search to.
 */
-void Acclaim::RootTools::getMaxMinWithinLimits(TGraph* gr, Double_t& maxY, Double_t& maxX,
+void Acclaim::RootTools::getMaxMinWithinLimits(const TGraph* gr, Double_t& maxY, Double_t& maxX,
                                                Double_t& minY, Double_t& minX,
                                                Double_t lowerLimit, Double_t upperLimit){
 

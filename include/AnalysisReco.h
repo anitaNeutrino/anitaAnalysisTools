@@ -13,6 +13,7 @@ namespace AnitaResponse {
   class ResponseManager;
 }
 class NoiseMonitor;
+class TruthAnitaEvent;
 
 namespace Acclaim
 {
@@ -33,8 +34,8 @@ class AnalysisReco : public TObject {
   virtual ~AnalysisReco();  
 
   // Does the reconstruction.
-  void process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary, NoiseMonitor* noiseMonitor=NULL);
-  void process(const FilteredAnitaEvent * ev, Adu5Pat* pat, AnitaEventSummary * summary, NoiseMonitor* noiseMonitor=NULL);    
+  void process(const FilteredAnitaEvent * ev, UsefulAdu5Pat* pat ,AnitaEventSummary * summary, NoiseMonitor* noiseMonitor=NULL, TruthAnitaEvent* truth = NULL);
+  void process(const FilteredAnitaEvent * ev, Adu5Pat* pat, AnitaEventSummary * summary, NoiseMonitor* noiseMonitor=NULL, TruthAnitaEvent* truth = NULL);    
 
   // Master functions for delays between antennas.
   Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,

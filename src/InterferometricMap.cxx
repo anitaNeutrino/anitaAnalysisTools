@@ -10,6 +10,7 @@
 #include "TString.h"
 #include "UsefulAdu5Pat.h"
 #include "RampdemReader.h"
+#include "TruthAnitaEvent.h"
 
 ClassImp(Acclaim::InterferometricMap);
 
@@ -98,6 +99,30 @@ const TDecompSVD& Acclaim::InterferometricMap::getSVD(){
 
 
 
+/** 
+ * Draw the interferometric map and any contained TGraphs
+ * 
+ * @param opt 
+ */
+void Acclaim::InterferometricMap::Draw(Option_t* opt){
+  TH2D::Draw(opt);
+
+
+  TGraph& grSun = getSunGraph();
+  if(grSun.GetN() > 0) grSun.Draw("psame");
+
+  TGraph& grTruth = getTruthGraph();
+  if(grTruth.GetN() > 0) grTruth.Draw("psame");
+
+  if(fIsZoomMap){
+    TGraph& grPeak = getPeakPointGraph();
+    grPeak.Draw("psame");
+
+    TGraph& grEdge = getEdgeBoxGraph();
+    grEdge.Draw("lsame");
+  }  
+}
+
 
 /** 
  * Method required by ROOT interative behaviour.
@@ -114,17 +139,6 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
     (void) y;
     new TCanvas();
     Draw("colz");
-
-    TGraph& grPeak = getPeakPointGraph();
-    grPeak.Draw("psame");
-
-    if(fUsefulPat){
-      
-      TGraph& grSun = getSunGraph();
-      grSun.Draw("psame");
-    }
-    
-    
   }  
 }
 
@@ -355,7 +369,7 @@ void Acclaim::InterferometricMap::setNameAndTitle(){
  * @param thetaRange is the size of the zoom map in theta (degrees)
  */
 Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, Double_t zoomCentrePhi, Double_t phiRange, Double_t zoomCentreTheta, Double_t thetaRange)
-    : fUsefulPat(NULL)
+    : fUsefulPat(NULL), truthLat(-9999), truthLon(-9999), truthAlt(-9999)
 {
   fIsZoomMap = true;
   fPeakPhiSector = phiSector;
@@ -391,7 +405,9 @@ Acclaim::InterferometricMap::InterferometricMap(Int_t peakInd, Int_t phiSector, 
 /** 
  * Default constructor, which creates a coarse map
  */
-Acclaim::InterferometricMap::InterferometricMap() : fUsefulPat(NULL){
+Acclaim::InterferometricMap::InterferometricMap()
+    : fUsefulPat(NULL), truthLat(-9999), truthLon(-9999), truthAlt(-9999)
+{
   fIsZoomMap = false;
   fPeakPhiSector = -1;
   minPhiBin = -1;
@@ -411,7 +427,6 @@ Acclaim::InterferometricMap::InterferometricMap() : fUsefulPat(NULL){
  * Default destructor
  */
 Acclaim::InterferometricMap::~InterferometricMap(){
-  // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << fUsefulPat << std::endl;  
   deletePat();
 }
 
@@ -420,7 +435,6 @@ Acclaim::InterferometricMap::~InterferometricMap(){
  * If we have a copy of the usefulAdu5Pat, then delete it nicely.
  */
 void Acclaim::InterferometricMap::deletePat(){
-  // std::cerr << __PRETTY_FUNCTION__ << "\t" << this << "\t" << fUsefulPat << std::endl;
   if(fUsefulPat) {
     // std::cerr << fUsefulPat->heading << "\t" << std::endl;
     delete fUsefulPat;
@@ -443,6 +457,19 @@ void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
 }
 
 
+
+/** 
+ * Create an internal UsefulAdu5Pat from the raw gps data
+ * 
+ * @param pat is a pointer to the Adu5Pat
+ */
+void Acclaim::InterferometricMap::addTruthInfo(const TruthAnitaEvent* truth){
+
+  truthLon = truth->sourceLon;
+  truthLat = truth->sourceLat;
+  truthAlt = truth->sourceAlt;
+  // std::cerr << truthLon << "\t" << truthLat << "\t" << truthAlt << std::endl;
+}
 
 
 
@@ -1012,12 +1039,16 @@ TGraph& Acclaim::InterferometricMap::findOrMakeGraph(TString name){
 
   std::map<TString, TGraph>::iterator it = grs.find(name);
   if(it!=grs.end()){
+    it->second.SetLineColor(GetLineColor());
     return it->second;
   }
   else{
     TGraph gr;
     gr.SetName(name);
-    grs[name] = gr;
+    gr.SetLineColor(GetLineColor());
+    gr.SetLineWidth(GetLineWidth());
+    // gr.SetMarkerColor(GetLineColor());
+    grs[name] = gr;    
     return grs[name];
   }  
 }
@@ -1029,6 +1060,9 @@ TGraph& Acclaim::InterferometricMap::getPeakPointGraph(){
   if(gr.GetN()==0){
     gr.SetPoint(0, fPeakPhi, fPeakTheta);
   }
+  gr.SetMarkerColor(GetLineColor());
+  gr.SetMarkerStyle(8);
+  gr.SetMarkerSize(1);
   return grs["grPeak"];
   
 }
@@ -1049,7 +1083,36 @@ TGraph& Acclaim::InterferometricMap::getSunGraph(){
 
     grSun.SetPoint(0, phiDeg, thetaDeg);
   }
+  grSun.SetMarkerStyle(kOpenCircle);
+  grSun.SetMarkerSize(1);
   return grs["grSun"];
+  
+}
+
+
+TGraph& Acclaim::InterferometricMap::getTruthGraph(){
+
+  const char* grName = "grTruthGraph";
+  TGraph& grTruth = findOrMakeGraph(grName);
+
+  if(fUsefulPat && truthLon > -9999 && truthLat > -9999 && truthAlt > -9999){
+    Double_t thetaDeg, phiDeg;
+    fUsefulPat->getThetaAndPhiWave(truthLon, truthLat, truthAlt, thetaDeg, phiDeg);
+
+    thetaDeg*=-TMath::RadToDeg();
+    phiDeg*=TMath::RadToDeg();    
+
+    const double phi0 = getBin0PhiDeg();
+    phiDeg = phiDeg < phi0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
+    phiDeg = phiDeg >= phi0 + DEGREES_IN_CIRCLE ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
+
+    grTruth.SetPoint(0, phiDeg, thetaDeg);
+    // std::cerr << phiDeg << "\t" << thetaDeg << "\t" << std::endl;
+  }
+  grTruth.SetMarkerStyle(kFullStar);
+  grTruth.SetMarkerSize(1.5);
+  grTruth.SetMarkerColor(kRed);
+  return grs[grName];
   
 }
 
