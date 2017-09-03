@@ -1169,7 +1169,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       
       coherentPad->cd();
 
-      gr->Draw(opt);
+      gr->DrawGroup(opt);
 
       TGraphAligned* grPower2 = const_cast<TGraphAligned*>(coherentWave->powerdB());
       TGraphAligned* grPower4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->powerdB());
@@ -1189,7 +1189,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower->addGuiChild(*grPower4, "l");
 
       coherentFftPad->cd();
-      grPower->Draw(opt);
+      grPower->DrawGroup(opt);
       
     }
     else{

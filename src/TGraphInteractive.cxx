@@ -7,16 +7,22 @@
 
 
 
+
+
+
 Acclaim::GuiParent::~GuiParent(){
   // delete all children
   for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]!=NULL){
+    if(fChildren[i]){
       delete fChildren[i];
       // I think the children should then have zero'd the parent pointer
       // in their own destructor?
     }
   }
 }
+
+
+
 
 
 size_t Acclaim::GuiParent::addGuiChild(const TGraph& gr, Option_t* drawOpt){
@@ -26,27 +32,35 @@ size_t Acclaim::GuiParent::addGuiChild(const TGraph& gr, Option_t* drawOpt){
 }
 
 
+
+
 size_t Acclaim::GuiParent::addGuiChild(TGraphInteractive* grPtr){
-  grPtr->fParent = this;
-  fChildren.push_back(grPtr);  
-
-  return fChildren.size();
-}
-
-
-size_t Acclaim::GuiParent::copyChildren(const GuiParent* that){
-  for(UInt_t i=0; i < that->fChildren.size(); i++){
-    this->addGuiChild(*that->fChildren[i], that->fChildren[i]->fDrawOpt); // use copy add function
+  if(grPtr){
+    grPtr->fParent = this;
+    fChildren.push_back(grPtr);
   }
   return fChildren.size();
 }
 
 
 
+
+size_t Acclaim::GuiParent::copyChildren(const GuiParent* that){
+  for(UInt_t i=0; i < that->fChildren.size(); i++){
+    if(that->fChildren[i]){
+      this->addGuiChild(*that->fChildren[i], that->fChildren[i]->fDrawOpt); // use copy add function
+    }
+  }
+  return fChildren.size();
+}
+
+
+
+
 void Acclaim::GuiParent::removeReference(TGraphInteractive* gr){
   UInt_t hash = gr->Hash();
   for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]->Hash() == hash){
+    if(fChildren[i] && fChildren[i]->Hash() == hash){
       fChildren[i] = NULL;
       break;
     }
@@ -54,26 +68,18 @@ void Acclaim::GuiParent::removeReference(TGraphInteractive* gr){
 }
 
 
+
 void Acclaim::GuiParent::DrawGroup(Option_t* opt){
-  Draw(opt);
+  this->Draw(opt);
   for(UInt_t i=0; i < fChildren.size(); i++){
-    fChildren[i]->Draw(); // draw with saved draw option
+    if(fChildren[i]){
+      TString thisDrawOpt = fChildren[i]->fDrawOpt + "same";
+      fChildren[i]->Draw(thisDrawOpt);
+    }
   }
 }
 
 
-void Acclaim::GuiParent::ExecuteEvent(int event, int x, int y){
-  (void) x;
-  (void) y;
-  if(event == kButton1Double){
-
-    TCanvas* c1 = new TCanvas();
-    DrawGroup("colz");
-
-    TLegend* l1 = c1->BuildLegend();
-    l1->SetBit(kCanDelete);    
-  }  
-}
 
 
 
@@ -122,6 +128,13 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOp
 }
 
 
+// Acclaim::TGraphInteractive::TGraphInteractive(const TGraphInteractive* gr)
+//     : TGraphInteractive((const TGraph*)gr, gr->fDrawOpt)
+// {
+//   copyChildren(gr);
+// }
+
+
 
 
 Acclaim::TGraphInteractive::~TGraphInteractive(){
@@ -155,14 +168,14 @@ Acclaim::GuiParent* Acclaim::TGraphInteractive::findOriginator() const{
 
 
 
-void Acclaim::TGraphInteractive::Draw(Option_t* opt){
+void Acclaim::TGraphInteractive::DrawGroup(Option_t* opt){
 
   TString passedOpt(opt);
   if(passedOpt!=""){
     fDrawOpt = opt;
   }
 
-  TGraphAligned::Draw(opt);
+  Draw(opt);
   
   TString drawOpt = opt;
   drawOpt.ReplaceAll("same", "");
@@ -171,34 +184,57 @@ void Acclaim::TGraphInteractive::Draw(Option_t* opt){
   drawOpt += "same";
 
   // gPad->Update();
-  int firstBin = GetXaxis()->GetFirst();
-  int lastBin = GetXaxis()->GetLast();
-  double lowerLimit = GetXaxis()->GetBinLowEdge(firstBin);
-  double upperLimit = GetXaxis()->GetBinUpEdge(lastBin);
 
-  double yMax=0, yMin=0, xMax=0, xMin=0;
-  RootTools::getMaxMinWithinLimits(this, yMax, xMax, yMin, xMin, lowerLimit, upperLimit);
+  if(fChildren.size() > 0){
+    int firstBin = GetXaxis()->GetFirst();
+    int lastBin = GetXaxis()->GetLast();
+    double lowerLimit = GetXaxis()->GetBinLowEdge(firstBin);
+    double upperLimit = GetXaxis()->GetBinUpEdge(lastBin);
 
-  for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]){
-      fChildren[i]->Draw(drawOpt);
+    double yMax=0, yMin=0, xMax=0, xMin=0;
+    RootTools::getMaxMinWithinLimits(this, yMax, xMax, yMin, xMin, lowerLimit, upperLimit);
 
-      double childMax, childMin;
-      RootTools::getMaxMinWithinLimits(fChildren[i], childMax, xMax, childMin, xMin, lowerLimit, upperLimit);
-      // std::cerr << lowerLimit << "\t" << upperLimit << "\t" << firstBin << "\t" << lastBin << "\t" << childMax << "\t" << childMin << std::endl;
+    for(unsigned i=0; i < fChildren.size(); i++){
+      if(fChildren[i]){
+        fChildren[i]->Draw(drawOpt);
 
-      if(childMax > yMax){
-        yMax = childMax;
-      }
-      if(childMin < yMin){
-        yMin = childMin;
+        double childMax, childMin;
+        RootTools::getMaxMinWithinLimits(fChildren[i], childMax, xMax, childMin, xMin, lowerLimit, upperLimit);
+        // std::cerr << lowerLimit << "\t" << upperLimit << "\t" << firstBin << "\t" << lastBin << "\t" << childMax << "\t" << childMin << std::endl;
+
+        if(childMax > yMax){
+          yMax = childMax;
+        }
+        if(childMin < yMin){
+          yMin = childMin;
+        }
       }
     }
-  }
 
-  double padding = 0.1*(yMax - yMin);
-  SetMaximum(yMax + padding);
-  SetMinimum(yMin - padding);
+    double padding = 0.1*(yMax - yMin);
+    SetMaximum(yMax + padding);
+    SetMinimum(yMin - padding);
+  }
 }
 
 
+void Acclaim::TGraphInteractive::ExecuteEvent(int event, int px, int py){
+  (void) px;
+  (void) py;
+  if(event==kButton1Double){
+    GuiParent* p = findOriginator();
+
+    new TCanvas();
+    TGraphInteractive* grP = dynamic_cast<TGraphInteractive*>(p);
+    if(grP){
+      TGraphInteractive* copy = new TGraphInteractive(grP, grP->fDrawOpt);
+      copy->copyChildren(grP);
+      copy->SetBit(kCanDelete);      
+      copy->DrawGroup();
+    }
+    else{
+      p->DrawGroup();
+    }
+    
+  }
+}

@@ -2,6 +2,7 @@
 #define TGRAPH_INTERACTIVE
 
 #include "TGraphAligned.h"
+#include "TCanvas.h"
 
 namespace Acclaim{
 
@@ -33,17 +34,13 @@ class GuiParent {
   // Must be defined so derived class can DrawGroup (just make it reference base class draw)
   // e.g. virtual void Draw(Option_t* opt){TObject::Draw(opt);}
   virtual void Draw(Option_t* opt) = 0;
-
-  // Must be defined so children can pass execute event up the inheritance tree
-  // e.g. virtual void ExecuteEvent(int event, int px, int py){TObject::ExecuteEvent(event, px, py);}
-  virtual void ExecuteEvent(int event, int px, int py);
   
   // Must be overloaded by children (TGraphInteractive*) to return pointer to parent
   virtual GuiParent* getParent() const {return NULL;}
 
 
 
-  void DrawGroup(Option_t* opt); // Draw self and loop over/draw TGraphInteractive children
+  void DrawGroup(Option_t* opt=""); // Draw self and loop over/draw TGraphInteractive children
   size_t addGuiChild(TGraphInteractive* grPtr); // Does not copy, takes ownership of heap object
   size_t addGuiChild(const TGraph& grRef,  Option_t* drawOpt); // Copies and owns the copy
   size_t copyChildren(const GuiParent* that); // copy all children from that, and add to this  
@@ -65,20 +62,21 @@ class GuiParent {
 class TGraphInteractive : public TGraphAligned, public GuiParent {
  public:
   TGraphInteractive() {;}
+  // TGraphInteractive(const TGraphInteractive* gr);
   TGraphInteractive(const TGraph* gr, Option_t* drawOpt);
-  TGraphInteractive(const TGraphInteractive* gr);
   virtual ~TGraphInteractive();
-
-  virtual void ExecuteEvent(int event, int px, int py){
-    fParent->ExecuteEvent(event, px, py);
+  // Satisfy pure virtual overload of GuiParent
+  virtual void Draw(Option_t* opt = ""){
+    TGraphAligned::Draw(opt);
   }
 
-  // Satisfy pure virtual overload of GuiParent
-  virtual void Draw(Option_t* opt = "");
+  virtual void ExecuteEvent(int event, int px, int py);
 
   // Walk up parent tree until a NULL is returned
   GuiParent* findOriginator() const;
 
+
+  virtual void DrawGroup(Option_t* opt = "");
 
  public:
   friend class GuiParent;
