@@ -45,24 +45,9 @@ void Acclaim::Filters::makeFourierBuffersLoadHistoryOnNextEvent(FilterStrategy* 
 }
 
 
-
-//---------------------------------------------------------------------------------------------------------
-/**
- * @brief Adds my custom strategies to a map of TString to strategies
- *
- * My analysis will only use a handful of filters strategies.
- * This function appends the "defaultStrategies" to a TString/FilterStrategy* map like what is used in MagidDisplay.
- * This function allows the strategies to be loaded painlessly into MagicDisplay and analysis scripts
- * Note that the strategies are initialized once so adding the saveOutput bool will currently only work on the first call.
- *
- * @param filterStrats is a the TString/FilterStrategy* map.
- * @param saveOutput is passed to the filterStrategies when they are created.
- */
-void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
-
+void Acclaim::Filters::generateFilterStrategies(bool saveOutput){
 
   if(acclaimDefaults.size()==0){
-
     // first make the operations...
 
     // should always use some kind of alfa filter unless you have a good reason
@@ -76,10 +61,10 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     Notch* brickWall370 = new Notch(0.34, 0.40);    
 
     // double log10ProbThresh = -100; //2.5;
-    double reducedChiSquareThresh = 5;
-    double channelChiSquareCdfThresh = 0.995;
-    const int numEventsInRayleighDistributions = 1500;
-    RayleighFilter* rf = new RayleighFilter(channelChiSquareCdfThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
+    // double reducedChiSquareThresh = 5;
+    // double channelChiSquareCdfThresh = 0.995;
+    // const int numEventsInRayleighDistributions = 1500;
+    // RayleighFilter* rf = new RayleighFilter(channelChiSquareCdfThresh, reducedChiSquareThresh, numEventsInRayleighDistributions);
 
 
 
@@ -100,19 +85,37 @@ void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>
     brick->addOperation(brickWall370, saveOutput);
     acclaimDefaults["BrickWallSatellites"] = brick;
 
-    // every operation is going to use these default strategies
     FilterStrategy* defaultDeco = new FilterStrategy();
     (*defaultDeco) = (*defaultOps);
     defaultDeco->addOperation(df, saveOutput); // has internal check for ANITA version
     acclaimDefaults["Deconvolve"] = defaultDeco;
   
-    FilterStrategy* fs = new FilterStrategy();
-    (*fs) = (*defaultOps);
-    fs->addOperation(bandHighPass, saveOutput);
-    fs->addOperation(bandLowPass, saveOutput);
-    fs->addOperation(rf, saveOutput);
-    acclaimDefaults["RayleighFilter"] = fs;
+    // FilterStrategy* fs = new FilterStrategy();
+    // (*fs) = (*defaultOps);
+    // fs->addOperation(bandHighPass, saveOutput);
+    // fs->addOperation(bandLowPass, saveOutput);
+    // fs->addOperation(rf, saveOutput);
+    // acclaimDefaults["RayleighFilter"] = fs;
   }
+
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Adds my custom strategies to a map of TString to strategies
+ *
+ * My analysis will only use a handful of filters strategies.
+ * This function appends the "defaultStrategies" to a TString/FilterStrategy* map like what is used in MagidDisplay.
+ * This function allows the strategies to be loaded painlessly into MagicDisplay and analysis scripts
+ * Note that the strategies are initialized once so adding the saveOutput bool will currently only work on the first call.
+ *
+ * @param filterStrats is a the TString/FilterStrategy* map.
+ * @param saveOutput is passed to the filterStrategies when they are created.
+ */
+void Acclaim::Filters::appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput){
+
+  generateFilterStrategies(saveOutput);
 
   std::map<TString, FilterStrategy*>::iterator it;
   for(it = acclaimDefaults.begin(); it != acclaimDefaults.end(); ++it){

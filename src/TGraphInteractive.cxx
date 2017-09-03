@@ -5,9 +5,101 @@
 #include "TLegend.h"
 #include "RootTools.h"
 
-Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr)
+
+
+Acclaim::GuiParent::~GuiParent(){
+  // delete all children
+  for(unsigned i=0; i < fChildren.size(); i++){
+    if(fChildren[i]!=NULL){
+      delete fChildren[i];
+      // I think the children should then have zero'd the parent pointer
+      // in their own destructor?
+    }
+  }
+}
+
+
+size_t Acclaim::GuiParent::addGuiChild(const TGraph& gr, Option_t* drawOpt){
+  // create a copy, that this object owns
+  TGraphInteractive* grChild = new TGraphInteractive(&gr, drawOpt);
+  return addGuiChild(grChild);
+}
+
+
+size_t Acclaim::GuiParent::addGuiChild(TGraphInteractive* grPtr){
+  grPtr->fParent = this;
+  fChildren.push_back(grPtr);  
+
+  return fChildren.size();
+}
+
+
+size_t Acclaim::GuiParent::copyChildren(const GuiParent* that){
+  for(UInt_t i=0; i < that->fChildren.size(); i++){
+    this->addGuiChild(*that->fChildren[i], that->fChildren[i]->fDrawOpt); // use copy add function
+  }
+  return fChildren.size();
+}
+
+
+
+void Acclaim::GuiParent::removeReference(TGraphInteractive* gr){
+  UInt_t hash = gr->Hash();
+  for(unsigned i=0; i < fChildren.size(); i++){
+    if(fChildren[i]->Hash() == hash){
+      fChildren[i] = NULL;
+      break;
+    }
+  }
+}
+
+
+void Acclaim::GuiParent::DrawGroup(Option_t* opt){
+  Draw(opt);
+  for(UInt_t i=0; i < fChildren.size(); i++){
+    fChildren[i]->Draw(); // draw with saved draw option
+  }
+}
+
+
+void Acclaim::GuiParent::ExecuteEvent(int event, int x, int y){
+  (void) x;
+  (void) y;
+  if(event == kButton1Double){
+
+    TCanvas* c1 = new TCanvas();
+    DrawGroup("colz");
+
+    TLegend* l1 = c1->BuildLegend();
+    l1->SetBit(kCanDelete);    
+  }  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOpt)
     : TGraphAligned(gr->GetN(), gr->GetX(), gr->GetY()),
-      fParent(NULL)
+      fParent(NULL), fDrawOpt(drawOpt)
 {
   SetLineColor(gr->GetLineColor());
   SetLineStyle(gr->GetLineStyle());
@@ -31,17 +123,6 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr)
 
 
 
-Acclaim::TGraphInteractive::TGraphInteractive(const TGraphInteractive* gr)
-    : TGraphInteractive((const TGraph*)gr)
-{
-  for(UInt_t i=0; i < gr->fChildren.size(); i++){
-    if(gr->fChildren[i]!=NULL){
-      add(gr->fChildren[i]);
-    }
-  }
-}
-
-
 
 Acclaim::TGraphInteractive::~TGraphInteractive(){
 
@@ -49,72 +130,37 @@ Acclaim::TGraphInteractive::~TGraphInteractive(){
   if(fParent){
     fParent->removeReference(this);
   }
-
-  // delete all children
-  for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]!=NULL){
-      delete fChildren[i];
-      // I think the children should then have zero'd the parent pointer
-      // in their own destructor?
-    }
-  }
-  
 }
 
-
-
-
-size_t Acclaim::TGraphInteractive::add(const TGraph* gr){
-
-  // create a copy, that this object owns
-  TGraphInteractive* grChild = new TGraphInteractive(gr);
- // I am your father
-  grChild->fParent = this;
-  fChildren.push_back(grChild);  
-
-  return fChildren.size();
-}
-
-
-void Acclaim::TGraphInteractive::removeReference(TGraphInteractive* gr){
-  UInt_t id = gr->GetUniqueID();
-  for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]->GetUniqueID() == id){
-      fChildren[i] = NULL;
-      break;
-    }
-  }
-}
-
-
-
-
-
-Acclaim::TGraphInteractive* Acclaim::TGraphInteractive::getParent(){
-  return fParent;
-}
 
 
 
 /** 
- * Go up the parent tree until we find a TGraphInteractive with fParent = NULL
+ * Go up the parent tree until we find a GuiParent where getParent() returns NULL
  * 
- * @return the top level TGraphInteractive
+ * @return the top level Graphical object
  */
-Acclaim::TGraphInteractive* Acclaim::TGraphInteractive::findOriginator(){
+Acclaim::GuiParent* Acclaim::TGraphInteractive::findOriginator() const{
   
-  TGraphInteractive* current = this;
-  TGraphInteractive* next = this->getParent();
+  const GuiParent* current = static_cast<const GuiParent*>(this);
+  const GuiParent* next = this->getParent();
 
   while(next!=NULL){
     current = next;
     next = current->getParent();
   }
-  return current;  
+  return const_cast<GuiParent*>(current);
 }
 
 
+
+
 void Acclaim::TGraphInteractive::Draw(Option_t* opt){
+
+  TString passedOpt(opt);
+  if(passedOpt!=""){
+    fDrawOpt = opt;
+  }
 
   TGraphAligned::Draw(opt);
   
@@ -156,29 +202,3 @@ void Acclaim::TGraphInteractive::Draw(Option_t* opt){
 }
 
 
-void Acclaim::TGraphInteractive::ExecuteEvent(int event, int x, int y){
-  
-  if(event == kButton1Double){
-
-    TGraphInteractive* originator = findOriginator();
-    TString drawOpt = originator->GetDrawOption();
-
-    // force options for drawing a new axis
-    drawOpt.ReplaceAll("same", "");
-    if(!drawOpt.Contains("a")){
-      drawOpt += "a"; 
-    }
-
-    TGraphInteractive* grNew = new TGraphInteractive(originator);
-    grNew->SetBit(kCanDelete); // now the canvas will own it
-    
-    TCanvas* c1 = new TCanvas();
-    grNew->Draw(drawOpt);
-
-    TLegend* l1 = c1->BuildLegend();
-    l1->SetBit(kCanDelete);    
-  }  
-
-  // pass on up the chain
-  TGraphAligned::ExecuteEvent(event, x, y);  
-}

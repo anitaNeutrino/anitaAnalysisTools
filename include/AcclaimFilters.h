@@ -46,7 +46,8 @@ namespace Acclaim
       const double anitaLowPassGHz = 1.2;
       const double alfaLowPassGHz = 0.7;
     }
-  
+
+    void generateFilterStrategies(bool saveOutput = false);
     void appendFilterStrategies(std::map<TString, FilterStrategy*>& filterStrats, bool saveOutput = false);
     FilterStrategy* findStrategy(const std::map<TString, FilterStrategy*>& filterStrats, const TString& stratName);
     FilterStrategy* findDefaultStrategy(const TString& stratName);

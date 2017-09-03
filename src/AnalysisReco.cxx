@@ -1158,14 +1158,14 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       gr4->SetLineColor(kRed);      
       gr4->SetLineStyle(3);
 
-      TGraphInteractive* gr = new TGraphInteractive(gr2);
+      TGraphInteractive* gr = new TGraphInteractive(gr2, "l");
       gr->SetBit(kCanDelete); // Let ROOT track and handle deletion
       
       TString title = "Coherent Filtered;Time (ns); Amplitiude (mV)";
       gr->SetTitle(title);
 
       gr4->SetTitle("Coherent Unfiltered");
-      gr->add(gr4);
+      gr->addGuiChild(*gr4, "l");
       
       coherentPad->cd();
 
@@ -1178,7 +1178,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower4->SetLineColor(kRed);
 
 
-      TGraphInteractive* grPower = new TGraphInteractive(grPower2);
+      TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
       grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
       grPower->GetXaxis()->SetRangeUser(0, 1.3);
 
@@ -1186,7 +1186,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower->SetTitle(title);
       
       grPower4->SetTitle("PSD Coherent Unfiltered");
-      grPower->add(grPower4);
+      grPower->addGuiChild(*grPower4, "l");
 
       coherentFftPad->cd();
       grPower->Draw(opt);

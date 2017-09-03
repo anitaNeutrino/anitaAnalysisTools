@@ -21,25 +21,71 @@ namespace Acclaim{
  * 
  */
 
-class TGraphInteractive : public TGraphAligned {
+class TGraphInteractive;
 
+/** 
+ * Skeletal class to inherit from if you want to have a bunch of TGraphs which follow you around a ROOT GUI
+ * Draw the whole set (self + children)
+ */
+class GuiParent {
+ public: 
+
+  // Must be defined so derived class can DrawGroup (just make it reference base class draw)
+  // e.g. virtual void Draw(Option_t* opt){TObject::Draw(opt);}
+  virtual void Draw(Option_t* opt) = 0;
+
+  // Must be defined so children can pass execute event up the inheritance tree
+  // e.g. virtual void ExecuteEvent(int event, int px, int py){TObject::ExecuteEvent(event, px, py);}
+  virtual void ExecuteEvent(int event, int px, int py);
+  
+  // Must be overloaded by children (TGraphInteractive*) to return pointer to parent
+  virtual GuiParent* getParent() const {return NULL;}
+
+
+
+  void DrawGroup(Option_t* opt); // Draw self and loop over/draw TGraphInteractive children
+  size_t addGuiChild(TGraphInteractive* grPtr); // Does not copy, takes ownership of heap object
+  size_t addGuiChild(const TGraph& grRef,  Option_t* drawOpt); // Copies and owns the copy
+  size_t copyChildren(const GuiParent* that); // copy all children from that, and add to this  
+
+
+ protected:
+  virtual ~GuiParent(); // Delete children on destruction in here
+  
+ private:
+  GuiParent(){;}
+  
+  friend class TGraphInteractive;
+  void removeReference(TGraphInteractive* grChild);  
+  std::vector<TGraphInteractive*> fChildren;
+};
+
+
+
+class TGraphInteractive : public TGraphAligned, public GuiParent {
  public:
   TGraphInteractive() {;}
-  TGraphInteractive(const TGraph* gr);
+  TGraphInteractive(const TGraph* gr, Option_t* drawOpt);
   TGraphInteractive(const TGraphInteractive* gr);
   virtual ~TGraphInteractive();
-  void ExecuteEvent(int event, int px, int py);
-  
-  size_t add(const TGraph*);
-  TGraphInteractive* getParent();
-  TGraphInteractive* findOriginator();
-  void Draw(Option_t* opt);
-  
- protected:
-  std::vector<TGraphInteractive*> fChildren;
-  TGraphInteractive* fParent;
 
-  void removeReference(TGraphInteractive* gr);
+  virtual void ExecuteEvent(int event, int px, int py){
+    fParent->ExecuteEvent(event, px, py);
+  }
+
+  // Satisfy pure virtual overload of GuiParent
+  virtual void Draw(Option_t* opt = "");
+
+  // Walk up parent tree until a NULL is returned
+  GuiParent* findOriginator() const;
+
+
+ public:
+  friend class GuiParent;
+  virtual GuiParent* getParent() const {return fParent;}
+ private:
+  GuiParent* fParent;
+  TString fDrawOpt; // keep it somewhere
   
 };
 
