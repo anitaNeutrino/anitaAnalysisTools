@@ -45,12 +45,13 @@ class GuiParent {
   size_t addGuiChild(const TGraph& grRef,  Option_t* drawOpt); // Copies and owns the copy
   size_t copyChildren(const GuiParent* that); // copy all children from that, and add to this  
 
+  const TGraphInteractive* findChild(const char* name);
 
- protected:
+  GuiParent(){;}
   virtual ~GuiParent(); // Delete children on destruction in here
+  void deleteChildren();
   
  private:
-  GuiParent(){;}
   
   friend class TGraphInteractive;
   void removeReference(TGraphInteractive* grChild);  
@@ -62,6 +63,7 @@ class GuiParent {
 class TGraphInteractive : public TGraphAligned, public GuiParent {
  public:
   TGraphInteractive() {;}
+  TGraphInteractive(int n, const double* x, const double* y, Option_t* drawOpt = "");
   // TGraphInteractive(const TGraphInteractive* gr);
   TGraphInteractive(const TGraph* gr, Option_t* drawOpt);
   virtual ~TGraphInteractive();

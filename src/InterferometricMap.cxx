@@ -106,21 +106,6 @@ const TDecompSVD& Acclaim::InterferometricMap::getSVD(){
  */
 void Acclaim::InterferometricMap::Draw(Option_t* opt){
   TH2D::Draw(opt);
-
-
-  TGraph& grSun = getSunGraph();
-  if(grSun.GetN() > 0) grSun.Draw("psame");
-
-  TGraph& grTruth = getTruthGraph();
-  if(grTruth.GetN() > 0) grTruth.Draw("psame");
-
-  if(fIsZoomMap){
-    TGraph& grPeak = getPeakPointGraph();
-    grPeak.Draw("psame");
-
-    TGraph& grEdge = getEdgeBoxGraph();
-    grEdge.Draw("lsame");
-  }  
 }
 
 
@@ -138,7 +123,7 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
     (void) x;
     (void) y;
     new TCanvas();
-    Draw("colz");
+    DrawGroup("colz");
   }  
 }
 
@@ -428,6 +413,12 @@ Acclaim::InterferometricMap::InterferometricMap()
  */
 Acclaim::InterferometricMap::~InterferometricMap(){
   deletePat();
+}
+
+
+void Acclaim::InterferometricMap::Reset(Option_t* opt){
+  TH2D::Reset(opt);
+  deleteChildren();
 }
 
 
@@ -1035,44 +1026,29 @@ void Acclaim::InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>
 
 
 
-TGraph& Acclaim::InterferometricMap::findOrMakeGraph(TString name){
 
-  std::map<TString, TGraph>::iterator it = grs.find(name);
-  if(it!=grs.end()){
-    it->second.SetLineColor(GetLineColor());
-    return it->second;
+const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getPeakPointGraph(){
+
+  TString name = "grPeak";
+  TGraphInteractive* grPeak = const_cast<TGraphInteractive*>(findChild(name));
+  if(grPeak==NULL){
+    grPeak = new TGraphInteractive(1, &fPeakPhi, &fPeakTheta, "p");
+    grPeak->SetName(name);
+    addGuiChild(grPeak);
   }
-  else{
-    TGraph gr;
-    gr.SetName(name);
-    gr.SetLineColor(GetLineColor());
-    gr.SetLineWidth(GetLineWidth());
-    // gr.SetMarkerColor(GetLineColor());
-    grs[name] = gr;    
-    return grs[name];
-  }  
-}
-
-
-TGraph& Acclaim::InterferometricMap::getPeakPointGraph(){
-
-  TGraph& gr = findOrMakeGraph("grPeak");
-  if(gr.GetN()==0){
-    gr.SetPoint(0, fPeakPhi, fPeakTheta);
-  }
-  gr.SetMarkerColor(GetLineColor());
-  gr.SetMarkerStyle(8);
-  gr.SetMarkerSize(1);
-  return grs["grPeak"];
+  grPeak->SetMarkerColor(GetLineColor());
+  grPeak->SetMarkerStyle(8);
+  grPeak->SetMarkerSize(1);
+  return grPeak;
   
 }
 
 
-TGraph& Acclaim::InterferometricMap::getSunGraph(){
+const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getSunGraph(){
 
-  TGraph& grSun = findOrMakeGraph("grSun");
-
-  if(fUsefulPat){
+  TString name = "grSun";
+  TGraphInteractive* grSun = const_cast<TGraphInteractive*>(findChild(name));
+  if(fUsefulPat && grSun==NULL){
     Double_t phiDeg, thetaDeg;
     fUsefulPat->getSunPosition(phiDeg, thetaDeg);
 
@@ -1081,21 +1057,22 @@ TGraph& Acclaim::InterferometricMap::getSunGraph(){
     phiDeg = phiDeg >= phi0 + DEGREES_IN_CIRCLE ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
     thetaDeg*=-1;
 
-    grSun.SetPoint(0, phiDeg, thetaDeg);
+    grSun = new TGraphInteractive(1, &phiDeg, &thetaDeg, "p");
+    grSun->SetName(name);
+    addGuiChild(grSun);
   }
-  grSun.SetMarkerStyle(kOpenCircle);
-  grSun.SetMarkerSize(1);
-  return grs["grSun"];
-  
+  grSun->SetMarkerStyle(kOpenCircle);
+  grSun->SetMarkerSize(1);
+  return grSun;  
 }
 
 
-TGraph& Acclaim::InterferometricMap::getTruthGraph(){
+const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getTruthGraph(){
 
-  const char* grName = "grTruthGraph";
-  TGraph& grTruth = findOrMakeGraph(grName);
+  const char* name = "grTruth";
+  TGraphInteractive* grTruth = const_cast<TGraphInteractive*>(findChild(name));
 
-  if(fUsefulPat && truthLon > -9999 && truthLat > -9999 && truthAlt > -9999){
+  if(fUsefulPat && grTruth == NULL && truthLon > -9999 && truthLat > -9999 && truthAlt > -9999){
     Double_t thetaDeg, phiDeg;
     fUsefulPat->getThetaAndPhiWave(truthLon, truthLat, truthAlt, thetaDeg, phiDeg);
 
@@ -1106,39 +1083,48 @@ TGraph& Acclaim::InterferometricMap::getTruthGraph(){
     phiDeg = phiDeg < phi0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
     phiDeg = phiDeg >= phi0 + DEGREES_IN_CIRCLE ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
 
-    grTruth.SetPoint(0, phiDeg, thetaDeg);
+    grTruth = new TGraphInteractive(1, &phiDeg, &thetaDeg);
+    addGuiChild(grTruth);    
     // std::cerr << phiDeg << "\t" << thetaDeg << "\t" << std::endl;
   }
-  grTruth.SetMarkerStyle(kFullStar);
-  grTruth.SetMarkerSize(1.5);
-  grTruth.SetMarkerColor(kRed);
-  return grs[grName];
+  grTruth->SetMarkerStyle(kFullStar);
+  grTruth->SetMarkerSize(1.5);
+  grTruth->SetMarkerColor(kRed);
+  return grTruth;
   
 }
 
 
-TGraph& Acclaim::InterferometricMap::getEdgeBoxGraph(){
+const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getEdgeBoxGraph(){
 
-  TGraph& gr = findOrMakeGraph("grEdgeBox");
-  const TAxis* phiAxis = GetPhiAxis();
-  const TAxis* thetaAxis = GetThetaAxis();  
-  // left->right across bottom edge
-  for(int phiBin=1; phiBin <= GetNbinsPhi()+1; phiBin++){
-    gr.SetPoint(gr.GetN(), phiAxis->GetBinLowEdge(phiBin), thetaAxis->GetBinLowEdge(1));
+  const char* name = "grEdgeBox";
+  TGraphInteractive* grEdgeBox = const_cast<TGraphInteractive*>(findChild(name));
+
+  if(grEdgeBox==NULL){
+    grEdgeBox = new TGraphInteractive();
+    const TAxis* phiAxis = GetPhiAxis();
+    const TAxis* thetaAxis = GetThetaAxis();  
+    // left->right across bottom edge
+    for(int phiBin=1; phiBin <= GetNbinsPhi()+1; phiBin++){
+      grEdgeBox->SetPoint(grEdgeBox->GetN(), phiAxis->GetBinLowEdge(phiBin), thetaAxis->GetBinLowEdge(1));
+    }
+    // bottom->top on right edge
+    for(int thetaBin=1; thetaBin <= GetNbinsTheta()+1; thetaBin++){
+      grEdgeBox->SetPoint(grEdgeBox->GetN(), phiAxis->GetBinLowEdge(GetNbinsPhi()+1), thetaAxis->GetBinLowEdge(thetaBin));
+    }
+    // right->left on top edge
+    for(int phiBin=GetNbinsPhi()+1; phiBin > 0; phiBin--){
+      grEdgeBox->SetPoint(grEdgeBox->GetN(), phiAxis->GetBinLowEdge(phiBin), thetaAxis->GetBinLowEdge(GetNbinsTheta()+1));
+    }
+    // top->bottom on left edge
+    for(int thetaBin=GetNbinsTheta()+1; thetaBin > 0; thetaBin--){
+      grEdgeBox->SetPoint(grEdgeBox->GetN(), phiAxis->GetBinLowEdge(1), thetaAxis->GetBinLowEdge(thetaBin));
+    }
+    addGuiChild(grEdgeBox);
   }
-  // bottom->top on right edge
-  for(int thetaBin=1; thetaBin <= GetNbinsTheta()+1; thetaBin++){
-    gr.SetPoint(gr.GetN(), phiAxis->GetBinLowEdge(GetNbinsPhi()+1), thetaAxis->GetBinLowEdge(thetaBin));
-  }
-  // right->left on top edge
-  for(int phiBin=GetNbinsPhi()+1; phiBin > 0; phiBin--){
-    gr.SetPoint(gr.GetN(), phiAxis->GetBinLowEdge(phiBin), thetaAxis->GetBinLowEdge(GetNbinsTheta()+1));
-  }
-  // top->bottom on left edge
-  for(int thetaBin=GetNbinsTheta()+1; thetaBin > 0; thetaBin--){
-    gr.SetPoint(gr.GetN(), phiAxis->GetBinLowEdge(1), thetaAxis->GetBinLowEdge(thetaBin));
-  }
+  grEdgeBox->SetLineWidth(3);
+  grEdgeBox->SetLineColor(GetLineColor());  
   
-  return grs["grEdgeBox"];
+  return grEdgeBox;
   
 }

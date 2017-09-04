@@ -12,16 +12,19 @@
 
 Acclaim::GuiParent::~GuiParent(){
   // delete all children
-  for(unsigned i=0; i < fChildren.size(); i++){
-    if(fChildren[i]){
-      delete fChildren[i];
-      // I think the children should then have zero'd the parent pointer
-      // in their own destructor?
-    }
-  }
+  deleteChildren();
 }
 
 
+void Acclaim::GuiParent::deleteChildren(){
+  for(unsigned i=0; i < fChildren.size(); i++){
+    if(fChildren[i]){
+      delete fChildren[i];
+      fChildren[i] = NULL;
+    }
+  }
+  fChildren.resize(0);
+}
 
 
 
@@ -80,6 +83,28 @@ void Acclaim::GuiParent::DrawGroup(Option_t* opt){
 }
 
 
+/** 
+ * Get a child TGraphInteractive with name matching name
+ * Will return the first graph matching name.
+ * The graph pointed to is still owned by guiParent, do not delete!
+ * 
+ * @param name is the name to match
+ * 
+ * @return pointer to the first graph in fChildren called name
+ */
+const Acclaim::TGraphInteractive* Acclaim::GuiParent::findChild(const char* name){
+
+  const TGraphInteractive* grChild = NULL;
+
+  for(UInt_t i=0; i < fChildren.size(); i++){
+    if(fChildren[i] && strcmp(fChildren[i]->GetName(), name)==0){
+      return grChild = fChildren[i];
+      break;
+    }
+  }
+  return grChild;
+}
+
 
 
 
@@ -125,6 +150,12 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOp
 
   GetXaxis()->SetRange(gr->GetXaxis()->GetFirst(), gr->GetXaxis()->GetLast());
   
+}
+
+
+Acclaim::TGraphInteractive::TGraphInteractive(int n, const double* x, const double* y, Option_t* drawOpt)
+    : TGraphAligned(n, x, y), fParent(NULL), fDrawOpt(drawOpt)
+{
 }
 
 

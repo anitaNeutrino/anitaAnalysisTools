@@ -675,12 +675,7 @@ void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat*
   }  
   else{// I own the map so I can overwrite it to avoid allocating memory
     // std::cerr << "old coarse map " << pol << std::endl;
-
-    for(int phiBin=1; phiBin<=coarseMaps[pol]->GetNbinsPhi(); phiBin++){
-      for(int thetaBin=1; thetaBin<=coarseMaps[pol]->GetNbinsTheta(); thetaBin++){
-	coarseMaps[pol]->SetBinContent(phiBin, thetaBin, 0);	
-      }
-    }
+    coarseMaps[pol]->Reset();
   }
 
   if(pat){
@@ -1085,23 +1080,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   
   TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
   
-  InterferometricMap* hCoarse = coarseMaps[pol];
-  // if(fDoHeatMap > 0 && heatMaps[pol]){
-  //   heatMaps[pol]->Draw("colz");
-  // }  
-  // else{
-  if(hCoarse){
-    hCoarse->Draw("colz");
-    // TGraph& grSun = hCoarse->getSunGraph();
-    // grSun.Draw("psame");
-    // grSun.SetMarkerStyle(kOpenCircle);
-
-    // TGraph& grMc = hCoarse->getTruthGraph();
-    // grMc.Draw("psame");
-    // grMc.SetMarkerStyle(kFullStar);
-  }
-
-  // std::vector<TGraph> grPeaks;
+  InterferometricMap* hCoarse = coarseMaps[pol];  
 
   TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
 
@@ -1123,17 +1102,13 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       h->SetLineColor(peakColors[pol][peakInd]);
       h->SetLineWidth(3);
 
-      h->Draw("col");
+      h->DrawGroup("col");
       drawnFineMaps.push_back(h);      
       
       coarseMapPad->cd();
 
-      TGraph& gr2 = h->getEdgeBoxGraph();
-      TGraph* gr3 = (TGraph*) gr2.Clone();
-      gr3->SetBit(kCanDelete, true);// leave to ROOT garbage collector
-
-      gr3->SetLineWidth(2);
-      gr3->Draw("lsame");	
+      const TGraphInteractive* grEdge = h->getEdgeBoxGraph();
+      hCoarse->addGuiChild(*grEdge, "l");
     }
 
     TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
@@ -1197,6 +1172,9 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     }
   }
 
+  coarseMapPad->cd();
+  hCoarse->DrawGroup("colz");  
+
   if(drawnFineMaps.size() > 0){
     std::list<InterferometricMap*>::iterator it = drawnFineMaps.begin();
     Double_t polMax = -1e9;
@@ -1218,7 +1196,6 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     }
     // std::cout << polMax << "\t" << polMin << std::endl;
   }
-
 
   TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
   

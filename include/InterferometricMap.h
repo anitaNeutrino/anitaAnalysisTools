@@ -45,6 +45,7 @@
 #include "TGraph.h"
 #include <map>
 #include "TDecompSVD.h"
+#include "TGraphInteractive.h"
 
 class Adu5Pat;
 class UsefulAdu5Pat;
@@ -58,7 +59,7 @@ namespace Acclaim
   class CrossCorrelator;
 
 
-  class InterferometricMap : public TH2D {
+class InterferometricMap : public TH2D, public GuiParent {
 
   public:
     InterferometricMap(); //!< Coarse map constructor (also default constructor for ROOT)
@@ -82,14 +83,16 @@ namespace Acclaim
     inline const TAxis* GetPhiAxis() const {return GetXaxis();}
     inline const TAxis* GetThetaAxis() const {return GetYaxis();}
 
-    TGraph& getPeakPointGraph(); // for plotting
-    TGraph& getEdgeBoxGraph(); // for plotting
-    TGraph& getSunGraph(); // for plotting
-    TGraph& getTruthGraph(); // for plotting    
+    const TGraphInteractive* getPeakPointGraph(); // for plotting
+    const TGraphInteractive* getEdgeBoxGraph(); // for plotting
+    const TGraphInteractive* getSunGraph(); // for plotting
+    const TGraphInteractive* getTruthGraph(); // for plotting
 
     bool isAZoomMap() const {return fIsZoomMap;}
     Int_t getPeakPhiSector() const {return fPeakPhiSector;}
     AnitaPol::AnitaPol_t getPol() const {return pol;}
+
+    virtual void Reset(Option_t* = "");
     
   protected:
 
@@ -134,9 +137,7 @@ namespace Acclaim
     Double_t fPeakTheta; //!< Location in theta of the peak of the quadratic fit to the region around the peak bin
     
 
-    std::map<TString, TGraph> grs;
-
-    ClassDef(InterferometricMap, 2);
+    ClassDef(InterferometricMap, 3);
 
     // static members, may end up elsewhere at some point
   public:
