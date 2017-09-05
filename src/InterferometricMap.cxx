@@ -132,6 +132,7 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
     new TCanvas();
     DrawGroup("colz");
   }
+  TH2D::ExecuteEvent(event, x, y);
 }
 
 
@@ -463,9 +464,11 @@ void Acclaim::InterferometricMap::addGpsInfo(const Adu5Pat* pat){
  */
 void Acclaim::InterferometricMap::addTruthInfo(const TruthAnitaEvent* truth){
 
-  truthLon = truth->sourceLon;
-  truthLat = truth->sourceLat;
-  truthAlt = truth->sourceAlt;
+  if(truth){
+    truthLon = truth->sourceLon;
+    truthLat = truth->sourceLat;
+    truthAlt = truth->sourceAlt;
+  }
   // std::cerr << truthLon << "\t" << truthLat << "\t" << truthAlt << std::endl;
 }
 
@@ -1079,7 +1082,7 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getTruthGraph(){
   const char* name = "grTruth";
   TGraphInteractive* grTruth = const_cast<TGraphInteractive*>(findChild(name));
 
-  if(fUsefulPat && grTruth == NULL && truthLon > -9999 && truthLat > -9999 && truthAlt > -9999){
+  if(fUsefulPat && grTruth == NULL && truthLon > -999 && truthLat > -999 && truthAlt > -999){
     Double_t thetaDeg, phiDeg;
     fUsefulPat->getThetaAndPhiWave(truthLon, truthLat, truthAlt, thetaDeg, phiDeg);
 
@@ -1094,9 +1097,11 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getTruthGraph(){
     addGuiChild(grTruth);    
     // std::cerr << phiDeg << "\t" << thetaDeg << "\t" << std::endl;
   }
-  grTruth->SetMarkerStyle(kFullStar);
-  grTruth->SetMarkerSize(1.5);
-  grTruth->SetMarkerColor(kRed);
+  if(grTruth){
+    grTruth->SetMarkerStyle(kFullStar);
+    grTruth->SetMarkerSize(1.5);
+    grTruth->SetMarkerColor(kRed);
+  }
   return grTruth;
   
 }

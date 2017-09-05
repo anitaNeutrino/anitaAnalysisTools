@@ -266,4 +266,5 @@ void Acclaim::TGraphInteractive::ExecuteEvent(int event, int px, int py){
     }
     
   }
+  TGraphAligned::ExecuteEvent(event, px, py);
 }
