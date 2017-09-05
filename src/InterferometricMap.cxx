@@ -100,11 +100,18 @@ const TDecompSVD& Acclaim::InterferometricMap::getSVD(){
 
 
 /** 
- * Draw the interferometric map and any contained TGraphs
+ * Draw the interferometric map only (use DrawGroup to also draw TGraphInteractives)
  * 
  * @param opt 
  */
 void Acclaim::InterferometricMap::Draw(Option_t* opt){
+
+  // trigger the creation of the contained graphs upon drawing
+  getSunGraph();
+  getTruthGraph();
+  if(fIsZoomMap){
+    getEdgeBoxGraph();
+  }
   TH2D::Draw(opt);
 }
 
@@ -124,7 +131,7 @@ void Acclaim::InterferometricMap::ExecuteEvent(int event, int x, int y){
     (void) y;
     new TCanvas();
     DrawGroup("colz");
-  }  
+  }
 }
 
 
@@ -1063,7 +1070,7 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getSunGraph(){
   }
   grSun->SetMarkerStyle(kOpenCircle);
   grSun->SetMarkerSize(1);
-  return grSun;  
+  return grSun;
 }
 
 
@@ -1077,13 +1084,13 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getTruthGraph(){
     fUsefulPat->getThetaAndPhiWave(truthLon, truthLat, truthAlt, thetaDeg, phiDeg);
 
     thetaDeg*=-TMath::RadToDeg();
-    phiDeg*=TMath::RadToDeg();    
+    phiDeg*=TMath::RadToDeg();
 
     const double phi0 = getBin0PhiDeg();
     phiDeg = phiDeg < phi0 ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
     phiDeg = phiDeg >= phi0 + DEGREES_IN_CIRCLE ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
 
-    grTruth = new TGraphInteractive(1, &phiDeg, &thetaDeg);
+    grTruth = new TGraphInteractive(1, &phiDeg, &thetaDeg, "p");
     addGuiChild(grTruth);    
     // std::cerr << phiDeg << "\t" << thetaDeg << "\t" << std::endl;
   }
@@ -1101,7 +1108,7 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getEdgeBoxGraph()
   TGraphInteractive* grEdgeBox = const_cast<TGraphInteractive*>(findChild(name));
 
   if(grEdgeBox==NULL){
-    grEdgeBox = new TGraphInteractive();
+    grEdgeBox = new TGraphInteractive(0, NULL, NULL, "l");
     const TAxis* phiAxis = GetPhiAxis();
     const TAxis* thetaAxis = GetThetaAxis();  
     // left->right across bottom edge

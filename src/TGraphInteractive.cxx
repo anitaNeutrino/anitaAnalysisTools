@@ -7,9 +7,6 @@
 
 
 
-
-
-
 Acclaim::GuiParent::~GuiParent(){
   // delete all children
   deleteChildren();
@@ -134,6 +131,7 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOp
 {
   SetLineColor(gr->GetLineColor());
   SetLineStyle(gr->GetLineStyle());
+  SetLineWidth(gr->GetLineWidth());
   SetFillColor(0);
   SetFillStyle(gr->GetFillStyle());
   SetName(gr->GetName());

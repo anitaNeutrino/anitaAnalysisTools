@@ -26,7 +26,7 @@ class TGraphInteractive;
 
 /** 
  * Skeletal class to inherit from if you want to have a bunch of TGraphs which follow you around a ROOT GUI
- * Draw the whole set (self + children)
+ * Draw the whole set (self + children) with DrawGroup(Option_t*)
  */
 class GuiParent {
  public: 
@@ -64,9 +64,9 @@ class TGraphInteractive : public TGraphAligned, public GuiParent {
  public:
   TGraphInteractive() {;}
   TGraphInteractive(int n, const double* x, const double* y, Option_t* drawOpt = "");
-  // TGraphInteractive(const TGraphInteractive* gr);
   TGraphInteractive(const TGraph* gr, Option_t* drawOpt);
   virtual ~TGraphInteractive();
+
   // Satisfy pure virtual overload of GuiParent
   virtual void Draw(Option_t* opt = ""){
     TGraphAligned::Draw(opt);
