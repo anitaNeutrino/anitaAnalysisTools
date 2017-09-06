@@ -374,3 +374,20 @@ int Acclaim::IsNotTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::
   (void) peakInd;
   return sum->flags.pulser == 0;
 }
+
+
+
+/**
+ * Do the standardized peak moments match MC expectations?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  handleDefaults(sum, pol, peakInd);
+  return (sum->coherent_filtered[pol][peakInd].standardizedPeakMoment(1) > 60 && sum->deconvolved_filtered[pol][peakInd].standardizedPeakMoment(1) > 60);
+}

@@ -171,6 +171,12 @@ class CloseToMC : public AnalysisCut{
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
   };
 
+  class SignalLikeFirstStandardizedPeakMoments : public AnalysisCut{
+   public:
+    SignalLikeFirstStandardizedPeakMoments() : AnalysisCut("signalLikeFirstStandardizedPeakMoments", "Signal-like first standardized peak moments", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+  };
+
 // const globals so you don't need to instantiate these yourself
   namespace AnalysisCuts{
     const IsAboveHorizontal isAboveHorizontal;
@@ -190,6 +196,7 @@ class CloseToMC : public AnalysisCut{
     const IsRfTrigger isRfTrigger;
     const SmallDeltaRough smallDeltaRough;
     const IsNotTaggedAsPulser isNotTaggedAsPulser;
+    const SignalLikeFirstStandardizedPeakMoments signalLikeFirstStandardizedPeakMoments;
   }
 }
 
