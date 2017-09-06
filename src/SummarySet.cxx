@@ -10,6 +10,7 @@
 #include "SummarySelector.h"
 #include "TCanvas.h"
 #include "TSeqCollection.h"
+#include "TROOT.h"
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
