@@ -80,6 +80,9 @@ class AnalysisReco : public TObject {
   void directionAndAntennasToDeltaTs(const std::vector<Int_t>& theAnts, AnitaPol::AnitaPol_t pol,
                                      Double_t peakPhiDeg, Double_t peakThetaDeg, std::vector<double>& dts);
 
+  static void setTriggerInfoFromPeakPhi(const RawAnitaHeader* header, AnitaPol::AnitaPol_t pol,
+                                        Int_t peakPhiSector, AnitaEventSummary::PointingHypothesis& peak);
+
   const std::vector<int>& phiSectorToCoherentAnts(int peakPhiSector){return phiSectorToAnts[peakPhiSector];}
   void wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs);
 

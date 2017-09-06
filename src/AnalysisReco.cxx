@@ -342,10 +342,15 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
       InterferometricMap* h = fineMaps[pol][peakInd];
       if(h){
+
+        // for plotting
         h->addGpsInfo(fEv->getGPS());
         h->addTruthInfo(truth);
-      
-        h->getPeakInfo(eventSummary->peak[pol][peakInd].value, eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][peakInd].theta);
+
+
+        h->getPeakInfo(eventSummary->peak[pol][peakInd].value,
+                       eventSummary->peak[pol][peakInd].phi,
+                       eventSummary->peak[pol][peakInd].theta);
 
         // fill in difference between rough and fine
         eventSummary->peak[pol][peakInd].dphi_rough = eventSummary->peak[pol][peakInd].phi - coarseMapPeakPhiDegs.at(peakInd);
@@ -354,27 +359,8 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
         // based on Cosmin's comments in AnitaAnalysisSummary.h
         eventSummary->peak[pol][peakInd].phi_separation = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, eventSummary->peak[pol][0].phi);
 
-        // hwAngle, is the angle between the peak and the nearest L3 phi-sector trigger of that polarisation
-        const RawAnitaHeader* header = fEv->getHeader();
-        eventSummary->peak[pol][peakInd].hwAngle = -9999;
-        for(int phi=0; phi < NUM_PHI; phi++){
-          int phiWasTriggered = header->isInL3Pattern(phi, pol);
-          if(phiWasTriggered > 0){
-            double phiSectorPhi = h->getPhiSectorCenterPhiDeg(phi);
-            double dPhi = RootTools::getDeltaAngleDeg(eventSummary->peak[pol][peakInd].phi, phiSectorPhi);
-            if(TMath::Abs(dPhi) < TMath::Abs(eventSummary->peak[pol][peakInd].hwAngle)){
-              eventSummary->peak[pol][peakInd].hwAngle = dPhi;
-            }
-          }
-        }
-
-        int peakPhiSector = h->getPeakPhiSector();
-        AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
-        eventSummary->peak[pol][peakInd].triggered = header->isInL3Pattern(peakPhiSector, pol);
-        eventSummary->peak[pol][peakInd].triggered_xpol = header->isInL3Pattern(peakPhiSector, xPol);
-
-        eventSummary->peak[pol][peakInd].masked = header->isInPhiMaskOffline(peakPhiSector, pol) || header->isInL1MaskOffline(peakPhiSector, pol);
-        eventSummary->peak[pol][peakInd].masked_xpol = header->isInPhiMaskOffline(peakPhiSector, xPol) || header->isInL1MaskOffline(peakPhiSector, xPol);
+        // hwAngle, is the angle between the peak and the nearest L3 phi-sector trigger of that polarisation        
+        setTriggerInfoFromPeakPhi(fEv->getHeader(), pol, h->getPeakPhiSector(), eventSummary->peak[pol][peakInd]);
 
         // coherent
         // coherent_filtered
@@ -422,6 +408,53 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
 
 
 
+
+
+/** 
+ * Sets the phi depended trigger stuff in the peak
+ * 
+ * @param header is the RawAnitaHeader
+ * @param h is the interferometric map
+ * @param peak is a reference
+ */
+void Acclaim::AnalysisReco::setTriggerInfoFromPeakPhi(const RawAnitaHeader* header,
+                                                      AnitaPol::AnitaPol_t pol,
+                                                      Int_t peakPhiSector,
+                                                      AnitaEventSummary::PointingHypothesis& peak){
+
+
+  AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
+  // const RawAnitaHeader* header = fEv->getHeader();
+  peak.hwAngle = -9999;
+  peak.hwAngleXPol = -9999;
+
+  for(int phi=0; phi < NUM_PHI; phi++){
+    int phiWasTriggered = header->isInL3Pattern(phi, pol);
+    if(phiWasTriggered > 0){
+      double phiSectorPhi = InterferometricMap::getPhiSectorCenterPhiDeg(phi);
+      double dPhi = RootTools::getDeltaAngleDeg(peak.phi, phiSectorPhi);
+      if(TMath::Abs(dPhi) < TMath::Abs(peak.hwAngle)){
+        peak.hwAngle = dPhi;
+      }
+    }
+    int phiWasTriggeredXPol = header->isInL3Pattern(phi, xPol);
+    if(phiWasTriggeredXPol > 0){
+      double phiSectorPhi = InterferometricMap::getPhiSectorCenterPhiDeg(phi);
+      double dPhi = RootTools::getDeltaAngleDeg(peak.phi, phiSectorPhi);
+      if(TMath::Abs(dPhi) < TMath::Abs(peak.hwAngleXPol)){
+        peak.hwAngleXPol = dPhi;
+      }
+    }
+  }
+
+  peak.triggered = header->isInL3Pattern(peakPhiSector, pol);
+  peak.triggered_xpol = header->isInL3Pattern(peakPhiSector, xPol);
+
+  peak.masked = header->isInPhiMaskOffline(peakPhiSector, pol) || header->isInL1MaskOffline(peakPhiSector, pol);
+  peak.masked_xpol = header->isInPhiMaskOffline(peakPhiSector, xPol) || header->isInL1MaskOffline(peakPhiSector, xPol);
+
+  return;
+}
 
 
 /**
