@@ -79,6 +79,8 @@ void overlayOneDimDists(TFile* f){
     double minFact = 0.1; //0.9* - 0.8*double(c1->GetLogy());
     hs->SetMaximum(max*1.1);
     hs->SetMinimum(min*minFact);
+    hb->SetMaximum(max*1.1);
+    hb->SetMinimum(min*minFact);
   }
 
   
@@ -155,7 +157,6 @@ void drawEfficiencies(TFile* f, bool makeFisher){
 
   for(int i=0; i < l->GetEntries(); i++){
     TString name = l->At(i)->GetName();
-
     bool effPrefix = name.Contains("eff_");
     if(effPrefix && name.Contains("_vs_SNR")){
       effSnr.push_back((TEfficiency*)f->Get(name));
@@ -210,21 +211,21 @@ void drawEfficiencies(TFile* f, bool makeFisher){
     TString passedCommand = "TMath::Log10(mc_energy)>>" + namePassed;
     TString cutCommand = "weight*(" + cutForm + TString::Format("> %lf)", fisherCutVal);
     signalTree->Draw(passedCommand, cutCommand, "goff");
-    
+
     TString nameTotal = name + "_total";
     TH1D* hTotal = new TH1D(nameTotal, nameTotal, nx, xLow, xHigh);
 
     std::cout << hPassed->Integral() << "\t" << hTotal->Integral() << std::endl;
 
     TString totalCommand = "TMath::Log10(mc_energy)>>" + nameTotal;
-    
+
     signalTree->Draw(totalCommand, "weight", "goff");
-    
+
     TEfficiency* effE = new TEfficiency(*hPassed, *hTotal);
     effE->SetName(name);
     effE->SetTitle("Fisher effiency?");
     effE->SetTitle(TString::Format("Thermal cut efficiency at Fisher Score of %4.2lf; log10(Energy) eV; Efficiency", fisherCutVal));
-                                        
+
     auto c1 = new TCanvas();
     effE->Draw();
   }
@@ -233,7 +234,7 @@ void drawEfficiencies(TFile* f, bool makeFisher){
 void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
-  drawFisherPlot(f);
+  // drawFisherPlot(f);
   drawEfficiencies(f, true);
   // overlayOneDimDists(f);
   

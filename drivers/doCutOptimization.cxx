@@ -69,23 +69,25 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dPhiMC()", false)); // debugging
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dThetaMC()", false)); // debugging
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngle()", true));  // definitionally can't do better than the hardware trigger, I think  
-
   // map info
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", true)); // map values
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSun())", true)); // delta phi sun
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered_xpol", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked_xpol", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().minAbsHwAngle())", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngleLessThanAbsHwAngleXPol()", true));
 
   // waveform info
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcCoherentFiltered().standardizedPeakMoment(1)", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().standardizedPeakMoment(1)", true));  
   
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().snr", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().impulsivityMeasure)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::SignBit(sum.mcDeconvolved().impulsivityMeasure)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().localMaxToMinTime)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolved().globalMaxToMinTime)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolvedFiltered().impulsivityMeasure)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::SignBit(sum.mcDeconvolvedFiltered().impulsivityMeasure)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolvedFiltered().localMaxToMinTime)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolvedFiltered().globalMaxToMinTime)", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().peakHilbert", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().linearPolFrac()", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().circPolFrac()", true));

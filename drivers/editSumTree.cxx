@@ -15,15 +15,16 @@ using namespace Acclaim;
  */
 int main(int argc, char* argv[]){
 
-  if(argc!=2){
-    std::cerr << "Usage: " <<  argv[0] << " run" << std::endl;
+  if(argc!=4){
+    std::cerr << "Usage: " <<  argv[0] << " inputDir inputGlob run" << std::endl;
     return 1;
   }
-  int run = atoi(argv[1]);
 
-  TString inFileBaseName = "filterDecimatedSineSubPlusBrickWall";
-  TString inDir = "~/ANITA/anita3Analysis/sineSubPlusNotches/2017_08_23/";
-  TString inGlob = inDir + inFileBaseName + TString::Format("_%d_*.root", run);
+  TString inDir = argv[1];
+  TString inFileBaseName = argv[2];
+  int run = atoi(argv[3]);
+
+  TString inGlob = inDir + "/" + inFileBaseName + TString::Format("_%d_*.root", run);
   SummarySet ss(inGlob);
 
   TString outFileName = inFileBaseName + TString::Format("_%d.root", run);
@@ -31,7 +32,6 @@ int main(int argc, char* argv[]){
   TTree* sumTree = new TTree("sumTree", "sumTree");
   AnitaEventSummary* sum = NULL;
   sumTree->Branch("sum", &sum);
-
 
   AnitaDataset d(run);
 
