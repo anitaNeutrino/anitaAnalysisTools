@@ -796,7 +796,6 @@ void Acclaim::InterferometricMap::fitPeakWithQuadratic(Int_t peakPhiBin, Int_t p
     return;    
   }
 
-
   // put bin values around peak into a vector for the matrix equation we're about to solve
   TVectorD peakData(NUM_BINS_QUAD_FIT_PHI*NUM_BINS_QUAD_FIT_THETA);
   int row=0;
@@ -808,7 +807,7 @@ void Acclaim::InterferometricMap::fitPeakWithQuadratic(Int_t peakPhiBin, Int_t p
   }
     
   // solve for the quadratic coefficients a,b,c,d,e,f
-  TDecompSVD& svd = (TDecompSVD&) getSVD(); // cast away const-ness
+  TDecompSVD& svd = const_cast<TDecompSVD&>(getSVD()); // cast away const-ness
   Bool_t ok = false;
   TVectorD quadraticCoefficients = svd.Solve(peakData, ok);
   if(!ok){
@@ -837,8 +836,16 @@ void Acclaim::InterferometricMap::fitPeakWithQuadratic(Int_t peakPhiBin, Int_t p
   fPeakTheta = y_c + GetThetaAxis()->GetBinLowEdge(peakThetaBin+1);
   fPeakValue = p_c;
 
-  // std::cerr << a << "\t" << b << "\t" << c << "\t" << d << "\t" << e << "\t" << f << std::endl;
-  // std::cerr << fPeakPhi << "\t" << fPeakTheta << "\t" << fPeakValue << "\t" << GetBinContent(peakPhiBin+1, peakThetaBin+1) << std::endl;
+  // now also get uncertainties, correlation, chisquare
+  TVectorD residual = svd.GetMatrix()*quadraticCoefficients - peakData;
+  fPeakReducedChisquare = residual.Norm2Sqr()/(residual.GetNrows());
+
+  // TODO, add uncertainties in phi/theta and covariance
+  // would have been better to do a gaussian fit
+  // by taking the logarithm beforehand...
+  fPeakSigmaPhi = 0;
+  fPeakSigmaTheta = 0;
+  fPeakCovariance = 0;
 }
 
 
@@ -879,64 +886,64 @@ void Acclaim::InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Dou
     for(Int_t phiBin=0; phiBin<nPhi; phiBin++){
       for(Int_t thetaBin = 0; thetaBin < nTheta; thetaBin++){
 
-	// if(allowedBins[phiBin][thetaBin] > 0){
-	if(allowedBins[phiBin*nTheta + thetaBin] > 0){	  
-	  // then we are in an allowed region
+        // if(allowedBins[phiBin][thetaBin] > 0){
+        if(allowedBins[phiBin*nTheta + thetaBin] > 0){
+          // then we are in an allowed region
 
-	  // Double_t mapValue = coarseMap[pol][phiBin][thetaBin];
-	  Double_t mapValue = GetBinContent(phiBin+1, thetaBin+1);
-	  if(mapValue > peakValues[peakInd]){
-	    // higher than the current highest map value
+          // Double_t mapValue = coarseMap[pol][phiBin][thetaBin];
+          Double_t mapValue = GetBinContent(phiBin+1, thetaBin+1);
+          if(mapValue > peakValues[peakInd]){
+            // higher than the current highest map value
 
-	    gotHere = 1;
-	    // Time for something a little tricky to read...
-	    // I want to stop bins that are on the edge of allowed regions registering as peaks
-	    // if the bins just inside the disallowed regions are higher valued.
-	    // To ensure a local maxima so I am going to ensure that all neighbouring
-	    // bins are less than the current value.
-	    // Checking the 3x3 grid around the current bin (wrapping in phi).
+            gotHere = 1;
+            // Time for something a little tricky to read...
+            // I want to stop bins that are on the edge of allowed regions registering as peaks
+            // if the bins just inside the disallowed regions are higher valued.
+            // To ensure a local maxima so I am going to ensure that all neighbouring
+            // bins are less than the current value.
+            // Checking the 3x3 grid around the current bin (wrapping in phi).
 
-	    // Wrap phi edges
-	    Int_t lastPhiBin = phiBin != 0 ? phiBin - 1 : (NUM_BINS_PHI*NUM_PHI) - 1;
-	    Int_t nextPhiBin = phiBin != (NUM_BINS_PHI*NUM_PHI) - 1 ? phiBin + 1 : 0;
+            // Wrap phi edges
+            Int_t lastPhiBin = phiBin != 0 ? phiBin - 1 : (NUM_BINS_PHI*NUM_PHI) - 1;
+            Int_t nextPhiBin = phiBin != (NUM_BINS_PHI*NUM_PHI) - 1 ? phiBin + 1 : 0;
 
 
-	    // Is current bin higher than phi neighbours in same theta row?
-	    // if(coarseMap[pol][lastPhiBin][thetaBin] < mapValue &&
-	    //    coarseMap[pol][nextPhiBin][thetaBin] < mapValue){
-	    if(GetBinContent(lastPhiBin+1, thetaBin+1) < mapValue &&
-	       GetBinContent(nextPhiBin+1, thetaBin+1) < mapValue){
+            // Is current bin higher than phi neighbours in same theta row?
+            // if(coarseMap[pol][lastPhiBin][thetaBin] < mapValue &&
+            //    coarseMap[pol][nextPhiBin][thetaBin] < mapValue){
+            if(GetBinContent(lastPhiBin+1, thetaBin+1) < mapValue &&
+               GetBinContent(nextPhiBin+1, thetaBin+1) < mapValue){
 
-	      gotHere = 2;
-	      // So far so good, now check theta neigbours
-	      // This doesn't wrap, so I will allow edge cases to pass as maxima
-	      Int_t nextThetaBin = thetaBin != (NUM_BINS_THETA) - 1 ? thetaBin+1 : thetaBin;
-	      Int_t lastThetaBin = thetaBin != 0 ? thetaBin-1 : thetaBin;
+              gotHere = 2;
+              // So far so good, now check theta neigbours
+              // This doesn't wrap, so I will allow edge cases to pass as maxima
+              Int_t nextThetaBin = thetaBin != (NUM_BINS_THETA) - 1 ? thetaBin+1 : thetaBin;
+              Int_t lastThetaBin = thetaBin != 0 ? thetaBin-1 : thetaBin;
 
-	      // Check theta bins below
-	      gotHere = 3;
-	      if(thetaBin == 0 || (GetBinContent(lastPhiBin+1, lastThetaBin+1) < mapValue &&
-				   GetBinContent(phiBin+1, lastThetaBin+1) < mapValue &&
-				   GetBinContent(nextPhiBin+1, lastThetaBin+1) < mapValue)){
+              // Check theta bins below
+              gotHere = 3;
+              if(thetaBin == 0 || (GetBinContent(lastPhiBin+1, lastThetaBin+1) < mapValue &&
+                                   GetBinContent(phiBin+1, lastThetaBin+1) < mapValue &&
+                                   GetBinContent(nextPhiBin+1, lastThetaBin+1) < mapValue)){
 
-		// Check theta bins above
-		gotHere = 4;
-		if(thetaBin == NUM_BINS_THETA-1 || (GetBinContent(lastPhiBin+1, nextThetaBin+1) < mapValue &&
-						    GetBinContent(phiBin+1, nextThetaBin+1) < mapValue &&
-						    GetBinContent(nextPhiBin+1, nextThetaBin+1) < mapValue)){
+                // Check theta bins above
+                gotHere = 4;
+                if(thetaBin == NUM_BINS_THETA-1 || (GetBinContent(lastPhiBin+1, nextThetaBin+1) < mapValue &&
+                                                    GetBinContent(phiBin+1, nextThetaBin+1) < mapValue &&
+                                                    GetBinContent(nextPhiBin+1, nextThetaBin+1) < mapValue)){
 
-		  // Okay okay okay... you're a local maxima, you can be my next peak.
-		  peakValues[peakInd] = GetBinContent(phiBin+1, thetaBin+1);
-		  // phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
-		  // thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
-		  phiDegs[peakInd] = GetPhiAxis()->GetBinLowEdge(phiBin+1);
-		  thetaDegs[peakInd] = GetThetaAxis()->GetBinLowEdge(thetaBin+1);		  
-		  // thetaDegs[peakInd] = Acclaim::InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
-		}
-	      }
-	    }
-	  }
-	}
+                  // Okay okay okay... you're a local maxima, you can be my next peak.
+                  peakValues[peakInd] = GetBinContent(phiBin+1, thetaBin+1);
+                  // phiDegs[peakInd] = phiWaveLookup[phiBin]*TMath::RadToDeg();
+                  // thetaDegs[peakInd] = thetaWaves[thetaBin]*TMath::RadToDeg();
+                  phiDegs[peakInd] = GetPhiAxis()->GetBinLowEdge(phiBin+1);
+                  thetaDegs[peakInd] = GetThetaAxis()->GetBinLowEdge(thetaBin+1);
+                  // thetaDegs[peakInd] = Acclaim::InterferometricMap::getCoarseBinEdgesTheta()[thetaBin];
+                }
+              }
+            }
+          }
+        }
       } // thetaBin
     } // phiBin
 
@@ -946,30 +953,30 @@ void Acclaim::InterferometricMap::findPeakValues(Int_t numPeaks, std::vector<Dou
     if(peakValues[peakInd] >= -999){ // Checks that a peak was found, probably unnecessary
 
       for(Int_t phiBin=0; phiBin<nPhi; phiBin++){
-	// Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
-	Double_t phiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
-	Double_t absDeltaPhi = TMath::Abs(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg));
-	if(absDeltaPhi < PEAK_PHI_DEG_RANGE){
+        // Double_t phiDeg = phiWaveLookup[phiBin]*TMath::RadToDeg();
+        Double_t phiDeg = GetPhiAxis()->GetBinLowEdge(phiBin+1);
+        Double_t absDeltaPhi = TMath::Abs(RootTools::getDeltaAngleDeg(phiDegs[peakInd], phiDeg));
+        if(absDeltaPhi < PEAK_PHI_DEG_RANGE){
 
-	  for(Int_t thetaBin = 0; thetaBin < nTheta; thetaBin++){
+          for(Int_t thetaBin = 0; thetaBin < nTheta; thetaBin++){
 
-	    // Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
-	    Double_t thetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);
-	    Double_t absDeltaTheta = TMath::Abs(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg));
-	    if(absDeltaTheta < PEAK_THETA_DEG_RANGE){
+            // Double_t thetaDeg = thetaWaves[thetaBin]*TMath::RadToDeg();
+            Double_t thetaDeg = GetThetaAxis()->GetBinLowEdge(thetaBin+1);
+            Double_t absDeltaTheta = TMath::Abs(RootTools::getDeltaAngleDeg(thetaDegs[peakInd], thetaDeg));
+            if(absDeltaTheta < PEAK_THETA_DEG_RANGE){
 
-	      // Now this region in phi/theta is disallowed on the next loop through...
-	      // allowedBins[phiBin][thetaBin] = 0;
-	      allowedBins[phiBin*nTheta + thetaBin] = 0;	      
-	    }
-	  }
-	}
+              // Now this region in phi/theta is disallowed on the next loop through...
+              // allowedBins[phiBin][thetaBin] = 0;
+              allowedBins[phiBin*nTheta + thetaBin] = 0;
+            }
+          }
+        }
       }
     }
     if(peakValues[peakInd] < 0){
       std::cerr << "Peak " << peakInd << " = " << peakValues[peakInd] << "\t" << gotHere << std::endl;
       for(int pi=0; pi <= peakInd; pi++){
-    	std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
+        std::cerr << peakValues[pi] << "\t" << phiDegs[pi] << "\t" << thetaDegs[pi] << std::endl;
       }
     }
   }
