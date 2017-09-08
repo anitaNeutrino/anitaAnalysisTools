@@ -82,6 +82,7 @@ class AnalysisReco : public TObject {
 
   static void setTriggerInfoFromPeakPhi(const RawAnitaHeader* header, AnitaPol::AnitaPol_t pol,
                                         Int_t peakPhiSector, AnitaEventSummary::PointingHypothesis& peak);
+  static void fillChannelInfo(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum);
 
   const std::vector<int>& phiSectorToCoherentAnts(int peakPhiSector){return phiSectorToAnts[peakPhiSector];}
   void wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs);
@@ -129,7 +130,6 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Int_t, NumPeaks);
   ANALYSIS_SETTING(Int_t, DoHeatMap);
   ANALYSIS_SETTING(Double_t, HeatMapHorizonKm);
-  ANALYSIS_SETTING(Double_t, ImpulsivityMeasurePowerFraction);
   ANALYSIS_SETTING(Double_t, CoherentDtNs);
   ClassDef(AnalysisReco, 0)
 

@@ -69,6 +69,11 @@ void overlayOneDimDists(TFile* f){
     hb->Draw("hist");
     hs->Draw("histsame");
 
+    auto l1 = new TLegend(0.8, 0.8, 1, 1);
+    l1->AddEntry(hs, "MC neutrinos", "l");
+    l1->AddEntry(hb, "Upward pointing RF", "l");
+    l1->Draw();
+
     double max = TMath::Max(hs->GetBinContent(hs->GetMaximumBin()),
                             hb->GetBinContent(hb->GetMaximumBin()));
 
@@ -235,7 +240,7 @@ void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
   // drawFisherPlot(f);
-  drawEfficiencies(f, true);
-  // overlayOneDimDists(f);
+  // drawEfficiencies(f, true);
+  overlayOneDimDists(f);
   
 }

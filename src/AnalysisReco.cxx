@@ -7,6 +7,7 @@
 #include <numeric>
 #include "RootTools.h"
 #include "TGraphInteractive.h"
+#include "ImpulsivityMeasure.h"
 
 ClassImp(Acclaim::AnalysisReco);
 
@@ -208,16 +209,16 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
   grHilbert->getMoments(sizeof(info.peakMoments)/sizeof(double), info.peakTime, info.peakMoments);
 
-  // define my own impulsivity measure, to do battle with Cosmin's
+  // set impulsivity measure defined in AnitaAnalysisSummary
+  info.impulsivityMeasure = impulsivity::impulsivityMeasure(coherentWave, NULL, maxIndex, true);
 
-  std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(grHilbert, fImpulsivityMeasurePowerFraction);  
-  info.impulsivityMeasure = window.second - window.first; // is the smallest width of the square of the hilbert envelope containing a certain fraction of the power
-  // if that doesn't contain the peak of the hilbert envelope, then something is weird and *= -1 (this may be a silly thing to do)
-  if(info.peakTime < window.first || info.peakTime > window.second){
-    info.impulsivityMeasure *= -1;
+
+  const int numWidths = 5;
+  for(int w=0; w < numWidths; w++){
+    const double powerFraction = (w+1)*0.1;
+    std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(grHilbert, powerFraction);
+    info.narrowestWidths[w] = window.second - window.first;
   }
-
-  // std::cout << "output: " << info.impulsivityMeasure << "\t" << window.first << "\t" << window.second << std::endl;
 
   ///////////////////////////////////////////////////////////////////////////////////
   // CURRENTLY NOT USING THESE...
@@ -280,6 +281,35 @@ TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TStrin
 }
 
 
+
+
+
+
+/** 
+ * Fill Peng's ChannelInfo object, it might come in handy...
+ * 
+ * @param fEv is the filtered event
+ * @param sum is the event summary to fill
+ */
+void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum){
+  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(int ant=0; ant<NUM_SEAVEYS; ant++){
+      const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+      const TGraphAligned* gr = wf->even();
+      const TGraphAligned* he = wf->hilbertEnvelope();
+
+      sum->channels[polInd][ant].rms = gr->GetRMS();
+      sum->channels[polInd][ant].avgPower = RootTools::getTimeIntegratedPower(gr);
+      Double_t maxY, maxX, minY, minX;
+      RootTools::getLocalMaxToMin(gr, maxY, maxX, minY, minX);
+      sum->channels[polInd][ant].snr = (maxY - minY)/sum->channels[polInd][ant].rms;
+      sum->channels[polInd][ant].peakHilbert = TMath::MaxElement(he->GetN(), he->GetY());
+    }
+  }
+}
+
+
 /** 
  * Reconstructs the FilteredAnitaEvent and fills the pointing and coherent bits of the AnitaEventSummary
  * 
@@ -305,7 +335,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
   nicelyDeleteInternalFilteredEvents();
   fEvMin = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false); // just the minimum filter
   fEvMinDeco = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
-  fEvDeco = new FilteredAnitaEvent(fEv, fMinDecoFilter); // extra deconvolution  
+  fEvDeco = new FilteredAnitaEvent(fEv, fMinDecoFilter); // extra deconvolution
+
+  fillChannelInfo(fEv, eventSummary);
 
   eventSummary->eventNumber = fEv->getHeader()->eventNumber;
 
@@ -496,8 +528,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fNumPeaks = 3;
   fDoHeatMap = 0;
   fHeatMapHorizonKm = 800;
-  fImpulsivityMeasurePowerFraction = 0.5;
-  fCoherentDtNs = 0.05;
+  fCoherentDtNs = 0.01;
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -520,7 +551,13 @@ void Acclaim::AnalysisReco::initializeInternals(){
 
 
 
-
+/** 
+ * Get the off boresight delay for a single antenna
+ * 
+ * @param deltaPhiDeg is the phi angle from boresight
+ * 
+ * @return the delay
+ */
 Double_t Acclaim::AnalysisReco::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) const {
 
 
@@ -945,345 +982,357 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   }
 
   // now we've found the channel with the biggest peak-to-peak
-      // prepare to coherently sum the waves with this channel first
-      std::vector<const AnalysisWaveform*> waves;
-      waves.push_back(fEv->getFilteredGraph(biggest, pol));
-      std::vector<int> orderedAnts(1, biggest);
-      for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
-        int ant = theAnts.at(antInd);
-        if(ant != biggest){
-          waves.push_back(fEv->getFilteredGraph(ant, pol));
-          orderedAnts.push_back(ant);
-        }
-      }
+  // prepare to coherently sum the waves with this channel first
+  std::vector<const AnalysisWaveform*> waves;
+  waves.push_back(fEv->getFilteredGraph(biggest, pol));
+  std::vector<int> orderedAnts(1, biggest);
+  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
+    int ant = theAnts.at(antInd);
+    if(ant != biggest){
+      waves.push_back(fEv->getFilteredGraph(ant, pol));
+      orderedAnts.push_back(ant);
+    }
+  }
 
-      std::vector<double> dts;
-      directionAndAntennasToDeltaTs(orderedAnts, pol, peakPhiDeg, peakThetaDeg, dts);
+  std::vector<double> dts;
+  directionAndAntennasToDeltaTs(orderedAnts, pol, peakPhiDeg, peakThetaDeg, dts);
   
-      return coherentlySum(waves, dts);
-    }
+  return coherentlySum(waves, dts);
+}
 
 
 
 
 
 
-    size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
-      size_t s = waves.size();
-      if(s < 1){    
-        std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum." << std::endl;
-      }  
-      else if(s != dts.size()){    
-        const char* action = dts.size() < waves.size() ? "padding" : "trimming";
-        std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
-                  << action << " dts..." << std::endl;
-        while(s != dts.size()){
-          if(dts.size() < s){
-            dts.push_back(0);
-          }
-          else{
-            dts.pop_back();	
-          }
-        }
+
+/** 
+ * Check vector lengths are correct, trims/pads the dts if required
+ * 
+ * @param waves the waveforms to sum
+ * @param dts the time offsets to apply
+ * 
+ * @return the size of both vectors
+ */
+size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
+  size_t s = waves.size();
+  if(s < 1){    
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum." << std::endl;
+  }  
+  else if(s != dts.size()){    
+    const char* action = dts.size() < waves.size() ? "padding" : "trimming";
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
+              << action << " dts..." << std::endl;
+    while(s != dts.size()){
+      if(dts.size() < s){
+        dts.push_back(0);
       }
-      return s;
-    }
-
-
-    /** 
-     * Coherently sum waveforms
-     * 
-     * @param waves is a set of waveforms to coherently sum
-     * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
-     * 
-     * @return a newly created AnalysisWaveform, created by coherently summing the input waves
-     */
-    AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
-
-      if(checkWavesAndDtsMatch(waves, dts)==0){
-        std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
-        return NULL;
-      }  
-
-      const TGraph* gr0 = waves[0]->even();
-      const double totalTime = gr0->GetX()[gr0->GetN()-1] - gr0->GetX()[0];
-      const int interpN = floor(totalTime/fCoherentDtNs);
-  
-      std::vector<double> zeros(interpN, 0);
-      AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0]);
-      TGraphAligned* grCoherent = coherentWave->updateEven();
-
-      for(UInt_t i=0; i < waves.size(); i++){
-        const TGraphAligned* grU = waves[i]->even();
-        // std::cout << i << " here" << std::endl;
-    
-        const double t0 = grU->GetX()[0];
-        const double tN = grU->GetX()[grU->GetN()-1];
-    
-        for(int samp=0; samp < grCoherent->GetN(); samp++){
-          double t = grCoherent->GetX()[samp];
-          double tPlusDt = t + dts[i];
-          if(tPlusDt > t0 && tPlusDt < tN){
-            double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
-            if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
-              std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
-            }
-            else{
-              grCoherent->GetY()[samp] += y;
-            }
-          }
-        }
-      }
-
-      for(int samp=0; samp < grCoherent->GetN(); samp++){
-        grCoherent->GetY()[samp]/=waves.size();
-      };    
-
-      return coherentWave;
-    }
-
-
-
-
-    /** 
-     * Generate the waveforms that do into the coherent sum
-     * 
-     * @param waves is a set of waveforms to coherently sum
-     * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
-     * 
-     * @return a newly created AnalysisWaveform, created by coherently summing the input waves
-     */
-    void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs){
-
-      for(unsigned w=0; w < waves.size(); w++){
-        const TGraphAligned* grOld = waves[w]->even();
-        TGraphAligned* gr = new TGraphAligned(grOld->GetN(), grOld->GetX(), grOld->GetY());
-
-        for(int i=0; i < gr->GetN(); i++){
-          gr->GetX()[i] -= dts[w];
-        }
-    
-        grs.push_back(gr);
+      else{
+        dts.pop_back();	
       }
     }
+  }
+  return s;
+}
 
 
 
 
 
+/** 
+ * Coherently sum waveforms
+ * 
+ * @param waves is a set of waveforms to coherently sum
+ * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
+ * 
+ * @return a newly created AnalysisWaveform, created by coherently summing the input waves
+ */
+AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
 
+  if(checkWavesAndDtsMatch(waves, dts)==0){
+    std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
+    return NULL;
+  }  
 
-
-
-
-
-
-
-    /** 
-     * Function for MagicDisplay
-     * 
-     * @param summaryPad is the pad if it already exists (makes a new Canvas if passed NULL)
-     * @param pol is the polarization to draw
-     */
-    void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
-
-      const int numColsForNow = 3;
-      EColor peakColors[AnitaPol::kNotAPol][numColsForNow] = {{kBlack, EColor(kMagenta+2), EColor(kViolet+2)},
-                                                              {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}}; 
-
-      if(wholePad==NULL){
-        UInt_t eventNumber = fCrossCorr->eventNumber[pol];
-        TString canName = TString::Format("can%u", eventNumber);
-        TString polSuffix = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
-        canName += polSuffix;
-        TString canTitle = TString::Format("Event %u - ", eventNumber) + polSuffix;
-        wholePad = new TCanvas(canName);
-      }
-      wholePad->Clear();
+  const TGraph* gr0 = waves[0]->even();
+  const double totalTime = gr0->GetX()[gr0->GetN()-1] - gr0->GetX()[0];
+  const int interpN = floor(totalTime/fCoherentDtNs);
   
+  std::vector<double> zeros(interpN, 0);
+  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0]);
+  TGraphAligned* grCoherent = coherentWave->updateEven();
 
-      TPad* wholeTitlePad = RootTools::makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
-      TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);  
-      TString wholeTitleText; // = TString::Format(");
-      wholeTitleText += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
-      wholeTitleText += " Reconstruction";
-      wholeTitle->AddText(wholeTitleText);
-      wholeTitle->SetBit(kCanDelete, true);
-      wholeTitle->SetLineWidth(0);
-      wholeTitle->Draw();
-  
-      TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
-  
-      InterferometricMap* hCoarse = coarseMaps[pol];  
-
-      TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
-
-      std::list<InterferometricMap*> drawnFineMaps;
-      Double_t coherentMax = -1e9, coherentMin = 1e9;
-  
-      const int nFine = 3; // maybe discover this dynamically?
-      for(int peakInd = 0; peakInd < nFine; peakInd++){
-        double yUp = 1 - double(peakInd)/nFine;
-        double yLow = yUp - double(1)/nFine;    
-        TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
-
+  for(UInt_t i=0; i < waves.size(); i++){
+    const TGraphAligned* grU = waves[i]->even();
+    // std::cout << i << " here" << std::endl;
     
-        InterferometricMap* h = fineMaps[pol][peakInd];
-        if(h){
-          h->SetTitleSize(1);
-          h->GetXaxis()->SetTitleSize(0.01);
-          h->GetYaxis()->SetTitleSize(0.01);
-          h->SetLineColor(peakColors[pol][peakInd]);
-          h->SetLineWidth(3);
-
-          h->DrawGroup("col");
-          drawnFineMaps.push_back(h);      
-      
-          coarseMapPad->cd();
-
-          const TGraphInteractive* grEdge = h->getEdgeBoxGraph();
-          hCoarse->addGuiChild(*grEdge, "l");
-        }
-
-        TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
-        TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
-
-        // TODO, make this selectable?
-        AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
-        // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
-        // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
-        AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
-        if(coherentWave && coherentUnfilteredWave){
-
-          const char* opt = "al";
-
-          // don't want to be able to edit it by accident so copy it...
-          TGraphAligned* gr2 = const_cast<TGraphAligned*>(coherentWave->even());
-          TGraphAligned* gr4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->even());
-
-          gr2->SetFillColor(0);
-          gr4->SetFillColor(0);
-          gr2->SetLineColor(peakColors[pol][peakInd]);
-          gr4->SetLineColor(kRed);      
-          gr4->SetLineStyle(3);
-
-          TGraphInteractive* gr = new TGraphInteractive(gr2, "l");
-          gr->SetBit(kCanDelete); // Let ROOT track and handle deletion
-      
-          TString title = "Coherent Filtered;Time (ns); Amplitiude (mV)";
-          gr->SetTitle(title);
-
-          gr4->SetTitle("Coherent Unfiltered");
-          gr->addGuiChild(*gr4, "l");
-      
-          coherentPad->cd();
-
-          gr->DrawGroup(opt);
-
-          TGraphAligned* grPower2 = const_cast<TGraphAligned*>(coherentWave->powerdB());
-          TGraphAligned* grPower4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->powerdB());
-
-          grPower2->SetLineColor(peakColors[pol][peakInd]);
-          grPower4->SetLineColor(kRed);
-
-
-          TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
-          grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
-          grPower->GetXaxis()->SetRangeUser(0, 1.3);
-
-          title = "PSD Coherent Filtered;Time (ns);Power Spectral Density (dBm/MHz)";
-          grPower->SetTitle(title);
-      
-          grPower4->SetTitle("PSD Coherent Unfiltered");
-          grPower->addGuiChild(*grPower4, "l");
-
-          coherentFftPad->cd();
-          grPower->DrawGroup(opt);
-      
+    const double t0 = grU->GetX()[0];
+    const double tN = grU->GetX()[grU->GetN()-1];
+    
+    for(int samp=0; samp < grCoherent->GetN(); samp++){
+      double t = grCoherent->GetX()[samp];
+      double tPlusDt = t + dts[i];
+      if(tPlusDt > t0 && tPlusDt < tN){
+        double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
+        if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
+          std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
         }
         else{
-          std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << coherentWave << "\t" << coherentUnfilteredWave << std::endl;
+          grCoherent->GetY()[samp] += y;
         }
       }
+    }
+  }
 
+  for(int samp=0; samp < grCoherent->GetN(); samp++){
+    grCoherent->GetY()[samp]/=waves.size();
+  };    
+
+  return coherentWave;
+}
+
+
+
+
+/** 
+ * Generate the waveforms that do into the coherent sum
+ * 
+ * @param waves is a set of waveforms to coherently sum
+ * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
+ * 
+ * @return a newly created AnalysisWaveform, created by coherently summing the input waves
+ */
+void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs){
+
+  for(unsigned w=0; w < waves.size(); w++){
+    const TGraphAligned* grOld = waves[w]->even();
+    TGraphAligned* gr = new TGraphAligned(grOld->GetN(), grOld->GetX(), grOld->GetY());
+
+    for(int i=0; i < gr->GetN(); i++){
+      gr->GetX()[i] -= dts[w];
+    }
+    
+    grs.push_back(gr);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/** 
+ * Function for MagicDisplay
+ * 
+ * @param summaryPad is the pad if it already exists (makes a new Canvas if passed NULL)
+ * @param pol is the polarization to draw
+ */
+void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
+
+  const int numColsForNow = 3;
+  EColor peakColors[AnitaPol::kNotAPol][numColsForNow] = {{kBlack, EColor(kMagenta+2), EColor(kViolet+2)},
+                                                          {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}}; 
+
+  if(wholePad==NULL){
+    UInt_t eventNumber = fCrossCorr->eventNumber[pol];
+    TString canName = TString::Format("can%u", eventNumber);
+    TString polSuffix = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
+    canName += polSuffix;
+    TString canTitle = TString::Format("Event %u - ", eventNumber) + polSuffix;
+    wholePad = new TCanvas(canName);
+  }
+  wholePad->Clear();
+  
+
+  TPad* wholeTitlePad = RootTools::makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
+  TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);  
+  TString wholeTitleText; // = TString::Format(");
+  wholeTitleText += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
+  wholeTitleText += " Reconstruction";
+  wholeTitle->AddText(wholeTitleText);
+  wholeTitle->SetBit(kCanDelete, true);
+  wholeTitle->SetLineWidth(0);
+  wholeTitle->Draw();
+  
+  TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
+  
+  InterferometricMap* hCoarse = coarseMaps[pol];  
+
+  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
+
+  std::list<InterferometricMap*> drawnFineMaps;
+  Double_t coherentMax = -1e9, coherentMin = 1e9;
+  
+  const int nFine = 3; // maybe discover this dynamically?
+  for(int peakInd = 0; peakInd < nFine; peakInd++){
+    double yUp = 1 - double(peakInd)/nFine;
+    double yLow = yUp - double(1)/nFine;    
+    TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
+
+    
+    InterferometricMap* h = fineMaps[pol][peakInd];
+    if(h){
+      h->SetTitleSize(1);
+      h->GetXaxis()->SetTitleSize(0.01);
+      h->GetYaxis()->SetTitleSize(0.01);
+      h->SetLineColor(peakColors[pol][peakInd]);
+      h->SetLineWidth(3);
+
+      h->DrawGroup("col");
+      drawnFineMaps.push_back(h);      
+      
       coarseMapPad->cd();
-      hCoarse->DrawGroup("colz");  
 
-      if(drawnFineMaps.size() > 0){
-        std::list<InterferometricMap*>::iterator it = drawnFineMaps.begin();
-        Double_t polMax = -1e9;
-        Double_t polMin = 1e9;    
-        for(; it!=drawnFineMaps.end(); ++it){
-          polMax = (*it)->GetMaximum() > polMax ? (*it)->GetMaximum() : polMax;
-          polMin = (*it)->GetMinimum() < polMin ? (*it)->GetMinimum() : polMin;      
-        }
-        for(it=drawnFineMaps.begin(); it!=drawnFineMaps.end(); ++it){
-          (*it)->SetMaximum(polMax);
-          (*it)->SetMinimum(polMin);
-        }
-        if(hCoarse){
-          hCoarse->SetMaximum(polMax);
-          // hCoarse->SetMinimum(polMin);      
-        }
-        while(drawnFineMaps.size() > 0){
-          drawnFineMaps.pop_back();
-        }
-        // std::cout << polMax << "\t" << polMin << std::endl;
-      }
-
-      TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
-  
-      for(int peakInd=0; peakInd < nFine; peakInd++){
-        double xlow = double(peakInd)/nFine;
-        double xup = xlow + double(1.)/nFine;
-    
-        TPaveText *title = new TPaveText(xlow, 0.9, xup, 1);
-        // title->SetBorderSize(0);
-        title->SetBit(kCanDelete, true);
-        title->SetTextColor(peakColors[pol][peakInd]);
-        title->SetLineColor(peakColors[pol][peakInd]);
-
-        // TString titleText = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
-        TString titleText;
-        titleText += TString::Format(" Peak %d", peakInd);    
-        title->AddText(titleText);
-    
-        title->Draw();
-    
-        TPaveText *pt = new TPaveText(xlow, 0, xup, 0.9);
-        // pt->SetBorderSize(0);
-        pt->SetBit(kCanDelete, true);
-        pt->SetTextColor(peakColors[pol][peakInd]);
-        pt->SetLineColor(peakColors[pol][peakInd]);
-    
-        pt->AddText(TString::Format("Image peak = %4.4lf", summary.peak[pol][peakInd].value));
-        pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", summary.peak[pol][peakInd].phi));
-        pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",summary.peak[pol][peakInd].theta));
-        pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", summary.coherent[pol][peakInd].peakHilbert));            
-
-        pt->AddText(TString::Format("Latitude = %4.2lf #circ", summary.peak[pol][peakInd].latitude));
-        pt->AddText(TString::Format("Longitude = %4.2lf #circ", summary.peak[pol][peakInd].longitude));
-        pt->AddText(TString::Format("Altitude = %4.2lf #circ", summary.peak[pol][peakInd].altitude));                    
-    
-        pt->Draw();
-      }
-  
-      wholePad->SetBorderSize(2);
-    
+      const TGraphInteractive* grEdge = h->getEdgeBoxGraph();
+      hCoarse->addGuiChild(*grEdge, "l");
     }
 
+    TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
+    TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
+
+    // TODO, make this selectable?
+    AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
+    // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
+    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
+    if(coherentWave && coherentUnfilteredWave){
+
+      const char* opt = "al";
+
+      // don't want to be able to edit it by accident so copy it...
+      TGraphAligned* gr2 = const_cast<TGraphAligned*>(coherentWave->even());
+      TGraphAligned* gr4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->even());
+
+      gr2->SetFillColor(0);
+      gr4->SetFillColor(0);
+      gr2->SetLineColor(peakColors[pol][peakInd]);
+      gr4->SetLineColor(kRed);      
+      gr4->SetLineStyle(3);
+
+      TGraphInteractive* gr = new TGraphInteractive(gr2, "l");
+      gr->SetBit(kCanDelete); // Let ROOT track and handle deletion
+      
+      TString title = "Coherent Filtered;Time (ns); Amplitiude (mV)";
+      gr->SetTitle(title);
+
+      gr4->SetTitle("Coherent Unfiltered");
+      gr->addGuiChild(*gr4, "l");
+      
+      coherentPad->cd();
+
+      gr->DrawGroup(opt);
+
+      TGraphAligned* grPower2 = const_cast<TGraphAligned*>(coherentWave->powerdB());
+      TGraphAligned* grPower4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->powerdB());
+
+      grPower2->SetLineColor(peakColors[pol][peakInd]);
+      grPower4->SetLineColor(kRed);
 
 
-    /** 
-     * @brief Coherently summed filtered (un-deconvolved) waveform accessor for external processes. 
-     * Only works once per event processed as ownership is transferred to the function caller.
-     * 
-     * @param pol is the polarisation
-     * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
-     * @param xPol direct or cross polarisation compared to pol.
-     * 
-     * @return pointer to the AnalysisWaveform
-     */
+      TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
+      grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
+      grPower->GetXaxis()->SetRangeUser(0, 1.3);
+
+      title = "PSD Coherent Filtered;Time (ns);Power Spectral Density (dBm/MHz)";
+      grPower->SetTitle(title);
+      
+      grPower4->SetTitle("PSD Coherent Unfiltered");
+      grPower->addGuiChild(*grPower4, "l");
+
+      coherentFftPad->cd();
+      grPower->DrawGroup(opt);
+      
+    }
+    else{
+      std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << coherentWave << "\t" << coherentUnfilteredWave << std::endl;
+    }
+  }
+
+  coarseMapPad->cd();
+  hCoarse->DrawGroup("colz");  
+
+  if(drawnFineMaps.size() > 0){
+    std::list<InterferometricMap*>::iterator it = drawnFineMaps.begin();
+    Double_t polMax = -1e9;
+    Double_t polMin = 1e9;    
+    for(; it!=drawnFineMaps.end(); ++it){
+      polMax = (*it)->GetMaximum() > polMax ? (*it)->GetMaximum() : polMax;
+      polMin = (*it)->GetMinimum() < polMin ? (*it)->GetMinimum() : polMin;      
+    }
+    for(it=drawnFineMaps.begin(); it!=drawnFineMaps.end(); ++it){
+      (*it)->SetMaximum(polMax);
+      (*it)->SetMinimum(polMin);
+    }
+    if(hCoarse){
+      hCoarse->SetMaximum(polMax);
+      // hCoarse->SetMinimum(polMin);      
+    }
+    while(drawnFineMaps.size() > 0){
+      drawnFineMaps.pop_back();
+    }
+    // std::cout << polMax << "\t" << polMin << std::endl;
+  }
+
+  TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
+  
+  for(int peakInd=0; peakInd < nFine; peakInd++){
+    double xlow = double(peakInd)/nFine;
+    double xup = xlow + double(1.)/nFine;
+    
+    TPaveText *title = new TPaveText(xlow, 0.9, xup, 1);
+    // title->SetBorderSize(0);
+    title->SetBit(kCanDelete, true);
+    title->SetTextColor(peakColors[pol][peakInd]);
+    title->SetLineColor(peakColors[pol][peakInd]);
+
+    // TString titleText = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
+    TString titleText;
+    titleText += TString::Format(" Peak %d", peakInd);    
+    title->AddText(titleText);
+    
+    title->Draw();
+    
+    TPaveText *pt = new TPaveText(xlow, 0, xup, 0.9);
+    // pt->SetBorderSize(0);
+    pt->SetBit(kCanDelete, true);
+    pt->SetTextColor(peakColors[pol][peakInd]);
+    pt->SetLineColor(peakColors[pol][peakInd]);
+    
+    pt->AddText(TString::Format("Image peak = %4.4lf", summary.peak[pol][peakInd].value));
+    pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", summary.peak[pol][peakInd].phi));
+    pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",summary.peak[pol][peakInd].theta));
+    pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", summary.coherent[pol][peakInd].peakHilbert));            
+
+    pt->AddText(TString::Format("Latitude = %4.2lf #circ", summary.peak[pol][peakInd].latitude));
+    pt->AddText(TString::Format("Longitude = %4.2lf #circ", summary.peak[pol][peakInd].longitude));
+    pt->AddText(TString::Format("Altitude = %4.2lf #circ", summary.peak[pol][peakInd].altitude));                    
+    
+    pt->Draw();
+  }
+  
+  wholePad->SetBorderSize(2);
+    
+}
+
+
+
+/** 
+ * @brief Coherently summed filtered (un-deconvolved) waveform accessor for external processes. 
+ * Only works once per event processed as ownership is transferred to the function caller.
+ * 
+ * @param pol is the polarisation
+ * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
+ * @param xPol direct or cross polarisation compared to pol.
+ * 
+ * @return pointer to the AnalysisWaveform
+ */
 AnalysisWaveform* Acclaim::AnalysisReco::getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
   AnalysisWaveform* wf = wfCoherentFiltered[pol][peakInd][xPol];
   wfCoherentFiltered[pol][peakInd][xPol] = NULL;
