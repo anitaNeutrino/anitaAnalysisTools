@@ -47,18 +47,26 @@ int main(int argc, char* argv[]){
     *sum = *inSum;
 
 
-    const double phi0 = InterferometricMap::getBin0PhiDeg();
-    for(int polInd = 0; polInd < AnitaPol::kNotAPol; polInd++){
-      AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-      for(int peakInd=0; peakInd < sum->nPeaks[pol]; peakInd++){
-
-        // hack to recover peakPhiSector...
-        double phi_rough = sum->peak[pol][peakInd].phi - sum->peak[pol][peakInd].dphi_rough;
-        int peakPhiSector = floor((phi_rough - phi0)/22.5);
-        // std::cout << peakPhiSector << "\t" << phi_rough << std::endl;
-        AnalysisReco::setTriggerInfoFromPeakPhi(d.header(), pol, peakPhiSector, sum->peak[pol][peakInd]);
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      for(int peakInd=0; peakInd < AnitaEventSummary::maxDirectionsPerPol; peakInd++){
+        double temp = sum->peak[polInd][peakInd].latitude;
+        sum->peak[polInd][peakInd].latitude = sum->peak[polInd][peakInd].longitude;
+        sum->peak[polInd][peakInd].longitude = temp;
       }
     }
+    // const double phi0 = InterferometricMap::getBin0PhiDeg();
+    // for(int polInd = 0; polInd < AnitaPol::kNotAPol; polInd++){
+    //   AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    //   for(int peakInd=0; peakInd < sum->nPeaks[pol]; peakInd++){
+
+    //     // hack to recover peakPhiSector...
+    //     double phi_rough = sum->peak[pol][peakInd].phi - sum->peak[pol][peakInd].dphi_rough;
+    //     int peakPhiSector = floor((phi_rough - phi0)/22.5);
+    //     // std::cout << peakPhiSector << "\t" << phi_rough << std::endl;
+    //     AnalysisReco::setTriggerInfoFromPeakPhi(d.header(), pol, peakPhiSector, sum->peak[pol][peakInd]);
+    //   }
+    // }
+
 
     sumTree->Fill();
     p.inc(entry, N);
