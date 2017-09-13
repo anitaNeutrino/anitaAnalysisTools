@@ -12,6 +12,9 @@
 #include "TSeqCollection.h"
 #include "TROOT.h"
 
+#include "ProgressBar.h"
+#include "TH2DAntarctica.h"
+
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
       fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0), fUseProof(useProof) {
@@ -108,6 +111,80 @@ Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
   return fChain->GetEntry(entry);
 }
 
+
+
+TProfile2DAntarctica* Acclaim::SummarySet::makeAntarcticaProf(AnitaPol::AnitaPol_t pol, const char* name, const char* title, Int_t nx, Int_t ny){
+
+  TProfile2DAntarctica* prof = new TProfile2DAntarctica(name, title, nx, ny);
+
+  Bool_t doPol[AnitaPol::kNotAPol] = {pol == AnitaPol::kHorizontal || pol == AnitaPol::kNotAPol,
+                                      pol == AnitaPol::kVertical   || pol == AnitaPol::kNotAPol};
+
+  ProgressBar p(N());
+  for(Long64_t entry=0; entry < N(); entry++){
+    getEntry(entry);
+    AnitaEventSummary* sum = summary();
+
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      if(doPol[polInd]){
+        for(int peakInd=0; peakInd < sum->nPeaks[polInd]; peakInd++){
+
+          // TODO consider removing theta < 0 once traceBackTocontinent is fixed.
+          if(sum->peak[polInd][peakInd].theta < 0 && sum->peak[polInd][peakInd].longitude > -9999 && sum->peak[polInd][peakInd].latitude > -9999){
+            // std::cerr << entry << "\t" << polInd << "\t" << peakInd << "\t"
+            //           << sum->peak[polInd][peakInd].longitude << "\t"
+            //           << sum->peak[polInd][peakInd].latitude << "\t"
+            //           << sum->peak[polInd][peakInd].value << std::endl;
+            prof->Fill(sum->peak[polInd][peakInd].longitude,
+                       sum->peak[polInd][peakInd].latitude,
+                       sum->peak[polInd][peakInd].value);
+
+          }
+        }
+      }
+    }
+    p.inc(entry, N());
+  }
+  return prof;
+}
+
+
+
+TH2DAntarctica* Acclaim::SummarySet::makeAntarcticaHist(AnitaPol::AnitaPol_t pol, const char* name, const char* title, Int_t nx, Int_t ny){
+
+  TH2DAntarctica* hist = new TH2DAntarctica(name, title, nx, ny);
+
+  Bool_t doPol[AnitaPol::kNotAPol] = {pol == AnitaPol::kHorizontal || pol == AnitaPol::kNotAPol,
+                                      pol == AnitaPol::kVertical   || pol == AnitaPol::kNotAPol};
+
+  ProgressBar p(N());
+  for(Long64_t entry=0; entry < N(); entry++){
+    getEntry(entry);
+    AnitaEventSummary* sum = summary();
+
+    for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+      if(doPol[polInd]){
+        for(int peakInd=0; peakInd < sum->nPeaks[polInd]; peakInd++){
+
+          // TODO consider removing theta < 0 once traceBackTocontinent is fixed.
+          if(sum->peak[polInd][peakInd].theta < 0 && sum->peak[polInd][peakInd].longitude > -9999 && sum->peak[polInd][peakInd].latitude > -9999){
+            // std::cerr << entry << "\t" << polInd << "\t" << peakInd << "\t"
+            //           << sum->peak[polInd][peakInd].longitude << "\t"
+            //           << sum->peak[polInd][peakInd].latitude << "\t"
+            //           << sum->peak[polInd][peakInd].value << std::endl;
+            hist->Fill(sum->peak[polInd][peakInd].longitude,
+                       sum->peak[polInd][peakInd].latitude,
+                       sum->peak[polInd][peakInd].value);
+
+          }
+                  
+        }
+      }
+    }
+    p.inc(entry, N());
+  }
+  return hist;
+}
 
 
 
