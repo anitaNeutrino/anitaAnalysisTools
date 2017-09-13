@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
   AnitaEventSummary* sum = NULL;
   sumTree->Branch("sum", &sum);
 
-  AnitaDataset d(run);
+  // AnitaDataset d(run);
 
   const Long64_t N = ss.N();
   ProgressBar p(N);
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     ss.getEntry(entry);
     AnitaEventSummary* inSum = ss.summary();
 
-    d.getEvent(inSum->eventNumber);
+    // d.getEvent(inSum->eventNumber);
     
 
     *sum = *inSum;

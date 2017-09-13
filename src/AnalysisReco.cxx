@@ -406,29 +406,31 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
         fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
       
         if(usefulPat != NULL){
-      
-          Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
-          Double_t thetaWave = -1*TMath::DegToRad()*eventSummary->peak[pol][peakInd].theta;
+          int success = 0;
+          if(eventSummary->peak[pol][peakInd].theta < 0){ // work around for bug in traceBackToContinent
+            Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
+            Double_t thetaWave = -1*TMath::DegToRad()*eventSummary->peak[pol][peakInd].theta;
 
-          // *   Returns 0 if never hits the ground, even with maximum adjustment
-          // *   Returns 1 if hits the ground with no adjustment
-          // *   Returns 2 if it hits the ground with adjustment
-          int success = usefulPat->traceBackToContinent(phiWave, thetaWave, 
-                                                        &eventSummary->peak[pol][peakInd].latitude,
-                                                        &eventSummary->peak[pol][peakInd].longitude,
-                                                        &eventSummary->peak[pol][peakInd].altitude,
-                                                        &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
-
+            // *   Returns 0 if never hits the ground, even with maximum adjustment
+            // *   Returns 1 if hits the ground with no adjustment
+            // *   Returns 2 if it hits the ground with adjustment
+            success = usefulPat->traceBackToContinent(phiWave, thetaWave,
+                                                      &eventSummary->peak[pol][peakInd].longitude,
+                                                      &eventSummary->peak[pol][peakInd].latitude,
+                                                      &eventSummary->peak[pol][peakInd].altitude,
+                                                      &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
+          }
           if(success==0){
-            eventSummary->peak[pol][peakInd].latitude = -9999;
             eventSummary->peak[pol][peakInd].longitude = -9999;
+            eventSummary->peak[pol][peakInd].latitude = -9999;
             eventSummary->peak[pol][peakInd].altitude = -9999;
+            eventSummary->peak[pol][peakInd].theta_adjustment_needed = -9999;
             eventSummary->peak[pol][peakInd].distanceToSource = -9999;
           }
           else{
             eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat->getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
                                                                                                                         eventSummary->peak[pol][peakInd].longitude,
-                                                                                                                        eventSummary->peak[pol][peakInd].altitude);	
+                                                                                                                        eventSummary->peak[pol][peakInd].altitude);
           }
         }
       }

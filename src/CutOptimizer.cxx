@@ -578,14 +578,16 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
         Bool_t matchSignalSelection = true;
         for(UInt_t i=0; i < signalSelection.size(); i++){
           int thisCutVal = signalSelection.at(i)->apply(sum);
-
           // std::cerr << signalSelection.at(i)->getName() << "\t" << thisCutVal << std::endl;
           
           fSignalEffs[kSNR][i]->Fill(thisCutVal, sum->mcDeconvolved().snr, sum->weight());
           fSignalEffs[kEnergy][i]->Fill(thisCutVal, TMath::Log10(sum->mc.energy), sum->weight());
 
           matchSignalSelection = matchSignalSelection && (thisCutVal != 0);
+          // std::cerr << thisCutVal << "\t";
         }
+        // std::cerr << std::endl;
+
 
         if(matchSignalSelection){
           for(UInt_t i=0; i < forms.N(); i++){
@@ -623,175 +625,175 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
 
   // Someone with a bit more time can do the backwards compatibility
 #if ROOT_VERSION_CODE < ROOT_VERSION(6,10,0)
-  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", TVMA changed a lot in recent ROOT versions. ";
-  std::cerr << "This class requires ROOT version at least 6.10, you only have " << ROOT_VERSION_CODE << std::endl;
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", TVMA changed a lot in recent ROOT versions. ";
+    std::cerr << "This class requires ROOT version at least 6.10, you only have " << ROOT_VERSION_CODE << std::endl;
 #else
   
-  TFile* fOutFile = makeOutputFile(fileName);
+    TFile* fOutFile = makeOutputFile(fileName);
 
-  generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);  
+    generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);  
 
-  if(!fSignalTree || !fBackgroundTree){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "
-              << "Can't optimize! Aborting!" << std::endl;
-    return;
-  }
-  if(fSignalTree->GetEntries() == 0 || fBackgroundTree->GetEntries() == 0){    
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", "
-              << "signal tree contains " << fSignalTree->GetEntries() << " events and "
-              << "background tree contains " << fBackgroundTree->GetEntries() << " events. "
-              << "Can't optimize! Aborting!" << std::endl;
-    return;
-  }
-
-  TString factoryName = "ThermalCut";
-  TString option = debug ? "V" : "silent";
-  TMVA::Factory factory(factoryName, fOutFile, option);
-  TString dlName = fOutFile->GetName();
-  dlName.ReplaceAll(".root", "");
-  TMVA::DataLoader dl(dlName);
-
-  dl.AddSignalTree(fSignalTree);
-  dl.AddBackgroundTree(fBackgroundTree);
-
-  // should have identical for signal/background
-  TObjArray* backBranches = fBackgroundTree->GetListOfBranches();
-  for(int i=0; i < backBranches->GetEntries(); i++){
-    TBranch* b = (TBranch*) backBranches->At(i);
-    TString bName = b->GetName();
-
-    if(bName == "weight"){
-      dl.SetWeightExpression("weight");
+    if(!fSignalTree || !fBackgroundTree){
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "
+                << "Can't optimize! Aborting!" << std::endl;
+      return;
     }
-    else{
-      for(std::vector<FormulaString>::const_iterator it = formulaStrings.begin(); it != formulaStrings.end(); ++it){
-        // if the name matches and the FormulaString has true, then add
-        if(bName == branchifyName(it->first) && it->second){
-          dl.AddVariable(bName);
-        }
+    if(fSignalTree->GetEntries() == 0 || fBackgroundTree->GetEntries() == 0){    
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", "
+                << "signal tree contains " << fSignalTree->GetEntries() << " events and "
+                << "background tree contains " << fBackgroundTree->GetEntries() << " events. "
+                << "Can't optimize! Aborting!" << std::endl;
+      return;
+    }
+
+    TString factoryName = "ThermalCut";
+    TString option = debug ? "V" : "silent";
+    TMVA::Factory factory(factoryName, fOutFile, option);
+    TString dlName = fOutFile->GetName();
+    dlName.ReplaceAll(".root", "");
+    TMVA::DataLoader dl(dlName);
+
+    dl.AddSignalTree(fSignalTree);
+    dl.AddBackgroundTree(fBackgroundTree);
+
+    // should have identical for signal/background
+    TObjArray* backBranches = fBackgroundTree->GetListOfBranches();
+    for(int i=0; i < backBranches->GetEntries(); i++){
+      TBranch* b = (TBranch*) backBranches->At(i);
+      TString bName = b->GetName();
+
+      if(bName == "weight"){
+        dl.SetWeightExpression("weight");
       }
-    }    
-  }
-
-  TString methodTitle = "tc";
-
-  factory.BookMethod(&dl, TMVA::Types::EMVA::kFisher, methodTitle, "");
-
-  // If an inf/nan ends up in the training sample TMVA will throw an exception.
-  // We want to still write the signal/background trees to find out what went wrong,
-  // so let's wrap the attempt in a try/catch block
-  try{
-    factory.TrainAllMethods();
-    factory.TestAllMethods();
-    factory.EvaluateAllMethods();
-
-    TString weightFileName = dlName + "/weights/" + factoryName + "_" + methodTitle + ".weights.xml";
-
-    FisherResult result(weightFileName.Data());
-    fOutFile->cd();
-
-    const int nBinsX = 1024;
-    const int nBinsY = 1024;
-    const int nT = 2;
-    TTree* ts[nT] = {fSignalTree, fBackgroundTree};
-    
-    for(int t=0; t < nT; t++){
-      EColor col = t == 0 ? kRed : kBlue;
-      TObjArray* bs = ts[t]->GetListOfBranches();
-      int nActive = 0;
-      for(int b=0; b < bs->GetEntries(); b++){
-        TBranch* br = (TBranch*) bs->At(b);
-
-        int bs = ts[t]->GetBranchStatus(br->GetName());
-        if(bs > 0){
-          nActive++;
-          TH2D* h = result.makeTimeHist(nBinsX, nBinsY, ts[t], col, nActive);
-          if(h){
-            h->Write();
-            delete h;
+      else{
+        for(std::vector<FormulaString>::const_iterator it = formulaStrings.begin(); it != formulaStrings.end(); ++it){
+          // if the name matches and the FormulaString has true, then add
+          if(bName == branchifyName(it->first) && it->second){
+            dl.AddVariable(bName);
           }
         }
+      }    
+    }
 
-        ts[t]->SetBranchStatus(br->GetName(), 1);                  
+    TString methodTitle = "tc";
+
+    factory.BookMethod(&dl, TMVA::Types::EMVA::kFisher, methodTitle, "");
+
+    // If an inf/nan ends up in the training sample TMVA will throw an exception.
+    // We want to still write the signal/background trees to find out what went wrong,
+    // so let's wrap the attempt in a try/catch block
+    try{
+      factory.TrainAllMethods();
+      factory.TestAllMethods();
+      factory.EvaluateAllMethods();
+
+      TString weightFileName = dlName + "/weights/" + factoryName + "_" + methodTitle + ".weights.xml";
+
+      FisherResult result(weightFileName.Data());
+      fOutFile->cd();
+
+      const int nBinsX = 1024;
+      const int nBinsY = 1024;
+      const int nT = 2;
+      TTree* ts[nT] = {fSignalTree, fBackgroundTree};
+    
+      for(int t=0; t < nT; t++){
+        EColor col = t == 0 ? kRed : kBlue;
+        TObjArray* bs = ts[t]->GetListOfBranches();
+        int nActive = 0;
+        for(int b=0; b < bs->GetEntries(); b++){
+          TBranch* br = (TBranch*) bs->At(b);
+
+          int bs = ts[t]->GetBranchStatus(br->GetName());
+          if(bs > 0){
+            nActive++;
+            TH2D* h = result.makeTimeHist(nBinsX, nBinsY, ts[t], col, nActive);
+            if(h){
+              h->Write();
+              delete h;
+            }
+          }
+
+          ts[t]->SetBranchStatus(br->GetName(), 1);                  
+        }
+      }
+
+      TH2D* hSignal2 = result.makeTimeHist(nBinsX, nBinsY, fSignalTree, kRed);
+      TH2D* hBackground2 = result.makeTimeHist(nBinsX, nBinsY, fBackgroundTree, kBlue);
+
+      TH1D* hSignal = hSignal2->ProjectionY();
+      TH1D* hBackground = hBackground2->ProjectionY();
+
+      TH1D* hSigInt = new TH1D("hSigInt", "hSigInt", nBinsY, hSignal->GetXaxis()->GetBinLowEdge(1), hSignal->GetXaxis()->GetBinUpEdge(nBinsY));
+      TH1D* hBackInt = new TH1D("hBackInt", "hBackInt", nBinsY, hBackground->GetXaxis()->GetBinLowEdge(1), hBackground->GetXaxis()->GetBinUpEdge(nBinsY));
+      hSignal->Scale(1./hSignal->Integral());
+      hBackground->Scale(1./hBackground->Integral()); 
+
+      double cumulativeSignal = 1; //hSignal->Integral();
+      double cumulativeBackground = 1; //hBackground->Integral();
+
+      for(int bx=1; bx <= nBinsY; bx++){
+        hSigInt->SetBinContent(bx,  cumulativeSignal);
+        hBackInt->SetBinContent(bx, cumulativeBackground);
+
+        cumulativeSignal -= hSignal->GetBinContent(bx);
+        cumulativeBackground -= hBackground->GetBinContent(bx);
+
+      }
+      hSignal->Write();
+      hSigInt->Write();
+      hBackground->Write();
+      hBackInt->Write();
+
+
+      for(unsigned i=0; i < signalSelection.size(); i++){
+        fSignalEffs[kSNR][i]->SetDirectory(gDirectory);
+        fSignalEffs[kEnergy][i]->SetDirectory(gDirectory);
+      
+        fSignalEffs[kSNR][i]->Write();
+        fSignalEffs[kEnergy][i]->Write();
+
+        delete fSignalEffs[kSNR][i];
+        delete fSignalEffs[kEnergy][i];
+      
+      }
+    
+
+      result.Write();
+  
+      delete hSignal;
+      delete hSigInt;
+      delete hBackground;
+      delete hBackInt;
+  
+    
+    }
+    catch(...){
+      std::cerr << "Exception in " << __PRETTY_FUNCTION__ << " can't optimize for some reason!" << std::endl;
+    }
+    // Activate all the branches!
+    // Branches unused by TMVA like run/eventNumber
+    // are switched off by the TMVA classes, which is slightly
+    // annoying when looking through the output trees.
+
+    const int nT = 2;
+    TTree* ts[nT] = {fSignalTree, fBackgroundTree};
+    for(int t=0; t < nT; t++){
+      TObjArray* bs = ts[t]->GetListOfBranches();
+      for(int b=0; b < bs->GetEntries(); b++){
+        TBranch* br = (TBranch*) bs->At(b);
+        ts[t]->SetBranchStatus(br->GetName(), 1);
       }
     }
 
-    TH2D* hSignal2 = result.makeTimeHist(nBinsX, nBinsY, fSignalTree, kRed);
-    TH2D* hBackground2 = result.makeTimeHist(nBinsX, nBinsY, fBackgroundTree, kBlue);
-
-    TH1D* hSignal = hSignal2->ProjectionY();
-    TH1D* hBackground = hBackground2->ProjectionY();
-
-    TH1D* hSigInt = new TH1D("hSigInt", "hSigInt", nBinsY, hSignal->GetXaxis()->GetBinLowEdge(1), hSignal->GetXaxis()->GetBinUpEdge(nBinsY));
-    TH1D* hBackInt = new TH1D("hBackInt", "hBackInt", nBinsY, hBackground->GetXaxis()->GetBinLowEdge(1), hBackground->GetXaxis()->GetBinUpEdge(nBinsY));
-    hSignal->Scale(1./hSignal->Integral());
-    hBackground->Scale(1./hBackground->Integral()); 
-
-    double cumulativeSignal = 1; //hSignal->Integral();
-    double cumulativeBackground = 1; //hBackground->Integral();
-
-    for(int bx=1; bx <= nBinsY; bx++){
-      hSigInt->SetBinContent(bx,  cumulativeSignal);
-      hBackInt->SetBinContent(bx, cumulativeBackground);
-
-      cumulativeSignal -= hSignal->GetBinContent(bx);
-      cumulativeBackground -= hBackground->GetBinContent(bx);
-
-    }
-    hSignal->Write();
-    hSigInt->Write();
-    hBackground->Write();
-    hBackInt->Write();
-
-
-    for(unsigned i=0; i < signalSelection.size(); i++){
-      fSignalEffs[kSNR][i]->SetDirectory(gDirectory);
-      fSignalEffs[kEnergy][i]->SetDirectory(gDirectory);
-      
-      fSignalEffs[kSNR][i]->Write();
-      fSignalEffs[kEnergy][i]->Write();
-
-      delete fSignalEffs[kSNR][i];
-      delete fSignalEffs[kEnergy][i];
-      
-    }
-    
-
-    result.Write();
-  
-    delete hSignal;
-    delete hSigInt;
-    delete hBackground;
-    delete hBackInt;
-  
-    
-  }
-  catch(...){
-    std::cerr << "Exception in " << __PRETTY_FUNCTION__ << " can't optimize for some reason!" << std::endl;
-  }
-  // Activate all the branches!
-  // Branches unused by TMVA like run/eventNumber
-  // are switched off by the TMVA classes, which is slightly
-  // annoying when looking through the output trees.
-
-  const int nT = 2;
-  TTree* ts[nT] = {fSignalTree, fBackgroundTree};
-  for(int t=0; t < nT; t++){
-    TObjArray* bs = ts[t]->GetListOfBranches();
-    for(int b=0; b < bs->GetEntries(); b++){
-      TBranch* br = (TBranch*) bs->At(b);
-      ts[t]->SetBranchStatus(br->GetName(), 1);
-    }
-  }
-
 
   
-  fOutFile->Write();
-  fOutFile->Close();
+    fOutFile->Write();
+    fOutFile->Close();
   
-  std::cout << "==> wrote root file " << fOutFile->GetName() << std::endl;
-  std::cout << "==> TMVAnalysis is done!" << std::endl;
+    std::cout << "==> wrote root file " << fOutFile->GetName() << std::endl;
+    std::cout << "==> TMVAnalysis is done!" << std::endl;
 
 #endif
 
-}
+  }
