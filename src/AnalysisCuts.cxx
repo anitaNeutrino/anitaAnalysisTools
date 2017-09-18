@@ -354,6 +354,7 @@ int Acclaim::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol
  */
 int Acclaim::SmallDeltaRough::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
+  handleDefaults(sum, pol, peakInd);
   const double dAngleCut = 4;
   return TMath::Abs(sum->peak[pol][peakInd].dphi_rough) < dAngleCut && TMath::Abs(sum->peak[pol][peakInd].dtheta_rough) < dAngleCut;
 }
