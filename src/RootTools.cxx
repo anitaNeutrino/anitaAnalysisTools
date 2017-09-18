@@ -1,6 +1,32 @@
+#include "TObjArray.h"
+#include "TGraph.h"
+#include "TPaveStats.h"
+#include "TTree.h"
+#include "TKey.h"
+#include "TAxis.h"
+#include "TMath.h"
+#include "iostream"
+#include "TH2.h"
+#include "TH1D.h"
+#include "TStyle.h"
+#include "TCanvas.h"
+#include "TLegend.h"
+#include "cfloat"
+#include "TColor.h"
+#include "TChain.h"
+#include "TRandom3.h"
+#include "Math/Interpolator.h"
+#include "Math/InterpolationTypes.h"
+
+
+#include "RawAnitaHeader.h"
+#include "UsefulAnitaEvent.h"
+#include "Adu5Pat.h"
 #include "RootTools.h"
 #include <algorithm>
 #include <numeric>
+#include "TObjArray.h"
+#include "TObjString.h"
 
 //---------------------------------------------------------------------------------------------------------
 /**
@@ -1715,4 +1741,50 @@ std::pair<double, double> Acclaim::RootTools::findSmallestWindowContainingFracOf
   // }
 
   // return std::pair<double, double>(minWinStart, minWinEnd);
+}
+
+
+
+/** 
+ * Split up the inputString at the separator string.
+ * 
+ * @param output is pushed back by the results of the tokenization
+ * @param inputString is the string to transform into tokens
+ * @param separator, the inputString is split where characters match the separator
+ */
+void Acclaim::RootTools::tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const char* separator){
+
+  TObjArray* tkns = TString(inputString).Tokenize(separator);
+  for(int i=0; i < tkns->GetEntries(); i++){
+    TObjString* tkn = (TObjString*) tkns->At(i);
+    TString s = tkn->String();
+    // std::cout << s << std::endl;
+    tokenizedOutput.push_back(s);
+  }
+  delete tkns;
+}
+
+
+/** 
+ * Tokenize with multiple separators
+ * 
+ * @param output is pushed back by the results of the tokenization
+ * @param inputString is the string to transform into tokens
+ * @param separators, the inputString is split where characters match each vector elemment
+ */
+void Acclaim::RootTools::tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const std::vector<const char*>& separators){
+
+  std::vector<TString> inputTokensSoFar(1, inputString);
+  for(UInt_t i=0; i < separators.size(); i++){
+
+    std::vector<TString> outputTokensThisIteration;
+    for(UInt_t j = 0; j < inputTokensSoFar.size(); j++){
+      tokenize(outputTokensThisIteration, inputTokensSoFar[j], separators[i]);
+    }
+    inputTokensSoFar = outputTokensThisIteration;
+  }
+
+  for(UInt_t k=0; k < inputTokensSoFar.size(); k++){
+    tokenizedOutput.push_back(inputTokensSoFar[k]);
+  }
 }

@@ -9,6 +9,7 @@
 #include "TPad.h"
 #include "RayleighHist.h"
 #include "RootTools.h"
+#include "RawAnitaHeader.h"
 
 static std::map<TString, FilterStrategy*> acclaimDefaults;
 

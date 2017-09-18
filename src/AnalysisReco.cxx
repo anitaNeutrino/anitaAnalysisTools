@@ -8,6 +8,7 @@
 #include "RootTools.h"
 #include "TGraphInteractive.h"
 #include "ImpulsivityMeasure.h"
+#include "TPaveText.h"
 
 ClassImp(Acclaim::AnalysisReco);
 

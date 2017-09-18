@@ -1,5 +1,5 @@
 #include "QualityCut.h"
-
+#include "UsefulAnitaEvent.h"
 
 /** 
  * Work around dodgy MC samples with 260 points, the last few of which are nonsense

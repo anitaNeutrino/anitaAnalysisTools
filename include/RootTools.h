@@ -11,30 +11,24 @@
 #ifndef ROOTTOOLS_H
 #define ROOTTOOLS_H
 
-#include "TObjArray.h"
-#include "TGraph.h"
-#include "TPaveStats.h"
-#include "TTree.h"
-#include "TAxis.h"
-#include "TMath.h"
-#include "iostream"
-#include "TH2.h"
-#include "TH1D.h"
-#include "TStyle.h"
-#include "TCanvas.h"
-#include "TLegend.h"
-#include "cfloat"
-#include "TColor.h"
-#include "TChain.h"
-#include "TRandom3.h"
-#include "Math/Interpolator.h"
-#include "Math/InterpolationTypes.h"
+#include "AnitaConventions.h"
+#include <iostream>
+#include "TString.h"
 
+class TGraph;
+class TH1D;
+class TH2;
+class TH2D;
+class TTree;
+class TCanvas;
+class TLegend;
+class TPad;
+class TAxis;
+class TChain;
 
-#include "RawAnitaHeader.h"
-#include "UsefulAnitaEvent.h"
-#include "Adu5Pat.h"
-
+class UsefulAnitaEvent;
+class RawAnitaHeader;
+class Adu5Pat;
 
 /** @mainpage
  * Yes, the name ACCLAIM is kind of lame, but passed a certain point anitaAnalysisTools was a a bit generic, and it was the best I could do in a lunch break.
@@ -180,7 +174,8 @@ namespace Acclaim
     std::pair<double, double> findSmallestWindowContainingFracOfPower(const TGraph* grPow, double fracOfPowerInWindow);
     double getTimeIntegratedPower(const TGraph* gr, int firstSamp=0, int lastSamp=-1);
 
+    void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const char* separator);
+    void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const std::vector<const char*>& separators);
   }
 }
-
 #endif
