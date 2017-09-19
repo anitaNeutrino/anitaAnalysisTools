@@ -33,6 +33,24 @@ void Acclaim::CutOptimizer::setDebug(bool db){
 }
 
 
+void Acclaim::CutOptimizer::FisherResult::getExpressions(std::vector<TString>& expressions) const {
+  for(ExpressionMap::const_iterator it = fExpressions.begin(); it!= fExpressions.end(); it++){
+    expressions.push_back(it->second);
+  }
+}
+
+double Acclaim::CutOptimizer::FisherResult::getWeight(const char* expression){
+
+  TString expr(expression);
+  for(ExpressionMap::const_iterator it = fExpressions.begin(); it!= fExpressions.end(); it++){
+    if(it->second == expr){
+      return fWeights[it->first];
+    }
+  }
+  return 0;
+}
+
+
 TString Acclaim::CutOptimizer::FisherResult::getFisherFormula() const{
 
   TString command;
@@ -494,6 +512,13 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   if(fBackgroundGlob != ""){
     globs.push_back(fBackgroundGlob);
   }
+  else{
+    globs.push_back(fSignalGlob); // again...
+  }
+  for(UInt_t g=0; g < fSpecGlobs.size(); g++){
+    globs.push_back(fSpecGlobs[g]);
+  }
+  
 
   // Branches could either be integers or floats, depending on the formula return type
   // We will try to figure it out later from the TTreeFormula, but for now assign
@@ -507,6 +532,26 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   // and store the types we do figure out here...
   std::vector<BranchType> assignedSignalBranches(nFormStr, kUnassigned);
   std::vector<BranchType> assignedBackgroundBranches(nFormStr, kUnassigned);
+
+
+  // some acrobatics to assign an arbitrary number of spectator trees...
+  while(fSpecTrees.size() > 0){
+    if(fSpecTrees.back()){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing spectator tree. Deleting and regenerating." << std::endl;      
+      delete fSpecTrees.back();
+      fSpecTrees.back() = NULL;      
+    }
+    fSpecTrees.pop_back();
+  }
+
+  const int nSpec = fSpecTreeNames.size();
+  for(int s=0; s < nSpec;  s++){
+    fSpecTrees.push_back(new TTree(fSpecTreeNames[s], fSpecTreeNames[s]));
+  }
+  std::vector<std::vector<BranchType> > assignedSpecBranches(nSpec, std::vector<BranchType>(nFormStr, kUnassigned));
+  std::vector<std::vector<Int_t> > fSpecIntVals(nSpec, std::vector<int>(nFormStr, 0));
+  std::vector<std::vector<Float_t> > fSpecFloatVals(nSpec, std::vector<float>(nFormStr, 0));
+
 
   // book efficiencies
   fSignalEffs[kSNR].reserve(signalSelection.size());
@@ -526,7 +571,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   for(UInt_t g=0; g < globs.size(); g++){
 
     Bool_t doSignal = g == 0 ? true : false;
-    Bool_t doBackground = globs.size() == 2 && g == 0 ? false : true;
+    Bool_t doBackground = g == 1 ? true : false;
 
     // Then load the master AnitaEventSummary chain using my SummarySet class    
     SummarySet ss(globs[g]);
@@ -539,7 +584,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
     }
 
     // Now we loop over the AnitaEventSummaries
-    ProgressBar p(nEntries); // For prettiness  
+    ProgressBar p(nEntries); // For prettiness
     for(Long64_t entry=0; entry < nEntries; entry++){
       ss.getEntry(entry);
 
@@ -604,8 +649,29 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
           fSignalTree->Fill();
         }
       }
-      else{
-        std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", not doing signal or background?" << std::endl;
+      else{ // then it's a spectator...
+        // std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", not doing signal or background?" << std::endl;
+        Bool_t matchSpecSelection = true;
+        
+        for(UInt_t i=0; i < fSpecSelections[g-2].size(); i++){
+          int thisCutVal = fSpecSelections[g-2].at(i)->apply(sum);
+          matchSpecSelection = matchSpecSelection && (thisCutVal != 0);
+        }
+
+        if(matchSpecSelection){
+          for(UInt_t i=0; i < forms.N(); i++){
+            if(assignedSpecBranches.at(g-2).at(i)==kUnassigned){
+              assignedSpecBranches.at(g-2).at(i) = setBranchFromFormula(fSpecTrees[g-2], forms.at(i), forms.str(i), &fSpecIntVals.at(g-2).at(i), &fSpecFloatVals.at(g-2).at(i));
+            }
+            if(assignedSpecBranches.at(g-2).at(i)==kInt){
+              fSpecIntVals.at(g-2).at(i) = forms.at(i)->EvalInstance();
+            }
+            else{
+              fSpecFloatVals.at(g-2).at(i) = forms.at(i)->EvalInstance();
+            }
+          }
+          fSpecTrees[g-2]->Fill();
+        }
       }
       p.inc(entry, nEntries);
     }
@@ -613,10 +679,14 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
       std::cout << "Created " << fSignalTree->GetName() << " with " << fSignalTree->GetEntries() << " events" << std::endl;
       if(debug){fSignalTree->Print();}
     }
-    if(doBackground){
+    else if(doBackground){
       std::cout << "Created " << fBackgroundTree->GetName() << " with " << fBackgroundTree->GetEntries() << " events" << std::endl;
       if(debug){fBackgroundTree->Print();}
     }
+    else{
+      std::cout << "Created " << fSpecTrees[g-2]->GetName() << " with " << fSpecTrees[g-2]->GetEntries() << " events" << std::endl;
+    }
+    
   }
 }
 

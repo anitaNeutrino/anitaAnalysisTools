@@ -47,6 +47,8 @@ class CutOptimizer{
     TString getFisherFormula() const;
     TH2D* makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd=0) const;
     virtual void Print(Option_t* opt = "") const;
+    void getExpressions(std::vector<TString>& expressions) const;
+    double getWeight(const char* expression);
 
    protected:
     void getResultFromXML(const char* filename);
@@ -71,6 +73,13 @@ class CutOptimizer{
                 const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection,
                 const std::vector<FormulaString>& formulaStrings,
                 const char* outFileName = "");
+
+  size_t addSpectatorTree(const char* treeName, const char* glob, const std::vector<const Acclaim::AnalysisCut*>& spectatorSelection){
+    fSpecTreeNames.push_back(treeName);
+    fSpecGlobs.push_back(glob);
+    fSpecSelections.push_back(spectatorSelection);
+    return fSpecSelections.size();
+  }
 
  protected:
 
@@ -97,6 +106,11 @@ class CutOptimizer{
   std::vector<Float_t> fBackgroundFloatVals;
   std::vector<Int_t> fSignalIntVals;
   std::vector<Int_t> fBackgroundIntVals;
+
+  std::vector<TString> fSpecTreeNames;
+  std::vector<TString> fSpecGlobs;
+  std::vector<std::vector<const Acclaim::AnalysisCut*> > fSpecSelections;
+  std::vector<TTree*> fSpecTrees;
 
   static const int numEffVars = 2;
   enum{

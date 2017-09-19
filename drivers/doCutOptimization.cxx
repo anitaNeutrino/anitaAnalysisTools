@@ -55,9 +55,6 @@ int main(int argc, char* argv[]){
 
 
 
-  
-  
-  
   std::vector<CutOptimizer::FormulaString> treeFormulas;
   treeFormulas.push_back(CutOptimizer::FormulaString("run", false));
   treeFormulas.push_back(CutOptimizer::FormulaString("eventNumber", false)); // these get excluded from training by the CutOptimizer
@@ -66,18 +63,18 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mc.energy", false)); // The MC energy
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().phi", false)); // debugging
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().theta", false)); // debugging
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dPhiMC()", false)); // debugging
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dThetaMC()", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dPhiTagged()", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dThetaTagged()", false)); // debugging
 
   // map info
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", true)); // map values
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSun())", true)); // delta phi sun
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered_xpol", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked_xpol", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().minAbsHwAngle())", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngleLessThanAbsHwAngleXPol()", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", false)); // map values
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSun())", false)); // delta phi sun
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered_xpol", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked_xpol", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().minAbsHwAngle())", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngleLessThanAbsHwAngleXPol()", false));
 
   // waveform info
   // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcCoherentFiltered().standardizedPeakMoment(1)", true));
@@ -99,6 +96,11 @@ int main(int argc, char* argv[]){
   // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert/sum.mcDeconvolvedFiltered().peakHilbert", true));
   // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcCoherent().peakHilbert/sum.mcCoherentFiltered().peakHilbert", true));
 
+
+  std::vector<const AnalysisCut*> waisCuts;
+  waisCuts.push_back(&Acclaim::AnalysisCuts::isTaggedAsWaisPulser);
+  co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
+  
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);
 
   return 0;

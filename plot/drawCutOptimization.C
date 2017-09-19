@@ -88,10 +88,8 @@ void overlayOneDimDists(TFile* f){
     hb->SetMaximum(max*1.1);
     hb->SetMinimum(min*minFact);
   }
-
-  
-  
 }
+
 
 
 
@@ -107,7 +105,8 @@ void drawFisherPlot(TFile* f){
   double xHigh = hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX());
 
   std::cerr << fitStart << "\t" << fitEnd << std::endl;
-  TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
+  // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
+  TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x)", xLow, xHigh);
 
   auto c1 = new TCanvas();
   hSigInt->Draw();
@@ -123,7 +122,7 @@ void drawFisherPlot(TFile* f){
 
   std::cerr << "With " << numRfTriggersA3 << " RF triggers, and only wanting " << numDesiredBackground << " to pass cuts..." << std::endl;
   std::cerr << "I have a background acceptance of " << backgroundAcceptance << std::endl;
-  double requiredFisherScore = fBackExp->GetX(backgroundAcceptance);
+  double requiredFisherScore = fBackExp->GetX(backgroundAcceptance, 0.001, 100);
   std::cerr << "Extrapolating my fit to that acceptance, I get a fisher score at " << requiredFisherScore << std::endl;
   fisherCutVal = requiredFisherScore; // set for other plots
   double thermalCutSignalBin = hSigInt->FindBin(requiredFisherScore);
@@ -135,9 +134,15 @@ void drawFisherPlot(TFile* f){
   fBackExp->SetRange(fitStart, requiredFisherScore);
   
   TGraph* grLine = new TGraph();
-  grLine->SetPoint(0, fitEnd, fBackExp->Eval(fitEnd));
-  grLine->SetPoint(1, requiredFisherScore, backgroundAcceptance);
-  grLine->SetPoint(2, requiredFisherScore, thermalCutSignalEfficiency);
+  const int nInterpPoints = 50;
+  for(int i=0; i < nInterpPoints; i++)
+  {
+    double x = fitEnd + (requiredFisherScore - fitEnd)*(double(i)/(nInterpPoints-1));
+    double y = fBackExp->Eval(x);
+    grLine->SetPoint(i, x, y);
+  }
+  grLine->SetPoint(grLine->GetN(), requiredFisherScore, backgroundAcceptance);
+  grLine->SetPoint(grLine->GetN(), requiredFisherScore, thermalCutSignalEfficiency);
   grLine->SetLineColor(kMagenta);
   grLine->SetLineStyle(3);
   grLine->Draw("lsame");
@@ -184,7 +189,7 @@ void drawEfficiencies(TFile* f, bool makeFisher){
     l1->AddEntry(effSnr.at(i), effSnr.at(i)->GetName(), "l");
   }
   l1->Draw();
-
+  
   auto c2 = new TCanvas();
   auto l2 = new TLegend(0.8, 0.8, 1, 1);
   
@@ -325,8 +330,8 @@ void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
   findReasonsForOutlying(f, 4, true,  true);
-  // drawFisherPlot(f);
-  // drawEfficiencies(f, true);
+  drawFisherPlot(f);
+  drawEfficiencies(f, true);
   // overlayOneDimDists(f);
   
 }
