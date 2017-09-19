@@ -8,6 +8,7 @@
 #include "TF1.h"
 #include "TGraph.h"
 #include "TKey.h"
+#include "RootTools.h"
 #include "TH2D.h"
 
 const int numRfTriggersA3 = 77e6;
@@ -236,11 +237,96 @@ void drawEfficiencies(TFile* f, bool makeFisher){
   }
 }
 
+
+void findReasonsForOutlying(TFile* f, double fisherCut, bool doSignal = true, bool doBackground = true){
+  Acclaim::CutOptimizer::FisherResult* fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");
+  TString fisherForm = fr->getFisherFormula();
+
+
+  std::vector<TString> fisherComponents; 
+  Acclaim::RootTools::tokenize(fisherComponents,  fisherForm.Data(), std::vector<const char*>{"+(",  ")"});
+
+
+  TString scanCommand = "run:eventNumber";
+  for(UInt_t i=0; i < fisherComponents.size(); i++){
+    scanCommand += ":" + fisherComponents.at(i);
+  }
+
+  TString scanCut  = fisherForm + TString::Format(" > %lf", fisherCut);
+
+  if(doSignal){
+
+    TH2D* hSignalComponents = new TH2D("hSignalComponents", "Components of Fisher Discriminant for Signal",
+                                       fisherComponents.size(), 0,  fisherComponents.size(),
+                                       1024, -20, 20);
+
+    TTree* signalTree = (TTree*) f->Get("signalTree");
+    // signalTree->Scan(scanCommand, scanCut);
+    for(UInt_t i=0; i < fisherComponents.size(); i++){
+      TH2D hTemp("hTemp", "hTemp",
+                 hSignalComponents->GetNbinsX(), hSignalComponents->GetXaxis()->GetBinLowEdge(1), hSignalComponents->GetXaxis()->GetBinUpEdge(hSignalComponents->GetNbinsX()),
+                 hSignalComponents->GetNbinsY(), hSignalComponents->GetYaxis()->GetBinLowEdge(1), hSignalComponents->GetYaxis()->GetBinUpEdge(hSignalComponents->GetNbinsY()));
+      signalTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");      
+      hSignalComponents->Add(&hTemp);
+
+      std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
+    }
+    for(UInt_t i=0; i < fisherComponents.size(); i++){
+      std::vector<TString> binLabel;
+      Acclaim::RootTools::tokenize(binLabel, fisherComponents.at(i), "*");
+      hSignalComponents->GetXaxis()->SetBinLabel(i+1, binLabel.size() > 1 ? binLabel.at(1) : "Constant");
+    }
+    auto cs = new TCanvas();
+    cs->SetBottomMargin(0.2);
+    cs->SetRightMargin(0.2);    
+    hSignalComponents->Draw("colz");
+    cs->SetLogz(1);
+  }
+
+  if(doBackground){
+    
+    TH2D* hBackgroundComponents = new TH2D("hBackgroundComponents", "Components of Fisher Discriminant for Background",
+                                           fisherComponents.size(), 0,  fisherComponents.size(),
+                                           1024, -20, 20);
+    
+    std::cerr << scanCommand << std::endl;
+    TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
+    // backgroundTree->Scan(scanCommand, scanCut);
+
+    for(UInt_t i=0; i < fisherComponents.size(); i++){
+      TH2D hTemp("hTemp", "hTemp",
+                 hBackgroundComponents->GetNbinsX(), hBackgroundComponents->GetXaxis()->GetBinLowEdge(1), hBackgroundComponents->GetXaxis()->GetBinUpEdge(hBackgroundComponents->GetNbinsX()),
+                 hBackgroundComponents->GetNbinsY(), hBackgroundComponents->GetYaxis()->GetBinLowEdge(1), hBackgroundComponents->GetYaxis()->GetBinUpEdge(hBackgroundComponents->GetNbinsY()));
+      backgroundTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");
+      
+      hBackgroundComponents->Add(&hTemp);
+      std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
+    }
+    for(UInt_t i=0; i < fisherComponents.size(); i++){    
+      std::vector<TString> binLabel;
+      Acclaim::RootTools::tokenize(binLabel, fisherComponents.at(i), "*");
+      hBackgroundComponents->GetXaxis()->SetBinLabel(i+1, binLabel.size() > 1 ? binLabel.at(1) : "Constant");
+    }
+    auto cb = new TCanvas();
+    cb->SetBottomMargin(0.2);
+    cb->SetRightMargin(0.2);
+    hBackgroundComponents->Draw("colz");
+    cb->SetLogz(1);
+  }
+
+
+  
+
+  
+  
+}
+
 void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
+  findReasonsForOutlying(f, 4, true,  true);
   // drawFisherPlot(f);
   // drawEfficiencies(f, true);
-  overlayOneDimDists(f);
+  // overlayOneDimDists(f);
   
 }
