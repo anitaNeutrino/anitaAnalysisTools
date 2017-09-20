@@ -561,7 +561,13 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   for(unsigned i=0; i < signalSelection.size(); i++){
     TString cutName = signalSelection[i]->getName();
     TString snrName = "eff_" + cutName + "_vs_SNR";
-    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, 200, 0, 100));
+
+    const int numEnergyBins = 30;
+    const double energyBins[numEnergyBins] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5,
+                                              5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5,
+                                              10., 12., 14., 16., 18., 20., 40., 60., 80., 100};
+    
+    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, numEnergyBins, energyBins));
 
     TString energyName = "eff_" + cutName + "_vs_Energy";
     fSignalEffs[kEnergy].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
@@ -625,7 +631,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
           int thisCutVal = signalSelection.at(i)->apply(sum);
           // std::cerr << signalSelection.at(i)->getName() << "\t" << thisCutVal << std::endl;
           
-          fSignalEffs[kSNR][i]->Fill(thisCutVal, sum->mcDeconvolved().snr, sum->weight());
+          fSignalEffs[kSNR][i]->Fill(thisCutVal, sum->trainingDeconvolved().snr, sum->weight());
           fSignalEffs[kEnergy][i]->Fill(thisCutVal, TMath::Log10(sum->mc.energy), sum->weight());
 
           matchSignalSelection = matchSignalSelection && (thisCutVal != 0);

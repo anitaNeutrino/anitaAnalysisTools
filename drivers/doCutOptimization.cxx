@@ -61,45 +61,49 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("realTime", false)); // these get excluded from training by the CutOptimizer
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.weight()", false)); // Automatically filled with 1 if non-MC
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.mc.energy", false)); // The MC energy
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().phi", false)); // debugging
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().theta", false)); // debugging
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dPhiTagged()", false)); // debugging
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().dThetaTagged()", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().phi", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().theta", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().dPhiTagged()", false)); // debugging
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().dThetaTagged()", false)); // debugging
 
   // map info
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().value", false)); // map values
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().dPhiSun())", false)); // delta phi sun
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered", false));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().triggered_xpol", false));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked", false));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().masked_xpol", false));
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcPeak().minAbsHwAngle())", false));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcPeak().absHwAngleLessThanAbsHwAngleXPol()", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().value", false)); // map values
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().dPhiSun())", false)); // delta phi sun
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().triggered", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().triggered_xpol", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().masked", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().masked_xpol", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().minAbsHwAngle())", false));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().absHwAngleLessThanAbsHwAngleXPol()", false));
 
   // waveform info
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcCoherentFiltered().standardizedPeakMoment(1)", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().standardizedPeakMoment(1)", true));  
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherentFiltered().standardizedPeakMoment(1)", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().standardizedPeakMoment(1)", true));
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().impulsivityMeasure", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().impulsivityMeasure", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().narrowestWidthsGradient()", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().narrowestWidthsGradient()", true));
-  
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().snr", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolvedFiltered().localMaxToMinTime)", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.mcDeconvolvedFiltered().globalMaxToMinTime)", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().peakHilbert", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().linearPolFrac()", true));
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolvedFiltered().circPolFrac()", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().impulsivityMeasure", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolved().impulsivityMeasure", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().narrowestWidthsGradient()", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolved().narrowestWidthsGradient()", true));
 
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().totalPower/sum.mcDeconvolvedFiltered().totalPower", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcDeconvolved().peakHilbert/sum.mcDeconvolvedFiltered().peakHilbert", true));
-  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.mcCoherent().peakHilbert/sum.mcCoherentFiltered().peakHilbert", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().snr", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingDeconvolvedFiltered().localMaxToMinTime)", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingDeconvolvedFiltered().globalMaxToMinTime)", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().peakHilbert", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().linearPolFrac()", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().circPolFrac()", true));
+
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolved().totalPower/sum.trainingDeconvolvedFiltered().totalPower", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolved().peakHilbert/sum.trainingDeconvolvedFiltered().peakHilbert", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherent().peakHilbert/sum.trainingCoherentFiltered().peakHilbert", true));
 
 
   std::vector<const AnalysisCut*> waisCuts;
   waisCuts.push_back(&Acclaim::AnalysisCuts::isTaggedAsWaisPulser);
   co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
+
+  std::vector<const AnalysisCut*> selectingBlastsCuts;
+  selectingBlastsCuts.push_back(&Acclaim::AnalysisCuts::isTaggedAsPayloadBlast);
+  co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
   
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);
 
