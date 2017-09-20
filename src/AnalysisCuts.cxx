@@ -392,3 +392,32 @@ int Acclaim::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSumma
   handleDefaults(sum, pol, peakInd);
   return (sum->coherent_filtered[pol][peakInd].standardizedPeakMoment(1) > 60 && sum->deconvolved_filtered[pol][peakInd].standardizedPeakMoment(1) > 60);
 }
+
+
+
+
+
+
+/** 
+ * Applies my thesis cuts in sequence, warts and all.
+ * Hopefully this analysis will do better...
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (unused)
+ * @param peakInd is the peak index (unused)
+ *
+ * @return 1 if true, 0 if false
+ * 
+ * @return 
+ */
+int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+
+  static const int numFisherWeights = 3;
+  static const Double_t fisherWeights[numFisherWeights] = {-2.80993, 14.6149, 0.0107283};
+  static const Double_t fisherCutVal = -0.0270745;
+
+  Double_t fisherScore = fisherWeights[0] + fisherWeights[1]*sum->trainingPeak().value + fisherWeights[2]*sum->trainingPeak().value;
+  return fisherScore > fisherCutVal;
+  
+
+}

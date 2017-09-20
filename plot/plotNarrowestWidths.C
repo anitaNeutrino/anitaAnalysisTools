@@ -55,8 +55,8 @@ void plotNarrowestWidths(){
 
         bool graphThisEntry = entry < 100;
     
-        int mcPeakInd = sum->mcPeakInd();
-        int mcPeakPolInd = sum->mcPolAsInt();    
+        int mcPeakInd = sum->trainingPeakInd();
+        int mcPeakPolInd = sum->trainingPolAsInt();
         for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
           for(int peakInd=0; peakInd < sum->nPeaks[polInd]; peakInd++){
             TGraph* gr = graphThisEntry ? new TGraph() : NULL;

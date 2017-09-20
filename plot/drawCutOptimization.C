@@ -16,6 +16,9 @@ const double numDesiredBackground = 0.5; //ish
 const double backgroundAcceptance = numDesiredBackground/numRfTriggersA3;
 double fisherCutVal = 4;
 
+Acclaim::CutOptimizer::FisherResult* fr = NULL;
+
+
 double getLowestNonZeroBin(TH1D* h){
   double min = DBL_MAX;
   for(int i=1; i <= h->GetNbinsX(); i++){
@@ -97,7 +100,7 @@ void drawFisherPlot(TFile* f){
   TH1D* hSigInt = (TH1D*) f->Get("hSigInt");
   TH1D* hBackInt = (TH1D*) f->Get("hBackInt");
 
-  int fitStartBin = hBackInt->FindLastBinAbove(1e-3);
+  int fitStartBin = hBackInt->FindLastBinAbove(1e-2);
   int fitEndBin = hBackInt->FindLastBinAbove(1e-7);
   double fitStart = hBackInt->GetXaxis()->GetBinLowEdge(fitStartBin);
   double fitEnd = hBackInt->GetXaxis()->GetBinUpEdge(fitEndBin);
@@ -106,7 +109,7 @@ void drawFisherPlot(TFile* f){
 
   std::cerr << fitStart << "\t" << fitEnd << std::endl;
   // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
-  TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x)", xLow, xHigh);
+  TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x - [3]*x*x*x + [4]*x*x*x*x)", xLow, xHigh);
 
   auto c1 = new TCanvas();
   hSigInt->Draw();
@@ -125,11 +128,8 @@ void drawFisherPlot(TFile* f){
   double requiredFisherScore = fBackExp->GetX(backgroundAcceptance, 0.001, 100);
   std::cerr << "Extrapolating my fit to that acceptance, I get a fisher score at " << requiredFisherScore << std::endl;
   fisherCutVal = requiredFisherScore; // set for other plots
-  double thermalCutSignalBin = hSigInt->FindBin(requiredFisherScore);
-  double thermalCutSignalEfficiency = hSigInt->GetBinContent(thermalCutSignalBin);
+  double thermalCutSignalEfficiency = hSigInt->Interpolate(requiredFisherScore);
   std::cerr << "My signal efficiency at this value is " << thermalCutSignalEfficiency << std::endl;
-  
-  
 
   fBackExp->SetRange(fitStart, requiredFisherScore);
   
@@ -146,6 +146,34 @@ void drawFisherPlot(TFile* f){
   grLine->SetLineColor(kMagenta);
   grLine->SetLineStyle(3);
   grLine->Draw("lsame");
+
+  TH1D* hWaisInt = NULL;
+  bool doWais = true;
+  if(doWais){
+    TTree* waisTree = (TTree*) f->Get("waisTree");
+
+    if(waisTree)    
+    {
+      int nx = hSigInt->GetNbinsX();
+      TH1D* hWais = new TH1D("hWais", "hWais", nx, hSigInt->GetXaxis()->GetBinLowEdge(1), hSigInt->GetXaxis()->GetBinUpEdge(nx));
+      hWaisInt = new TH1D("hWaisInt", "hWaisInt", nx, hSigInt->GetXaxis()->GetBinLowEdge(1), hSigInt->GetXaxis()->GetBinUpEdge(nx));
+      hWaisInt->SetLineColor(kCyan);
+      TString drawWais = fr->getFisherFormula() + ">>hWais";
+      waisTree->Draw(drawWais, "", "goff");
+      hWais->Scale(1./hWais->Integral());
+      double cumulativeWais = 1; //hSignal->Integral();
+      for(int bx=1; bx <= nx; bx++){
+        hWaisInt->SetBinContent(bx,  cumulativeWais);
+
+        cumulativeWais -= hWais->GetBinContent(bx);
+      }
+      hWaisInt->Draw("same");
+
+      double thermalCutWaisEfficiency = hWaisInt->Interpolate(requiredFisherScore);
+      
+      std::cerr <<  "By the way, the WAIS pulse efficiency is " << thermalCutWaisEfficiency << std::endl;
+    }
+  }
   
 
   hSigInt->SetTitle("Fisher Discriminant;Fisher Score;Fraction of events above value");
@@ -153,7 +181,10 @@ void drawFisherPlot(TFile* f){
   hSigInt->GetYaxis()->SetRangeUser(1e-09, 2);
   auto l1 = new TLegend(0.65, 0.75, 0.99, 0.99);
   l1->AddEntry(hSigInt, "MC", "l");
-  l1->AddEntry(hBackInt, "Upward pointing RF triggers", "l");
+  if(hWaisInt){
+    l1->AddEntry(hWaisInt, "WAIS pulses", "l");
+  }
+  l1->AddEntry(hBackInt, "Above horizontal RF triggers", "l");
   l1->Draw();
   
   c1->SetLogy(1);
@@ -207,7 +238,6 @@ void drawEfficiencies(TFile* f, bool makeFisher){
 
   if(makeFisher){
 
-    Acclaim::CutOptimizer::FisherResult* fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");
     TString cutForm = fr->getFisherFormula();
     const TH1* h_energy = effEnergy.at(0)->GetPassedHistogram();
     double xLow = h_energy->GetBinLowEdge(1);
@@ -243,10 +273,9 @@ void drawEfficiencies(TFile* f, bool makeFisher){
 }
 
 
-void findReasonsForOutlying(TFile* f, double fisherCut, bool doSignal = true, bool doBackground = true){
+void findReasonsForOutlying(TFile* f, double fisherCut, std::vector<TString>& treeNames){
   Acclaim::CutOptimizer::FisherResult* fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");
   TString fisherForm = fr->getFisherFormula();
-
 
   std::vector<TString> fisherComponents; 
   Acclaim::RootTools::tokenize(fisherComponents,  fisherForm.Data(), std::vector<const char*>{"+(",  ")"});
@@ -259,68 +288,41 @@ void findReasonsForOutlying(TFile* f, double fisherCut, bool doSignal = true, bo
 
   TString scanCut  = fisherForm + TString::Format(" > %lf", fisherCut);
 
-  if(doSignal){
+  for(auto& treeName : treeNames ){
 
-    TH2D* hSignalComponents = new TH2D("hSignalComponents", "Components of Fisher Discriminant for Signal",
-                                       fisherComponents.size(), 0,  fisherComponents.size(),
-                                       1024, -20, 20);
-
-    TTree* signalTree = (TTree*) f->Get("signalTree");
-    // signalTree->Scan(scanCommand, scanCut);
-    for(UInt_t i=0; i < fisherComponents.size(); i++){
-      TH2D hTemp("hTemp", "hTemp",
-                 hSignalComponents->GetNbinsX(), hSignalComponents->GetXaxis()->GetBinLowEdge(1), hSignalComponents->GetXaxis()->GetBinUpEdge(hSignalComponents->GetNbinsX()),
-                 hSignalComponents->GetNbinsY(), hSignalComponents->GetYaxis()->GetBinLowEdge(1), hSignalComponents->GetYaxis()->GetBinUpEdge(hSignalComponents->GetNbinsY()));
-      signalTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");      
-      hSignalComponents->Add(&hTemp);
-
-      std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
+    TTree* signalTree = (TTree*) f->Get(treeName);
+    if(!signalTree){
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find " << treeName << std::endl;
     }
-    for(UInt_t i=0; i < fisherComponents.size(); i++){
-      std::vector<TString> binLabel;
-      Acclaim::RootTools::tokenize(binLabel, fisherComponents.at(i), "*");
-      hSignalComponents->GetXaxis()->SetBinLabel(i+1, binLabel.size() > 1 ? binLabel.at(1) : "Constant");
-    }
-    auto cs = new TCanvas();
-    cs->SetBottomMargin(0.2);
-    cs->SetRightMargin(0.2);    
-    hSignalComponents->Draw("colz");
-    cs->SetLogz(1);
-  }
+    else{
+      TString histName = "h" + treeName + "Components";    
+      TH2D* hSignalComponents = new TH2D(histName, "Components of Fisher Discriminant for " + treeName,
+                                         fisherComponents.size(), 0,  fisherComponents.size(),
+                                         1024, -20, 20);
 
-  if(doBackground){
     
-    TH2D* hBackgroundComponents = new TH2D("hBackgroundComponents", "Components of Fisher Discriminant for Background",
-                                           fisherComponents.size(), 0,  fisherComponents.size(),
-                                           1024, -20, 20);
-    
-    std::cerr << scanCommand << std::endl;
-    TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
-    // backgroundTree->Scan(scanCommand, scanCut);
+      // signalTree->Scan(scanCommand, scanCut);
+      for(UInt_t i=0; i < fisherComponents.size(); i++){
+        TH2D hTemp("hTemp", "hTemp",
+                   hSignalComponents->GetNbinsX(), hSignalComponents->GetXaxis()->GetBinLowEdge(1), hSignalComponents->GetXaxis()->GetBinUpEdge(hSignalComponents->GetNbinsX()),
+                   hSignalComponents->GetNbinsY(), hSignalComponents->GetYaxis()->GetBinLowEdge(1), hSignalComponents->GetYaxis()->GetBinUpEdge(hSignalComponents->GetNbinsY()));
+        signalTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");      
+        hSignalComponents->Add(&hTemp);
 
-    for(UInt_t i=0; i < fisherComponents.size(); i++){
-      TH2D hTemp("hTemp", "hTemp",
-                 hBackgroundComponents->GetNbinsX(), hBackgroundComponents->GetXaxis()->GetBinLowEdge(1), hBackgroundComponents->GetXaxis()->GetBinUpEdge(hBackgroundComponents->GetNbinsX()),
-                 hBackgroundComponents->GetNbinsY(), hBackgroundComponents->GetYaxis()->GetBinLowEdge(1), hBackgroundComponents->GetYaxis()->GetBinUpEdge(hBackgroundComponents->GetNbinsY()));
-      backgroundTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");
-      
-      hBackgroundComponents->Add(&hTemp);
-      std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
-    }
-    for(UInt_t i=0; i < fisherComponents.size(); i++){    
-      std::vector<TString> binLabel;
-      Acclaim::RootTools::tokenize(binLabel, fisherComponents.at(i), "*");
-      hBackgroundComponents->GetXaxis()->SetBinLabel(i+1, binLabel.size() > 1 ? binLabel.at(1) : "Constant");
-    }
-    auto cb = new TCanvas();
-    cb->SetBottomMargin(0.2);
-    cb->SetRightMargin(0.2);
-    hBackgroundComponents->Draw("colz");
-    cb->SetLogz(1);
+        std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
+      }
+      for(UInt_t i=0; i < fisherComponents.size(); i++){
+        std::vector<TString> binLabel;
+        Acclaim::RootTools::tokenize(binLabel, fisherComponents.at(i), "*");
+        hSignalComponents->GetXaxis()->SetBinLabel(i+1, binLabel.size() > 1 ? binLabel.at(1) : "Constant");
+      }
+      auto cs = new TCanvas();
+      cs->SetBottomMargin(0.2);
+      cs->SetRightMargin(0.2);    
+      hSignalComponents->Draw("colz");
+      cs->SetLogz(1);
+    }    
   }
-
-
-  
 
   
   
@@ -329,9 +331,11 @@ void findReasonsForOutlying(TFile* f, double fisherCut, bool doSignal = true, bo
 void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
-  findReasonsForOutlying(f, 4, true,  true);
-  drawFisherPlot(f);
-  drawEfficiencies(f, true);
-  // overlayOneDimDists(f);
+  fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");
+  // std::vector<TString> treeNames = {"signalTree", "backgroundTree", "waisTree", "blastTree"};
+  // findReasonsForOutlying(f, 4, treeNames);
+  // drawFisherPlot(f);
+  // drawEfficiencies(f, true);
+  overlayOneDimDists(f);
   
 }

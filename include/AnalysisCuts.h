@@ -41,8 +41,8 @@ namespace Acclaim
    protected:
     inline static void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd){
       if(peakInd==-1){
-        peakInd = sum->mcPeakInd();
-        pol = sum->mcPol();
+        peakInd = sum->trainingPeakInd();
+        pol = sum->trainingPol();
       }
     }
     TString fName;
@@ -177,6 +177,12 @@ class CloseToMC : public AnalysisCut{
     virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
   };
 
+  class PassesThesisCuts : public AnalysisCut{
+   public:
+    PassesThesisCuts() : AnalysisCut("passesThesisCuts", "Passes thesis thermal cut", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// true/false
+  };
+
 // const globals so you don't need to instantiate these yourself
   namespace AnalysisCuts{
     const IsAboveHorizontal isAboveHorizontal;
@@ -197,6 +203,7 @@ class CloseToMC : public AnalysisCut{
     const SmallDeltaRough smallDeltaRough;
     const IsNotTaggedAsPulser isNotTaggedAsPulser;
     const SignalLikeFirstStandardizedPeakMoments signalLikeFirstStandardizedPeakMoments;
+    const PassesThesisCuts passesThesisThermalCut;
   }
 }
 
