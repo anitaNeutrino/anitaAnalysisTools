@@ -238,27 +238,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
 
 
-/** 
- * Wrapper function to create UsefulAdu5Pat from Adu5Pat and call primary process() function
- * 
- * @param fEv is the FilteredAnitaEvent to process
- * @param pat is the Adu5Pat from which the construct the UsefulAdu5Pat
- * @param eventSummary is the AnitaEventSummary to fill during the recontruction
- * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
- */
-
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, Adu5Pat* pat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
-
-  if(pat){
-    UsefulAdu5Pat usefulPat(pat);
-    process(fEv, &usefulPat, eventSummary, noiseMonitor, truth);
-  }
-  else{
-    process(fEv, (UsefulAdu5Pat*)NULL, eventSummary, noiseMonitor, truth);
-  }
-}
-
-
 
 /**
  * Creates the histogram with the easting/northing dimensions for Antarctica
@@ -320,7 +299,7 @@ void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, Anita
  * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
  */
 
-void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pat* usefulPat, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
+void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSummary * eventSummary, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
 
 
   // spawn a CrossCorrelator if we need one
@@ -405,8 +384,10 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
         fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
-      
-        if(usefulPat != NULL){
+
+        
+        if(fEv->getGPS() != NULL){
+          UsefulAdu5Pat usefulPat(fEv->getGPS());
           int success = 0;
           if(eventSummary->peak[pol][peakInd].theta < 0){ // work around for bug in traceBackToContinent
             Double_t phiWave = TMath::DegToRad()*eventSummary->peak[pol][peakInd].phi;
@@ -415,11 +396,11 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
             // *   Returns 0 if never hits the ground, even with maximum adjustment
             // *   Returns 1 if hits the ground with no adjustment
             // *   Returns 2 if it hits the ground with adjustment
-            success = usefulPat->traceBackToContinent(phiWave, thetaWave,
-                                                      &eventSummary->peak[pol][peakInd].longitude,
-                                                      &eventSummary->peak[pol][peakInd].latitude,
-                                                      &eventSummary->peak[pol][peakInd].altitude,
-                                                      &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
+            success = usefulPat.traceBackToContinent(phiWave, thetaWave,
+                                                     &eventSummary->peak[pol][peakInd].longitude,
+                                                     &eventSummary->peak[pol][peakInd].latitude,
+                                                     &eventSummary->peak[pol][peakInd].altitude,
+                                                     &eventSummary->peak[pol][peakInd].theta_adjustment_needed);
           }
           if(success==0){
             eventSummary->peak[pol][peakInd].longitude = -9999;
@@ -429,9 +410,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, UsefulAdu5Pa
             eventSummary->peak[pol][peakInd].distanceToSource = -9999;
           }
           else{
-            eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat->getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
-                                                                                                                        eventSummary->peak[pol][peakInd].longitude,
-                                                                                                                        eventSummary->peak[pol][peakInd].altitude);
+            eventSummary->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat.getTriggerTimeNsFromSource(eventSummary->peak[pol][peakInd].latitude,
+                                                                                                                       eventSummary->peak[pol][peakInd].longitude,
+                                                                                                                       eventSummary->peak[pol][peakInd].altitude);
           }
         }
       }

@@ -519,7 +519,7 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
         delete fEv;
       }
       fEv = new FilteredAnitaEvent(usefulEvent, fFilterStrat, pat, header, false);
-      fReco->process(fEv, &usefulPat, fEventSummary, fNoiseMonitor);
+      fReco->process(fEv, fEventSummary, fNoiseMonitor);
     }
 
     if(fSumTree){
