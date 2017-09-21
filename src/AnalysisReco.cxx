@@ -213,12 +213,12 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // set impulsivity measure defined in AnitaAnalysisSummary
   info.impulsivityMeasure = impulsivity::impulsivityMeasure(coherentWave, NULL, maxIndex, true);
 
-
-  const int numWidths = 5;
-  for(int w=0; w < numWidths; w++){
+  for(int w=0; w < AnitaEventSummary::numFracPowerWindows; w++){
     const double powerFraction = (w+1)*0.1;
     std::pair<double, double> window = RootTools::findSmallestWindowContainingFracOfPower(grHilbert, powerFraction);
-    info.narrowestWidths[w] = window.second - window.first;
+    // info.narrowestWidths[w] = window.second - window.first;
+    info.fracPowerWindowBegins[w] = window.first;
+    info.fracPowerWindowEnds[w] = window.second;
   }
 
   ///////////////////////////////////////////////////////////////////////////////////
@@ -1203,8 +1203,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     // TODO, make this selectable?
     AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
     // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
-    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
-    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
+    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
     if(coherentWave && coherentUnfilteredWave){
 
       const char* opt = "al";

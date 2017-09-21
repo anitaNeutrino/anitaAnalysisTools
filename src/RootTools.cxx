@@ -1685,9 +1685,9 @@ std::pair<double, double> Acclaim::RootTools::findSmallestWindowContainingFracOf
       lastJ++;
     }
     if(windowPower >= desiredPower){
-      double windowWidth =  gr->GetX()[lastJ] - gr->GetX()[0];
+      double windowWidth =  gr->GetX()[lastJ] - gr->GetX()[i];
       if(windowWidth < minWindowWidth){
-        minWinStart = gr->GetX()[0];
+        minWinStart = gr->GetX()[i];
         minWinEnd = gr->GetX()[lastJ];
         minWindowWidth = minWinEnd - minWinStart;
       }
