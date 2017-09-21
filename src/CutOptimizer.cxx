@@ -565,10 +565,10 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
     const int numEnergyBins = 30;
     const double energyBins[numEnergyBins] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5,
                                               5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5,
-                                              10., 12., 14., 16., 18., 20., 40., 60., 80., 100};
+                                              10 , 12 , 14 , 16 , 18 , 20 , 40 , 60 , 80 , 100};
     
-    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, numEnergyBins, energyBins));
-
+    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, numEnergyBins-1, energyBins));
+    
     TString energyName = "eff_" + cutName + "_vs_Energy";
     fSignalEffs[kEnergy].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
   }

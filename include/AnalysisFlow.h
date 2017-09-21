@@ -22,6 +22,9 @@ class NoiseMonitor;
 namespace Acclaim
 {
 
+class CmdLineArgs;
+
+
 /**
  * @class AnalysisFlow
  * @brief High level interface to join up the various bits of the analysis
@@ -35,12 +38,11 @@ class AnalysisFlow : public TObject{
     enum selection{
       kAll                = 0,
       kWaisPulser         = 1,
-      kDecimated          = 2,
-      kQuietTime          = 3,
-      kWaisPulserAndNonRF = 4 // I need min bias events for SNR estimates with the noise monitor class
+      kDecimated          = 2
     };
 
-    AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1);
+    AnalysisFlow(CmdLineArgs* args, FilterStrategy* filterStrat=NULL); // prefered constructor
+    AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1) __attribute__((deprecated));
     ~AnalysisFlow();
 
     void doAnalysis();
@@ -83,7 +85,8 @@ class AnalysisFlow : public TObject{
     TFile* fOutFile;
     TTree* fSumTree;
 
-    void prepareEverything();
+    void prepareEverything(const char* preferredSettingsFileName = NULL);
+    Bool_t checkForSgeTaskId();
 
     ANALYSIS_SETTING(Int_t, DoAll);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);

@@ -1,5 +1,5 @@
 
-set(BINARIES filterAllNone filterAllSineSub filterWaisAndNonRfSineSub analyzeWais filterDecimatedAcclaim filterWaisAcclaim filterDecimatedBrickWallSatellites filterWaisBrickWallSatellites filterDecimatedUniformMag filterWaisUniformMag filterWaisSineSub filterDecimatedSineSub filterAllSineSubPlusBrickWall filterDecimatedSineSubPlusBrickWall filterWaisAndNonRfSineSubPlusBrickWall doCutOptimization mergeSummaryTreeFiles rmsCacheSineSubPlusBrickWall editSumTree)
+set(BINARIES doNoFilters doSineSub doSineSubPlusBrickWall doRayleighFilter doCutOptimization mergeSummaryTreeFiles rmsCacheSineSubPlusBrickWall editSumTree)
 
 foreach(binary ${BINARIES})
   MESSAGE(STATUS "Process file: ${binary}")

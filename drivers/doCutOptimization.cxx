@@ -36,12 +36,12 @@ int main(int argc, char* argv[]){
   backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
   backgroundSelection.push_back(&AnalysisCuts::isNotTaggedAsPulser); // not a pulser...
 
-  const int nGen = 6;
+  const int nGen = 5;
   const AnalysisCut* genericDataQualityCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
                                                      &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
                                                      &AnalysisCuts::goodGPS, // do we have GPS data?
-                                                     &AnalysisCuts::nonZeroStokesI, // other badness
-                                                     &AnalysisCuts::realSNR, // other badness (should be fixed with new noise monitor)
+                                                     // &AnalysisCuts::nonZeroStokesI, // other badness
+                                                     &AnalysisCuts::realSNR,
                                                      &AnalysisCuts::isRfTrigger
                                                      }; // for hardware angle related stuff
   

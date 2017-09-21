@@ -5,11 +5,55 @@
 #include "QualityCut.h"
 #include "AcclaimFilters.h"
 #include "NoiseMonitor.h"
+#include "AcclaimCmdLineArgs.h"
 
 ClassImp(Acclaim::AnalysisFlow);
 
 /** 
- * @brief Constructor
+ * @brief Constructor (use this one!)
+ *
+ * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
+ * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
+ * This allows for easy cluster scripting.
+ * 
+ * @param args contains the command line arguments
+ * @param filterStrat is the filter stragtegy to use
+ */
+
+Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* filterStrat){
+
+  fOutFileBaseName = args->output_filename;
+  fSelection = (AnalysisFlow::selection) args->event_selection;
+  fFilterStrat = filterStrat;
+  fBlindStrat = AnitaDataset::kNoBlinding; //TODO update this!
+  
+  if(!checkForSgeTaskId()){
+    fDivision = args->division;
+    fNumDivisions = args->numdivisions;
+    fRun = args->run;
+  }
+
+
+  fSumTree = NULL;
+  fData = NULL;
+  fReco = NULL;
+  fOutFile = NULL;
+  fSettings = NULL;
+  fEventSummary = NULL;
+  fEv = NULL;
+
+  fFirstEntry=0;
+  fLastEntry=0;
+  fLastEventConsidered = 0;
+
+  prepareEverything(args->settings_filename);
+}
+
+
+
+
+/** 
+ * @brief Constructor (deprecated)
  *
  * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
  * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
@@ -17,6 +61,7 @@ ClassImp(Acclaim::AnalysisFlow);
  * 
  * @param run is the run to analyse
  * @param selection is the event selection to apply
+ * @param filterStrat is the filterStrategy to use
  * @param blindStrat is the blinding strategy to use
  * @param division selects which sub division of the run to do. The run is divied into numDivisions divisions, so division goes from 0 -> numDivisions-1, default is 0.
  * @param numDivisions divides the run into pieces. 
@@ -29,13 +74,38 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fFilterStrat = filterStrat;
   fBlindStrat = blindStrat;
 
+  if(!checkForSgeTaskId()){
+    fDivision = division;
+    fNumDivisions = numDivisions;
+    fRun = run;
+  }
 
+  fSumTree = NULL;
+  fData = NULL;
+  fReco = NULL;
+  fOutFile = NULL;
+  fSettings = NULL;
+  fEventSummary = NULL;
+  fEv = NULL;
+
+  fFirstEntry=0;
+  fLastEntry=0;
+  fLastEventConsidered = 0;
+
+  prepareEverything();
+}
+
+
+
+
+Bool_t Acclaim::AnalysisFlow::checkForSgeTaskId(){
   // on the Hoffman2 cluster, this is the task ID
-  // we're going to use it to try and figure out how to set the division if it wasn't explicitly set
+  // we're going to use it to try and figure out the run, division and numdivision
   // assuming this wasn't explicitly set...
   const char* sgeTaskId = "SGE_TASK_ID";
   const char* sgeTaskIdEnv = getenv(sgeTaskId);
-  if(sgeTaskIdEnv && numDivisions==1){    
+
+  if(sgeTaskIdEnv){    
     // we have runs 130-439
     // I'm going to set the job array like:
     // 130-439 for 1 job per run = 309 jobs
@@ -69,30 +139,12 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
 	      << ", set fRun = " << fRun
 	      << ", fNumDivisions = " << fNumDivisions
 	      << ", fDivision = " << fDivision << "." << std::endl;
+    return true;
   }
   else{
-    fDivision = division;
-    fNumDivisions = numDivisions;
-    fRun = run;
+    return false;
   }
-
-
-  fSumTree = NULL;
-  fData = NULL;
-  fReco = NULL;
-  fOutFile = NULL;
-  fSettings = NULL;
-  fEventSummary = NULL;
-  fEv = NULL;
-
-  fFirstEntry=0;
-  fLastEntry=0;
-  fLastEventConsidered = 0;
-
-  prepareEverything();
 }
-
-
 
 
 
@@ -253,9 +305,9 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
       doEvent = true;
       break;
 
-    case kWaisPulserAndNonRF:
-      doEvent = isPulserWAIS(header, usefulPat) || !(header->getTriggerBitRF());
-      break;
+    // case kWaisPulserAndNonRF:
+    //   doEvent = isPulserWAIS(header, usefulPat) || !(header->getTriggerBitRF());
+    //   break;
       
     default:
       std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unknown event selection." << std::endl;
@@ -365,7 +417,7 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
  * Set up all I/O
  * 
  */
-void Acclaim::AnalysisFlow::prepareEverything(){
+void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileName){
 
   if(fRun >= 257 && fRun <= 263){
     if(AnitaVersion::get()==3){
@@ -379,7 +431,7 @@ void Acclaim::AnalysisFlow::prepareEverything(){
   }
 
   if(!fSettings){
-    fSettings = new AnalysisSettings();
+    fSettings = new AnalysisSettings(preferredSettingsFileName);
     fSettings->apply(dynamic_cast<TObject*>(this));
   }
 

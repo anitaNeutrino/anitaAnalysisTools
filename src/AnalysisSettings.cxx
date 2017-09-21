@@ -10,6 +10,9 @@
 #include <cstdlib>
 #include <stdexcept>
 
+
+const char* default_filename = "AcclaimSettings.conf";
+
 Acclaim::AnalysisSettings::AnalysisSettings(const char* fName) : fileName(fName) {
 
   parseSettingsFile();
@@ -226,9 +229,19 @@ void Acclaim::AnalysisSettings::handleKeyValue(VariableMap_t* variableMap, const
 
 Bool_t Acclaim::AnalysisSettings::tryFile(const char* fName){
   Bool_t openedFile = false;
-  std::ifstream a(fName);
+
+  TString n(fName);
+  if(n.Length() > 0 && n[n.Length()-1] == '/'){
+    std::cerr << "Info in " << __PRETTY_FUNCTION__ << ", interpreting forward slash terminated input as directory, appending " << default_filename << std::endl;
+    n += TString::Format("%s", default_filename);
+  }
+
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << ", trying "<< n.Data() << std::endl;  
+  
+  std::ifstream a(n.Data());
   if(a.is_open()){
     openedFile = true;
+    fileName = n.Data();
   }
   return openedFile;
 }
@@ -236,7 +249,6 @@ Bool_t Acclaim::AnalysisSettings::tryFile(const char* fName){
 void Acclaim::AnalysisSettings::findFile(){
 
   if(fileName.Length()!=0){
-    std::cout << "Trying " << fileName << std::endl;  
     // try to open current file name
     if(tryFile(fileName)){      
       return;
@@ -246,8 +258,7 @@ void Acclaim::AnalysisSettings::findFile(){
   // that didn't work so try a couple more things ...
 
   // default file name in the present working directory
-  const char* fName = "AcclaimSettings.conf";
-  std::cout << "Trying " << fName << std::endl;  
+  const char* fName = default_filename;
   if(tryFile(fName)){
     fileName = TString(fName);
     return;
@@ -259,8 +270,7 @@ void Acclaim::AnalysisSettings::findFile(){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", ANITA_UTIL_INSTALL_DIR not set." << std::endl;
   }
 
-  TString fName2 = TString::Format("%s/share/Acclaim/%s", anitaUtilInstallDir, fName);
-  std::cout << "Trying " << fName2 << std::endl;
+  TString fName2 = TString::Format("%s/share/Acclaim/%s", anitaUtilInstallDir, default_filename);
   if(tryFile(fName2.Data())){
     fileName = TString(fName2);
     return;
