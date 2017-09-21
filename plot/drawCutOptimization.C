@@ -14,7 +14,7 @@
 const int numRfTriggersA3 = 77e6;
 const double numDesiredBackground = 0.5; //ish
 const double backgroundAcceptance = numDesiredBackground/numRfTriggersA3;
-double fisherCutVal = 4;
+double fisherCutVal = 999;
 
 Acclaim::CutOptimizer::FisherResult* fr = NULL;
 
@@ -211,32 +211,36 @@ void drawEfficiencies(TFile* f, bool makeFisher){
   const int nC = 7;
   EColor colors[nC] = {kRed, kBlue, kGreen, kYellow, kMagenta, kOrange, kSpring};
   
-  auto c1 = new TCanvas();
-  auto l1 = new TLegend(0.8, 0.8, 1, 1);
+  auto cSNR = new TCanvas();
+  auto lSNR = new TLegend(0.8, 0.8, 1, 1);
   for(unsigned i=0; i < effSnr.size(); i++){
     const char* opt = i == 0 ? "" : "same";
     effSnr.at(i)->Draw(opt);
     effSnr.at(i)->SetLineColor(colors[i%nC]);
-    l1->AddEntry(effSnr.at(i), effSnr.at(i)->GetName(), "l");
+    TString n = effSnr.at(i)->GetName();
+    n.ReplaceAll("_vs_SNR", "").ReplaceAll("eff_", "");
+    lSNR->AddEntry(effSnr.at(i), n, "l");
   }
-  l1->Draw();
+  lSNR->Draw();
   
-  auto c2 = new TCanvas();
-  auto l2 = new TLegend(0.8, 0.8, 1, 1);
+  auto cEnergy = new TCanvas();
+  auto lEnergy = new TLegend(0.8, 0.8, 1, 1);
   
   for(unsigned i=0; i < effEnergy.size(); i++){
     const char* opt = i == 0 ? "" : "same";
     effEnergy.at(i)->Draw(opt);
     effEnergy.at(i)->SetLineColor(colors[i%nC]);
-    l2->AddEntry(effSnr.at(i), effEnergy.at(i)->GetName(), "l");
+    TString n = effEnergy.at(i)->GetName();
+    n.ReplaceAll("_vs_Energy", "").ReplaceAll("eff_", "");
+
+    lEnergy->AddEntry(effSnr.at(i), n, "l");
 
     if(i==0){
-      effEnergy.at(i)->SetTitle("Efficiency of pre-thermal cuts; log10(Energy) eV; Efficiency");
+      effEnergy.at(i)->SetTitle("Current efficiency of pre-clustering cuts (independent); log10(Energy) eV; Efficiency");
     }
   }  
-  l2->Draw();
 
-  if(makeFisher){
+  if(makeFisher && fisherCutVal < 999){
 
     TString cutForm = fr->getFisherFormula();
     const TH1* h_energy = effEnergy.at(0)->GetPassedHistogram();
@@ -267,9 +271,41 @@ void drawEfficiencies(TFile* f, bool makeFisher){
     effE->SetTitle("Fisher effiency?");
     effE->SetTitle(TString::Format("Thermal cut efficiency at Fisher Score of %4.2lf; log10(Energy) eV; Efficiency", fisherCutVal));
 
-    auto c1 = new TCanvas();
-    effE->Draw();
+    // cSNR->cd();
+    cEnergy->cd();
+    lEnergy->AddEntry(effE, "Thermal cut", "l");
+    effE->Draw("same");
+
+
+
+    // TString namePassed = name + "_passed";
+    // TH1D* hPassed = new TH1D(namePassed, namePassed, nx, xLow, xHigh);
+
+    // TString passedCommand = "TMath::Log10(mc_energy)>>" + namePassed;
+    // TString cutCommand = "weight*(" + cutForm + TString::Format("> %lf)", fisherCutVal);
+    // signalTree->Draw(passedCommand, cutCommand, "goff");
+
+    // TString nameTotal = name + "_total";
+    // TH1D* hTotal = new TH1D(nameTotal, nameTotal, nx, xLow, xHigh);
+
+    // std::cout << hPassed->Integral() << "\t" << hTotal->Integral() << std::endl;
+
+    // TString totalCommand = "TMath::Log10(mc_energy)>>" + nameTotal;
+
+    // signalTree->Draw(totalCommand, "weight", "goff");
+
+    // TEfficiency* effE = new TEfficiency(*hPassed, *hTotal);
+    // effE->SetName(name);
+    // effE->SetTitle("Fisher effiency?");
+    // effE->SetTitle(TString::Format("Thermal cut efficiency at Fisher Score of %4.2lf; SNR; Efficiency", fisherCutVal));
+    
+
+    // cSNR->cd();
+    // effSNR->Draw("same")
   }
+  cEnergy->cd();
+  lEnergy->Draw();
+  
 }
 
 
@@ -332,10 +368,10 @@ void drawCutOptimization(const char* fileName){
 
   TFile* f = TFile::Open(fileName);
   fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");
-  // std::vector<TString> treeNames = {"signalTree", "backgroundTree", "waisTree", "blastTree"};
-  // findReasonsForOutlying(f, 4, treeNames);
-  // drawFisherPlot(f);
-  // drawEfficiencies(f, true);
-  overlayOneDimDists(f);
+  std::vector<TString> treeNames = {"signalTree", "backgroundTree"};//, "waisTree", "blastTree"};
+  findReasonsForOutlying(f, 4, treeNames);
+  drawFisherPlot(f);
+  drawEfficiencies(f, true);
+  // overlayOneDimDists(f);
   
 }
