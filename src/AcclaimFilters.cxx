@@ -52,8 +52,7 @@ void Acclaim::Filters::generateFilterStrategies(bool saveOutput){
     // first make the operations...
 
     // should always use some kind of alfa filter unless you have a good reason
-    const double fpeSafety = 1e-10;    
-    ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz - fpeSafety);
+    ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz);
     
     Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
     Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
