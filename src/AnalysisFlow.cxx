@@ -520,7 +520,8 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
     fEventSummary = new AnitaEventSummary(header, &usefulPat, fData->truth());
     Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, fEventSummary);
 
-    if(isGoodEvent || fDoAll){
+    // varner2 contains a check that all channels have lots of points, too few can crash interpolation
+    if(isGoodEvent || (fDoAll && !fEventSummary->flags.isVarner2)){
 
       setPulserFlags(header, &usefulPat, fEventSummary);
         
