@@ -79,6 +79,12 @@ class TGraphInteractive : public TGraphAligned, public GuiParent {
 
 
   virtual void DrawGroup(Option_t* opt = "");
+  void SetDrawOpt(Option_t* drawOpt){
+    fDrawOpt = drawOpt;
+  }
+  Option_t* GetDrawOpt(){
+    return fDrawOpt;
+  }
 
  public:
   friend class GuiParent;

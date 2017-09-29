@@ -207,10 +207,10 @@ void Acclaim::TGraphInteractive::DrawGroup(Option_t* opt){
   Draw(opt);
   
   TString drawOpt = opt;
-  drawOpt.ReplaceAll("same", "");
-  drawOpt.ReplaceAll("a", "");
+  // drawOpt.ReplaceAll("same", "");
+  // drawOpt.ReplaceAll("a", "");
 
-  drawOpt += "same";
+  // drawOpt += "same";
 
   // gPad->Update();
 
@@ -225,6 +225,13 @@ void Acclaim::TGraphInteractive::DrawGroup(Option_t* opt){
 
     for(unsigned i=0; i < fChildren.size(); i++){
       if(fChildren[i]){
+        // fChildren[i]->Draw(drawOpt);
+
+        TString drawOpt = fChildren[i]->GetDrawOpt();
+        drawOpt.ReplaceAll("same", "");
+        drawOpt.ReplaceAll("a", "");
+        drawOpt += "same";
+
         fChildren[i]->Draw(drawOpt);
 
         double childMax, childMin;

@@ -411,7 +411,8 @@ int Acclaim::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSumma
  * @return 
  */
 int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
-
+  (void) pol;
+  (void) peakInd;
   static const int numFisherWeights = 3;
   static const Double_t fisherWeights[numFisherWeights] = {-2.80993, 14.6149, 0.0107283};
   static const Double_t fisherCutVal = -0.0270745;
@@ -419,5 +420,24 @@ int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::Ani
   Double_t fisherScore = fisherWeights[0] + fisherWeights[1]*sum->trainingPeak().value + fisherWeights[2]*sum->trainingPeak().value;
   return fisherScore > fisherCutVal;
   
+
+}
+
+
+/** 
+ * Applies my thesis cuts in sequence, warts and all.
+ * Hopefully this analysis will do better...
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1 if true, 0 if false
+ * 
+ * @return 
+ */
+int Acclaim::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+  handleDefaults(sum, pol, peakInd);  
+  return (TMath::Abs(sum->peak[pol][peakInd].dPhiNorth()) > 90);
 
 }

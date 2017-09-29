@@ -222,8 +222,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   }
 
   ///////////////////////////////////////////////////////////////////////////////////
-  // CURRENTLY NOT USING THESE...
-  //
   // //spectrum info
   // Double_t bandwidth[peaksPerSpectrum];  /// bandwidth of each peak (implementation defined, may not be comparable between analyses) 
   // Double_t peakFrequency[peaksPerSpectrum]; //peak frequency of power spectrum 
@@ -231,6 +229,77 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // Double_t spectrumSlope;  ///  Slope of line fit to spectrum (in log-space, so this is spectral-index) 
   // Double_t spectrumIntercept; /// Intercept of line fit to spectrum (in log-space) 
 
+  // we have interpolated the coherently summed waveform,  probably significantly to extract useful information
+  // from the time domain. Therefore there's a bunch of trailing high frequency crap that I want to ignore
+  // The maximum useful frequency is the nominal sampling
+
+  const double maxFreqIfIHadNotIntepolated = FancyFFTs::getNumFreqs(NUM_SAMP)*(1./(NOMINAL_SAMPLING_DELTAT*NUM_SAMP));
+  const double df = coherentWave->deltaF(); // the actual deltaF
+  int numGoodFreqBins = floor(maxFreqIfIHadNotIntepolated/df);
+
+  // std::cout << maxFreq << std::endl;
+  const TGraphAligned* grPow = coherentWave->power();
+
+  if(numGoodFreqBins > grPow->GetN()){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
+              << ". Did you downsample the coherently summed waveform?" << std::endl;
+    numGoodFreqBins = grPow->GetN();
+  }
+
+  TGraph grMaxima;
+  for(int i=1; i < numGoodFreqBins-1; i++){
+    if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i+i] ){
+      grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
+    }
+
+    // This check should be redundent now, but won't hurt to leave it in...
+    if(grPow->GetX()[i] >= maxFreqIfIHadNotIntepolated){
+      break;
+    }
+  }
+
+  // Sort my collection of local maxima,
+  // The second argument, false, means sort the local maxima in decreasing order (i.e. biggest first)
+  grMaxima.Sort(TGraph::CompareY, false);
+
+  // Put the N largest local maxima into the AnitaEventSummary::WaveformInfo
+  for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+    if(i < grMaxima.GetN()){
+      info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
+      info.peakPower[i] = grMaxima.GetY()[i];
+      info.peakFrequency[i] = grMaxima.GetX()[i];
+    }
+    else{
+      info.bandwidth[i] = 0;
+      info.peakPower[i] = 0;
+      info.peakFrequency[i] = 0;
+    }
+  }
+  
+  const TGraphAligned* grPow_db = coherentWave->powerdB();
+
+  const int firstSlopeBin = TMath::Nint(fSlopeFitStartFreqGHz/df);
+  const int lastSlopeBin  = TMath::Nint(fSlopeFitEndFreqGHz/df);
+  const int numSlopeBins = lastSlopeBin - firstSlopeBin;
+
+  const double mean_f      = TMath::Mean(numSlopeBins, &grPow_db->GetX()[firstSlopeBin]);
+  const double mean_pow_db = TMath::Mean(numSlopeBins, &grPow_db->GetY()[firstSlopeBin]);
+
+  double gradNumerator = 0;
+  double gradDenominator = 0;
+  for(int i=firstSlopeBin; i < lastSlopeBin; i++){
+    double dx = grPow_db->GetX()[i] - mean_f;
+    double dy = grPow_db->GetY()[i] - mean_pow_db;
+
+    gradNumerator   += dy*dx;
+    gradDenominator += dx*dx;
+  }
+
+  if(gradDenominator <= 0){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
+  }
+  info.spectrumSlope = gradNumerator/gradDenominator;
+  info.spectrumIntercept = mean_pow_db - info.spectrumSlope*mean_f;
 
 }
 
@@ -514,12 +583,14 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fDoHeatMap = 0;
   fHeatMapHorizonKm = 800;
   fCoherentDtNs = 0.01;
-
+  fSlopeFitStartFreqGHz = 0.18;
+  fSlopeFitEndFreqGHz = 1.3;
+  
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
   if(!fMinFilter){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minFiltName << std::endl;
-  }
+  }  
 
   const TString minDecoFiltName = "Deconvolve";
   fMinDecoFilter = Filters::findDefaultStrategy(minDecoFiltName);
@@ -1199,8 +1270,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
     // TODO, make this selectable?
     AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
-    // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
-    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &coherentInfo = summary.coherent_filtered[pol][peakInd];
+    
+    AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &coherentUnfilteredInfo = summary.coherent[pol][peakInd];
+    
+    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];    
     // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
     if(coherentWave && coherentUnfilteredWave){
 
@@ -1235,16 +1310,61 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower2->SetLineColor(peakColors[pol][peakInd]);
       grPower4->SetLineColor(kRed);
 
-
       TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
       grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
-      grPower->GetXaxis()->SetRangeUser(0, 1.3);
+      const double maxFreqGHz = 1.3;
+      grPower->GetXaxis()->SetRangeUser(0, maxFreqGHz);
 
-      title = "PSD Coherent Filtered;Time (ns);Power Spectral Density (dBm/MHz)";
+      title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
       grPower->SetTitle(title);
+
+      TGraphInteractive* grSlope = new TGraphInteractive(0, NULL, NULL, "l");
+      grSlope->SetPoint(0, fSlopeFitStartFreqGHz, coherentInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentInfo.spectrumIntercept);
+      grSlope->SetPoint(1, fSlopeFitEndFreqGHz, coherentInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentInfo.spectrumIntercept);
+      grSlope->SetLineColor(grPower->GetLineColor());
       
+      grPower->addGuiChild(grSlope); // pass it a pointer and it takes ownership
+      
+
       grPower4->SetTitle("PSD Coherent Unfiltered");
       grPower->addGuiChild(*grPower4, "l");
+      
+
+      TGraphInteractive* grSlope4 = new TGraphInteractive(0, NULL, NULL, "l");
+      grSlope4->SetPoint(0, fSlopeFitStartFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
+      grSlope4->SetPoint(1, fSlopeFitEndFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
+      grSlope4->SetLineColor(grPower4->GetLineColor());
+      grPower->addGuiChild(grSlope4);
+
+
+      double df = coherentWave->deltaF();
+      TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+      grCoherentPeakMarker->SetMarkerStyle(20);
+      grCoherentPeakMarker->SetMarkerSize(0.5);
+      grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
+      
+      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+        if(coherentInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(coherentInfo.peakFrequency[i]/df);
+          grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
+        }
+      }
+      grPower->addGuiChild(grCoherentPeakMarker);
+
+      double df2 = coherentUnfilteredWave->deltaF();
+      TGraphInteractive* grCoherentUnfilteredPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+      grCoherentUnfilteredPeakMarker->SetMarkerStyle(20);
+      grCoherentUnfilteredPeakMarker->SetMarkerSize(0.5);
+      grCoherentUnfilteredPeakMarker->SetMarkerColor(grPower4->GetLineColor());
+      
+      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+        if(coherentUnfilteredInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(coherentUnfilteredInfo.peakFrequency[i]/df2);
+          grCoherentUnfilteredPeakMarker->SetPoint(grCoherentUnfilteredPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
+        }
+      }
+      grPower->addGuiChild(grCoherentUnfilteredPeakMarker);
+          
 
       coherentFftPad->cd();
       grPower->DrawGroup(opt);
