@@ -575,6 +575,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
     }
   }
 
+  fDebug = 0;
   fUseOffAxisDelay = 1;
   fCoherentDeltaPhi = 2;
   fLastCoherentDeltaPhi = -1;
@@ -1123,9 +1124,24 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     
     const double t0 = grU->GetX()[0];
     const double tN = grU->GetX()[grU->GetN()-1];
+
+    if(fDebug){
+      std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", waves[" << i << "] has " << grU->GetN() << " points." << std::endl;
+      for(int samp=1; samp < grU->GetN(); samp++){
+        if(grU->GetX()[samp] - grU->GetX()[samp-1] <= 0){
+          std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", x not monotonically increasing!" << std::endl;
+          for(int samp=0; samp < grU->GetN(); samp++){
+            std::cerr << "x[" << samp << "] = " << grU->GetX()[samp] << std::endl;
+          }
+          break;
+        }
+      }
+    }
+
     
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
+
       double tPlusDt = t + dts[i];
       if(tPlusDt > t0 && tPlusDt < tN){
         double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);

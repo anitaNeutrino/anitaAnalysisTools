@@ -121,6 +121,7 @@ class AnalysisReco : public TObject {
   void chooseAntennasForCoherentlySumming(int coherentDeltaPhi);
   void nicelyDeleteInternalFilteredEvents();
   
+  ANALYSIS_SETTING(Int_t, Debug);
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
   Int_t fLastCoherentDeltaPhi; // for checking whether recalculation is needed
   ANALYSIS_SETTING(Int_t, WhichResponseDir);

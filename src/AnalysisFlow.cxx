@@ -6,6 +6,7 @@
 #include "AcclaimFilters.h"
 #include "NoiseMonitor.h"
 #include "AcclaimCmdLineArgs.h"
+#include "UsefulAnitaEvent.h"
 
 ClassImp(Acclaim::AnalysisFlow);
 
@@ -45,6 +46,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
   fFirstEntry=0;
   fLastEntry=0;
   fLastEventConsidered = 0;
+  fDebug = 0;
 
   prepareEverything(args->settings_filename);
 }
@@ -91,6 +93,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclai
   fFirstEntry=0;
   fLastEntry=0;
   fLastEventConsidered = 0;
+  fDebug = 0;
 
   prepareEverything();
 }
@@ -490,8 +493,15 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEvent(UInt_t eventNumber){
 AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
 
   fData->getEntry(entry);
+
   RawAnitaHeader* header = fData->header();
   UsefulAnitaEvent* usefulEvent = fData->useful();
+
+  if(fDebug){
+    std::cerr << "Debug in " << __PRETTY_FUNCTION__ << " doing entry " << entry << " for selection " << fSelection
+              << ", header->eventNumber = " << header->eventNumber << ", usefulEvent->eventNumber = " << usefulEvent->eventNumber
+              << std::endl;
+  }
 
   // make FourierBuffer filters behave as if we were considering sequential events
   // this is useful for the decimated data set...
@@ -510,7 +520,8 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
     fEventSummary = new AnitaEventSummary(header, &usefulPat, fData->truth());
     Bool_t isGoodEvent = QualityCut::applyAll(usefulEvent, fEventSummary);
 
-    if(isGoodEvent || fDoAll){
+    // varner2 contains a check that all channels have lots of points, too few can crash interpolation
+    if(isGoodEvent || (fDoAll && !fEventSummary->flags.isVarner2)){
 
       setPulserFlags(header, &usefulPat, fEventSummary);
         

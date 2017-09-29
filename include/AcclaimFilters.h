@@ -41,10 +41,10 @@ namespace Acclaim
    *
    */  
     namespace Bands {
-      // zero everything outside of these
+      // account for floating point error with small subtraction
       const double anitaHighPassGHz = 0.2;
-      const double anitaLowPassGHz = 1.2;
-      const double alfaLowPassGHz = 0.7;
+      const double anitaLowPassGHz = 1.2 - 1e-10;
+      const double alfaLowPassGHz = 0.7 - 1e-10;
     }
 
     void generateFilterStrategies(bool saveOutput = false);

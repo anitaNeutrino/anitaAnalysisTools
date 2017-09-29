@@ -36,9 +36,9 @@ class AnalysisFlow : public TObject{
   public:
 
     enum selection{
-      kAll                = 0,
-      kWaisPulser         = 1,
-      kDecimated          = 2
+      kAll,
+      kWaisPulser,
+      kDecimated
     };
 
     AnalysisFlow(CmdLineArgs* args, FilterStrategy* filterStrat=NULL); // prefered constructor
@@ -88,6 +88,7 @@ class AnalysisFlow : public TObject{
     void prepareEverything(const char* preferredSettingsFileName = NULL);
     Bool_t checkForSgeTaskId();
 
+    ANALYSIS_SETTING(Int_t, Debug);
     ANALYSIS_SETTING(Int_t, DoAll);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
     ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
