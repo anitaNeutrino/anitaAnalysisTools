@@ -1323,8 +1323,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
       double df = coherentWave->deltaF();
       TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
-      grCoherentPeakMarker->SetMarkerStyle(20);
-      grCoherentPeakMarker->SetMarkerSize(0.5);
+      grCoherentPeakMarker->SetMarkerStyle(4);
+      grCoherentPeakMarker->SetMarkerSize(0.75);
       grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
       
       for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
@@ -1337,8 +1337,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
       double df2 = coherentUnfilteredWave->deltaF();
       TGraphInteractive* grCoherentUnfilteredPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
-      grCoherentUnfilteredPeakMarker->SetMarkerStyle(20);
-      grCoherentUnfilteredPeakMarker->SetMarkerSize(0.5);
+      grCoherentUnfilteredPeakMarker->SetMarkerStyle(4);
+      grCoherentUnfilteredPeakMarker->SetMarkerSize(0.75);
       grCoherentUnfilteredPeakMarker->SetMarkerColor(grPower4->GetLineColor());
       
       for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
