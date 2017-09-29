@@ -222,8 +222,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   }
 
   ///////////////////////////////////////////////////////////////////////////////////
-  // CURRENTLY NOT USING THESE...
-  //
   // //spectrum info
   // Double_t bandwidth[peaksPerSpectrum];  /// bandwidth of each peak (implementation defined, may not be comparable between analyses) 
   // Double_t peakFrequency[peaksPerSpectrum]; //peak frequency of power spectrum 
@@ -231,29 +229,72 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // Double_t spectrumSlope;  ///  Slope of line fit to spectrum (in log-space, so this is spectral-index) 
   // Double_t spectrumIntercept; /// Intercept of line fit to spectrum (in log-space) 
 
-  const double maxFreq = 1.31;//?
+  // we have interpolated the coherently summed waveform,  probably significantly to extract useful information
+  // from the time domain. Therefore there's a bunch of trailing high frequency crap that I want to ignore
+  // The maximum useful frequency is the nominal sampling
+
+  const double maxFreqIfIHadNotIntepolated = FancyFFTs::getNumFreqs(NUM_SAMP)*(1./(NOMINAL_SAMPLING_DELTAT*NUM_SAMP));
+  const double df = coherentWave->deltaF(); // the actual deltaF
+  int numGoodFreqBins = floor(maxFreqIfIHadNotIntepolated/df);
+
+  // std::cout << maxFreq << std::endl;
   const TGraphAligned* grPow = coherentWave->power();
+
+  if(numGoodFreqBins > grPow->GetN()){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
+              << ". Did you downsample the coherently summed waveform?" << std::endl;
+    numGoodFreqBins = grPow->GetN();
+  }
+
   TGraph grMaxima;
-  for(int i=1; i < grPow->GetN()-1; i++){
+  for(int i=1; i < numGoodFreqBins-1; i++){
     if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i-i] ){
       grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
     }
 
-    if(grPow->GetX()[i] >= maxFreq){
+    // This check should be redundent now, but won't hurt to leave it in...
+    if(grPow->GetX()[i] >= maxFreqIfIHadNotIntepolated){
       break;
     }
   }
 
-  grMaxima.Sort(TGraph::CompareY, false); // false here means sort the local maxima in decreasing order (biggest first)
+  // Sort my collection of local maxima,
+  // The second argument, false, means sort the local maxima in decreasing order (i.e. biggest first)
+  grMaxima.Sort(TGraph::CompareY, false);
 
-  const int nPeaks = TMath::Min(grMaxima.GetN(), AnitaEventSummary::peaksPerSpectrum);
-  for(int i=0; i < nPeaks; i++){
-    info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
-    info.peakPower[i] = grMaxima.GetY()[i];
-    info.peakFrequency[i] = grMaxima.GetX()[i];
-    std::cout << i << "\t" << info.peakPower[i] << "\t" << info.peakFrequency[i] << std::endl;
+  // Put the N largest local maxima into the AnitaEventSummary::WaveformInfo
+  for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+    if(i < grMaxima.GetN()){
+      info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
+      info.peakPower[i] = grMaxima.GetY()[i];
+      info.peakFrequency[i] = grMaxima.GetX()[i];
+    }
+    else{
+      info.bandwidth[i] = 0;
+      info.peakPower[i] = 0;
+      info.peakFrequency[i] = 0;
+    }
   }
 
+  const TGraphAligned* grPow_db = coherentWave->powerdB();
+
+  const double mean_f = TMath::Mean(numGoodFreqBins, grPow_db->GetX());
+  const double mean_pow_db = TMath::Mean(numGoodFreqBins, grPow_db->GetY());
+  double gradNumerator = 0;
+  double gradDenominator = 0;
+  for(int i=0; i < numGoodFreqBins; i++){
+    double dx = grPow_db->GetX()[i] - mean_f;
+    double dy = grPow_db->GetY()[i] - mean_pow_db;
+
+    gradNumerator   += dy*dx;
+    gradDenominator += dx*dx;
+  }
+
+  if(gradDenominator <= 0){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
+  }
+  info.spectrumSlope = gradNumerator/gradDenominator;
+  info.spectrumIntercept = mean_pow_db - info.spectrumSlope*mean_f;
 
 }
 
