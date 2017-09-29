@@ -1247,7 +1247,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
       grPower->GetXaxis()->SetRangeUser(0, 1.3);
 
-      title = "PSD Coherent Filtered;Time (ns);Power Spectral Density (dBm/MHz)";
+      title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
       grPower->SetTitle(title);
       
       grPower4->SetTitle("PSD Coherent Unfiltered");
