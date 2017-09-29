@@ -40,7 +40,7 @@ class GuiParent {
 
 
 
-  void DrawGroup(Option_t* opt=""); // Draw self and loop over/draw TGraphInteractive children
+  virtual void DrawGroup(Option_t* opt=""); // Draw self and loop over/draw TGraphInteractive children
   size_t addGuiChild(TGraphInteractive* grPtr); // Does not copy, takes ownership of heap object
   size_t addGuiChild(const TGraph& grRef,  Option_t* drawOpt); // Copies and owns the copy
   size_t copyChildren(const GuiParent* that); // copy all children from that, and add to this  

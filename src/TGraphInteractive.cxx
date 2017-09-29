@@ -4,7 +4,7 @@
 #include "TAxis.h"
 #include "TLegend.h"
 #include "RootTools.h"
-
+#include "TH2.h"
 
 
 Acclaim::GuiParent::~GuiParent(){
@@ -70,11 +70,22 @@ void Acclaim::GuiParent::removeReference(TGraphInteractive* gr){
 
 
 void Acclaim::GuiParent::DrawGroup(Option_t* opt){
-  this->Draw(opt);
+  TString passedOpt = opt;
+  if(passedOpt==""){
+    // make some sane guesses about how to draw in absense of an option
+    if(dynamic_cast<TH2*>(this)){
+      passedOpt = "colz";
+    }
+  }
+
+  Draw(passedOpt);
   for(UInt_t i=0; i < fChildren.size(); i++){
     if(fChildren[i]){
-      TString thisDrawOpt = fChildren[i]->fDrawOpt + "same";
-      fChildren[i]->Draw(thisDrawOpt);
+      TString childDrawOpt = fChildren[i]->GetDrawOpt();
+      childDrawOpt.ReplaceAll("same", "");
+      childDrawOpt.ReplaceAll("a", "");
+      childDrawOpt += "same";
+      fChildren[i]->Draw(childDrawOpt);
     }
   }
 }
@@ -129,12 +140,20 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOp
     : TGraphAligned(gr->GetN(), gr->GetX(), gr->GetY()),
       fParent(NULL), fDrawOpt(drawOpt)
 {
-  SetLineColor(gr->GetLineColor());
-  SetLineStyle(gr->GetLineStyle());
-  SetLineWidth(gr->GetLineWidth());
-  SetFillColor(0);
-  SetFillStyle(gr->GetFillStyle());
   SetName(gr->GetName());
+  SetTitle(gr->GetTitle());  
+  GetXaxis()->SetTitle(gr->GetXaxis()->GetTitle());
+  GetYaxis()->SetTitle(gr->GetYaxis()->GetTitle());  
+  SetFillColor(gr->GetFillColor());
+  SetFillStyle(gr->GetFillStyle());  
+  
+  SetLineColor(gr->GetLineColor());
+  SetLineWidth(gr->GetLineWidth());
+  SetLineStyle(gr->GetLineStyle());  
+  
+  SetMarkerColor(gr->GetMarkerColor());
+  SetMarkerStyle(gr->GetMarkerStyle());
+  SetMarkerSize(gr->GetMarkerSize());  
   
   GetXaxis()->SetTitle(gr->GetXaxis()->GetTitle());
   GetYaxis()->SetTitle(gr->GetYaxis()->GetTitle());
@@ -206,7 +225,7 @@ void Acclaim::TGraphInteractive::DrawGroup(Option_t* opt){
 
   Draw(opt);
   
-  TString drawOpt = opt;
+  // TString drawOpt = opt;
   // drawOpt.ReplaceAll("same", "");
   // drawOpt.ReplaceAll("a", "");
 
@@ -269,7 +288,7 @@ void Acclaim::TGraphInteractive::ExecuteEvent(int event, int px, int py){
       copy->DrawGroup();
     }
     else{
-      p->DrawGroup();
+      p->DrawGroup(); // probably a TH2
     }
     
   }
