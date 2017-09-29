@@ -130,6 +130,8 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Int_t, DoHeatMap);
   ANALYSIS_SETTING(Double_t, HeatMapHorizonKm);
   ANALYSIS_SETTING(Double_t, CoherentDtNs);
+  ANALYSIS_SETTING(Double_t, SlopeFitStartFreqGHz);
+  ANALYSIS_SETTING(Double_t, SlopeFitEndFreqGHz);
   ClassDef(AnalysisReco, 0)
 
 };

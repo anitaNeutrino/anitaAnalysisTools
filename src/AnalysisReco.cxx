@@ -248,7 +248,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
   TGraph grMaxima;
   for(int i=1; i < numGoodFreqBins-1; i++){
-    if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i-i] ){
+    if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i+i] ){
       grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
     }
 
@@ -275,14 +275,19 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
       info.peakFrequency[i] = 0;
     }
   }
-
+  
   const TGraphAligned* grPow_db = coherentWave->powerdB();
 
-  const double mean_f = TMath::Mean(numGoodFreqBins, grPow_db->GetX());
-  const double mean_pow_db = TMath::Mean(numGoodFreqBins, grPow_db->GetY());
+  const int firstSlopeBin = TMath::Nint(fSlopeFitStartFreqGHz/df);
+  const int lastSlopeBin  = TMath::Nint(fSlopeFitEndFreqGHz/df);
+  const int numSlopeBins = lastSlopeBin - firstSlopeBin;
+
+  const double mean_f      = TMath::Mean(numSlopeBins, &grPow_db->GetX()[firstSlopeBin]);
+  const double mean_pow_db = TMath::Mean(numSlopeBins, &grPow_db->GetY()[firstSlopeBin]);
+
   double gradNumerator = 0;
   double gradDenominator = 0;
-  for(int i=0; i < numGoodFreqBins; i++){
+  for(int i=firstSlopeBin; i < lastSlopeBin; i++){
     double dx = grPow_db->GetX()[i] - mean_f;
     double dy = grPow_db->GetY()[i] - mean_pow_db;
 
@@ -577,12 +582,14 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fDoHeatMap = 0;
   fHeatMapHorizonKm = 800;
   fCoherentDtNs = 0.01;
-
+  fSlopeFitStartFreqGHz = 0.18;
+  fSlopeFitEndFreqGHz = 1.3;
+  
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
   if(!fMinFilter){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minFiltName << std::endl;
-  }
+  }  
 
   const TString minDecoFiltName = "Deconvolve";
   fMinDecoFilter = Filters::findDefaultStrategy(minDecoFiltName);
@@ -1247,8 +1254,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
     // TODO, make this selectable?
     AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
-    // AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
-    AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &coherentInfo = summary.coherent_filtered[pol][peakInd];
+    
+    AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &coherentUnfilteredInfo = summary.coherent[pol][peakInd];
+    
+    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];    
     // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
     if(coherentWave && coherentUnfilteredWave){
 
@@ -1283,16 +1294,61 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower2->SetLineColor(peakColors[pol][peakInd]);
       grPower4->SetLineColor(kRed);
 
-
       TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
       grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
-      grPower->GetXaxis()->SetRangeUser(0, 1.3);
+      const double maxFreqGHz = 1.3;
+      grPower->GetXaxis()->SetRangeUser(0, maxFreqGHz);
 
       title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
       grPower->SetTitle(title);
+
+      TGraphInteractive* grSlope = new TGraphInteractive(0, NULL, NULL, "l");
+      grSlope->SetPoint(0, fSlopeFitStartFreqGHz, coherentInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentInfo.spectrumIntercept);
+      grSlope->SetPoint(1, fSlopeFitEndFreqGHz, coherentInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentInfo.spectrumIntercept);
+      grSlope->SetLineColor(grPower->GetLineColor());
       
+      grPower->addGuiChild(grSlope); // pass it a pointer and it takes ownership
+      
+
       grPower4->SetTitle("PSD Coherent Unfiltered");
       grPower->addGuiChild(*grPower4, "l");
+      
+
+      TGraphInteractive* grSlope4 = new TGraphInteractive(0, NULL, NULL, "l");
+      grSlope4->SetPoint(0, fSlopeFitStartFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
+      grSlope4->SetPoint(1, fSlopeFitEndFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
+      grSlope4->SetLineColor(grPower4->GetLineColor());
+      grPower->addGuiChild(grSlope4);
+
+
+      double df = coherentWave->deltaF();
+      TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+      grCoherentPeakMarker->SetMarkerStyle(20);
+      grCoherentPeakMarker->SetMarkerSize(0.5);
+      grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
+      
+      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+        if(coherentInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(coherentInfo.peakFrequency[i]/df);
+          grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
+        }
+      }
+      grPower->addGuiChild(grCoherentPeakMarker);
+
+      double df2 = coherentUnfilteredWave->deltaF();
+      TGraphInteractive* grCoherentUnfilteredPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+      grCoherentUnfilteredPeakMarker->SetMarkerStyle(20);
+      grCoherentUnfilteredPeakMarker->SetMarkerSize(0.5);
+      grCoherentUnfilteredPeakMarker->SetMarkerColor(grPower4->GetLineColor());
+      
+      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+        if(coherentUnfilteredInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(coherentUnfilteredInfo.peakFrequency[i]/df2);
+          grCoherentUnfilteredPeakMarker->SetPoint(grCoherentUnfilteredPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
+        }
+      }
+      grPower->addGuiChild(grCoherentUnfilteredPeakMarker);
+          
 
       coherentFftPad->cd();
       grPower->DrawGroup(opt);
