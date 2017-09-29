@@ -231,6 +231,29 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // Double_t spectrumSlope;  ///  Slope of line fit to spectrum (in log-space, so this is spectral-index) 
   // Double_t spectrumIntercept; /// Intercept of line fit to spectrum (in log-space) 
 
+  const double maxFreq = 1.31;//?
+  const TGraphAligned* grPow = coherentWave->power();
+  TGraph grMaxima;
+  for(int i=1; i < grPow->GetN()-1; i++){
+    if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i-i] ){
+      grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
+    }
+
+    if(grPow->GetX()[i] >= maxFreq){
+      break;
+    }
+  }
+
+  grMaxima.Sort(TGraph::CompareY, false); // false here means sort the local maxima in decreasing order (biggest first)
+
+  const int nPeaks = TMath::Min(grMaxima.GetN(), AnitaEventSummary::peaksPerSpectrum);
+  for(int i=0; i < nPeaks; i++){
+    info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
+    info.peakPower[i] = grMaxima.GetY()[i];
+    info.peakFrequency[i] = grMaxima.GetX()[i];
+    std::cout << i << "\t" << info.peakPower[i] << "\t" << info.peakFrequency[i] << std::endl;
+  }
+
 
 }
 
