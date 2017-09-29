@@ -76,6 +76,9 @@ void Acclaim::GuiParent::DrawGroup(Option_t* opt){
     if(dynamic_cast<TH2*>(this)){
       passedOpt = "colz";
     }
+    else if(dynamic_cast<TGraph*>(this)){
+      passedOpt = "al"; // I normally want lines
+    }
   }
 
   Draw(passedOpt);
@@ -140,6 +143,7 @@ Acclaim::TGraphInteractive::TGraphInteractive(const TGraph* gr, Option_t* drawOp
     : TGraphAligned(gr->GetN(), gr->GetX(), gr->GetY()),
       fParent(NULL), fDrawOpt(drawOpt)
 {
+
   SetName(gr->GetName());
   SetTitle(gr->GetTitle());  
   GetXaxis()->SetTitle(gr->GetXaxis()->GetTitle());
@@ -223,7 +227,7 @@ void Acclaim::TGraphInteractive::DrawGroup(Option_t* opt){
     fDrawOpt = opt;
   }
 
-  Draw(opt);
+  Draw(passedOpt);
   
   // TString drawOpt = opt;
   // drawOpt.ReplaceAll("same", "");
