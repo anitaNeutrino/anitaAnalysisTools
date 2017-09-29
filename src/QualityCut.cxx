@@ -194,7 +194,7 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
  */
 Acclaim::PayloadBlastCut::PayloadBlastCut(){
   ratioCutHigh = 2.8;
-  ratioCutLow = 1.14;
+  ratioCutLow = -1; // no longer used
   maxRatio = 0;
   maxRatioPhi = -1;
   maxRatioPol = AnitaPol::kNotAPol;
