@@ -10,8 +10,13 @@ namespace Acclaim{
  * @class CmdLineArgs 
  * @brief A simple command line option parser.
  * 
+ * Parses a default set of command line arguments for
+ * the Acclaim analysis
+ * 
  * Warning! Could prevent a program that uses it
- * from running if it doesn't like what it gets
+ * from running if it doesn't like what it gets!
+ * 
+ * Useage: In your executable, do
  * 
  * int main(int argc, char* argv[]){
  *   Acclaim::CmdLineArgs args(argc, argv);
@@ -31,8 +36,9 @@ class CmdLineArgs {
   int numdivisions;
   int division;
   int anitaversion;
+  int tag_output_as_mc;
   TString settings_filename;
-  TString output_filename;  
+  TString output_filename;
   
 };
 

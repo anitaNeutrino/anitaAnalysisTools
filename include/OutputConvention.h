@@ -45,13 +45,12 @@ namespace Acclaim
     static TFile* getFile(TString fileNameWithWildcards); //!< Opens matching file with the most recent suffix
 
   private:
-    int argc; //!< The argc from the main program
-    char** argv; //!< The argv from the main program
-    TDatime dateTime; //!< The dateTime type containing the date/time.
-    TString outputDir; //!< TString contining the output directory.
-    TString dateTimeSuffix; //!< TString contining the fileName suffix extracted from the date/time.
-    TString outFileName; ///!< The output total file output name.
-
+    int argc; /// The argc from the main program
+    char** argv; /// The argv from the main program
+    TDatime dateTime; /// The dateTime type containing the date/time.
+    TString outputDir; /// TString contining the output directory.
+    TString dateTimeSuffix; /// TString contining the fileName suffix extracted from the date/time.
+    TString outFileName; /// The output total file output name.
     TString getDateTimeSuffix();
 
 

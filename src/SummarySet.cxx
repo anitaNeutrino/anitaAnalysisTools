@@ -123,7 +123,7 @@ Double_t Acclaim::SummarySet::getTotalSize() const{
   Double_t totalSize = 0;
 
   if(fChain){
-    TObjArray *fileElements = fChain->GetListOfFiles();
+    TObjArray* fileElements = fChain->GetListOfFiles();
 
     TIter next(fileElements);
     TChainElement* chEl = NULL;

@@ -24,6 +24,7 @@ ClassImp(Acclaim::AnalysisFlow);
 Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* filterStrat){
 
   fOutFileBaseName = args->output_filename;
+  
   fSelection = (AnalysisFlow::selection) args->event_selection;
   fFilterStrat = filterStrat;
   fBlindStrat = AnitaDataset::kNoBlinding; //TODO update this!
@@ -54,49 +55,49 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
 
 
 
-/** 
- * @brief Constructor (deprecated)
- *
- * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
- * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
- * This allows for easy cluster scripting.
- * 
- * @param run is the run to analyse
- * @param selection is the event selection to apply
- * @param filterStrat is the filterStrategy to use
- * @param blindStrat is the blinding strategy to use
- * @param division selects which sub division of the run to do. The run is divied into numDivisions divisions, so division goes from 0 -> numDivisions-1, default is 0.
- * @param numDivisions divides the run into pieces. 
- */
+// /** 
+//  * @brief Constructor (deprecated)
+//  *
+//  * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
+//  * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
+//  * This allows for easy cluster scripting.
+//  * 
+//  * @param run is the run to analyse
+//  * @param selection is the event selection to apply
+//  * @param filterStrat is the filterStrategy to use
+//  * @param blindStrat is the blinding strategy to use
+//  * @param division selects which sub division of the run to do. The run is divied into numDivisions divisions, so division goes from 0 -> numDivisions-1, default is 0.
+//  * @param numDivisions divides the run into pieces. 
+//  */
 
-Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
+// Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
 
-  fOutFileBaseName = outFileBaseName ? TString::Format("%s", outFileBaseName) : "";
-  fSelection = selection;
-  fFilterStrat = filterStrat;
-  fBlindStrat = blindStrat;
+//   fOutFileBaseName = outFileBaseName ? TString::Format("%s", outFileBaseName) : "";
+//   fSelection = selection;
+//   fFilterStrat = filterStrat;
+//   fBlindStrat = blindStrat;
 
-  if(!checkForSgeTaskId()){
-    fDivision = division;
-    fNumDivisions = numDivisions;
-    fRun = run;
-  }
+//   if(!checkForSgeTaskId()){
+//     fDivision = division;
+//     fNumDivisions = numDivisions;
+//     fRun = run;
+//   }
 
-  fSumTree = NULL;
-  fData = NULL;
-  fReco = NULL;
-  fOutFile = NULL;
-  fSettings = NULL;
-  fEventSummary = NULL;
-  fEv = NULL;
+//   fSumTree = NULL;
+//   fData = NULL;
+//   fReco = NULL;
+//   fOutFile = NULL;
+//   fSettings = NULL;
+//   fEventSummary = NULL;
+//   fEv = NULL;
 
-  fFirstEntry=0;
-  fLastEntry=0;
-  fLastEventConsidered = 0;
-  fDebug = 0;
+//   fFirstEntry=0;
+//   fLastEntry=0;
+//   fLastEventConsidered = 0;
+//   fDebug = 0;
 
-  prepareEverything();
-}
+//   prepareEverything();
+// }
 
 
 
@@ -241,25 +242,25 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     TString runStr = TString::Format("%d", fRun);
     fakeArgv.push_back((char*) runStr.Data());
     
-    TString extra;
+    TString extraDigits;
     if(fNumDivisions > 1){
       
       Int_t numDigitsTotal = floor(TMath::Log10(fNumDivisions) + 1);
       Int_t numDigitsThis = fDivision == 0 ? 1 : floor(TMath::Log10(fDivision) + 1);
 
-      std::cout << fNumDivisions << "\t" << numDigitsTotal << std::endl;
-      std::cout << fDivision << "\t" << numDigitsThis << std::endl;
+      // std::cout << fNumDivisions << "\t" << numDigitsTotal << std::endl;
+      // std::cout << fDivision << "\t" << numDigitsThis << std::endl;
 
       for(int i=0; i < numDigitsTotal - numDigitsThis; i++){
-	std::cout << i << "\t" << numDigitsTotal - numDigitsThis << std::endl;
+	// std::cout << i << "\t" << numDigitsTotal - numDigitsThis << std::endl;
 	
-	extra += TString::Format("0");
+	extraDigits += TString::Format("0");
       }
-      extra += TString::Format("%d", fDivision);
+      extraDigits += TString::Format("%d", fDivision);
 
-      std::cout << extra << std::endl;
+      // std::cout << extraDigits << std::endl;
       
-      fakeArgv.push_back((char*) extra.Data());
+      fakeArgv.push_back((char*) extraDigits.Data());
     }
     Int_t fakeArgc = (Int_t) fakeArgv.size();
 

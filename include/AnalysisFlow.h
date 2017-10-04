@@ -41,8 +41,16 @@ class AnalysisFlow : public TObject{
       kDecimated
     };
 
+    static const char* selectionAsString(selection sel){
+      switch(sel){
+        case kAll: return "all";
+        case kWaisPulser: return "wais";
+        case kDecimated: return "decimated";
+      }
+    }
+
     AnalysisFlow(CmdLineArgs* args, FilterStrategy* filterStrat=NULL); // prefered constructor
-    AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1) __attribute__((deprecated));
+    // AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1) __attribute__((deprecated));
     ~AnalysisFlow();
 
     void doAnalysis();
