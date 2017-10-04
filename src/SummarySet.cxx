@@ -10,6 +10,7 @@
 #include "SummarySelector.h"
 #include "TCanvas.h"
 #include "TSeqCollection.h"
+#include "TChainElement.h"
 #include "TROOT.h"
 
 #include "ProgressBar.h"
@@ -53,6 +54,7 @@ void Acclaim::SummarySet::initProof(){
     const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
     TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
     gProof->Load(loadAnita);
+    std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
   }
   
   if(fChain){
@@ -107,9 +109,47 @@ void Acclaim::SummarySet::init(){
   }
 }
 
+
+
+
+
+/** 
+ * Counts the number of bytes in each file in fChain
+ * 
+ * @return The sum of the file sizes in fChain (bytes)
+ */
+Double_t Acclaim::SummarySet::getTotalSize() const{
+
+  Double_t totalSize = 0;
+
+  if(fChain){
+    TObjArray *fileElements = fChain->GetListOfFiles();
+
+    TIter next(fileElements);
+    TChainElement* chEl = NULL;
+
+    while ((chEl = (TChainElement*) next())){
+      TFile f(chEl->GetTitle());
+      totalSize += f.GetSize();
+    }
+  }
+  return totalSize;
+}
+
+
+
+/** 
+ * Loads entry from the fChain, access with summary()
+ * 
+ * @param entry is the entry to load
+ * 
+ * @return the number of bytes read (same as TChain::GetEntry(entry))
+ */
 Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
   return fChain->GetEntry(entry);
 }
+
+
 
 
 
@@ -177,7 +217,6 @@ TH2DAntarctica* Acclaim::SummarySet::makeAntarcticaHist(AnitaPol::AnitaPol_t pol
                        sum->peak[polInd][peakInd].value);
 
           }
-                  
         }
       }
     }

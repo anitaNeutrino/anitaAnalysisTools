@@ -58,9 +58,15 @@ class SummarySet {
 
   TProfile2DAntarctica* makeAntarcticaProf(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);
   TH2DAntarctica*       makeAntarcticaHist(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);  
-   
+
   void SetUseProof(bool useProof=true) {fUseProof = useProof;}
   Bool_t GetUseProof() {return fUseProof;}
+
+  Double_t getTotalSize() const;
+
+  Double_t getBytesPerEvent() const { /// Approximately, the size of each SummaryTree entry
+    return N() > 0 ? getTotalSize()/N() : 0;
+  }
 
  protected:
 
