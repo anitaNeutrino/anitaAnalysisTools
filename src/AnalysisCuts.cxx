@@ -433,11 +433,58 @@ int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::Ani
  * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
  *
  * @return 1 if true, 0 if false
- * 
- * @return 
  */
 int Acclaim::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);  
   return (TMath::Abs(sum->peak[pol][peakInd].dPhiNorth()) > 90);
 
+}
+
+
+
+/** 
+ * Checks to see if the hilbert peak of the coherently summed waveform is higher than it's dedispersed counterpart
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::HigherPeakHilbertAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+  handleDefaults(sum, pol, peakInd);
+  return (sum->deconvolved_filtered[pol][peakInd].peakHilbert > sum->coherent_filtered[pol][peakInd].peakHilbert);
+}
+
+
+
+/** 
+ * Checks to see if the impulsivity measure of the coherently summed waveform is higher than it's dedispersed counterpart
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::HigherImpulsivityMeasureAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+  handleDefaults(sum, pol, peakInd);
+  return (sum->deconvolved_filtered[pol][peakInd].impulsivityMeasure > sum->coherent_filtered[pol][peakInd].impulsivityMeasure);
+}
+
+
+
+/** 
+ * Checks to see if the fracPowerWindowGradient of the coherently summed waveform is lower than it's dedispersed counterpart
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 if true, 0 if false
+ */
+
+int Acclaim::LowerFracPowerWindowGradientAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
+  handleDefaults(sum, pol, peakInd);
+  return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < sum->coherent_filtered[pol][peakInd].fracPowerWindowGradient());
 }

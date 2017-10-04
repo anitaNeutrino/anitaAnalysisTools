@@ -191,6 +191,26 @@ class CloseToMC : public AnalysisCut{
   };
 
 
+  class HigherPeakHilbertAfterDedispersion : public AnalysisCut {
+   public:
+    HigherPeakHilbertAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Hilbert peak is higher after dedispersion", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+  };
+
+    
+  class HigherImpulsivityMeasureAfterDedispersion : public AnalysisCut {
+   public:
+    HigherImpulsivityMeasureAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "ImpulsivityMeasure is higher after dedispersion", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+  };
+
+  class LowerFracPowerWindowGradientAfterDedispersion : public AnalysisCut {
+   public:
+    LowerFracPowerWindowGradientAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Lower fracPowerWindowGradient after dedispersion", 2) {;}
+    virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+  };
+
+
 
 // const globals so you don't need to instantiate these yourself
   namespace AnalysisCuts{
@@ -214,7 +234,13 @@ class CloseToMC : public AnalysisCut{
     const SignalLikeFirstStandardizedPeakMoments signalLikeFirstStandardizedPeakMoments;
     const PassesThesisCuts passesThesisThermalCut;
     const IsNotNorth isNotNorth;
+    const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
+    const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
+    const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;  
   }
 }
+
+
+
 
 #endif
