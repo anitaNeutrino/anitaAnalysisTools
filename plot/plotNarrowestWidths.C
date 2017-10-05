@@ -10,8 +10,10 @@ void plotNarrowestWidths(){
 
   // Acclaim::SummarySet ss("~/ANITA/anita3Analysis/sineSubPlusNotches/2017_09_13/filterDecimatedSineSubPlusBrickWall_*.root");
   // Acclaim::SummarySet ssMc("~/ANITA/anita3Analysis/sineSubPlusNotches/2017_09_13/filterAllSineSubPlusBrickWall_*.root");
-  Acclaim::SummarySet ss("~/ANITA/anita3Analysis/sineSub/2017_09_14/filterDecimatedSineSub_*.root");
-  Acclaim::SummarySet ssMc("~/ANITA/anita3Analysis/sineSub/2017_09_14/filterAllSineSub_*.root");
+  // Acclaim::SummarySet ss("~/ANITA/anita3Analysis/sineSub/2017_09_14/filterDecimatedSineSub_*.root");
+  // Acclaim::SummarySet ssMc("~/ANITA/anita3Analysis/sineSub/2017_09_14/filterAllSineSub_*.root");
+  Acclaim::SummarySet ss("~/ANITA/anita3Analysis/sineSub/2017_09_21/doSineSub_*.root");
+  Acclaim::SummarySet ssMc("~/ANITA/anita3Analysis/sineSub/2017_09_23/doSineSub_*.root");
   
   TH2D* hS2 = new TH2D("hS2", "hS2", 6, -5, 55, 1024, 0, 100);
   TH2D* hB2 = new TH2D("hB2", "hB2", 6, -5, 55, 1024, 0, 100);  
@@ -61,35 +63,35 @@ void plotNarrowestWidths(){
         if(j==0 && sum->trainingPeak().closeToMC(3, 3)){
           for(int i=0; i < 5; i++){
             double powFrac = 10 + i*10;
-            hS2->Fill(powFrac, sum->trainingDeconvolvedFiltered().narrowestWidths[i], sum->weight());
+            hS2->Fill(powFrac, sum->trainingDeconvolvedFiltered().fracPowerWindowBegins[i], sum->weight());
             if(graphThisEntry && gr){
-              gr->SetPoint(i, powFrac, sum->trainingDeconvolvedFiltered().narrowestWidths[i]);
+              gr->SetPoint(i, powFrac, sum->trainingDeconvolvedFiltered().fracPowerWindowBegins[i]);
               gr->SetLineColor(kRed);
             }                
           }
-          hS->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->weight());
-          hSc->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsIntercept(), sum->weight());
-          hSc2->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsChisquare(), sum->weight());
-          hS3->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->trainingDeconvolvedFiltered().narrowestWidthsChisquare(), sum->weight());
-          hS4->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->trainingDeconvolvedFiltered().impulsivityMeasure, sum->weight());            
+          hS->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->weight());
+          hSc->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowIntercept(), sum->weight());
+          hSc2->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowChisquare(), sum->weight());
+          hS3->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->trainingDeconvolvedFiltered().fracPowerWindowChisquare(), sum->weight());
+          hS4->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->trainingDeconvolvedFiltered().impulsivityMeasure, sum->weight());            
 
         }
         else if(j == 1 && sum->trainingPeak().theta > 0 && sum->flags.isGood == 1 && sum->flags.pulser == 0){
           for(int i=0; i < 5; i++){
             double powFrac = 10 + i*10;
-            hB2->Fill(powFrac, sum->trainingDeconvolvedFiltered().narrowestWidths[i], sum->weight());
+            hB2->Fill(powFrac, sum->trainingDeconvolvedFiltered().fracPowerWindowBegins[i], sum->weight());
             if(graphThisEntry && gr){
-              gr->SetPoint(i, powFrac, sum->trainingDeconvolvedFiltered().narrowestWidths[i]);
+              gr->SetPoint(i, powFrac, sum->trainingDeconvolvedFiltered().fracPowerWindowBegins[i]);
               gr->SetLineColor(kBlue);
             }                
           }
-          hB->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->weight());
-          hBc->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsIntercept(), sum->weight());
-          hBc2->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsChisquare(), sum->weight());
-          hB3->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->trainingDeconvolvedFiltered().narrowestWidthsChisquare(), sum->weight());
-          hB4->Fill(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient(), sum->trainingDeconvolvedFiltered().impulsivityMeasure, sum->weight());            
+          hB->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->weight());
+          hBc->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowIntercept(), sum->weight());
+          hBc2->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowChisquare(), sum->weight());
+          hB3->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->trainingDeconvolvedFiltered().fracPowerWindowChisquare(), sum->weight());
+          hB4->Fill(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient(), sum->trainingDeconvolvedFiltered().impulsivityMeasure, sum->weight());            
 
-          // if(sum->trainingDeconvolvedFiltered().narrowestWidthsGradient() < 20){
+          // if(sum->trainingDeconvolvedFiltered().fracPowerWindowGradient() < 20){
           //   std::cerr << std::endl << sum->run << "\t" << sum->eventNumber << "\t" << polInd << "\t" << peakInd << "\t" << sum->peak[polInd][peakInd].dPhiMC() << "\t" << sum->peak[polInd][peakInd].dThetaMC() << std::endl;
           // }
         }
