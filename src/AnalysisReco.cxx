@@ -80,10 +80,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                                              InterferometricMap* h,
                                              NoiseMonitor* noiseMonitor) {
 
-  // This section will fill the WaveformInfo as rapidly as I can keep up...
-  // Some variables are marked with TODO, because they haven't been implemented yet.
-
-
 
   ////////////////////////////////////////////////////////////////
   // Double_t snr; ///Signal to Noise of waveform
@@ -386,7 +382,9 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
   fEvMinDeco = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
   fEvDeco = new FilteredAnitaEvent(fEv, fMinDecoFilter); // extra deconvolution
 
-  fillChannelInfo(fEv, eventSummary);
+  if(fFillChannelInfo){
+    fillChannelInfo(fEv, eventSummary);
+  }
 
   eventSummary->eventNumber = fEv->getHeader()->eventNumber;
 
@@ -585,6 +583,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fCoherentDtNs = 0.01;
   fSlopeFitStartFreqGHz = 0.18;
   fSlopeFitEndFreqGHz = 1.3;
+  fFillChannelInfo = 0;
   
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);

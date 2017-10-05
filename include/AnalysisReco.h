@@ -133,6 +133,7 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Double_t, CoherentDtNs);
   ANALYSIS_SETTING(Double_t, SlopeFitStartFreqGHz);
   ANALYSIS_SETTING(Double_t, SlopeFitEndFreqGHz);
+  ANALYSIS_SETTING(Double_t, FillChannelInfo);
   ClassDef(AnalysisReco, 0)
 
 };
