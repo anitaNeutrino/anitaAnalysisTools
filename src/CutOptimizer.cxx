@@ -32,7 +32,6 @@ void Acclaim::CutOptimizer::setDebug(bool db){
   debug = db;
 }
 
-
 void Acclaim::CutOptimizer::FisherResult::getExpressions(std::vector<TString>& expressions) const {
   for(ExpressionMap::const_iterator it = fExpressions.begin(); it!= fExpressions.end(); it++){
     expressions.push_back(it->second);
@@ -74,6 +73,7 @@ TString Acclaim::CutOptimizer::FisherResult::getFisherFormula() const{
   }
   return command;
 }
+
 
 void Acclaim::CutOptimizer::FisherResult::Print(Option_t* opt) const{
   (void) opt;
@@ -277,7 +277,7 @@ void Acclaim::CutOptimizer::FisherResult::parseNode(TXMLEngine* xml, XMLNodePoin
  */
 Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgroundGlob, bool doAllPeaks, bool save_trees)
     : fSignalGlob(signalGlob), fBackgroundGlob(backgroundGlob ? backgroundGlob : ""),
-      fSignalTree(NULL), fBackgroundTree(NULL), fDoAllPeaks(doAllPeaks), fSaveTrees(save_trees)
+      fSignalTree(NULL), fBackgroundTree(NULL), fRejectedSignalTree(NULL), fRejectedBackgroundTree(NULL), fDoAllPeaks(doAllPeaks), fSaveTrees(save_trees)
 {
 
 }
@@ -495,6 +495,19 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
     fSignalTree->SetDirectory(0);
   }
 
+  
+  if(fRejectedSignalTree){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing rejectedSignal tree. Deleting and regenerating." << std::endl;
+    delete fRejectedSignalTree;
+    fRejectedSignalTree = NULL;
+  }
+  fRejectedSignalTree = new TTree("rejectedSignalTree",  "rejectedSignalTree");
+  if(!fSaveTrees){
+    fRejectedSignalTree->SetDirectory(0);
+  }
+
+  
+  
   if(fBackgroundTree){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing background tree. Deleting and regenerating." << std::endl;
     delete fBackgroundTree;
@@ -504,6 +517,17 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
   if(!fSaveTrees){
     fBackgroundTree->SetDirectory(0);
   }
+
+  if(fRejectedBackgroundTree){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing rejectedBackground tree. Deleting and regenerating." << std::endl;
+    delete fRejectedBackgroundTree;
+    fRejectedBackgroundTree = NULL;
+  }
+  fRejectedBackgroundTree = new TTree("rejectedBackgroundTree",  "rejectedBackgroundTree");
+  if(!fSaveTrees){
+    fRejectedBackgroundTree->SetDirectory(0);
+  }
+
   
   // now we need to figure out if we have separate globs for signal and background
   // or just one for both...
@@ -554,24 +578,36 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
 
 
   // book efficiencies
-  fSignalEffs[kSNR].reserve(signalSelection.size());
-  fSignalEffs[kEnergy].reserve(signalSelection.size());
   bool defSumw2 = TH1::GetDefaultSumw2();
   TH1::SetDefaultSumw2(true); // force tefficiency to have sumw2?
   for(unsigned i=0; i < signalSelection.size(); i++){
-    TString cutName = signalSelection[i]->getName();
-    TString snrName = "eff_" + cutName + "_vs_SNR";
 
-    const int numEnergyBins = 30;
-    const double energyBins[numEnergyBins] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5,
+    const int numSnrBins = 30;
+    const double snrBins[numSnrBins] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5,
                                               5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5,
                                               10 , 12 , 14 , 16 , 18 , 20 , 40 , 60 , 80 , 100};
+
+    for(int orderInd=0; orderInd < numCutOrders; orderInd++){
+      TString cutName = signalSelection[i]->getName();
+      
+      TString orderName;
+      switch(orderInd){
+        case kInSequence: orderName = "inSequence"; break;
+        case kIfFirst:    orderName = "ifFirst";    break;
+        // case kIfLast:     orderName = "ifLast";     break;
+        default:
+          std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "Unknown order!" << std::endl;
+      }
+      
+      TString snrName = "eff_" + cutName + "_" + orderName + "_vs_SNR";
+      fSignalEffs[kSNR][orderInd].push_back(new TEfficiency(snrName, snrName, numSnrBins-1, snrBins));
+      
     
-    fSignalEffs[kSNR].push_back(new TEfficiency(snrName, snrName, numEnergyBins-1, energyBins));
-    
-    TString energyName = "eff_" + cutName + "_vs_Energy";
-    fSignalEffs[kEnergy].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
+      TString energyName = "eff_" + cutName + "_" + orderName + "_vs_Energy";
+      fSignalEffs[kEnergy][orderInd].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
+    }
   }
+
   TH1::SetDefaultSumw2(defSumw2);
 
   for(UInt_t g=0; g < globs.size(); g++){
@@ -608,20 +644,24 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
           }
         }
 
-        if(matchBackgroundSelection){
-          for(UInt_t i=0; i < forms.N(); i++){
+        for(UInt_t i=0; i < forms.N(); i++){
 
-            if(assignedBackgroundBranches.at(i)==kUnassigned){
-              assignedBackgroundBranches.at(i) = setBranchFromFormula(fBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));
-            }
-            if(assignedBackgroundBranches.at(i)==kInt){
-              fBackgroundIntVals.at(i) = forms.at(i)->EvalInstance();
-            }
-            else{
-              fBackgroundFloatVals.at(i) = forms.at(i)->EvalInstance();
-            }
+          if(assignedBackgroundBranches.at(i)==kUnassigned){
+            assignedBackgroundBranches.at(i) = setBranchFromFormula(fBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));
+            assignedBackgroundBranches.at(i) = setBranchFromFormula(fRejectedBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));              
           }
+          if(assignedBackgroundBranches.at(i)==kInt){
+            fBackgroundIntVals.at(i) = forms.at(i)->EvalInstance();
+          }
+          else{
+            fBackgroundFloatVals.at(i) = forms.at(i)->EvalInstance();
+          }
+        }
+        if(matchBackgroundSelection){        
           fBackgroundTree->Fill();
+        }
+        else{
+          fRejectedBackgroundTree->Fill();
         }
       }
       else if(doSignal){
@@ -629,30 +669,37 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
         Bool_t matchSignalSelection = true;
         for(UInt_t i=0; i < signalSelection.size(); i++){
           int thisCutVal = signalSelection.at(i)->apply(sum);
-          // std::cerr << signalSelection.at(i)->getName() << "\t" << thisCutVal << std::endl;
-          
-          fSignalEffs[kSNR][i]->Fill(thisCutVal, sum->trainingDeconvolved().snr, sum->weight());
-          fSignalEffs[kEnergy][i]->Fill(thisCutVal, TMath::Log10(sum->mc.energy), sum->weight());
+          double log10E = TMath::Log10(sum->mc.energy);
+
+          // if first...
+          fSignalEffs[kSNR][kIfFirst][i]->Fill(thisCutVal, sum->trainingDeconvolved().snr, sum->weight());
+          fSignalEffs[kEnergy][kIfFirst][i]->Fill(thisCutVal, log10E, sum->weight());
 
           matchSignalSelection = matchSignalSelection && (thisCutVal != 0);
-          // std::cerr << thisCutVal << "\t";
+          // in sequence...
+          fSignalEffs[kSNR][kInSequence][i]->Fill(matchSignalSelection, sum->trainingDeconvolved().snr, sum->weight());
+          fSignalEffs[kEnergy][kInSequence][i]->Fill(matchSignalSelection, log10E, sum->weight());
         }
         // std::cerr << std::endl;
 
 
-        if(matchSignalSelection){
-          for(UInt_t i=0; i < forms.N(); i++){
-            if(assignedSignalBranches.at(i)==kUnassigned){
-              assignedSignalBranches.at(i) = setBranchFromFormula(fSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
-            }
-            if(assignedSignalBranches.at(i)==kInt){
-              fSignalIntVals.at(i) = forms.at(i)->EvalInstance();
-            }
-            else{
-              fSignalFloatVals.at(i) = forms.at(i)->EvalInstance();
-            }
+        for(UInt_t i=0; i < forms.N(); i++){
+          if(assignedSignalBranches.at(i)==kUnassigned){
+            assignedSignalBranches.at(i) = setBranchFromFormula(fSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
+            assignedSignalBranches.at(i) = setBranchFromFormula(fRejectedSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
           }
+          if(assignedSignalBranches.at(i)==kInt){
+            fSignalIntVals.at(i) = forms.at(i)->EvalInstance();
+          }
+          else{
+            fSignalFloatVals.at(i) = forms.at(i)->EvalInstance();
+          }
+        }
+        if(matchSignalSelection){        
           fSignalTree->Fill();
+        }
+        else{
+          fRejectedSignalTree->Fill();
         }
       }
       else{ // then it's a spectator...
@@ -823,17 +870,23 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
 
 
       for(unsigned i=0; i < signalSelection.size(); i++){
-        fSignalEffs[kSNR][i]->SetDirectory(gDirectory);
-        fSignalEffs[kEnergy][i]->SetDirectory(gDirectory);
-      
-        fSignalEffs[kSNR][i]->Write();
-        fSignalEffs[kEnergy][i]->Write();
+        fSignalEffs[kSNR][kIfFirst][i]->SetDirectory(gDirectory);
+        fSignalEffs[kEnergy][kIfFirst][i]->SetDirectory(gDirectory);
+        fSignalEffs[kSNR][kInSequence][i]->SetDirectory(gDirectory);
+        fSignalEffs[kEnergy][kInSequence][i]->SetDirectory(gDirectory);
 
-        delete fSignalEffs[kSNR][i];
-        delete fSignalEffs[kEnergy][i];
-      
+
+        fSignalEffs[kSNR][kIfFirst][i]->Write();
+        fSignalEffs[kEnergy][kIfFirst][i]->Write();
+        fSignalEffs[kSNR][kInSequence][i]->Write();
+        fSignalEffs[kEnergy][kInSequence][i]->Write();
+
+
+        delete fSignalEffs[kSNR][kIfFirst][i];
+        delete fSignalEffs[kEnergy][kIfFirst][i];
+        delete fSignalEffs[kSNR][kInSequence][i];
+        delete fSignalEffs[kEnergy][kInSequence][i];
       }
-    
 
       result.Write();
   

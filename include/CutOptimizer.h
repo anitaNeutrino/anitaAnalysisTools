@@ -100,6 +100,8 @@ class CutOptimizer{
   TString fOutFileName;
   TTree* fSignalTree;
   TTree* fBackgroundTree;
+  TTree* fRejectedSignalTree;
+  TTree* fRejectedBackgroundTree;
   Bool_t fDoAllPeaks;
   Bool_t fSaveTrees;
   std::vector<Float_t> fSignalFloatVals;
@@ -117,7 +119,14 @@ class CutOptimizer{
     kSNR,
     kEnergy
   };
-  std::vector<TEfficiency*>fSignalEffs[numEffVars];
+  static const int numCutOrders = 2;
+  enum {
+    kInSequence,
+    kIfFirst
+    // kIfLast
+  };
+
+  std::vector<TEfficiency*>fSignalEffs[numEffVars][numCutOrders];
 
   /** 
    * @class Dummy class to hold the TTreeFormula and trick TChain into notifying all the formulas
