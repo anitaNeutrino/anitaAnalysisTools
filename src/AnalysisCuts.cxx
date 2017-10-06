@@ -25,7 +25,7 @@ bool portable_isinf(double x){
  * @param title is the cut title
  * @param mrv is the maximum value it is possible for apply() to return
  */
-Acclaim::AnalysisCut::AnalysisCut(const char* name, const char* title, int mrv)
+Acclaim::AnalysisCuts::AnalysisCut::AnalysisCut(const char* name, const char* title, int mrv)
     : fName(name), fTitle(title), fMaxRetVal(mrv)
 {
   // just assign name, title, and maximum return value
@@ -42,7 +42,7 @@ Acclaim::AnalysisCut::AnalysisCut(const char* name, const char* title, int mrv)
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsAboveHorizontal::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsAboveHorizontal::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   return sum->peak[pol][peakInd].theta > 0 ? 1 : 0;
@@ -60,7 +60,7 @@ int Acclaim::IsAboveHorizontal::apply(const AnitaEventSummary* sum, AnitaPol::An
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsTaggedAsWaisPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsTaggedAsWaisPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -77,7 +77,7 @@ int Acclaim::IsTaggedAsWaisPulser::apply(const AnitaEventSummary* sum, AnitaPol:
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsTaggedAsLDBPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsTaggedAsLDBPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;  
@@ -94,7 +94,7 @@ int Acclaim::IsTaggedAsLDBPulser::apply(const AnitaEventSummary* sum, AnitaPol::
  *
  * @return 0 for HPol, 1 for VPol
  */
-int Acclaim::HigherPol::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::HigherPol::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -110,7 +110,7 @@ int Acclaim::HigherPol::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::HasSourceLocation::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::HasSourceLocation::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);  
   bool didReconstruct = (sum->peak[pol][peakInd].latitude < -900 || TMath::Abs(sum->peak[pol][peakInd].theta_adjustment_needed) > 0) ? false : true;
@@ -130,7 +130,7 @@ int Acclaim::HasSourceLocation::apply(const AnitaEventSummary* sum, AnitaPol::An
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsOnContinent::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsOnContinent::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   return RampdemReader::isOnContinent(sum->peak[pol][peakInd].longitude, sum->peak[pol][peakInd].latitude);
@@ -147,7 +147,7 @@ int Acclaim::IsOnContinent::apply(const AnitaEventSummary* sum, AnitaPol::AnitaP
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsTaggedAsPayloadBlast::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsTaggedAsPayloadBlast::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -164,7 +164,7 @@ int Acclaim::IsTaggedAsPayloadBlast::apply(const AnitaEventSummary* sum, AnitaPo
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   return TMath::Abs(sum->peak[pol][peakInd].dPhiSun()) < 20 ? true : false;
@@ -180,7 +180,7 @@ int Acclaim::IsWithin20DegreesOfSunInPhi::apply(const AnitaEventSummary* sum, An
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsGood::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsGood::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -201,7 +201,7 @@ int Acclaim::IsGood::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t po
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::GoodGPS::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::GoodGPS::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -219,7 +219,7 @@ int Acclaim::GoodGPS::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t p
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::NonZeroStokesI::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::NonZeroStokesI::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);  
   return (sum->deconvolved[pol][peakInd].I > 0);
@@ -237,7 +237,7 @@ int Acclaim::NonZeroStokesI::apply(const AnitaEventSummary* sum, AnitaPol::Anita
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::RealSNR::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::RealSNR::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);  
   return !(TMath::IsNaN(sum->deconvolved[pol][peakInd].snr) || portable_isinf(sum->deconvolved[pol][peakInd].snr));
@@ -254,7 +254,7 @@ int Acclaim::RealSNR::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t p
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::Anita3QuietTime::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::Anita3QuietTime::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -271,7 +271,7 @@ int Acclaim::Anita3QuietTime::apply(const AnitaEventSummary* sum, AnitaPol::Anit
  *
  * @return 1+peakInd if true, 0 if false
  */
-int Acclaim::CloseToMC::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::CloseToMC::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   bool close = false;
@@ -304,7 +304,7 @@ int Acclaim::CloseToMC::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t
  *
  * @return 1+peakInd if true, 0 if false
  */
-int Acclaim::CloseToWais::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::CloseToWais::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   bool close = false;
@@ -335,7 +335,7 @@ int Acclaim::CloseToWais::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -352,7 +352,7 @@ int Acclaim::IsRfTrigger::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::SmallDeltaRough::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::SmallDeltaRough::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   const double dAngleCut = 4;
@@ -369,7 +369,7 @@ int Acclaim::SmallDeltaRough::apply(const AnitaEventSummary* sum, AnitaPol::Anit
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsNotTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::IsNotTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
   (void) peakInd;
@@ -387,7 +387,7 @@ int Acclaim::IsNotTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+int Acclaim::AnalysisCuts::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   handleDefaults(sum, pol, peakInd);
   return (sum->coherent_filtered[pol][peakInd].standardizedPeakMoment(1) > 60 && sum->deconvolved_filtered[pol][peakInd].standardizedPeakMoment(1) > 60);
@@ -410,7 +410,7 @@ int Acclaim::SignalLikeFirstStandardizedPeakMoments::apply(const AnitaEventSumma
  * 
  * @return 
  */
-int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+int Acclaim::AnalysisCuts::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   (void) pol;
   (void) peakInd;
   static const int numFisherWeights = 3;
@@ -434,7 +434,7 @@ int Acclaim::PassesThesisCuts::apply(const AnitaEventSummary* sum, AnitaPol::Ani
  *
  * @return 1 if true, 0 if false
  */
-int Acclaim::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+int Acclaim::AnalysisCuts::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);  
   return (TMath::Abs(sum->peak[pol][peakInd].dPhiNorth()) > 90);
 
@@ -451,7 +451,7 @@ int Acclaim::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_
  * 
  * @return 1 if true, 0 if false
  */
-int Acclaim::HigherPeakHilbertAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+int Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);
   return (sum->deconvolved_filtered[pol][peakInd].peakHilbert > sum->coherent_filtered[pol][peakInd].peakHilbert);
 }
@@ -467,7 +467,7 @@ int Acclaim::HigherPeakHilbertAfterDedispersion::apply(const AnitaEventSummary* 
  * 
  * @return 1 if true, 0 if false
  */
-int Acclaim::HigherImpulsivityMeasureAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+int Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);
   return (sum->deconvolved_filtered[pol][peakInd].impulsivityMeasure > sum->coherent_filtered[pol][peakInd].impulsivityMeasure);
 }
@@ -484,7 +484,7 @@ int Acclaim::HigherImpulsivityMeasureAfterDedispersion::apply(const AnitaEventSu
  * @return 1 if true, 0 if false
  */
 
-int Acclaim::LowerFracPowerWindowGradientAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
+int Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
   handleDefaults(sum, pol, peakInd);
   return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < sum->coherent_filtered[pol][peakInd].fracPowerWindowGradient());
 }

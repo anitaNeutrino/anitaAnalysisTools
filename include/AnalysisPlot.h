@@ -18,7 +18,8 @@ class TH1;
 namespace Acclaim{
 
 /** 
- * @class AnalysisPlot does the hard work of histogramming variables in the presence of cuts.
+ * @class AnalysisPlot 
+ * @brief Does the hard work of histogramming variables in the presence of cuts.
  * 
  * Purpose:
  * TChain::Draw is bloody slow even on the 10% ANITA data.
@@ -70,7 +71,7 @@ class AnalysisPlot : public TNamed {
   AnalysisPlot(const char* name, const char* title, int nBinsX, double xMin, double xMax, int nBinsY=0, double yMin=0, double yMax=0);
   virtual ~AnalysisPlot();
 
-  size_t addCut(const AnalysisCut* cut);
+  size_t addCut(const AnalysisCuts::AnalysisCut* cut);
 
   virtual int Fill(const AnitaEventSummary* sum, double xVal, double yVal=1, double zVal=1);
   void Draw(Option_t* opt="");
@@ -95,7 +96,7 @@ class AnalysisPlot : public TNamed {
   std::vector<TString> cutNames; /// the string to associate with the cut in histogram names
 
   // These don't persist (deliberately) due to the //! comment string
-  std::vector<const AnalysisCut*> analysisCuts; //! The cuts to apply, do not persist, the only data needed later are saved in cutNames
+  std::vector<const AnalysisCuts::AnalysisCut*> analysisCuts; //! The cuts to apply, do not persist, the only data needed later are saved in cutNames
   std::vector<TH1*> hDummies; //! Dummy histograms for drawing, don't persist
   
 

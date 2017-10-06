@@ -482,7 +482,7 @@ Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TT
  * @param backgroundSelection is a set of my custom cut class defining the background selection for TMVA training.
  * @param formulaStrings are a set of formulae like one would pass to TTree::Drawm which get evaluated for signal/background events
  */
-void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
+void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
 
   // First generate the new signal and background trees
   if(fSignalTree){
@@ -744,7 +744,9 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
 }
 
 
-void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings, const char* fileName){
+void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection,
+				     const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection,
+				     const std::vector<FormulaString>& formulaStrings, const char* fileName){
 
   // Someone with a bit more time can do the backwards compatibility
 #if ROOT_VERSION_CODE < ROOT_VERSION(6,10,0)

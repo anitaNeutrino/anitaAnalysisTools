@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
 
 
 
-  std::vector<const Acclaim::AnalysisCut *> signalSelection;
+  std::vector<const AnalysisCuts::AnalysisCut *> signalSelection;
   TString sg = signalGlob;
   if(sg.Contains("Wais")){
     // extra data quality cuts
@@ -31,21 +31,20 @@ int main(int argc, char* argv[]){
   }
   
 
-  std::vector<const Acclaim::AnalysisCut *> backgroundSelection;
+  std::vector<const AnalysisCuts::AnalysisCut *> backgroundSelection;
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
   backgroundSelection.push_back(&AnalysisCuts::isNotTaggedAsPulser); // not a pulser...
 
   const int nGen = 8;
-  const AnalysisCut* genericDataQualityCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
-                                                     &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
-                                                     &AnalysisCuts::goodGPS, // do we have GPS data?
-                                                     &AnalysisCuts::realSNR,
-                                                     &AnalysisCuts::isRfTrigger,
-                                                     &AnalysisCuts::higherPeakHilbertAfterDedispersion,
-                                                     &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
-                                                     &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion
-                                                     };
+  const AnalysisCuts::AnalysisCut* genericDataQualityCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
+								   &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
+								   &AnalysisCuts::goodGPS, // do we have GPS data?
+								   &AnalysisCuts::realSNR,
+								   &AnalysisCuts::isRfTrigger,
+								   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
+								   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
+								   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
   
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(genericDataQualityCuts[i]);
@@ -75,12 +74,12 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().minAbsHwAngle())", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().fracPowerWindowGradient()", true));
 
-  std::vector<const AnalysisCut*> waisCuts;
-  waisCuts.push_back(&Acclaim::AnalysisCuts::isTaggedAsWaisPulser);
+  std::vector<const AnalysisCuts::AnalysisCut*> waisCuts;
+  waisCuts.push_back(&AnalysisCuts::isTaggedAsWaisPulser);
   co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
 
   // std::vector<const AnalysisCut*> selectingBlastsCuts;
-  // selectingBlastsCuts.push_back(&Acclaim::AnalysisCuts::isTaggedAsPayloadBlast);
+  // selectingBlastsCuts.push_back(&AnalysisCuts::isTaggedAsPayloadBlast);
   // co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
   
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);

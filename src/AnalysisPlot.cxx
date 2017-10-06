@@ -75,7 +75,7 @@ Acclaim::AnalysisPlot::~AnalysisPlot(){
  * 
  * @return The number of cuts stored the AnalysisPlot object will proccess on a Fill() command 
  */
-size_t Acclaim::AnalysisPlot::addCut(const AnalysisCut* cut){
+size_t Acclaim::AnalysisPlot::addCut(const AnalysisCuts::AnalysisCut* cut){
 
   const int nRetVals = cut->getMaximumReturnValue();
   const char* nameStr = cut->getName();
