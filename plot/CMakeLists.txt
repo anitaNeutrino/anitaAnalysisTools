@@ -1,5 +1,5 @@
 
-set(BINARIES initialDistributions)
+set(BINARIES initialDistributions makeHeatMaps)
 
 foreach(binary ${BINARIES})
   MESSAGE(STATUS "Process file: ${binary}")
