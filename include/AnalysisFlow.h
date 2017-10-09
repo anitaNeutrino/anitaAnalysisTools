@@ -73,7 +73,7 @@ class AnalysisFlow : public TObject{
 
     int fRun;
     selection fSelection;
-    AnitaDataset::BlindingStrategy fBlindStrat;
+    // AnitaDataset::BlindingStrategy fBlindStrat;
     int fDivision;
     int fNumDivisions;
 
@@ -98,6 +98,7 @@ class AnalysisFlow : public TObject{
 
     ANALYSIS_SETTING(Int_t, Debug);
     ANALYSIS_SETTING(Int_t, DoAll);
+    ENUM_ANALYSIS_SETTING(AnitaDataset::BlindingStrategy, BlindStrat);
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
     ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
     ANALYSIS_SETTING(Int_t, OutFileCompressionLevel);

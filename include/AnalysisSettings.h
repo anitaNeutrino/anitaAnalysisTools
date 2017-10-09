@@ -42,6 +42,28 @@
           f##SettingVariable = val; \
        }
 
+// This one is useful for converting an enum in a file to
+#define ENUM_ANALYSIS_SETTING(enum_type, SettingVariable) \
+    protected:                                    \
+       enum_type f##SettingVariable;              \
+    public:                                       \
+       Int_t Get##SettingVariable() const         \
+       {                                          \
+	 return (Int_t)f##SettingVariable;        \
+       }                                          \
+       enum_type GetEnum##SettingVariable() const \
+       {                                          \
+	 return f##SettingVariable;		  \
+       }                                          \
+       void Set##SettingVariable(Int_t val)       \
+       {                                          \
+	 f##SettingVariable = (enum_type)val;	  \
+       }                                          \
+       void Set##SettingVariable(enum_type val)   \
+       {                                          \
+	 f##SettingVariable = val;                \
+       }
+
 
 
 namespace Acclaim {

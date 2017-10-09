@@ -28,7 +28,6 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
   
   fSelection = (AnalysisFlow::selection) args->event_selection;
   fFilterStrat = filterStrat;
-  fBlindStrat = AnitaDataset::kNoBlinding; //TODO update this!
   
   if(!checkForSgeTaskId()){
     fDivision = args->division;
@@ -51,6 +50,8 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
   fDebug = 0;
   fOutFileCompressionLevel = 9;
   fOutFileCompressionAlgo = 2;
+  fBlindStrat = AnitaDataset::kNoBlinding;
+
   prepareEverything(args->settings_filename);
 }
 
@@ -437,10 +438,6 @@ void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileN
     }
   }
   
-  if(!fData){
-    prepareDataSet();
-  }
-
   if(!fSettings){
     fSettings = new AnalysisSettings(preferredSettingsFileName);
     fSettings->apply(dynamic_cast<TObject*>(this));
@@ -449,6 +446,10 @@ void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileN
   if(!fReco){
     fReco = new AnalysisReco();
     fSettings->apply(fReco);
+  }
+
+  if(!fData){ // do this after reading blinding strategy this->fBlindStrat from config file
+    prepareDataSet();
   }
 
   if(!fOutFile){
