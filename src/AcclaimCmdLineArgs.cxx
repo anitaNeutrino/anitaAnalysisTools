@@ -15,9 +15,9 @@ const int default_subdivision = 0;
 const int default_anitaversion = 3;
 const char* default_settings_filename = "";
 
-/** 
+/**
  * Prints available options and default values
- * 
+ *
  * @param argv0 should be the program name, i.e. argv[0]
  */
 void Acclaim::CmdLineArgs::printHelp(const char* argv0){
@@ -40,15 +40,15 @@ void Acclaim::CmdLineArgs::printHelp(const char* argv0){
 
   std::cerr << std::endl;
   std::cerr << "An additional \"mc\" can be added to the output filename with the --mc flag" << std::endl;
-  std::cerr << "--mc         : Add mc tag to output file name, this does NOT affect the selection flags listed above." << std::endl;  
+  std::cerr << "--mc         : Add mc tag to output file name, this does NOT affect the selection flags listed above." << std::endl;
 
 }
 
 
 
-/** 
+/**
  * Leverages getopt.h to actually do the parsing
- * 
+ *
  * @param argc passed from main (via constructor)
  * @param argv passed from main (via constructor)
  */
@@ -79,28 +79,28 @@ void Acclaim::CmdLineArgs::getArgs(int argc, char* argv[]){
                                            {"settings",     required_argument, NULL,              's'},
                                            {"output",       required_argument, NULL,              'o'},
                                            {0, 0, 0, 0}};
-    
+
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "ha:r:n:d:s:",
+    c = getopt_long (argc, argv, "ha:r:n:m:d:s:",
                      long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1){
       break;
     }
-    
+
     switch (c){
       case 0:
         /* If this option set a flag, do nothing else now. */
         if (long_options[option_index].flag != 0){
           if(option_index < numEventSelectionFlags){
             std::cout << "Info in " << __PRETTY_FUNCTION__ << ", got " << long_options[option_index].name <<  ", so set event_selection = " << event_selection << std::endl;
-          }          
+          }
           break;
         }
-        
+
         // std::cout << "option " << long_options[option_index].name << std::endl;
         // if (optarg){
         //   std::cout  << " with arg " <<  optarg << std::endl;
@@ -130,7 +130,7 @@ void Acclaim::CmdLineArgs::getArgs(int argc, char* argv[]){
         break;
 
       case 'm':
-        division = atoi(optarg);        
+        division = atoi(optarg);
         std::cout << "Info in " << __PRETTY_FUNCTION__ << ", set division = " << division << std::endl;
         break;
 
@@ -173,9 +173,9 @@ void Acclaim::CmdLineArgs::getArgs(int argc, char* argv[]){
 }
 
 
-/** 
+/**
  * Constructor
- * 
+ *
  * @param argc passed from main
  * @param argv passed from main
  */
@@ -183,7 +183,7 @@ Acclaim::CmdLineArgs::CmdLineArgs(int argc, char* argv[]){
 
   getArgs(argc, argv);
   checkArgs(argv[0]);
-  
+
 }
 
 
@@ -192,14 +192,14 @@ void Acclaim::CmdLineArgs::checkArgs(const char* argv0){
   // if(anitaversion!=3){
   //   std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", currently only checking arguments for ANITA-3" << std::endl;
   // }
-  
+
   Bool_t mustDie = false; // will set to true if have nonsense, program will then die
 
   if(numdivisions <= 0){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", require numdivisions to be a positive integer" << std::endl;
     mustDie = true;
   }
-  
+
   if(division < 0 || division >= numdivisions){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", require 0 <= division < numdivisions" << std::endl;
     mustDie = true;
@@ -210,7 +210,6 @@ void Acclaim::CmdLineArgs::checkArgs(const char* argv0){
     exit(1);
   }
 
-  
-  
-}
 
+
+}
