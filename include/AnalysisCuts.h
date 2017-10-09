@@ -68,7 +68,10 @@ namespace Acclaim
       int fMaxRetVal;
     };
 
-
+    /**
+     * @class IsAboveHorizontal
+     * @brief Checks whether a given peak is above the horizontal
+     */
 
     class IsAboveHorizontal : public AnalysisCut
     {
@@ -77,6 +80,12 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+    /**
+     * @class IsTaggedAsWaisPulser
+     * @brief Is the triggerTime stamp consistent with WAIS divide?
+     */
+
     class IsTaggedAsWaisPulser : public AnalysisCut
     {
     public:
@@ -84,12 +93,25 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+
+    /**
+     * @class IsTaggedAsLDBPulser
+     * @brief Is the triggerTime stamp consistent with the LDB pulser?
+     */
     class IsTaggedAsLDBPulser : public AnalysisCut
     {
     public:
       IsTaggedAsLDBPulser() : AnalysisCut("isTaggedAsLDBPulser", "Tagged As LDB Pulser") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
+
+
+
+    /**
+     * @class HigherPol
+     * @brief Which polarisation has a higher map peak?
+     */
 
     class HigherPol : public AnalysisCut
     {
@@ -98,6 +120,10 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns 0 for HPol, 1 for VPol
     };
 
+    /**
+     * @class HasSourceLocation
+     * @brief Did the event interest with the surface model of the Earth?
+     */
     class HasSourceLocation : public AnalysisCut
     {
     public:
@@ -105,6 +131,11 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+    /**
+     * @class IsOnContinent
+     * @brief Did the event reconstruct to the Antarctic landmass (including ice shelfs)?
+     */
     class IsOnContinent : public AnalysisCut
     {
     public:
@@ -112,6 +143,11 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+    /**
+     * @class IsTaggedAsPayloadBlast
+     * @brief Was this event tagged as a payload blast in my initial reconstruction?
+     */
     class IsTaggedAsPayloadBlast : public AnalysisCut
     {
     public:
@@ -119,12 +155,21 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+    /**
+     * @class IsWithin20DegreesOfSunInPhi
+     * @brief Is this event within 20 degrees of the sun in payload phi?
+     */
     class IsWithin20DegreesOfSunInPhi : public AnalysisCut{
     public:
       IsWithin20DegreesOfSunInPhi() : AnalysisCut("isWithin20DegreesOfSunInPhi", "|#delta#phi_{sun}| < 20") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+    /**
+     * @class IsGood
+     * @brief Is the is good flag set for this event?
+     */
     class IsGood : public AnalysisCut{
     public:
       IsGood() : AnalysisCut("isGood", "Is Good") {;}
@@ -132,32 +177,51 @@ namespace Acclaim
     };
 
 
+    /**
+     * @class GoodGPS
+     * @brief Is the GPS heading a sensible number?
+     */
     class GoodGPS : public AnalysisCut{
     public:
       GoodGPS() : AnalysisCut("goodGPS", "Good GPS") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+
+    /**
+     * @class NonZeroStokesI
+     * @brief Is the stokes I parameter non-zero?
+     */
     class NonZeroStokesI : public AnalysisCut{
     public:
       NonZeroStokesI() : AnalysisCut("nonZeroStokesI", "Non-zero Stokes I") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
+    /**
+     * @class RealSNR
+     * @brief Is the SNR a real number (i.e. not a NaN)?
+     */
     class RealSNR : public AnalysisCut{
     public:
       RealSNR() : AnalysisCut("realSNR", "Non-NaN SNR") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
-
+    /**
+     * @class Anita3QuietTime
+     * @brief Does this event fall in my choice of the quiet portion of the ANITA-3 flight time?
+     */
     class Anita3QuietTime : public AnalysisCut{
     public:
       Anita3QuietTime() : AnalysisCut("quietTime", "Quiet Time") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
-
+    /**
+     * @class CloseToMC
+     * @brief Is this event close to the monte carlo?
+     */
     class CloseToMC : public AnalysisCut{
     public:
       CloseToMC() : AnalysisCut("closeToMC", "Near MC") {;}
