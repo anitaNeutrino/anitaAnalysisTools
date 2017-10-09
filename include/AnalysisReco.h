@@ -134,6 +134,7 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Double_t, SlopeFitStartFreqGHz);
   ANALYSIS_SETTING(Double_t, SlopeFitEndFreqGHz);
   ANALYSIS_SETTING(Double_t, FillChannelInfo);
+  ANALYSIS_SETTING(Double_t, FillSpectrumInfo);
   ClassDef(AnalysisReco, 0)
 
 };

@@ -7,6 +7,7 @@
 #include "NoiseMonitor.h"
 #include "AcclaimCmdLineArgs.h"
 #include "UsefulAnitaEvent.h"
+#include "Compression.h"
 
 ClassImp(Acclaim::AnalysisFlow);
 
@@ -48,7 +49,8 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
   fLastEntry=0;
   fLastEventConsidered = 0;
   fDebug = 0;
-
+  fOutFileCompressionLevel = 9;
+  fOutFileCompressionAlgo = 2;
   prepareEverything(args->settings_filename);
 }
 
@@ -274,6 +276,11 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
     fOutFile = oc.makeFile();
     if(fOutFileCompressionLevel >= 0){
       fOutFile->SetCompressionLevel(fOutFileCompressionLevel);
+      // kUseGlobalCompressionSetting,
+      //                           kZLIB,
+      //                           kLZMA,
+      //                           kOldCompressionAlgo
+      fOutFile->SetCompressionAlgorithm((ROOT::ECompressionAlgorithm) fOutFileCompressionAlgo);
     }
 
     // std::cout << fOutFile << "\t" << fOutFile->GetName() << std::endl;

@@ -229,74 +229,76 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // from the time domain. Therefore there's a bunch of trailing high frequency crap that I want to ignore
   // The maximum useful frequency is the nominal sampling
 
-  const double maxFreqIfIHadNotIntepolated = FancyFFTs::getNumFreqs(NUM_SAMP)*(1./(NOMINAL_SAMPLING_DELTAT*NUM_SAMP));
-  const double df = coherentWave->deltaF(); // the actual deltaF
-  int numGoodFreqBins = floor(maxFreqIfIHadNotIntepolated/df);
+  if(fFillSpectrumInfo){
+    const double maxFreqIfIHadNotIntepolated = FancyFFTs::getNumFreqs(NUM_SAMP)*(1./(NOMINAL_SAMPLING_DELTAT*NUM_SAMP));
+    const double df = coherentWave->deltaF(); // the actual deltaF
+    int numGoodFreqBins = floor(maxFreqIfIHadNotIntepolated/df);
 
-  // std::cout << maxFreq << std::endl;
-  const TGraphAligned* grPow = coherentWave->power();
+    // std::cout << maxFreq << std::endl;
+    const TGraphAligned* grPow = coherentWave->power();
 
-  if(numGoodFreqBins > grPow->GetN()){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
-              << ". Did you downsample the coherently summed waveform?" << std::endl;
-    numGoodFreqBins = grPow->GetN();
-  }
-
-  TGraph grMaxima;
-  for(int i=1; i < numGoodFreqBins-1; i++){
-    if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i+i] ){
-      grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
+    if(numGoodFreqBins > grPow->GetN()){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
+		<< ". Did you downsample the coherently summed waveform?" << std::endl;
+      numGoodFreqBins = grPow->GetN();
     }
 
-    // This check should be redundent now, but won't hurt to leave it in...
-    if(grPow->GetX()[i] >= maxFreqIfIHadNotIntepolated){
-      break;
-    }
-  }
+    TGraph grMaxima;
+    for(int i=1; i < numGoodFreqBins-1; i++){
+      if(grPow->GetY()[i] > grPow->GetY()[i-i]  && grPow->GetY()[i] > grPow->GetY()[i+i] ){
+	grMaxima.SetPoint(grMaxima.GetN(),  grPow->GetX()[i], grPow->GetY()[i]);
+      }
 
-  // Sort my collection of local maxima,
-  // The second argument, false, means sort the local maxima in decreasing order (i.e. biggest first)
-  grMaxima.Sort(TGraph::CompareY, false);
+      // This check should be redundent now, but won't hurt to leave it in...
+      if(grPow->GetX()[i] >= maxFreqIfIHadNotIntepolated){
+	break;
+      }
+    }
 
-  // Put the N largest local maxima into the AnitaEventSummary::WaveformInfo
-  for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
-    if(i < grMaxima.GetN()){
-      info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
-      info.peakPower[i] = grMaxima.GetY()[i];
-      info.peakFrequency[i] = grMaxima.GetX()[i];
+    // Sort my collection of local maxima,
+    // The second argument, false, means sort the local maxima in decreasing order (i.e. biggest first)
+    grMaxima.Sort(TGraph::CompareY, false);
+
+    // Put the N largest local maxima into the AnitaEventSummary::WaveformInfo
+    for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
+      if(i < grMaxima.GetN()){
+	info.bandwidth[i] = 0; // for now, let's just try the peak value and frequency
+	info.peakPower[i] = grMaxima.GetY()[i];
+	info.peakFrequency[i] = grMaxima.GetX()[i];
+      }
+      else{
+	info.bandwidth[i] = 0;
+	info.peakPower[i] = 0;
+	info.peakFrequency[i] = 0;
+      }
     }
-    else{
-      info.bandwidth[i] = 0;
-      info.peakPower[i] = 0;
-      info.peakFrequency[i] = 0;
-    }
-  }
   
-  const TGraphAligned* grPow_db = coherentWave->powerdB();
+    const TGraphAligned* grPow_db = coherentWave->powerdB();
 
-  const int firstSlopeBin = TMath::Nint(fSlopeFitStartFreqGHz/df);
-  const int lastSlopeBin  = TMath::Nint(fSlopeFitEndFreqGHz/df);
-  const int numSlopeBins = lastSlopeBin - firstSlopeBin;
+    const int firstSlopeBin = TMath::Nint(fSlopeFitStartFreqGHz/df);
+    const int lastSlopeBin  = TMath::Nint(fSlopeFitEndFreqGHz/df);
+    const int numSlopeBins = lastSlopeBin - firstSlopeBin;
 
-  const double mean_f      = TMath::Mean(numSlopeBins, &grPow_db->GetX()[firstSlopeBin]);
-  const double mean_pow_db = TMath::Mean(numSlopeBins, &grPow_db->GetY()[firstSlopeBin]);
+    const double mean_f      = TMath::Mean(numSlopeBins, &grPow_db->GetX()[firstSlopeBin]);
+    const double mean_pow_db = TMath::Mean(numSlopeBins, &grPow_db->GetY()[firstSlopeBin]);
 
-  double gradNumerator = 0;
-  double gradDenominator = 0;
-  for(int i=firstSlopeBin; i < lastSlopeBin; i++){
-    double dx = grPow_db->GetX()[i] - mean_f;
-    double dy = grPow_db->GetY()[i] - mean_pow_db;
+    double gradNumerator = 0;
+    double gradDenominator = 0;
+    for(int i=firstSlopeBin; i < lastSlopeBin; i++){
+      double dx = grPow_db->GetX()[i] - mean_f;
+      double dy = grPow_db->GetY()[i] - mean_pow_db;
 
-    gradNumerator   += dy*dx;
-    gradDenominator += dx*dx;
+      gradNumerator   += dy*dx;
+      gradDenominator += dx*dx;
+    }
+
+    if(gradDenominator <= 0){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
+    }
+    info.spectrumSlope = gradNumerator/gradDenominator;
+    info.spectrumIntercept = mean_pow_db - info.spectrumSlope*mean_f;
+
   }
-
-  if(gradDenominator <= 0){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
-  }
-  info.spectrumSlope = gradNumerator/gradDenominator;
-  info.spectrumIntercept = mean_pow_db - info.spectrumSlope*mean_f;
-
 }
 
 
@@ -584,6 +586,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fSlopeFitStartFreqGHz = 0.18;
   fSlopeFitEndFreqGHz = 1.3;
   fFillChannelInfo = 0;
+  fFillSpectrumInfo = 0;
   
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -1125,19 +1128,21 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     const double tN = grU->GetX()[grU->GetN()-1];
 
     if(fDebug){
-      std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", waves[" << i << "] has " << grU->GetN() << " points." << std::endl;
+      std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", waves[" << i << "] has even with " << grU->GetN() << " points. "; 
+      const TGraphAligned* grA = waves[i]->uneven();
+
+      std::cerr << "(uneven has " << grA->GetN() << " points)." << std::endl;
       for(int samp=1; samp < grU->GetN(); samp++){
         if(grU->GetX()[samp] - grU->GetX()[samp-1] <= 0){
           std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", x not monotonically increasing!" << std::endl;
-          for(int samp=0; samp < grU->GetN(); samp++){
-            std::cerr << "x[" << samp << "] = " << grU->GetX()[samp] << std::endl;
-          }
+	  std::cerr << "x[" << samp-1 << "] = " << grU->GetX()[samp-1] << std::endl;
+	  std::cerr << "x[" << samp   << "] = " << grU->GetX()[samp]   << std::endl;
           break;
         }
       }
     }
 
-    
+    int numNan = 0;
     for(int samp=0; samp < grCoherent->GetN(); samp++){
       double t = grCoherent->GetX()[samp];
 
@@ -1145,12 +1150,19 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
       if(tPlusDt > t0 && tPlusDt < tN){
         double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
         if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
-          std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
+	  numNan++;
+          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
+          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " for time " << tPlusDt << " for sample " << samp << " of " << grCoherent->GetN() << std::endl;
         }
         else{
           grCoherent->GetY()[samp] += y;
         }
       }
+    }
+
+    if(numNan > 0){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned "
+		<< numNan << " NaNs for wave " << i << std::endl;
     }
   }
 

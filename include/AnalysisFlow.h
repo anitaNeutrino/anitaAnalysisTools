@@ -101,6 +101,7 @@ class AnalysisFlow : public TObject{
     ANALYSIS_SETTING(Double_t, NoiseTimeScaleSeconds);
     ANALYSIS_SETTING(Int_t, NoiseEvenWaveforms);
     ANALYSIS_SETTING(Int_t, OutFileCompressionLevel);
+    ANALYSIS_SETTING(Int_t, OutFileCompressionAlgo);
 
     ClassDef(AnalysisFlow, 0);
   };
