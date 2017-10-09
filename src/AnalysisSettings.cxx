@@ -19,7 +19,7 @@ Acclaim::AnalysisSettings::AnalysisSettings(const char* fName) : fileName(fName)
 }
 
 
-void Acclaim::AnalysisSettings::write(TFile* f){
+void Acclaim::AnalysisSettings::write(TFile* f) const{
 
   if(!f){
     std::cerr << "Error in " << __PRETTY_FUNCTION__
@@ -51,11 +51,11 @@ void Acclaim::AnalysisSettings::write(TFile* f){
 }
 
 
-void Acclaim::AnalysisSettings::print(){
+void Acclaim::AnalysisSettings::print() const{
   // For debugging
   std::cout << __PRETTY_FUNCTION__ << std::endl;  
 
-  SectionMap_t::iterator sit = sectionMap.begin();
+  SectionMap_t::const_iterator sit = sectionMap.begin();
   for(; sit!= sectionMap.end(); ++sit){
     VariableMap_t* vm = sit->second;
     std::cout << "[" << sit->first << "]" << std::endl;
@@ -72,7 +72,7 @@ void Acclaim::AnalysisSettings::print(){
 
 
 
-void Acclaim::AnalysisSettings::apply(TObject* obj){
+void Acclaim::AnalysisSettings::apply(TObject* obj) const {
 
   if(obj==NULL){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got NULL TObject pointer. Doing nothing." << std::endl;
@@ -81,7 +81,7 @@ void Acclaim::AnalysisSettings::apply(TObject* obj){
 
   TString className = obj->ClassName();
 
-  SectionMap_t::iterator sit = sectionMap.find(className);
+  SectionMap_t::const_iterator sit = sectionMap.find(className);
   if(sit==sectionMap.end()){
     std::cerr << "Fatal error in " << __PRETTY_FUNCTION__ << ", found no settings for " << className
               << "." << std::endl;
@@ -116,7 +116,7 @@ void Acclaim::AnalysisSettings::apply(TObject* obj){
 
 
 
-Bool_t Acclaim::AnalysisSettings::stringIsKeyValuePair(const TString& commentStrippedLine, TString& key, TString& value){
+Bool_t Acclaim::AnalysisSettings::stringIsKeyValuePair(const TString& commentStrippedLine, TString& key, TString& value) const{
   key = "";
   value = "";
   
@@ -138,7 +138,7 @@ Bool_t Acclaim::AnalysisSettings::stringIsKeyValuePair(const TString& commentStr
 }
 
 
-Bool_t Acclaim::AnalysisSettings::stringIsAlphaNumeric(const TString& str){
+Bool_t Acclaim::AnalysisSettings::stringIsAlphaNumeric(const TString& str) const{
   // really this should be "stringIsNotWhiteSpace", but that's hard to figure out how to do
   TRegexp reggie("[a-zA-Z0-9]");
   Ssiz_t len = str.Length();
@@ -149,7 +149,7 @@ Bool_t Acclaim::AnalysisSettings::stringIsAlphaNumeric(const TString& str){
 
 
 
-Bool_t Acclaim::AnalysisSettings::stringIsSection(const TString& commentStrippedLine, TString& secName){
+Bool_t Acclaim::AnalysisSettings::stringIsSection(const TString& commentStrippedLine, TString& secName) const{
 
   secName = "";
   Bool_t isSection = false;
@@ -288,7 +288,7 @@ void Acclaim::AnalysisSettings::findFile(){
 void Acclaim::AnalysisSettings::parseSettingsFile(){
 
   findFile();
-  std::cout << "After findFile(), fileName = " << fileName << std::endl;
+  std::cout << "After Acclaim::AnalysisSettings::findFile(), fileName = " << fileName << std::endl;
   
   std::ifstream settingsFile(fileName);
 
@@ -351,3 +351,135 @@ void Acclaim::AnalysisSettings::parseSettingsFile(){
 
 
 
+
+/** 
+ * Workhorse function to parse the config file contents instead of using ROOT reflection.
+ * This function is called by the public wrappers with specified types.
+ * Instead of using ROOT's reflection, we try and match the strings ourselves.
+ * Since I am doing this by hand, I've allowed multiple formats to work:
+ * 
+ * Acclaim::class::member
+ * Acclaim::class->member
+ * Acclaim::class.member
+ * 
+ * Should give some informative errors in cases of malformed input.
+ * 
+ * @param settingName is the name of the variable
+ * @param settingVal the value in the config file as a string
+ * 
+ * @return true on finding a match, otherwise false.
+ */
+Bool_t Acclaim::AnalysisSettings::getSetting(const char* settingName, TString& settingVal) const{
+
+  TString setting = settingName;
+
+  for(SectionMap_t::const_iterator it=sectionMap.begin(); it!= sectionMap.end(); ++it){
+
+    int secLen = it->first.Length();
+    if(secLen <= setting.Length() && setting(0, secLen)==it->first){
+
+      std::cout << "Setting " << setting << ", found a match with section " << it->first << std::endl;
+      
+      // string the class identifier
+      setting.Replace(0, secLen, "");
+
+      // let's allow :: or -> or . as member identifiers      
+      Bool_t goodMemberIdentifier = false;
+
+      if(setting(0, 2)=="::" || setting(0, 2) == "->"){
+	setting.Replace(0, 2, "");
+	goodMemberIdentifier = true;
+      }
+      else if(setting(0, 1)=="."){
+	setting.Replace(0, 1, "");
+	goodMemberIdentifier = true;	  
+      }
+      std::cout << "Now reduced to " << setting << std::endl;
+      
+      if(goodMemberIdentifier){
+
+	const VariableMap_t* vars = it->second;
+
+	VariableMap_t::const_iterator it2 = vars->find(setting);
+	if(it2 != vars->end()){ // found it!
+	  settingVal = it2->second;
+	  return true;
+	}
+	else{
+	  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", couldn't find variable "
+		    << setting << " in config file section " << it->first << std::endl;
+	  return false;
+	}
+      }
+      else{
+	std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", malformed member identifer! Acceptable formats are:" << std::endl;
+	std::cerr << " Acclaim::Class::member" << std::endl;
+	std::cerr << " Acclaim::Class->member" << std::endl;
+	std::cerr << " Acclaim::Class.member" << std::endl;
+	return false;
+      }
+    }
+  }
+
+  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find a class to match input " << setting << std::endl;
+  
+  return false;
+}
+
+
+
+
+/** 
+ * Read a setting from the conf file, and put the result into a boolian
+ * The input is not modified if no matching setting is found.
+ * 
+ * @param settingName is the class and variable name to find
+ * @param settingVal is the boolian value to update
+ * 
+ * @return true if a match was found, otherwise false
+ */
+Bool_t Acclaim::AnalysisSettings::getSetting(const char* settingName, Bool_t& settingVal) const{
+  Int_t boolAsInt;
+  Bool_t foundSetting = getSetting(settingName, boolAsInt);
+  if(foundSetting){
+    settingVal = settingVal = boolAsInt;
+  }
+  return foundSetting;  
+}
+
+
+/** 
+ * Read a setting from the conf file, and put the result into a integer
+ * The input is not modified if no matching setting is found.
+ * 
+ * @param settingName is the class and variable name to find
+ * @param settingVal is the integer value to update
+ * 
+ * @return true if a match was found, otherwise false
+ */
+Bool_t Acclaim::AnalysisSettings::getSetting(const char* settingName, Int_t& settingVal) const{
+  TString valAsString;
+  Bool_t foundSetting = getSetting(settingName, valAsString);
+  if(foundSetting){
+    settingVal = atoi(valAsString.Data());
+  }
+  return foundSetting;  
+}
+
+/** 
+ * Read a setting from the conf file, and put the result into a double
+ * The input is not modified if no matching setting is found.
+ * 
+ * @param settingName is the class and variable name to find
+ * @param settingVal is the double value to update
+ * 
+ * @return true if a match was found, otherwise false
+ */
+Bool_t Acclaim::AnalysisSettings::getSetting(const char* settingName, Double_t& settingVal) const{
+  TString valAsString;
+  Bool_t foundSetting = getSetting(settingName, valAsString);
+  if(foundSetting){
+    settingVal = atof(valAsString.Data());
+  }
+  return foundSetting;  
+}

@@ -42,7 +42,7 @@
           f##SettingVariable = val; \
        }
 
-// This one is useful for converting an enum in a file to
+// This one is useful for converting an enum in a file to Int_t
 #define ENUM_ANALYSIS_SETTING(enum_type, SettingVariable) \
     protected:                                    \
        enum_type f##SettingVariable;              \
@@ -76,18 +76,24 @@ class AnalysisSettings{
 
  public:
   AnalysisSettings(const char* fName = NULL);
-  // AnalysisSettings(const char* fName = "AcclaimSettings.conf");  
-  void apply(TObject* obj);
-  void write(TFile* f);
-  void print();
+  void apply(TObject* obj) const;
+  void write(TFile* f) const;
+  void print() const;
+
+  Bool_t getSetting(const char* settingName, Bool_t&   settingVal) const;
+  Bool_t getSetting(const char* settingName, Int_t&    settingVal) const;
+  Bool_t getSetting(const char* settingName, Double_t& settingVal) const;
   
  protected:
-  Bool_t stringIsKeyValuePair(const TString& commentStrippedLine, TString& key, TString& value);
-  Bool_t stringIsSection(const TString& commentStrippedLine, TString& secName);
-  Bool_t stringIsAlphaNumeric(const TString& commentStrippedLine);
+  Bool_t stringIsKeyValuePair(const TString& commentStrippedLine, TString& key, TString& value) const;
+  Bool_t stringIsSection(const TString& commentStrippedLine, TString& secName) const;
+  Bool_t stringIsAlphaNumeric(const TString& commentStrippedLine) const;
   
   void handleKeyValue(VariableMap_t* variableMap, const TString& key, const TString& value);
   VariableMap_t* handleSection(const TString& section);
+
+  Bool_t getSetting(const char* settingName, TString& settingVal) const;
+  
 
   void parseSettingsFile();
   Bool_t tryFile(const char* fName);
