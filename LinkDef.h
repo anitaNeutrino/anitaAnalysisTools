@@ -6,16 +6,20 @@
 
 #pragma link C++ namespace Acclaim;
 #pragma link C++ class Acclaim::FancyTTreeInterpolator+;
-#pragma link C++ namespace Acclaim::RootTools+;
-#pragma link C++ namespace Acclaim::FancyFFTs+;
+#pragma link C++ namespace Acclaim::RootTools;
+#pragma link C++ namespace Acclaim::FancyFFTs;
 #pragma link C++ class Acclaim::ProgressBar+;
 #pragma link C++ class Acclaim::AveragePowerSpectrum+;
 #pragma link C++ class Acclaim::AnitaAveragePowerSpectrum+;
 #pragma link C++ class Acclaim::AntarcticaMapPlotter+;
-#pragma link C++ class Acclaim::AnitaClusterer+;
-#pragma link C++ class Acclaim::AnitaClusterer::Point+;
-#pragma link C++ class Acclaim::AnitaClusterer::Cluster+;
-#pragma link C++ class Acclaim::ClusteredAnitaEvent+;
+
+#pragma link C++ namespace Acclaim::Clustering;
+#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod+;
+#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::Point+;
+#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::McPoint+;
+#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::Cluster+;
+#pragma link C++ class Acclaim::Clustering::Event+;
+#pragma link C++ class Acclaim::Clustering::McEvent+;
 
 #pragma link C++ class Acclaim::RayleighHist+;
 #pragma link C++ enum Acclaim::RayleighHist::FitMethod;
