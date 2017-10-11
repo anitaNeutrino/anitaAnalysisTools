@@ -450,10 +450,12 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
         // deconvolved_filtered
       
         fillWaveformInfo(pol, eventSummary->coherent_filtered[pol][peakInd],    fEv,        wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
-        fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);
         fillWaveformInfo(pol, eventSummary->deconvolved_filtered[pol][peakInd], fEvDeco,    wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
-        fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
 
+	if(fFillUnfiltered){
+	  fillWaveformInfo(pol, eventSummary->coherent[pol][peakInd]         ,    fEvMin,     wfCoherent[pol][peakInd],            h, noiseMonitor);	
+	  fillWaveformInfo(pol, eventSummary->deconvolved[pol][peakInd],          fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
+	}
         
         if(fEv->getGPS() != NULL){
           UsefulAdu5Pat usefulPat(fEv->getGPS());
@@ -587,6 +589,7 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fSlopeFitEndFreqGHz = 1.3;
   fFillChannelInfo = 0;
   fFillSpectrumInfo = 0;
+  fFillUnfiltered = 0;
   
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
