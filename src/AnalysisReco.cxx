@@ -1280,21 +1280,24 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
     // TODO, make this selectable?
-    AnalysisWaveform* coherentWave = wfCoherentFiltered[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &coherentInfo = summary.coherent_filtered[pol][peakInd];
+    AnalysisWaveform* primaryWave = wfCoherentFiltered[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &primaryInfo = summary.coherent_filtered[pol][peakInd];
     
-    AnalysisWaveform* coherentUnfilteredWave = wfCoherent[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &coherentUnfilteredInfo = summary.coherent[pol][peakInd];
+    AnalysisWaveform* secondaryWave = wfDeconvolvedFiltered[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &secondaryInfo = summary.deconvolved_filtered[pol][peakInd];
+
+    // AnalysisWaveform* secondaryWave = wfCoherent[pol][peakInd][0];
+    // AnitaEventSummary::WaveformInfo &secondaryInfo = summary.coherent[pol][peakInd];
     
-    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolved[pol][peakInd][0];    
-    // AnalysisWaveform* coherentUnfilteredWave = wfDeconvolvedFiltered[pol][peakInd][0];
-    if(coherentWave && coherentUnfilteredWave){
+    // AnalysisWaveform* secondaryWave = wfDeconvolved[pol][peakInd][0];
+    // AnalysisWaveform* secondaryWave = wfDeconvolvedFiltered[pol][peakInd][0];
+    if(primaryWave && secondaryWave){
 
       const char* opt = "al";
 
       // don't want to be able to edit it by accident so copy it...
-      TGraphAligned* gr2 = const_cast<TGraphAligned*>(coherentWave->even());
-      TGraphAligned* gr4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->even());
+      TGraphAligned* gr2 = const_cast<TGraphAligned*>(primaryWave->even());
+      TGraphAligned* gr4 = const_cast<TGraphAligned*>(secondaryWave->even());
 
       gr2->SetFillColor(0);
       gr4->SetFillColor(0);
@@ -1315,8 +1318,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
       gr->DrawGroup(opt);
 
-      TGraphAligned* grPower2 = const_cast<TGraphAligned*>(coherentWave->powerdB());
-      TGraphAligned* grPower4 = const_cast<TGraphAligned*>(coherentUnfilteredWave->powerdB());
+      TGraphAligned* grPower2 = const_cast<TGraphAligned*>(primaryWave->powerdB());
+      TGraphAligned* grPower4 = const_cast<TGraphAligned*>(secondaryWave->powerdB());
 
       grPower2->SetLineColor(peakColors[pol][peakInd]);
       grPower4->SetLineColor(kRed);
@@ -1330,8 +1333,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       grPower->SetTitle(title);
 
       TGraphInteractive* grSlope = new TGraphInteractive(0, NULL, NULL, "l");
-      grSlope->SetPoint(0, fSlopeFitStartFreqGHz, coherentInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentInfo.spectrumIntercept);
-      grSlope->SetPoint(1, fSlopeFitEndFreqGHz, coherentInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentInfo.spectrumIntercept);
+      grSlope->SetPoint(0, fSlopeFitStartFreqGHz, primaryInfo.spectrumSlope*fSlopeFitStartFreqGHz + primaryInfo.spectrumIntercept);
+      grSlope->SetPoint(1, fSlopeFitEndFreqGHz, primaryInfo.spectrumSlope*fSlopeFitEndFreqGHz + primaryInfo.spectrumIntercept);
       grSlope->SetLineColor(grPower->GetLineColor());
       
       grPower->addGuiChild(grSlope); // pass it a pointer and it takes ownership
@@ -1342,35 +1345,35 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       
 
       TGraphInteractive* grSlope4 = new TGraphInteractive(0, NULL, NULL, "l");
-      grSlope4->SetPoint(0, fSlopeFitStartFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitStartFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
-      grSlope4->SetPoint(1, fSlopeFitEndFreqGHz, coherentUnfilteredInfo.spectrumSlope*fSlopeFitEndFreqGHz + coherentUnfilteredInfo.spectrumIntercept);
+      grSlope4->SetPoint(0, fSlopeFitStartFreqGHz, secondaryInfo.spectrumSlope*fSlopeFitStartFreqGHz + secondaryInfo.spectrumIntercept);
+      grSlope4->SetPoint(1, fSlopeFitEndFreqGHz, secondaryInfo.spectrumSlope*fSlopeFitEndFreqGHz + secondaryInfo.spectrumIntercept);
       grSlope4->SetLineColor(grPower4->GetLineColor());
       grPower->addGuiChild(grSlope4);
 
 
-      double df = coherentWave->deltaF();
+      double df = primaryWave->deltaF();
       TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
       grCoherentPeakMarker->SetMarkerStyle(4);
       grCoherentPeakMarker->SetMarkerSize(0.75);
       grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
       
       for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
-        if(coherentInfo.peakFrequency[i] > 0){
-          int powerBin = TMath::Nint(coherentInfo.peakFrequency[i]/df);
+        if(primaryInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(primaryInfo.peakFrequency[i]/df);
           grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
         }
       }
       grPower->addGuiChild(grCoherentPeakMarker);
 
-      double df2 = coherentUnfilteredWave->deltaF();
+      double df2 = secondaryWave->deltaF();
       TGraphInteractive* grCoherentUnfilteredPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
       grCoherentUnfilteredPeakMarker->SetMarkerStyle(4);
       grCoherentUnfilteredPeakMarker->SetMarkerSize(0.75);
       grCoherentUnfilteredPeakMarker->SetMarkerColor(grPower4->GetLineColor());
       
       for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
-        if(coherentUnfilteredInfo.peakFrequency[i] > 0){
-          int powerBin = TMath::Nint(coherentUnfilteredInfo.peakFrequency[i]/df2);
+        if(secondaryInfo.peakFrequency[i] > 0){
+          int powerBin = TMath::Nint(secondaryInfo.peakFrequency[i]/df2);
           grCoherentUnfilteredPeakMarker->SetPoint(grCoherentUnfilteredPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
         }
       }
@@ -1382,7 +1385,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       
     }
     else{
-      std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << coherentWave << "\t" << coherentUnfilteredWave << std::endl;
+      std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << primaryWave << "\t" << secondaryWave << std::endl;
     }
   }
 

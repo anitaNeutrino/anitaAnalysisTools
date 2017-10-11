@@ -220,6 +220,9 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
       Long64_t numRemainder = numEntriesInRun%fNumDivisions;
       fLastEntry += numRemainder;
     }
+
+    // std::cerr << "Info in " << __PRETTY_FUNCTION__ << "Current blinding strategy: " << fData->getDescription(fData->getStrategy()) << std::endl;
+
   }
 }
 
