@@ -12,7 +12,6 @@
 
 const int nDim = 3;
 
-
 Acclaim::Clustering::LogLikelihoodMethod::Point::Point(Adu5Pat* pat, Double_t lat, Double_t lon, Double_t alt,
 						       Double_t theta, Double_t phi, Double_t sigmaTheta, Double_t sigmaPhi,
 						       Int_t polIn){
@@ -76,9 +75,9 @@ Acclaim::Clustering::LogLikelihoodMethod::McPoint::McPoint()
 
 
 Acclaim::Clustering::LogLikelihoodMethod::McPoint::McPoint(Adu5Pat* pat, Double_t lat, Double_t lon, Double_t alt,
-							   Double_t thetaDeg, Double_t phiDeg, Double_t sigmaTheta, Double_t sigmaPhi,
+							   Double_t theta, Double_t phi, Double_t sigmaTheta, Double_t sigmaPhi,
 							   Int_t polIn, Double_t theWeight, Double_t theEnergy)
-  : Point(pat,	lat, lon, alt, sigmaTheta, sigmaPhi, polIn){
+  : Point(pat,	lat, lon, alt, theta, phi, sigmaTheta, sigmaPhi, polIn){
   weight = theWeight;
   energy = theEnergy;
 }
@@ -144,19 +143,40 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
   numCallsToRecursive = 0;
   
   // can use this to move cluster around surface, 3D positions correctly becomes 2D problem
-  doneDefaultAssignment = false;
+  doneBaseClusterAssignment = false;
 }
 
 Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
 
-  // delete non-NULL antarctic histograms
-  while(hUnclustereds.size() > 0){
-    TH2DAntarctica* h = hUnclustereds.back();
-    if(h){
-      delete h;
+  // delete non-NULL antarctic histograms, tgraphs
+
+  for(UInt_t i=0; i < hBaseClusteredEvents.size(); i++){
+    if(hBaseClusteredEvents.at(i)){
+      delete hBaseClusteredEvents.at(i);
+      hBaseClusteredEvents.at(i) = NULL;
     }
-    hUnclustereds.pop_back();
   }
+  for(UInt_t i=0; i < grBaseClusterCenters.size(); i++){
+    if(grBaseClusterCenters.at(i)){
+      delete grBaseClusterCenters.at(i);
+      grBaseClusterCenters.at(i) = NULL;
+    }
+  }
+  
+  for(UInt_t i=0; i < hNonBaseClusteredEvents.size(); i++){
+    if(hNonBaseClusteredEvents.at(i)){
+      delete hNonBaseClusteredEvents.at(i);
+      hNonBaseClusteredEvents.at(i) = NULL;
+    }
+  }
+
+  for(UInt_t i=0; i < grNonBaseClusterCenters.size(); i++){
+    if(grNonBaseClusterCenters.at(i)){
+      delete grNonBaseClusterCenters.at(i);
+      grNonBaseClusterCenters.at(i)= NULL;
+    }
+  }
+  
 }
 
 
@@ -276,8 +296,7 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getSumOfMcWeights(){
 
 Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t& globalMaxBin){
 
-  Int_t addClusterIter =  hUnclustereds.size();
-  TString name = TString::Format("hUnclustered%d", addClusterIter);
+  TString name = TString::Format("hNonBaseClusteredEvents_%lu", clusters.size());
   // const int nBinsLat = 30;
   // const int nBinsLon = 360;
   // const int nBins = 1024;
@@ -285,7 +304,7 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
 
   TH2DAntarctica* h = new TH2DAntarctica(name, name);
 
-  hUnclustereds.push_back(h);
+  hNonBaseClusteredEvents.push_back(h);
 
   // find unclustered points
   ampBinNumbers.clear(); // doesn't clear memory
@@ -296,9 +315,9 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
       ampBinNumbers.at(pointInd) = h->Fill(point.longitude, point.latitude);
     }
   }
-  globalMaxBin = hUnclustereds.back()->GetMaximumBin();
+  globalMaxBin = hNonBaseClusteredEvents.back()->GetMaximumBin();
 
-  Int_t maxEventsInBin = hUnclustereds.back()->GetBinContent(globalMaxBin);
+  Int_t maxEventsInBin = hNonBaseClusteredEvents.back()->GetBinContent(globalMaxBin);
 
   return maxEventsInBin;
 
@@ -310,8 +329,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
 
   static int lastIntegral = 0;
 
-  if(doneDefaultAssignment==false){
-    assignEventsToDefaultClusters();
+  if(doneBaseClusterAssignment==false){
+    assignEventsToBaseClusters();
   }
 
   numCallsToRecursive++;
@@ -320,7 +339,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
 
   // std::cout << minLat << "\t" << maxLat << "\t" << minLon << "\t" << maxLon << std::endl;
 
-  // std::cout << "Info in " << __PRETTY_FUNCTION__ << ",  " << numCallsToRecursive << "\t" << hUnclustereds.back()->Integral() << std::endl;
+  // std::cout << "Info in " << __PRETTY_FUNCTION__ << ",  " << numCallsToRecursive << "\t" << hNonBaseClusteredEvents.back()->Integral() << std::endl;
 
   Int_t counter=0;
   Cluster cluster;
@@ -342,12 +361,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
   if(counter > minBinContent){
 
     for(int dim=0; dim < nDim; dim++){
-      cluster.centre[dim]/=counter;
+      cluster.centre[dim] /= counter;
     }
     AnitaGeomTool* geom = AnitaGeomTool::Instance();
-    geom->getLatLonAltFromCartesian(cluster.centre, cluster.latitude,\
+    geom->getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
 				    cluster.longitude, cluster.altitude);
     clusters.push_back(cluster);
+    
     numClusters = (Int_t) clusters.size();
 
     const int isMC = 0;
@@ -356,14 +376,21 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
       // std::cout << pointInd << "\t" << points.at(pointInd).ll << "\t" << std::endl;
     }
 
-    const int numEventsUnclustered = hUnclustereds.back()->Integral();
+    const int numEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
     if(numEventsUnclustered > 0 && lastIntegral != numEventsUnclustered){
-      lastIntegral = hUnclustereds.back()->Integral();
+      lastIntegral = hNonBaseClusteredEvents.back()->Integral();
+
+      TGraphAntarctica* gr = new TGraphAntarctica(1, &cluster.longitude, &cluster.latitude);
+      TString name = TString::Format("grClusterCenters%lu", clusters.size()-1);
+      TString title = TString::Format("Cluster %lu", clusters.size()-1);
+      gr->SetNameTitle(name, title);
+      grNonBaseClusterCenters.push_back(gr);
+
       recursivelyAddClusters(minBinContent);
     }
     else{
-      delete hUnclustereds.back();
-      hUnclustereds.pop_back();
+      delete hNonBaseClusteredEvents.back();
+      hNonBaseClusteredEvents.pop_back();
     }
 
   }
@@ -566,17 +593,41 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addPoint(Adu5Pat* pat, Double_t
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToDefaultClusters(){
+void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
   std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning points to closest cluster!" << std::endl;
   ProgressBar p(numClusters);
   const int isMC = 0;
+
+  
   for(Long64_t clusterInd=0; clusterInd < numClusters; clusterInd++){
     for(int pointInd=0; pointInd < (int) points.size(); pointInd++){
       assignSinglePointToCloserCluster(pointInd, isMC, clusterInd);
     }
     p.inc(clusterInd, numClusters);
   }
-  doneDefaultAssignment = true;
+
+  
+  hBaseClusteredEvents.resize(numClusters, NULL);
+  grBaseClusterCenters.resize(numClusters, NULL);
+
+  for(Long64_t clusterInd=0; clusterInd < numClusters; clusterInd++){
+    if(clusters.at(clusterInd).numEvents > 0){
+      TString name = TString::Format("hBaseClusteredEvents%d", (int)clusterInd);
+      TH2DAntarctica* h = new TH2DAntarctica(name, name);
+      hBaseClusteredEvents[clusterInd] = h;      
+
+      for(int pointInd=0; pointInd < (int)points.size(); pointInd++){
+	if(points.at(pointInd).inCluster == clusterInd){
+	  h->Fill(points.at(pointInd).longitude, points.at(pointInd).latitude);
+	}
+      }
+
+      grBaseClusterCenters.at(clusterInd) = new TGraphAntarctica(BaseList::getBase(clusterInd));
+      grBaseClusterCenters.at(clusterInd)->SetName(TString::Format("grClusterCenter%d", (int)clusterInd));
+    }
+  }
+  
+  doneBaseClusterAssignment = true;
 }
 
 
@@ -623,7 +674,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
   for(int clusterInd=0; clusterInd < (int) numClusters; clusterInd++){
     clusters.at(clusterInd).numEvents = 0;
   }
-  doneDefaultAssignment = false;
+  doneBaseClusterAssignment = false;
 }
 
 
@@ -674,10 +725,7 @@ TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTG
 
     for(int pointInd=0; pointInd < (Int_t) points.size(); pointInd++){
       if(points.at(pointInd).inCluster==clusterInd){
-
-	// Double_t lat, lon, alt;
-	// geom->getLatLonAltFromCartesian(points.at(pointInd).centre, lat, lon, alt);
-	gr->SetPoint(gr->GetN(), points.at(pointInd).latitude, points.at(pointInd).longitude);
+	gr->SetPoint(gr->GetN(), points.at(pointInd).longitude, points.at(pointInd).latitude);
       }
     }
   }
@@ -916,8 +964,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	Double_t phiDeg = sum->peak[pol][peakIndex].phi;
 	
 	/// @todo update this
-	Double_t sigmaTheta = 0.25;	
-	Double_t sigmaPhi = 0.5;
+	Double_t sigmaTheta = default_sigma_theta;	
+	Double_t sigmaPhi = default_sigma_phi;
 
 	if(sum->mc.weight > 0){
 	  addMcPoint(&pat, sourceLat, sourceLon, sourceAlt,
@@ -928,9 +976,6 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	else{
 	  addPoint(&pat, sourceLat,sourceLon,sourceAlt, sum->run, sum->eventNumber,
 	  	   thetaDeg, phiDeg, sigmaTheta, sigmaPhi, pol);
-	  // std::cout << __PRETTY_FUNCTION__ <<  "latitude = " << sourceLat << "\tlongitude = " << sourceLon <<  std::endl;
-	  // addPoint(&pat, sourceLon,sourceLat,sourceAlt, sum->run, sum->eventNumber,
-	  // 	   thetaDeg, phiDeg, sigmaTheta, sigmaPhi, pol);      
 	}
       }
       p.inc(entry, n);
@@ -942,7 +987,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){  
-  
+
   readInSummaries(dataGlob);
   initializeBaseList();
   readInSummaries(mcGlob);
@@ -951,13 +996,30 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   OutputConvention oc(1, &fakeArgv0);
   TFile* fOut = oc.makeFile();
 
+  assignEventsToBaseClusters();
   recursivelyAddClusters(0);
 
-  for(UInt_t i=0; i < hUnclustereds.size(); i++){
-    hUnclustereds.at(i)->Write();
-    delete hUnclustereds.at(i);
-    hUnclustereds.at(i) = NULL;
+  for(UInt_t i=0; i < hBaseClusteredEvents.size(); i++){
+    if(hBaseClusteredEvents.at(i)){
+      hBaseClusteredEvents.at(i)->Write();
+    }
   }
+  for(UInt_t i=0; i < grBaseClusterCenters.size(); i++){
+    if(grBaseClusterCenters.at(i)){
+      grBaseClusterCenters.at(i)->Write();
+    }
+  }  
+  for(UInt_t i=0; i < hNonBaseClusteredEvents.size(); i++){
+    if(hNonBaseClusteredEvents.at(i)){
+      hNonBaseClusteredEvents.at(i)->Write();
+    }
+  }
+  for(UInt_t i=0; i < grNonBaseClusterCenters.size(); i++){
+    if(grNonBaseClusterCenters.at(i)){
+      grNonBaseClusterCenters.at(i)->Write();
+    }
+  }
+  
 
   // TGraph* grNumPoints = new TGraph();
   // TGraph* grNumMcSinglets = new TGraph();

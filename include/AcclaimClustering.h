@@ -25,6 +25,9 @@ namespace Acclaim{
 
   namespace Clustering {
 
+    const double default_sigma_theta = 0.25;
+    const double default_sigma_phi = 0.5;
+
     //--------------------------------------------------------------------------------------------------------
     /**
      * @class Event
@@ -144,7 +147,8 @@ namespace Acclaim{
 	Point();
 	Point(Adu5Pat* pat, Double_t lat=0, Double_t lon=0, Double_t alt=0,
 	      Double_t thetaDeg=0, Double_t phiDeg=0,
-	      Double_t sigmaTheta = 0.25, Double_t sigmaPhi = 0.5,
+	      Double_t sigmaTheta = default_sigma_theta,
+	      Double_t sigmaPhi = default_sigma_phi,
 	      Int_t polIn=AnitaPol::kVertical);
 	
 	virtual ~Point(){ ;}
@@ -169,7 +173,8 @@ namespace Acclaim{
 	explicit McPoint(Adu5Pat* pat,
 			 Double_t lat=0, Double_t lon=0, Double_t alt=0,
 			 Double_t thetaDeg = 0, Double_t phiDeg = 0,
-			 Double_t sigmaTheta = 0.25, Double_t sigmaPhi = 0.5,
+			 Double_t sigmaTheta = default_sigma_theta,
+			 Double_t sigmaPhi = default_sigma_phi,
 			 Int_t polIn=AnitaPol::kVertical,
 			 Double_t theWeight=1, Double_t theEnergy=0);
 	virtual  ~McPoint(){;}
@@ -234,9 +239,11 @@ namespace Acclaim{
       void initializeEmptyBaseList();
 
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
+
       void recursivelyAddClusters(Int_t minBinContent);
       void assignMcPointsToClusters();
-      void assignEventsToDefaultClusters();
+      void assignEventsToBaseClusters();
+
       void findClosestPointToClustersOfSizeOne();
 
       void resetClusters();
@@ -250,8 +257,12 @@ namespace Acclaim{
       std::vector<Int_t> numIsolatedSmallBaseClusters;
       Double_t numMcIsolatedSinglets;
       int maxRetestClusterSize;
-      
-      std::vector<TH2DAntarctica*> hUnclustereds;
+
+      std::vector<TGraphAntarctica*> grBaseClusterCenters;
+      std::vector<TH2DAntarctica*> hBaseClusteredEvents;
+
+      std::vector<TGraphAntarctica*> grNonBaseClusterCenters;
+      std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;
       Int_t numIter;
       Int_t numClusters;
       Int_t numCallsToRecursive;
@@ -285,7 +296,7 @@ namespace Acclaim{
       std::vector<Int_t> ampBinNumbers;
       std::vector<Int_t> ampBinNumbers2;
 
-      bool doneDefaultAssignment;
+      bool doneBaseClusterAssignment; /// Set to true once all read in data events were clustered to bases
 
     };
   }
