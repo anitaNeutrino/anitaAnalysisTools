@@ -28,8 +28,8 @@ Acclaim::Clustering::LogLikelihoodMethod::Point::Point(Adu5Pat* pat, Double_t la
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(lat, lon, alt, centre);
 
-  theta = thetaDeg;
-  phi = phiDeg;
+  thetaDeg = theta;
+  phiDeg = phi;
 
   sigmaThetaDeg = sigmaTheta;
   sigmaPhiDeg = sigmaPhi;
@@ -212,8 +212,7 @@ inline Double_t getDistSq(Acclaim::Clustering::LogLikelihoodMethod::Cluster& clu
 inline void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::LogLikelihoodMethod::Point& point, const Acclaim::Clustering::LogLikelihoodMethod::Cluster& cluster, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
   Double_t thetaWave, phiWave;
-  usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude,cluster.altitude,
-			       thetaWave,phiWave);
+  usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
   Double_t thetaDeg = -1*TMath::RadToDeg()*thetaWave;
   Double_t phiDeg = TMath::RadToDeg()*phiWave;
 
@@ -239,35 +238,27 @@ inline void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::LogLik
 
 
 
-inline Double_t getAngDistSq(const Acclaim::Clustering::LogLikelihoodMethod::Point& point, const Acclaim::Clustering::LogLikelihoodMethod::Cluster& cluster, const Adu5Pat* pat){
-
-  Double_t deltaThetaDeg, deltaPhiDeg;
-  getDeltaThetaDegDeltaPhiDegCluster(point, cluster, pat, deltaThetaDeg, deltaPhiDeg);
-
-  // normalized
-  Double_t dThetaSq = deltaThetaDeg/point.sigmaThetaDeg;
-  Double_t dPhiSq = deltaPhiDeg/point.sigmaPhiDeg;
-
-  Double_t angSq =  dThetaSq*dThetaSq + dPhiSq*dPhiSq;
-
-  return angSq;
-}
-
 inline Double_t getAngDistSq(const Acclaim::Clustering::LogLikelihoodMethod::Point& point, const Acclaim::Clustering::LogLikelihoodMethod::Cluster& cluster, UsefulAdu5Pat& usefulPat){
 
   Double_t deltaThetaDeg, deltaPhiDeg;
   getDeltaThetaDegDeltaPhiDegCluster(point, cluster, usefulPat, deltaThetaDeg, deltaPhiDeg);
 
   // normalized
-  Double_t dThetaSq = deltaThetaDeg/point.sigmaThetaDeg;
-  Double_t dPhiSq = deltaPhiDeg/point.sigmaPhiDeg;
+  Double_t dThetaNorm = deltaThetaDeg/point.sigmaThetaDeg;
+  Double_t dPhiNorm = deltaPhiDeg/point.sigmaPhiDeg;
 
-  Double_t angSq =  dThetaSq*dThetaSq + dPhiSq*dPhiSq;
+  // std::cerr << point.thetaDeg << "\t" << point.phiDeg << "\t" << deltaThetaDeg << "\t" << deltaPhiDeg << "\t" << dThetaNorm << "\t" << dPhiNorm << std::endl;  
+
+  Double_t angSq =  dThetaNorm*dThetaNorm + dPhiNorm*dPhiNorm;
   
   return angSq;
 }
 
 
+inline Double_t getAngDistSq(const Acclaim::Clustering::LogLikelihoodMethod::Point& point, const Acclaim::Clustering::LogLikelihoodMethod::Cluster& cluster, const Adu5Pat* pat){
+  UsefulAdu5Pat usefulPat(pat);
+  return getAngDistSq(point, cluster, usefulPat);
+}
 
 
 
@@ -310,7 +301,6 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
   Int_t maxEventsInBin = hUnclustereds.back()->GetBinContent(globalMaxBin);
 
   return maxEventsInBin;
-
 
 }
 
@@ -366,19 +356,16 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
       // std::cout << pointInd << "\t" << points.at(pointInd).ll << "\t" << std::endl;
     }
 
-    if(lastIntegral != hUnclustereds.back()->Integral()){
+    const int numEventsUnclustered = hUnclustereds.back()->Integral();
+    if(numEventsUnclustered > 0 && lastIntegral != numEventsUnclustered){
       lastIntegral = hUnclustereds.back()->Integral();
       recursivelyAddClusters(minBinContent);
     }
+    else{
+      delete hUnclustereds.back();
+      hUnclustereds.pop_back();
+    }
 
-    // std::cout << counter << "\t" << maxBinVal << "\t" << clusters.back().latitude << "\t"
-    // 	      << clusters.back().longitude << "\t" << hUnclustereds.back()->Integral() << std::endl;
-
-    // std::cout << hUnclustereds.size() << " " << counter << " " << minBinContent << std::endl;
-
-      
-    // if(hUnclustereds.size() < 10){
-    // }    
   }
 }
 
@@ -494,6 +481,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSinglePointToCloserCluster(
 
     if(ll < llCut){ // within the cut?
 
+      if(!isMC){
+	std::cout << ll << std::endl;
+      }
+      
       if(ll < point.ll){ // the best point?
  
 	point.secondClosestCluster = point.inCluster;

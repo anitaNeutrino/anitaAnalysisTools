@@ -169,7 +169,7 @@ namespace Acclaim{
 	explicit McPoint(Adu5Pat* pat,
 			 Double_t lat=0, Double_t lon=0, Double_t alt=0,
 			 Double_t thetaDeg = 0, Double_t phiDeg = 0,
-			 Double_t sigmaTheta = 0.5, Double_t sigmaPhi = 1,
+			 Double_t sigmaTheta = 0.25, Double_t sigmaPhi = 0.5,
 			 Int_t polIn=AnitaPol::kVertical,
 			 Double_t theWeight=1, Double_t theEnergy=0);
 	virtual  ~McPoint(){;}
