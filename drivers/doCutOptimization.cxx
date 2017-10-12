@@ -37,18 +37,18 @@ int main(int argc, char* argv[]){
   backgroundSelection.push_back(&AnalysisCuts::isNotTaggedAsPulser); // not a pulser...
 
   const int nGen = 8;
-  const AnalysisCuts::AnalysisCut* genericDataQualityCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
-								   &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
-								   &AnalysisCuts::goodGPS, // do we have GPS data?
-								   &AnalysisCuts::realSNR,
-								   &AnalysisCuts::isRfTrigger,
-								   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
-								   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
-								   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
+  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
+							   &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
+							   &AnalysisCuts::goodGPS, // do we have GPS data?
+							   &AnalysisCuts::realSNR,
+							   &AnalysisCuts::isRfTrigger,
+							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
+							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
+							   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
   
   for(unsigned i=0; i < nGen; i++){
-    signalSelection.push_back(genericDataQualityCuts[i]);
-    backgroundSelection.push_back(genericDataQualityCuts[i]);    
+    signalSelection.push_back(preThermalCuts[i]);
+    backgroundSelection.push_back(preThermalCuts[i]);
   }
 
 

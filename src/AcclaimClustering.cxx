@@ -7,33 +7,38 @@
 #include "AntarcticaMapPlotter.h"
 #include "RootTools.h"
 #include "ProgressBar.h"
+#include "TGraphAntarctica.h"
+#include "TH2DAntarctica.h"
+
+const int nDim = 3;
 
 
 Acclaim::Clustering::LogLikelihoodMethod::Point::Point(Adu5Pat* pat, Double_t lat, Double_t lon, Double_t alt,
-						       Double_t sigmaTheta, Double_t sigmaPhi,
+						       Double_t theta, Double_t phi, Double_t sigmaTheta, Double_t sigmaPhi,
 						       Int_t polIn){
 
+  (void) pat;
   pol = (AnitaPol::AnitaPol_t) polIn;
-  UsefulAdu5Pat usefulPat(pat);
   latitude = lat;
   longitude = lon;
   altitude = alt;
-  usefulPat.getThetaAndPhiWave(longitude, latitude, altitude, thetaDeg, phiDeg);
 
-  // convert to degrees
-  thetaDeg = -1*thetaDeg*TMath::RadToDeg();
-  phiDeg = phiDeg*TMath::RadToDeg();
-  // dTheta = 0;
-  // dPhi = 0;
+  // std::cout << __PRETTY_FUNCTION__ << std::endl << "latitude = " << latitude << "\tlongitude = " << longitude << std::endl << std::endl;
+
+  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  geom->getCartesianCoords(lat, lon, alt, centre);
+
+  theta = thetaDeg;
+  phi = phiDeg;
+
   sigmaThetaDeg = sigmaTheta;
   sigmaPhiDeg = sigmaPhi;
+
   ll = DBL_MAX;
   inCluster = -1;
   llSecondBest = DBL_MAX;
   secondClosestCluster = -1;
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->getCartesianCoords(lat, lon, alt, centre);
 }
 
 
@@ -71,8 +76,8 @@ Acclaim::Clustering::LogLikelihoodMethod::McPoint::McPoint()
 
 
 Acclaim::Clustering::LogLikelihoodMethod::McPoint::McPoint(Adu5Pat* pat, Double_t lat, Double_t lon, Double_t alt,
-							   Double_t sigmaTheta, Double_t sigmaPhi, Int_t polIn,
-							   Double_t theWeight, Double_t theEnergy)
+							   Double_t thetaDeg, Double_t phiDeg, Double_t sigmaTheta, Double_t sigmaPhi,
+							   Int_t polIn, Double_t theWeight, Double_t theEnergy)
   : Point(pat,	lat, lon, alt, sigmaTheta, sigmaPhi, polIn){
   weight = theWeight;
   energy = theEnergy;
@@ -95,7 +100,7 @@ Acclaim::Clustering::LogLikelihoodMethod::Cluster::Cluster() {
 Acclaim::Clustering::LogLikelihoodMethod::Cluster::Cluster(const Point& seedPoint) {
   latitude = seedPoint.latitude;
   longitude = seedPoint.longitude;
-  longitude = seedPoint.longitude;
+  altitude = seedPoint.altitude;
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = seedPoint.centre[dim];
   }
@@ -134,16 +139,26 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
   numIsolatedSmallClusters.resize(maxRetestClusterSize, 0);
   numIsolatedSmallBaseClusters.resize(maxRetestClusterSize, 0);
 
-  initialized = false;
   llCut = 250;
   maxDistCluster = 800e3; // try 800km
   numCallsToRecursive = 0;
-  minimalImprovement  = 0.01;
   
   // can use this to move cluster around surface, 3D positions correctly becomes 2D problem
   doneDefaultAssignment = false;
-  amp = new AntarcticaMapPlotter();
 }
+
+Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
+
+  // delete non-NULL antarctic histograms
+  while(hUnclustereds.size() > 0){
+    TH2DAntarctica* h = hUnclustereds.back();
+    if(h){
+      delete h;
+    }
+    hUnclustereds.pop_back();
+  }
+}
+
 
 
 
@@ -274,17 +289,20 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
   TString name = TString::Format("hUnclustered%d", addClusterIter);
   // const int nBinsLat = 30;
   // const int nBinsLon = 360;
-  const int nBins = 1024;
-  amp->addHistogram(name, name, nBins, nBins);
-  hUnclustereds.push_back(amp->getCurrentHistogram());
+  // const int nBins = 1024;
+  // amp->addHistogram(name, name, nBins, nBins);
+
+  TH2DAntarctica* h = new TH2DAntarctica(name, name);
+
+  hUnclustereds.push_back(h);
+
   // find unclustered points
   ampBinNumbers.clear(); // doesn't clear memory
   ampBinNumbers.resize((Int_t) points.size()); // so this shouldn't reallocate memory
   for(int pointInd=0; pointInd < (Int_t) points.size(); pointInd++){
     const Point& point = points.at(pointInd);
     if(point.inCluster < 0){
-      ampBinNumbers.at(pointInd) = amp->Fill(point.latitude, point.longitude);
-      // hUnclustereds.back()->Fill(point.longitude, point.latitude);
+      ampBinNumbers.at(pointInd) = h->Fill(point.longitude, point.latitude);
     }
   }
   globalMaxBin = hUnclustereds.back()->GetMaximumBin();
@@ -300,6 +318,8 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
 
 void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minBinContent){
 
+  static int lastIntegral = 0;
+
   if(doneDefaultAssignment==false){
     assignEventsToDefaultClusters();
   }
@@ -310,6 +330,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
 
   // std::cout << minLat << "\t" << maxLat << "\t" << minLon << "\t" << maxLon << std::endl;
 
+  // std::cout << "Info in " << __PRETTY_FUNCTION__ << ",  " << numCallsToRecursive << "\t" << hUnclustereds.back()->Integral() << std::endl;
 
   Int_t counter=0;
   Cluster cluster;
@@ -345,6 +366,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
       // std::cout << pointInd << "\t" << points.at(pointInd).ll << "\t" << std::endl;
     }
 
+    if(lastIntegral != hUnclustereds.back()->Integral()){
+      lastIntegral = hUnclustereds.back()->Integral();
+      recursivelyAddClusters(minBinContent);
+    }
+
     // std::cout << counter << "\t" << maxBinVal << "\t" << clusters.back().latitude << "\t"
     // 	      << clusters.back().longitude << "\t" << hUnclustereds.back()->Integral() << std::endl;
 
@@ -352,8 +378,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
 
       
     // if(hUnclustereds.size() < 10){
-    recursivelyAddClusters(minBinContent);
-    // }
+    // }    
   }
 }
 
@@ -383,11 +408,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::findClosestPointToClustersOfSizeO
 
 	// skip points in the cluster under test
 	if(points.at(pointInd).inCluster!=clusterInd){
-	  UsefulAdu5Pat usefulPat(pats.at(pointInd));
+
+	  UsefulAdu5Pat usefulPat(&pats.at(pointInd));
 	  Double_t dist = usefulPat.getDistanceFromSource(cluster.latitude,
 							  cluster.longitude,
 							  cluster.altitude);
 
+	  // this is where proper collision detection would be useful...
 	  if(dist < maxDistCluster){
 	    Double_t ll = getAngDistSq(points.at(pointInd), cluster, usefulPat);
 
@@ -452,21 +479,23 @@ void Acclaim::Clustering::LogLikelihoodMethod::findClosestPointToClustersOfSizeO
 
 void Acclaim::Clustering::LogLikelihoodMethod::assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd){
   Point& point = isMC==0 ? points.at(pointInd) : mcPoints.at(pointInd);
-  Adu5Pat* pat = isMC==0 ? pats.at(pointInd)   : mcPats.at(pointInd);
+  const Adu5Pat& pat = isMC==0 ? pats.at(pointInd)   : mcPats.at(pointInd);
+  
   Cluster& cluster = clusters.at(clusterInd);
 
-  UsefulAdu5Pat usefulPat(pat);
+  UsefulAdu5Pat usefulPat(&pat);
 
   Double_t distM = usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
-  
+
   if(distM < maxDistCluster){ // are we even close?
-
-    Double_t ll = getAngDistSq(point, cluster, usefulPat);
     
-    if(ll < llCut){
-	  
-      if(ll < point.ll){
+    Double_t ll = getAngDistSq(point, cluster, usefulPat);
 
+
+    if(ll < llCut){ // within the cut?
+
+      if(ll < point.ll){ // the best point?
+ 
 	point.secondClosestCluster = point.inCluster;
 	point.llSecondBest = point.ll;
 
@@ -512,12 +541,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcPointsToClusters(){
 
 
 
-size_t Acclaim::Clustering::LogLikelihoodMethod::addMcPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
+size_t Acclaim::Clustering::LogLikelihoodMethod::addMcPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t thetaDeg, Double_t phiDeg, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
 
-  mcPoints.push_back(McPoint(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol, weight, energy));
+  mcPoints.push_back(McPoint(pat, latitude, longitude, altitude, thetaDeg, phiDeg, sigmaThetaDeg, sigmaPhiDeg, pol, weight, energy));
   mcEventNumbers.push_back(eventNumber);
   mcRuns.push_back(run);
-  mcPats.push_back((Adu5Pat*)pat->Clone());
+  mcPats.push_back(*pat);
 
   return points.size();
 }
@@ -529,12 +558,13 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addMcPoint(Adu5Pat* pat, Double
 
 
 
-size_t Acclaim::Clustering::LogLikelihoodMethod::addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol){
+size_t Acclaim::Clustering::LogLikelihoodMethod::addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t thetaDeg, Double_t phiDeg, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol){
 
-  points.push_back(Point(pat, latitude, longitude, altitude, sigmaThetaDeg, sigmaPhiDeg, pol));
+  points.push_back(Point(pat, latitude, longitude, altitude, thetaDeg, phiDeg, sigmaThetaDeg, sigmaPhiDeg, pol));
+  // std::cout << __PRETTY_FUNCTION__ << std::endl << "latitude = " << latitude << "\tlongitude = " << longitude << std::endl << std::endl;  
   eventNumbers.push_back(eventNumber);
   runs.push_back(run);
-  pats.push_back((Adu5Pat*)pat->Clone());
+  pats.push_back(*pat);
 
   return points.size();
 }
@@ -549,11 +579,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToDefaultClusters(){
   std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning points to closest cluster!" << std::endl;
   ProgressBar p(numClusters);
   const int isMC = 0;
-    for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
-      for(int pointInd=0; pointInd < (int) points.size(); pointInd++){
-	assignSinglePointToCloserCluster(pointInd, isMC, clusterInd);
-      }
-    p++;
+  for(Long64_t clusterInd=0; clusterInd < numClusters; clusterInd++){
+    for(int pointInd=0; pointInd < (int) points.size(); pointInd++){
+      assignSinglePointToCloserCluster(pointInd, isMC, clusterInd);
+    }
+    p.inc(clusterInd, numClusters);
   }
   doneDefaultAssignment = true;
 }
@@ -562,19 +592,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToDefaultClusters(){
 void Acclaim::Clustering::LogLikelihoodMethod::initializeEmptyBaseList(){
   numClusters=0;
   BaseList::makeEmptyBaseList();
-  initialized=true;
 }
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 
   numClusters = (int) BaseList::getNumBases();
-  std::cout << "Info in " << __PRETTY_FUNCTION__ << "Initializing base list..." << std::endl;
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << ": Initializing base list..." << std::endl;
   for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
     const BaseList::base& base = BaseList::getBase(clusterInd);
     clusters.push_back(Cluster(base));
   }
-  initialized = true;
 }
 
 
@@ -640,14 +668,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
 
 
 
-TGraph* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTGraph(Int_t clusterInd){
+TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTGraph(Int_t clusterInd){
 
-  TGraph* gr = NULL;
+  TGraphAntarctica* gr = NULL;
   if(clusterInd >= 0 && clusterInd < numClusters){
 
     TString name  = TString::Format("grCluster%d", clusterInd);
-    TString title  = TString::Format("Cluster %d; Longitude (Degrees); Latitude (Degrees)", clusterInd);
-    gr = new TGraph();
+    TString title  = TString::Format("Cluster %d; Easting (m); Northing (m)", clusterInd);
+    gr = new TGraphAntarctica();
     gr->SetName(name);
     gr->SetTitle(title);
 
@@ -870,99 +898,122 @@ TGraph* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTGraph(Int_t
 
 
 Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* summaryGlob){
-  SummarySet ss(summaryGlob);
-  Long64_t n = ss.N();
 
-  std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
-  ProgressBar p(n);
-  for(Long64_t entry=0; entry < n; entry++){
+  Long64_t n = 0;
+  if(summaryGlob){
+    SummarySet ss(summaryGlob);
+    n = ss.N();
+
+    std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
+    ProgressBar p(n);
+    for(Long64_t entry=0; entry < n; entry++){
     
-    ss.getEntry(entry);
-    AnitaEventSummary* sum = ss.summary();
+      ss.getEntry(entry);
+      AnitaEventSummary* sum = ss.summary();
 
-    AnitaPol::AnitaPol_t pol = sum->trainingPol();
-    Int_t peakIndex = sum->trainingPeakInd();
+      AnitaPol::AnitaPol_t pol = sum->trainingPol();
+      Int_t peakIndex = sum->trainingPeakInd();
     
-    Double_t sourceLat = sum->peak[pol][peakIndex].latitude;
-    Double_t sourceLon = sum->peak[pol][peakIndex].longitude;
-    Double_t sourceAlt = sum->peak[pol][peakIndex].altitude;
-    if(sourceLat > -999 && sourceLon > -999){
+      Double_t sourceLat = sum->peak[pol][peakIndex].latitude;
+      Double_t sourceLon = sum->peak[pol][peakIndex].longitude;
+      Double_t sourceAlt = sum->peak[pol][peakIndex].altitude;
+      if(sourceLat > -999 && sourceLon > -999){
 
-      Adu5Pat pat;
-      pat.longitude = sum->anitaLocation.longitude;
-      pat.latitude = sum->anitaLocation.latitude;
-      pat.altitude = sum->anitaLocation.altitude;      
+	Adu5Pat pat = static_cast<Adu5Pat>(sum->anitaLocation);
 
-      // TODO! Update this!!!
-      Double_t sigmaTheta = 0.25;
-      Double_t sigmaPhi = 0.5;
-
-      if(sum->mc.weight > 0){
-	addMcPoint(&pat, sourceLat, sourceLon, sourceAlt,
-		   sum->run, sum->eventNumber,
-		   sigmaTheta, sigmaPhi, pol, sum->mc.weight, sum->mc.energy);
+	Double_t thetaDeg = sum->peak[pol][peakIndex].theta;
+	Double_t phiDeg = sum->peak[pol][peakIndex].phi;
 	
+	/// @todo update this
+	Double_t sigmaTheta = 0.25;	
+	Double_t sigmaPhi = 0.5;
+
+	if(sum->mc.weight > 0){
+	  addMcPoint(&pat, sourceLat, sourceLon, sourceAlt,
+		     sum->run, sum->eventNumber, thetaDeg, phiDeg,
+		     sigmaTheta, sigmaPhi, pol, sum->mc.weight, sum->mc.energy);
+	
+	}
+	else{
+	  addPoint(&pat, sourceLat,sourceLon,sourceAlt, sum->run, sum->eventNumber,
+	  	   thetaDeg, phiDeg, sigmaTheta, sigmaPhi, pol);
+	  // std::cout << __PRETTY_FUNCTION__ <<  "latitude = " << sourceLat << "\tlongitude = " << sourceLon <<  std::endl;
+	  // addPoint(&pat, sourceLon,sourceLat,sourceAlt, sum->run, sum->eventNumber,
+	  // 	   thetaDeg, phiDeg, sigmaTheta, sigmaPhi, pol);      
+	}
       }
-      else{
-	addPoint(&pat, sourceLat,sourceLon,sourceAlt, sum->run, sum->eventNumber, sigmaTheta, sigmaPhi, pol);      
-      }
+      p.inc(entry, n);
     }
-    p.inc(entry, n);
   }
   return n;
 }
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob){
+void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){  
   
   readInSummaries(dataGlob);
   initializeBaseList();
   readInSummaries(mcGlob);
 
+  char* fakeArgv0 = const_cast<char*>(outFileName);
+  OutputConvention oc(1, &fakeArgv0);
+  TFile* fOut = oc.makeFile();
+
+  recursivelyAddClusters(0);
+
+  for(UInt_t i=0; i < hUnclustereds.size(); i++){
+    hUnclustereds.at(i)->Write();
+    delete hUnclustereds.at(i);
+    hUnclustereds.at(i) = NULL;
+  }
+
   // TGraph* grNumPoints = new TGraph();
   // TGraph* grNumMcSinglets = new TGraph();
-  std::vector<TGraph*> grNumIsolateds(maxRetestClusterSize, NULL);
-  std::vector<TGraph*> grNumBaseIsolateds(maxRetestClusterSize, NULL);
-  for(int i=0; i < maxRetestClusterSize; i++){
-    grNumIsolateds.at(i) = new TGraph();
-    grNumBaseIsolateds.at(i) = new TGraph();
-  }
+  // std::vector<TGraph*> grNumIsolateds(maxRetestClusterSize, NULL);
+  // std::vector<TGraph*> grNumBaseIsolateds(maxRetestClusterSize, NULL);
+  // for(int i=0; i < maxRetestClusterSize; i++){
+  //   grNumIsolateds.at(i) = new TGraph();
+  //   grNumBaseIsolateds.at(i) = new TGraph();
+  // }
 
-  const int numLLs = 1;
-  double llCuts[numLLs] = {100};
+  // const int numLLs = 1;
+  // double llCuts[numLLs] = {100};
 
-  for(int i=0; i < numLLs; i++){
-    llCut = llCuts[i];
-    resetClusters();
-    recursivelyAddClusters(0);
+  // for(int i=0; i < numLLs; i++){
+  //   llCut = llCuts[i];
+  //   resetClusters();
+  //   recursivelyAddClusters(0);
 
-    std::cout << "********************************" << std::endl;
-    std::cout << "llCut = " << llCuts[i] << std::endl;
-    std::cout << "********************************" << std::endl;
-    findClosestPointToClustersOfSizeOne();
+  //   std::cout << "********************************" << std::endl;
+  //   std::cout << "llCut = " << llCuts[i] << std::endl;
+  //   std::cout << "********************************" << std::endl;
+  //   findClosestPointToClustersOfSizeOne();
 
-    assignMcPointsToClusters();
+  //   assignMcPointsToClusters();
 
-    for(int j=0; j < maxRetestClusterSize; j++){
-      grNumIsolateds.at(j)->SetPoint(grNumIsolateds.at(j)->GetN(),
-				     llCut, numIsolatedSmallClusters.at(j));
+  //   for(int j=0; j < maxRetestClusterSize; j++){
+  //     grNumIsolateds.at(j)->SetPoint(grNumIsolateds.at(j)->GetN(),
+  // 				     llCut, numIsolatedSmallClusters.at(j));
       
-      grNumBaseIsolateds.at(j)->SetPoint(grNumBaseIsolateds.at(j)->GetN(),
-					 llCut, numIsolatedSmallBaseClusters.at(j));
-    }
-  }
+  //     grNumBaseIsolateds.at(j)->SetPoint(grNumBaseIsolateds.at(j)->GetN(),
+  // 					 llCut, numIsolatedSmallBaseClusters.at(j));
+  //   }
+  // }
 
-  for(int i=0; i < maxRetestClusterSize; i++){
-    TString grName = TString::Format("grNumBaseIsolateds_%d", i+1);
-    grNumBaseIsolateds.at(i)->SetName(grName);
-    grNumBaseIsolateds.at(i)->Write();
+  // for(int i=0; i < maxRetestClusterSize; i++){
+  //   TString grName = TString::Format("grNumBaseIsolateds_%d", i+1);
+  //   grNumBaseIsolateds.at(i)->SetName(grName);
+  //   grNumBaseIsolateds.at(i)->Write();
 
-    if(i > 0){
-      grName = TString::Format("grNumIsolateds_%d", i+1);
-      grNumIsolateds.at(i)->SetName(grName);
-      grNumIsolateds.at(i)->Write();
-    }
-  }
+  //   if(i > 0){
+  //     grName = TString::Format("grNumIsolateds_%d", i+1);
+  //     grNumIsolateds.at(i)->SetName(grName);
+  //     grNumIsolateds.at(i)->Write();
+  //   }
+  // }
+
+  fOut->Write();
+  fOut->Close();
 
 }
