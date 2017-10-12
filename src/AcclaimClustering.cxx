@@ -325,22 +325,22 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minBinContent){
+void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(Int_t minBinContent){
 
   static int lastIntegral = 0;
 
+  // in case this hasn't been done already
   if(doneBaseClusterAssignment==false){
     assignEventsToBaseClusters();
   }
+  
+  numCallsToRecursive++; // for debugging
+  
 
-  numCallsToRecursive++;
   Int_t globalMaxBin;
   Int_t maxBinVal = histogramUnclusteredEvents(globalMaxBin);
 
-  // std::cout << minLat << "\t" << maxLat << "\t" << minLon << "\t" << maxLon << std::endl;
-
-  // std::cout << "Info in " << __PRETTY_FUNCTION__ << ",  " << numCallsToRecursive << "\t" << hNonBaseClusteredEvents.back()->Integral() << std::endl;
-
+  
   Int_t counter=0;
   Cluster cluster;
   for(int pointInd=0; pointInd < (Int_t) points.size(); pointInd++){
@@ -358,7 +358,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
   if(counter!=maxBinVal){
     std::cerr << "Now what?" << std::endl;
   }
-  if(counter > minBinContent){
+
+  if(counter > minBinContent){ // then we create a new cluster and do the whole thing again
 
     for(int dim=0; dim < nDim; dim++){
       cluster.centre[dim] /= counter;
@@ -373,7 +374,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
     const int isMC = 0;
     for(int pointInd=0; pointInd < (Int_t) points.size(); pointInd++){
       assignSinglePointToCloserCluster(pointInd, isMC, numClusters-1);
-      // std::cout << pointInd << "\t" << points.at(pointInd).ll << "\t" << std::endl;
     }
 
     const int numEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
@@ -386,7 +386,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClusters(Int_t minB
       gr->SetNameTitle(name, title);
       grNonBaseClusterCenters.push_back(gr);
 
-      recursivelyAddClusters(minBinContent);
+      recursivelyAddClustersFromData(minBinContent); // recursion
     }
     else{
       delete hNonBaseClusteredEvents.back();
@@ -539,13 +539,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcPointsToClusters(){
 
   const int isMC = 1;
   Double_t numSinglets = 0;
-  for(int pointInd=0; pointInd < (Int_t)mcPoints.size(); pointInd++){
+
+  Long64_t nMc = mcPoints.size();
+
+  std::cerr  << "Info in " << __PRETTY_FUNCTION__ << ": starting!" << std::endl;
+  ProgressBar p(nMc);  
+  for(Long64_t j=0; j < nMc; j++){
     for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
-      assignSinglePointToCloserCluster(pointInd, isMC, clusterInd);
+      assignSinglePointToCloserCluster(j, isMC, clusterInd);
     }
-    if(mcPoints.at(pointInd).inCluster < 0){
-      numSinglets+=mcPoints.at(pointInd).weight;
+    if(mcPoints.at(j).inCluster < 0){
+      numSinglets+=mcPoints.at(j).weight;
     }
+    p.inc(j, nMc);
   }
   numMcIsolatedSinglets = numSinglets;
 }
@@ -736,204 +742,33 @@ TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTG
 
 
 
-// TTree* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox){
+void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
-//   fOut->cd();
+  TTree* clusteredDataTree = new TTree("clusteredDataTree", "Tree of clustered ANITA events");
+  Point* point = NULL;
+  clusteredDataTree->Branch("point", &point);
 
-//   TTree* clusterTree = new TTree("clusterTree", "Tree of clustered ANITA events");
-//   fSignalBox->cd();
-//   TTree* clusterTreeHidden = new TTree("clusterTreeHidden", "Tree of clustered hidden ANITA events");
-
-//   Event* clusteredEvent;
-//   clusterTree->Branch("clusteredEvent", &clusteredEvent);
-
-//   clusterTreeHidden->Branch("clusteredEvent", &clusteredEvent);
-
-//   //  std::cout << "Num points " << (Int_t)points.size() << std::endl;
-//   // AnitaGeomTool* geom = AnitaGeomTool::Instance();
-//   const int numBases = BaseList::getNumBases();
-
-//   for(Int_t pointInd=0; pointInd < (Int_t)points.size(); pointInd++){
-
-//     const Point& point = points.at(pointInd);
-
-//     clusteredEvent = new Event();
-
-//     Int_t clusterInd = points.at(pointInd).inCluster;
-//     clusteredEvent->inCluster = clusterInd;
-//     clusteredEvent->isBase = 0;
-//     if(clusterInd >= 0){
-//       clusteredEvent->eventNumber = eventNumbers.at(pointInd);
-//       clusteredEvent->run = runs.at(pointInd);
-//       clusteredEvent->pol = points.at(pointInd).pol;
-
-//       // convert from km back to m for conversion to lat/lon/alt
-//       // for(int dim=0; dim < nDim; dim++){
-//       //   // clusteredEvent->eventPosition[dim] = point.centre[dim];
-//       //   clusteredEvent->eventPosition[dim] = point.centre[dim];
-//       // }
-//       clusteredEvent->eventLat = point.latitude;
-//       clusteredEvent->eventLon = point.longitude;
-//       clusteredEvent->eventAlt = point.altitude;
-
-
-//       clusteredEvent->anitaLat = pats.at(pointInd)->latitude;
-//       clusteredEvent->anitaLon = pats.at(pointInd)->longitude;
-//       clusteredEvent->anitaAlt = pats.at(pointInd)->altitude;
-
-//       clusteredEvent->thetaDeg = point.thetaDeg;
-//       clusteredEvent->phiDeg = point.phiDeg;
-//       clusteredEvent->isMC = 0;
-//       clusteredEvent->weight = 1;
-
-//       const Cluster& cluster = clusters.at(clusterInd);
-
-//       clusteredEvent->isBase = clusterInd < numBases ? 1 : 0;
-
-//       clusteredEvent->clusterLat = cluster.latitude;
-//       clusteredEvent->clusterLon = cluster.longitude;
-//       clusteredEvent->clusterAlt = cluster.altitude;
-
-//       // Double_t deltaThetaDeg, deltaPhiDeg;
-//       getDeltaThetaDegDeltaPhiDegCluster(point, cluster, pats.at(pointInd), \
-// 					 clusteredEvent->deltaThetaDeg, \
-// 					 clusteredEvent->deltaPhiDeg);
-
-//       // clusteredEvent->distanceToClusterCentroid = TMath::Sqrt(getDistSq(point, cluster));
-//       // clusteredEvent->distanceToClusterCentroid = get(point, cluster));
-//       clusteredEvent->minusTwoLogLikelihood = getAngDistSq(point, cluster, pats.at(pointInd));
-
-//       UsefulAdu5Pat usefulPat(pats.at(pointInd));
-//       clusteredEvent->distanceToClusterCentroid = usefulPat.getDistanceFromSource(cluster.latitude, \
-// 										  cluster.longitude, \
-// 										  cluster.altitude);
-//       clusteredEvent->numEventsInCluster = cluster.numEvents;
-
-//       if ( clusteredEvent->secondClosestCluster>=(int)clusters.size() ||  clusteredEvent->secondClosestCluster>=(int)points.size()  ){
-// 	//	std::cout <<  "Second closest cluster problem? " << clusteredEvent->secondClosestCluster<< " " << clusterInd << " " << pointInd << " " << (int)clusters.size()  << " " << points.size() << std::endl;
-//       } else    if(clusteredEvent->secondClosestCluster >= 0){
-	
-// 	const Cluster& cluster2 = clusters.at(clusteredEvent->secondClosestCluster);
-	
-// 	clusteredEvent->distanceToClusterCentroidSecondBest = usefulPat.getDistanceFromSource(cluster2.latitude, \
-// 											      cluster2.longitude, \
-// 											      cluster2.altitude);
-//       }
-    
-//       clusteredEvent->numIterations = numIter;
-
-//       clusteredEvent->numClusters = numClusters;
-
-//     }
-//     else{
-//       std::cerr << "clusterInd = " << clusterInd << ". ";
-//       std::cerr << "pointInd = " << pointInd << ". ";
-//       std::cerr << "This shouldn't be possible!" << std::endl;
-//     }
-
-//     // inviting out of range exception if my clustering doesn't work properly
-//     if(clusteredEvent->isBase == 0 &&
-//        clusters.at(clusteredEvent->inCluster).numEvents==1 &&
-//        clusters.at(clusteredEvent->inCluster).numPointsWithinMinLL == 0){
-//       // the box of goodies
-//       clusterTreeHidden->Fill();
-//     }
-//     else{
-//       clusterTree->Fill();
-//     }
-
-
-//     delete clusteredEvent;
-//   }
-
-
-//   for(Int_t pointInd=0; pointInd < (Int_t)mcPoints.size(); pointInd++){
-
-//     const McPoint& point = mcPoints.at(pointInd);
-
-//     clusteredEvent = new Event();
-//     clusteredEvent->eventNumber = mceventNumbers.at(pointInd);
-//     clusteredEvent->run = mcruns.at(pointInd);
-//     clusteredEvent->pol = point.pol;
-//     clusteredEvent->isMC = 1;
-//     clusteredEvent->weight = point.weight;
-//     clusteredEvent->energy = point.energy;
-
-//     // convert from km back to m for conversion to lat/lon/alt
-//     // for(int dim=0; dim < nDim; dim++){
-//     //   // clusteredEvent->eventPosition[dim] = point.centre[dim];
-//     //   clusteredEvent->eventPosition[dim] = point.centre[dim];
-//     // }
-//     clusteredEvent->eventLat = point.latitude;
-//     clusteredEvent->eventLon = point.longitude;
-//     clusteredEvent->eventAlt = point.altitude;
-
-//     clusteredEvent->anitaLat = mcpats.at(pointInd)->latitude;
-//     clusteredEvent->anitaLon = mcpats.at(pointInd)->longitude;
-//     clusteredEvent->anitaAlt = mcpats.at(pointInd)->altitude;
-
-//     clusteredEvent->thetaDeg = point.thetaDeg;
-//     clusteredEvent->phiDeg = point.phiDeg;
-
-//     Int_t clusterInd = mcPoints.at(pointInd).inCluster;
-//     clusteredEvent->inCluster = clusterInd;
-//     clusteredEvent->isBase = 0;
-
-//     if(clusterInd >= 0  && clusterInd<(int)clusters.size() ){
-//       const Cluster& cluster = clusters.at(clusterInd);
-
-//       clusteredEvent->isBase = clusterInd < numBases ? 1 : 0;
-//       clusteredEvent->numPointsWithinMinLL = cluster.numPointsWithinMinLL;
-
-//       clusteredEvent->clusterLat = cluster.latitude;
-//       clusteredEvent->clusterLon = cluster.longitude;
-//       clusteredEvent->clusterAlt = cluster.altitude;
-
-//       // Double_t deltaThetaDeg, deltaPhiDeg;
-//       getDeltaThetaDegDeltaPhiDegCluster(point, cluster, mcpats.at(pointInd), \
-// 					 clusteredEvent->deltaThetaDeg, \
-// 					 clusteredEvent->deltaPhiDeg);
-
-//       // clusteredEvent->distanceToClusterCentroid = TMath::Sqrt(getDistSq(point, cluster));
-//       // clusteredEvent->distanceToClusterCentroid = get(point, cluster));
-//       clusteredEvent->minusTwoLogLikelihood = getAngDistSq(point, cluster, mcpats.at(pointInd));
-
-//       UsefulAdu5Pat usefulPat(mcpats.at(pointInd));
-
-//       clusteredEvent->distanceToClusterCentroid = usefulPat.getDistanceFromSource(cluster.latitude, \
-// 										  cluster.longitude, \
-// 										  cluster.altitude);
-
-
-//       if(clusteredEvent->secondClosestCluster >= 0){
-// 	const Cluster& cluster2 = clusters.at(clusteredEvent->secondClosestCluster);
-
-
-// 	clusteredEvent->distanceToClusterCentroidSecondBest = usefulPat.getDistanceFromSource(cluster2.latitude, \
-// 											      cluster2.longitude, \
-// 											      cluster2.altitude);
-//       }
-
-//       clusteredEvent->numEventsInCluster = cluster.numEvents;
-
-//       clusteredEvent->numClusters = numClusters;
-//       clusteredEvent->numIterations = numIter;
-//     }
-//     clusterTree->Fill();
-    
-//     delete clusteredEvent;
-    
-//   }
-
+  for(Int_t i=0; i < (Int_t)points.size(); i++){
+    point = &points.at(i);
+    clusteredDataTree->Fill();
+  }
   
-//   clusterTreeHidden->Write();
-//   fSignalBox->Write();
-//   fSignalBox->Close();
+  TTree* clusteredMcTree = new TTree("clusteredMcTree", "Tree of clustered Monte Carlo ANITA events");
+  McPoint* mcPoint = NULL;
+  clusteredMcTree->Branch("mcPoint", &mcPoint);
+  for(Int_t j=0; j < (Int_t)mcPoints.size(); j++){
+    mcPoint = &mcPoints.at(j);
+    clusteredMcTree->Fill();
+  }
 
-//   fOut->cd();
-//   return clusterTree;
-
-// }
+  TTree* clusterTree = new TTree("clusterTree", "Tree of clusters");
+  Cluster* cluster = NULL;
+  clusterTree->Branch("cluster", &cluster);
+  for(int k=0; k < (Int_t)clusters.size(); k++){
+    cluster = &clusters.at(k);
+    clusterTree->Fill();
+  }
+}
 
 
 Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* summaryGlob){
@@ -985,20 +820,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 }
 
 
-
-void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){  
-
-  readInSummaries(dataGlob);
-  initializeBaseList();
-  readInSummaries(mcGlob);
-
-  char* fakeArgv0 = const_cast<char*>(outFileName);
-  OutputConvention oc(1, &fakeArgv0);
-  TFile* fOut = oc.makeFile();
-
-  assignEventsToBaseClusters();
-  recursivelyAddClusters(0);
-
+void Acclaim::Clustering::LogLikelihoodMethod::writeAllGraphsAndHists(){
   for(UInt_t i=0; i < hBaseClusteredEvents.size(); i++){
     if(hBaseClusteredEvents.at(i)){
       hBaseClusteredEvents.at(i)->Write();
@@ -1019,6 +841,27 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
       grNonBaseClusterCenters.at(i)->Write();
     }
   }
+}
+
+
+
+
+void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){  
+
+  readInSummaries(dataGlob);
+  initializeBaseList();
+  readInSummaries(mcGlob);
+
+  char* fakeArgv0 = const_cast<char*>(outFileName);
+  OutputConvention oc(1, &fakeArgv0);
+  TFile* fOut = oc.makeFile();
+
+  assignEventsToBaseClusters();
+  recursivelyAddClustersFromData(0);
+
+
+  assignMcPointsToClusters();
+
   
 
   // TGraph* grNumPoints = new TGraph();
@@ -1036,7 +879,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   // for(int i=0; i < numLLs; i++){
   //   llCut = llCuts[i];
   //   resetClusters();
-  //   recursivelyAddClusters(0);
+  //   recursivelyAddClustersFromData(0);
 
   //   std::cout << "********************************" << std::endl;
   //   std::cout << "llCut = " << llCuts[i] << std::endl;
@@ -1065,6 +908,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   //     grNumIsolateds.at(i)->Write();
   //   }
   // }
+
+  writeAllGraphsAndHists();
+  makeSummaryTrees();
 
   fOut->Write();
   fOut->Close();

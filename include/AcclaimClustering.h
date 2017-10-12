@@ -28,72 +28,72 @@ namespace Acclaim{
     const double default_sigma_theta = 0.25;
     const double default_sigma_phi = 0.5;
 
-    //--------------------------------------------------------------------------------------------------------
-    /**
-     * @class Event
-     * @brief Will populate a tree showing the results of the clustering
-     * 
-     */
-    class Event{
-    public:
-      UInt_t eventNumber;				/// The event number
-      Int_t run;					/// The run 
-      AnitaPol::AnitaPol_t pol;				/// Polarisation of waveform
-      Double_t sourceLat;				/// latitude of position of event
-      Double_t sourceLon;				/// longitude of position of event
-      Double_t sourceAlt;				/// altitude of posiiton of event
+    // //--------------------------------------------------------------------------------------------------------
+    // /**
+    //  * @class Event
+    //  * @brief Will populate a tree showing the results of the clustering
+    //  * 
+    //  */
+    // class Event{
+    // public:
+    //   UInt_t eventNumber;				/// The event number
+    //   Int_t run;					/// The run 
+    //   AnitaPol::AnitaPol_t pol;				/// Polarisation of waveform
+    //   Double_t sourceLat;				/// latitude of position of event
+    //   Double_t sourceLon;				/// longitude of position of event
+    //   Double_t sourceAlt;				/// altitude of posiiton of event
       
-      Double_t thetaDeg;				/// reconstruction angle
-      Double_t phiDeg;					/// reconstruction angle
+    //   Double_t thetaDeg;				/// reconstruction angle
+    //   Double_t phiDeg;					/// reconstruction angle
 
-      // AnitaEventSummary::PayloadLocation anitaPosition; /// Where is ANITA?
+    //   // AnitaEventSummary::PayloadLocation anitaPosition; /// Where is ANITA?
 
-      Double_t sigmaThetaDeg;
-      Double_t sigmaPhiDeg;
+    //   Double_t sigmaThetaDeg;
+    //   Double_t sigmaPhiDeg;
 
-      Double_t distanceToClusterCentroid;		/// distance (km) from point to centroid
-      Double_t distanceToClusterCentroidSecondBest;	/// distance (km) from point to centroid
+    //   Double_t distanceToClusterCentroid;		/// distance (km) from point to centroid
+    //   Double_t distanceToClusterCentroidSecondBest;	/// distance (km) from point to centroid
       
-      Double_t minusTwoLogLikelihood;			/// distance in some normalized error units TODO
-      Double_t minusTwoLogLikelihoodSecondBest;		/// distance in some normalized error units TODO
+    //   Double_t minusTwoLogLikelihood;			/// distance in some normalized error units TODO
+    //   Double_t minusTwoLogLikelihoodSecondBest;		/// distance in some normalized error units TODO
 
-      Double_t deltaThetaDeg;				/// angular distance to cluster centre
-      Double_t deltaPhiDeg;				/// angular distance to cluster centre
+    //   Double_t deltaThetaDeg;				/// angular distance to cluster centre
+    //   Double_t deltaPhiDeg;				/// angular distance to cluster centre
 
-      Int_t inCluster;					/// ID of cluster
-      Int_t secondClosestCluster;			/// ID of cluster
-      Int_t numPointsWithinMinLL;			/// if > -1 then is a singlet, if > 0 then is a non-isolated singlet
+    //   Int_t inCluster;					/// ID of cluster
+    //   Int_t secondClosestCluster;			/// ID of cluster
+    //   Int_t numPointsWithinMinLL;			/// if > -1 then is a singlet, if > 0 then is a non-isolated singlet
 
-      Int_t isBase;
-      Int_t numEventsInCluster;				/// number of events in the cluster containing this event
+    //   Int_t isBase;
+    //   Int_t numEventsInCluster;				/// number of events in the cluster containing this event
 
-							/// Double_t clusterPosition[3]; // centroid of cluster cartesian (m)
-      Double_t clusterLat;				/// latitude of centroid of cluster
-      Double_t clusterLon;				/// longitude of centroid of cluster
-      Double_t clusterAlt;				/// altitude of centroid of cluster
+    // 							/// Double_t clusterPosition[3]; // centroid of cluster cartesian (m)
+    //   Double_t clusterLat;				/// latitude of centroid of cluster
+    //   Double_t clusterLon;				/// longitude of centroid of cluster
+    //   Double_t clusterAlt;				/// altitude of centroid of cluster
 
-      Double_t anitaLat;				/// latitude of centroid of cluster
-      Double_t anitaLon;				/// longitude of centroid of cluster
-      Double_t anitaAlt;				/// altitude of centroid of cluster
+    //   Double_t anitaLat;				/// latitude of centroid of cluster
+    //   Double_t anitaLon;				/// longitude of centroid of cluster
+    //   Double_t anitaAlt;				/// altitude of centroid of cluster
 
-      Int_t numClusters;				/// Total number of clusters (maybe gratuitous)
-      Int_t numIterations;				/// number of loop iterations (maybe gratuitous)
+    //   Int_t numClusters;				/// Total number of clusters (maybe gratuitous)
+    //   Int_t numIterations;				/// number of loop iterations (maybe gratuitous)
 
-      Event(){
-	numPointsWithinMinLL = -1;
-      }
-    };
+    //   Event(){
+    // 	numPointsWithinMinLL = -1;
+    //   }
+    // };
 
-    /**
-     * @class MCEvent
-     * @brief Holds additional monte carlo information
-     */
-    class MCEvent : public Event {
-    public:
-      /// @todo add constructors
-      Double_t weight;
-      Double_t energy;
-    };
+    // /**
+    //  * @class MCEvent
+    //  * @brief Holds additional monte carlo information
+    //  */
+    // class MCEvent : public Event {
+    // public:
+    //   /// @todo add constructors
+    //   Double_t weight;
+    //   Double_t energy;
+    // };
 
 
 
@@ -129,9 +129,6 @@ namespace Acclaim{
 	
 	Double_t sigmaThetaDeg;		/// resolution associated with this snr?
 	Double_t sigmaPhiDeg;		/// resolution associated with this snr?
-
-
-	
 
 	Double_t dTheta;		/// theta distance to cluster
 	Double_t dPhi;			/// phi distance to cluster
@@ -221,7 +218,6 @@ namespace Acclaim{
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
       
       TGraphAntarctica* makeClusterSummaryTGraph(Int_t clusterInd);
-      TTree* makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox);
 
       Int_t getNumClusters(){
 	return numClusters;
@@ -240,11 +236,15 @@ namespace Acclaim{
 
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
 
-      void recursivelyAddClusters(Int_t minBinContent);
+      void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcPointsToClusters();
       void assignEventsToBaseClusters();
 
+
+      void writeAllGraphsAndHists();
       void findClosestPointToClustersOfSizeOne();
+
+      void makeSummaryTrees();
 
       void resetClusters();
       Double_t getSumOfMcWeights();
@@ -263,6 +263,7 @@ namespace Acclaim{
 
       std::vector<TGraphAntarctica*> grNonBaseClusterCenters;
       std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;
+      
       Int_t numIter;
       Int_t numClusters;
       Int_t numCallsToRecursive;
