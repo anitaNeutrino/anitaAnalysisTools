@@ -1,3 +1,4 @@
+
 #ifdef __CINT__
 
 #pragma link off all globals;
@@ -14,12 +15,10 @@
 #pragma link C++ class Acclaim::AntarcticaMapPlotter+;
 
 #pragma link C++ namespace Acclaim::Clustering;
+#pragma link C++ class Acclaim::Clustering::Event+;
+#pragma link C++ class Acclaim::Clustering::McEvent+;
+#pragma link C++ class Acclaim::Clustering::Cluster+;
 #pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod+;
-#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::Point+;
-#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::McPoint+;
-#pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod::Cluster+;
-// #pragma link C++ class Acclaim::Clustering::Event+;
-// #pragma link C++ class Acclaim::Clustering::McEvent+;
 
 #pragma link C++ class Acclaim::RayleighHist+;
 #pragma link C++ enum Acclaim::RayleighHist::FitMethod;
