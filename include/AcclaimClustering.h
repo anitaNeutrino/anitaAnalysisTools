@@ -10,27 +10,19 @@
 #define ACCLAIM_CLUSTERING_H
 
 #include "UsefulAdu5Pat.h"
-#include "TRandom3.h"
-#include "TGraph.h"
-#include "TTree.h"
-#include "TFile.h"
-
-#include "Math/Minimizer.h"
-#include "Math/Factory.h"
-#include "Math/Functor.h"
-
-#include "RootTools.h"
-#include "BaseList.h"
-#include "ProgressBar.h"
-#include "AntarcticaMapPlotter.h"
-
-#include "assert.h"
 #include "AnitaConventions.h"
+#include "BaseList.h"
 
 #define nDim 3
 
 
+class TTree;
+class TGraph;
+class TFile;
+
 namespace Acclaim{
+
+  class AntarcticaMapPlotter;  
 
   namespace Clustering {
 
@@ -143,22 +135,22 @@ namespace Acclaim{
       
 
       /** 
-       * @class MCPoint
+       * @class McPoint
        * @brief Holds the position of monte carlo generated neutrino event
        * 
        * Requires a little more information than a data point to keep track of the neutrino energy and weight
        */
-      class MCPoint : public Point{
+      class McPoint : public Point{
       public:
 	Double_t weight;
 	Double_t energy;
-	explicit MCPoint();
-	explicit MCPoint(Adu5Pat* pat,
+	explicit McPoint();
+	explicit McPoint(Adu5Pat* pat,
 			 Double_t lat=0, Double_t lon=0, Double_t alt=0,
 			 Double_t sigmaTheta = 0.5, Double_t sigmaPhi = 1,
 			 Int_t polIn=AnitaPol::kVertical,
 			 Double_t theWeight=1, Double_t theEnergy=0);
-	ClassDef(MCPoint, 1)
+	ClassDef(McPoint, 1)
       };
 
 
@@ -190,13 +182,10 @@ namespace Acclaim{
 
       
 
-      LogLikelihoodMethod(Int_t nClusters, Int_t numIterations, Int_t approxNumPoints=0);
+      LogLikelihoodMethod();
+      
       void doClustering(const char* dataGlob, const char* mcGlob);
       
-
-      void initializeBaseList();
-      void initializeEmptyBaseList();
-
       TGraph* makeClusterSummaryTGraph(Int_t clusterInd);
       TTree* makeClusterSummaryTree(TFile* fOut, TFile* fSignalBox);
 
@@ -204,9 +193,21 @@ namespace Acclaim{
 	return numClusters;
       }
 
+
+    private:
+
+      Long64_t readInSummaries(const char* summaryGlob);
+      
+      size_t addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
+      size_t addMcPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy);
+      
+      void assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd);
+      void initializeBaseList();
+      void initializeEmptyBaseList();
+
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClusters(Int_t minBinContent);
-      void assignMCPointsToClusters();
+      void assignMcPointsToClusters();
       void assignEventsToDefaultClusters();
       void findClosestPointToClustersOfSizeOne();
       double llCut;
@@ -218,15 +219,7 @@ namespace Acclaim{
       void resetClusters();
       Double_t getSumOfMcWeights();
       int maxRetestClusterSize;
-
-    private:
-
-      Long64_t readInSummaries(const char* summaryGlob);
-      size_t addPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
-      size_t addMCPoint(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy);
       
-
-      void assignSinglePointToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd);
       AntarcticaMapPlotter* amp;
       Cluster seedCluster(Point& point);
       std::vector<TH2D*> hUnclustereds;
@@ -234,16 +227,18 @@ namespace Acclaim{
       Int_t numClusters;
       Int_t numCallsToRecursive;
 
-      std::vector<Point> points; // only variables relevant to clustering
-      std::vector<MCPoint> mcPoints; // only variables relevant to clustering
-      std::vector<Adu5Pat*> pats;
-      std::vector<Adu5Pat*> mcpats;
       std::vector<Cluster> clusters; // only variables relevant to clustering
       std::vector<Int_t> seedPoints; // which points seeded which clusters
+
+      std::vector<Point> points; // only variables relevant to clustering
+      std::vector<Adu5Pat*> pats;
       std::vector<UInt_t> eventNumbers; // keep track of these separately
-      std::vector<UInt_t> mceventNumbers; // keep track of these separately
       std::vector<Int_t> runs; // keep track of these separately
-      std::vector<Int_t> mcruns; // keep track of these separately
+      
+      std::vector<McPoint> mcPoints; // only variables relevant to clustering
+      std::vector<Adu5Pat*> mcPats;
+      std::vector<UInt_t> mcEventNumbers; // keep track of these separately
+      std::vector<Int_t> mcRuns; // keep track of these separately
 
       Bool_t initialized;
       Double_t minimalImprovement;
