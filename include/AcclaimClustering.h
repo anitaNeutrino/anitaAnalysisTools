@@ -26,10 +26,9 @@ namespace Acclaim{
     const double default_sigma_theta = 0.25;
     const double default_sigma_phi = 0.5;
 
-
     /**
      * @class Event
-     * @brief Internal representation of a thing being clustered
+     * @brief Minimum required information about an ANITA event to be clustered
      */
     class Event{
     public:
@@ -37,47 +36,47 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       // determined by reconstruction
       //--------------------------------------------------------------------------------	
-      UInt_t eventNumber;		/// Event number
-      Int_t run;			/// Run
-      AnitaPol::AnitaPol_t pol;	/// Polarization
-	
-      Double_t centre[3];//!		/// Cartesian coordinates, does not persist in ROOT
-      Double_t latitude;		/// latitude
-      Double_t longitude;		/// longitude
-      Double_t altitude;		/// longitude
+      UInt_t eventNumber;			/// Event number
+      Int_t run;				/// Run
+      AnitaPol::AnitaPol_t pol;			/// Polarization
 
-      Double_t theta;			/// reconstructed theta
-      Double_t phi;			/// reconstructed phi
-	
-      Double_t sigmaTheta;		/// resolution associated with this snr?
-      Double_t sigmaPhi;		/// resolution associated with this snr?
+      Double_t centre[3];//!			/// Cartesian coordinates, does not persist in ROOT
+      Double_t latitude;			/// latitude
+      Double_t longitude;			/// longitude
+      Double_t altitude;			/// longitude
+      AnitaEventSummary::PayloadLocation anita; /// Anita's position
 
+      Double_t theta;				/// reconstructed theta
+      Double_t phi;				/// reconstructed phi
+
+      Double_t sigmaTheta;			/// resolution associated with this snr?
+      Double_t sigmaPhi;			/// resolution associated with this snr?
 
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
-      Double_t dThetaCluster;		/// theta distance to cluster
-      Double_t dPhiCluster;		/// phi distance to cluster
+      Double_t dThetaCluster;			/// theta distance to cluster
+      Double_t dPhiCluster;			/// phi distance to cluster
 
-      Double_t ll;			/// log likelihood = -2 * ln (...)
-      Int_t inCluster;		/// which cluster am I associated with?
+      Double_t ll;				/// log likelihood = -2 * ln (...)
+      Int_t inCluster;				/// which cluster am I associated with?
 
-      Double_t llSecondBest;		/// log likelihood to second closest cluster
-      Int_t secondClosestCluster;	/// what cluster am I second closest to?	
+      Double_t llSecondBest;			/// log likelihood to second closest cluster
+      Int_t secondClosestCluster;		/// what cluster am I second closest to?	
 
       Event();
-      Event(Adu5Pat* pat, Double_t lat=0, Double_t lon=0, Double_t alt=0,
-	    Double_t thetaDeg=0, Double_t phiDeg=0,
-	    Double_t sigmaTheta = default_sigma_theta,
-	    Double_t sigmaPhi = default_sigma_phi,
-	    Int_t polIn=AnitaPol::kVertical);
+      Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
+      // Event(Adu5Pat* pat, Double_t lat=0, Double_t lon=0, Double_t alt=0,
+      // 	    Double_t thetaDeg=0, Double_t phiDeg=0,
+      // 	    Double_t sigmaTheta = default_sigma_theta,
+      // 	    Double_t sigmaPhi = default_sigma_phi,
+      // 	    Int_t polIn=AnitaPol::kVertical);
 	
       virtual ~Event(){ ;}
       ClassDef(Event, 3)
     };
 
 
-      
 
     /** 
      * @class McEvent
@@ -87,17 +86,17 @@ namespace Acclaim{
      */
     class McEvent : public Event{
     public:
-      Double_t weight;
-      Double_t energy;
+      Double_t weight;			/// MC information
+      Double_t energy;			/// MC information
 
-      explicit McEvent();
-      explicit McEvent(Adu5Pat* pat,
-		       Double_t lat=0, Double_t lon=0, Double_t alt=0,
-		       Double_t thetaDeg = 0, Double_t phiDeg = 0,
-		       Double_t sigmaTheta = default_sigma_theta,
-		       Double_t sigmaPhi = default_sigma_phi,
-		       Int_t polIn=AnitaPol::kVertical,
-		       Double_t theWeight=1, Double_t theEnergy=0);
+      McEvent();
+      McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd)
+	: Event(sum, pol,  peakInd)
+      {
+	weight = sum->mc.weight;
+	energy = sum->mc.energy;
+      }
+
       virtual  ~McEvent(){;}
 	
       ClassDef(McEvent, 1)
@@ -115,8 +114,8 @@ namespace Acclaim{
     class Cluster{
     public:
       Cluster();
-      explicit Cluster(const Event& seedEvent);
-      explicit Cluster(const BaseList::base& base);
+      // Cluster(const Event& seedEvent);
+      Cluster(const BaseList::base& base);
 
       virtual ~Cluster(){ ;}	
 
@@ -156,8 +155,8 @@ namespace Acclaim{
 
       Long64_t readInSummaries(const char* summaryGlob);
       
-      size_t addEvent(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t thetaDeg, Double_t phiDeg, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol);
-      size_t addMcEvent(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t thetaDeg, Double_t phiDeg, Double_t sigmaThetaDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy);
+      size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
+      size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       
       void assignSingleEventToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd);
       void initializeBaseList();
@@ -178,8 +177,6 @@ namespace Acclaim{
       void resetClusters();
       Double_t getSumOfMcWeights();
 
-      Cluster seedCluster(Event& point);
-      
       double llCut;
       double maxDistCluster;
       std::vector<Int_t> numIsolatedSmallClusters;
@@ -197,32 +194,11 @@ namespace Acclaim{
       Int_t numClusters;
       Int_t numCallsToRecursive;
 
-
       // The clusters
-      std::vector<Cluster> clusters; // only variables relevant to clustering
-      std::vector<Int_t> seedEvents; // which points seeded which clusters
-      
-      // Data
-      std::vector<Event> points; // only variables relevant to clustering
-      std::vector<Adu5Pat> pats;
-      std::vector<UInt_t> eventNumbers; // keep track of these separately
-      std::vector<Int_t> runs; // keep track of these separately
+      std::vector<Cluster> clusters; /// Vector of clusters, 
+      std::vector<Event> events; /// Vector of data events
+      std::vector<McEvent> mcEvents; /// Vector of Monte Carlo events
 
-      // MC
-      std::vector<McEvent> mcEvents;
-      std::vector<Adu5Pat> mcPats;
-      std::vector<UInt_t> mcEventNumbers;
-      std::vector<Int_t> mcRuns;
-
-      // ok since things got very slow all of a sudden I need to speed them up
-      // since my interupts in lldb seem to fall inside the UsefulAdu5Pat functions
-      // I will cache the values.
-      // For each point I need the value for each cluster... use pair<pointInd, clusterInd>
-      // the figure of merit is the loglikelihood, with a distance d.
-
-      std::vector<Int_t> pointsInCluster;
-      Int_t theMinCluster;
-      Double_t sumOfAngularErrorsFromLatLon(const Double_t* latLon);
       std::vector<Int_t> ampBinNumbers;
       std::vector<Int_t> ampBinNumbers2;
 
