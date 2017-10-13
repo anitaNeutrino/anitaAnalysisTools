@@ -2,6 +2,7 @@
 #include "TString.h"
 #include "TChain.h"
 #include "AnitaConventions.h"
+#include "TGraphAntarctica.h"
 
 // This is a guess at the version number, if this doesn't work for you
 // feel free to try harder to track down the change
@@ -49,44 +50,53 @@ class SummarySet {
   TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
 
+  Long64_t Process(TList* list);
+
+  TProfile2DAntarctica* makeAntarcticaProf(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);
+  TH2DAntarctica*       makeAntarcticaHist(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);  
+
+
+  Double_t getTotalSize() const;
+  TGraphAntarctica* makePayloadLocationGraph(int stride = TGraphAntarctica::defaultGpsTreeStride);
+
+
   // If I keep adding these wrapper functions at some point it might make sense to inherit from TChain...
   TChain* getChain(){return fChain;}
   Long64_t Draw(const char* varexp, const TCut &selection, Option_t *option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0);
   Long64_t Draw(const char* varexp,const char* selection="", Option_t* option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0);
 
-  Long64_t Process(TList* list); /// for PROOF with cusom TSelector
-
-  TProfile2DAntarctica* makeAntarcticaProf(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);
-  TH2DAntarctica*       makeAntarcticaHist(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);  
-
+  /** 
+   * Returns the approximate mean size of each SummaryTree entry
+   * 
+   * @return effective AnitaEventSummary branch size
+   */
+  Double_t getBytesPerEvent() const { 
+    return N() > 0 ? getTotalSize()/N() : 0;
+  }
   void SetUseProof(bool useProof=true) {fUseProof = useProof;}
   Bool_t GetUseProof() {return fUseProof;}
 
-  Double_t getTotalSize() const;
 
-  Double_t getBytesPerEvent() const { /// Approximately, the size of each SummaryTree entry
-    return N() > 0 ? getTotalSize()/N() : 0;
-  }
 
  protected:
 
   void init();
   void initProof();
   void renameProofCanvas(const char* varexp);
-  TString fPathToSummaryFiles;
-  TString fTreeName;
-  TString fSummaryBranchName;
 
-  TChain* fChain;
-  Long64_t fN;
-  AnitaEventSummary* fSum;
+  TString fPathToSummaryFiles; /// The glob passed to the TChain
+  TString fTreeName;  /// The name of the TTrees, default is "sumTree"
+  TString fSummaryBranchName; /// Branch name of the AnitaEventSummary, default is "sum"
 
-  // useful data about the range of the summary data set
-  UInt_t fFirstTime;
-  UInt_t fFirstEventNumber;
-  UInt_t fLastTime;
-  UInt_t fLastEventNumber;
-  Bool_t fUseProof;
+  TChain* fChain; /// The chain of TTrees containing the AnitaEventSummary
+  Long64_t fN; /// The number of entries in the AnitaEventSummary chain, access with SummarySet::N()
+  AnitaEventSummary* fSum; /// Pointer to the current entry in the chain, access with SummarySet::summary()
+
+  UInt_t fFirstTime; /// The realTime of the first entry in the summary chain, useful for booking histograms
+  UInt_t fFirstEventNumber;/// The eventNumber of the first entry in the summary chain, useful for booking histograms
+  UInt_t fLastTime;/// The realTime of the last entry in the summary chain, useful for booking histograms
+  UInt_t fLastEventNumber;/// The eventNumber of the last entry in the summary chain, useful for booking histograms
+  Bool_t fUseProof; /// Switch on the Parallel ROOT Facility, for speedy histogram plotting
 };
 }
 

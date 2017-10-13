@@ -15,6 +15,7 @@
 
 #include "ProgressBar.h"
 #include "TH2DAntarctica.h"
+#include "TGraphAntarctica.h"
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
@@ -323,4 +324,24 @@ TH2D* Acclaim::SummarySet::bookEventNumberHistogram(const char* name, const char
   return h;
 }
 
+
+
+/** 
+ * Use the anitaLocation subclass in the AnitaEventSummary to make a flight path graph
+ * 
+ * @param stride only put every nth entry into the graph, default is the same as TGraphAntarctica::defaultGpsTreeStride
+ * 
+ * @return the TGraphAntarctica
+ */
+TGraphAntarctica* Acclaim::SummarySet::makePayloadLocationGraph(int stride){
+
+  TGraphAntarctica* gr = new TGraphAntarctica();
+  Long64_t n = N();
+  for(Long64_t entry=0; entry < n; entry+=stride){
+    getEntry(entry);
+    AnitaEventSummary* sum = summary();
+    gr->SetPoint(gr->GetN(), sum->anitaLocation.longitude, sum->anitaLocation.latitude);
+  }
+  return gr;
+}
 
