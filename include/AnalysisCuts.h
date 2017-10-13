@@ -231,14 +231,20 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
     };
 
-
+    /**
+     * @class IsRfTrigger
+     * @brief Is this an event with an RF trigger?
+     */
     class IsRfTrigger : public AnalysisCut{
     public:
       IsRfTrigger() : AnalysisCut("isRfTrigger", "RF trigger") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
     };
 
-
+    /**
+     * @class SmallDeltaRough
+     * @brief Do the rough and fine maps broadly agree in their reconstructed direction? 
+     */
     class SmallDeltaRough : public AnalysisCut{
     public:
       SmallDeltaRough() : AnalysisCut("smallDeltaRough", "Small angle between coarse/fine maps") {;}
@@ -246,25 +252,40 @@ namespace Acclaim
     };
 
 
+    /**
+     * @class IsNotTaggedAsPulser
+     * @brief Is the trigger time consistent with a pulser?
+     */
     class IsNotTaggedAsPulser : public AnalysisCut{
     public:
       IsNotTaggedAsPulser() : AnalysisCut("isNotTaggedAsPulser", "Not pulser") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
     };
 
+    /**
+     * @class SignalLikeFirstStandardizedPeakMoments
+     * @brief An attempt at a cut using the moments of the coherently summed waves
+     */
     class SignalLikeFirstStandardizedPeakMoments : public AnalysisCut{
     public:
       SignalLikeFirstStandardizedPeakMoments() : AnalysisCut("signalLikeFirstStandardizedPeakMoments", "Signal-like first standardized peak moments") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
     };
 
+    /**
+     * @class PassesThesisCuts
+     * @brief Incomplete thesis cut
+     */
     class PassesThesisCuts : public AnalysisCut{
     public:
       PassesThesisCuts() : AnalysisCut("passesThesisCuts", "Passes thesis thermal cut") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// true/false
     };
 
-
+    /**
+     * @class IsNotNorth
+     * @brief Is the peak event pointing away from North?
+     */
     class IsNotNorth : public AnalysisCut {
     public:
       IsNotNorth() : AnalysisCut("isNotNorth", "Is Not North") {;}
@@ -272,25 +293,43 @@ namespace Acclaim
     };
 
 
+    /**
+     * @class HigherPeakHilbertAfterDedispersion
+     * @brief Does the hilbert peak get higher after dedispersing?
+     */
     class HigherPeakHilbertAfterDedispersion : public AnalysisCut {
     public:
       HigherPeakHilbertAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Hilbert peak is higher after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
     };
 
-    
+
+    /**
+     * @class HigherImpulsivityMeasureAfterDedispersion
+     * @brief Does the impulsivity measure get higher after dedispersion?
+     */
     class HigherImpulsivityMeasureAfterDedispersion : public AnalysisCut {
     public:
       HigherImpulsivityMeasureAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "ImpulsivityMeasure is higher after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
     };
 
+
+    /**
+     * @class LowerFracPowerWindowGradientAfterDedispersion
+     * @brief Does the fracPowerWindowGradient get lower after dedispersion?
+     */
     class LowerFracPowerWindowGradientAfterDedispersion : public AnalysisCut {
     public:
       LowerFracPowerWindowGradientAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Lower fracPowerWindowGradient after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
     };
 
+
+    /**
+     * @class DedispersedFracPowerWindowGradientBelowThreshold
+     * @brief An absolute cut on the fracPowerWindowGradient, rejecting events above the threshold.
+     */
     class DedispersedFracPowerWindowGradientBelowThreshold : public AnalysisCut {
     public:
       DedispersedFracPowerWindowGradientBelowThreshold()
@@ -304,8 +343,6 @@ namespace Acclaim
     };
 
 
-
-    // const globals so you don't need to instantiate these yourself
     const IsAboveHorizontal isAboveHorizontal;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
     const HigherPol higherPol;
@@ -329,6 +366,8 @@ namespace Acclaim
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
+
+
     const DedispersedFracPowerWindowGradientBelowThreshold dedispersedFracPowerWindowGradientBelowThreshold;
   }
 }

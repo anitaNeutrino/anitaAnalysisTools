@@ -50,7 +50,7 @@ class SummarySet {
   TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
 
-  Long64_t Process(TList* list);
+  Long64_t Process(TSelector* selector, Option_t* option = "", Long64_t nentries = TCHAIN_NENTRIES_DEFAULT, Long64_t firstentry = 0);
 
   TProfile2DAntarctica* makeAntarcticaProf(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);
   TH2DAntarctica*       makeAntarcticaHist(AnitaPol::AnitaPol_t pol=AnitaPol::kNotAPol, const char* name="", const char* title="", Int_t nx=-1, Int_t ny=-1);  

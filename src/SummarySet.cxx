@@ -64,24 +64,13 @@ void Acclaim::SummarySet::initProof(){
 }
 
 
-Long64_t Acclaim::SummarySet::Process(TList* things){
-  (void) things;
-  std::cout << fN << " entries" << std::endl;
-
-  initProof();
-  SummarySelector* sel = new SummarySelector();
-  // AnalysisPlot* p = new AnalysisPlot("h", "asd", 100, 0, 1);
-  TList* l = new TList();
-  // l->Add(p);
-  sel->SetInputList(l);
-  fChain->Process(sel);
-
-  TList* l2 = sel->GetOutputList();
-  std::cerr << "there are " << l2->GetEntries() << " outputs" << std::endl;
-  // const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
-  // TString loadSelector = TString::Format("%s/share/Acclaim/SumSelector.C", anitaUtilInstallDir);
-  
-  return 0; //fChain->Process(loadSelector);  
+Long64_t Acclaim::SummarySet::Process(TSelector* selector, Option_t* option, Long64_t nentries, Long64_t firstentry){
+  Long64_t retVal = -1;
+  if(fChain){
+    initProof();
+    retVal = fChain->Process(selector, option, nentries, firstentry);
+  }
+  return retVal;
 }
 
 
