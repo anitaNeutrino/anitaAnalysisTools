@@ -39,6 +39,7 @@ namespace Acclaim{
       UInt_t eventNumber;			/// Event number
       Int_t run;				/// Run
       AnitaPol::AnitaPol_t pol;			/// Polarization
+      Int_t peakIndex;                          /// Which peak in the map does this represent?
 
       Double_t centre[3];//!			/// Cartesian coordinates, does not persist in ROOT
       Double_t latitude;			/// latitude
@@ -62,15 +63,12 @@ namespace Acclaim{
       Int_t inCluster;				/// which cluster am I associated with?
 
       Double_t llSecondBest;			/// log likelihood to second closest cluster
-      Int_t secondClosestCluster;		/// what cluster am I second closest to?	
+      Int_t secondClosestCluster;		/// what cluster am I second closest to?
+
+      Int_t antarcticaHistBin; //!              /// Which global bin in the TH2DAntarctica?
 
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
-      // Event(Adu5Pat* pat, Double_t lat=0, Double_t lon=0, Double_t alt=0,
-      // 	    Double_t thetaDeg=0, Double_t phiDeg=0,
-      // 	    Double_t sigmaTheta = default_sigma_theta,
-      // 	    Double_t sigmaPhi = default_sigma_phi,
-      // 	    Int_t polIn=AnitaPol::kVertical);
 	
       virtual ~Event(){ ;}
       ClassDef(Event, 3)
@@ -198,9 +196,6 @@ namespace Acclaim{
       std::vector<Cluster> clusters; /// Vector of clusters, 
       std::vector<Event> events; /// Vector of data events
       std::vector<McEvent> mcEvents; /// Vector of Monte Carlo events
-
-      std::vector<Int_t> ampBinNumbers;
-      std::vector<Int_t> ampBinNumbers2;
 
       bool doneBaseClusterAssignment; /// Set to true once all read in data events were clustered to bases
 
