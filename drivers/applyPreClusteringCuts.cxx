@@ -1,7 +1,7 @@
 #include "AnalysisCuts.h"
 #include "OutputConvention.h"
 #include "SummarySet.h"
-
+#include "ProgressBar.h"
 
 using namespace Acclaim;
 
@@ -35,12 +35,12 @@ int main(int argc, char* argv[]){
 							      &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
 							      &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion,
 							      &AnalysisCuts::dedispersedFracPowerWindowGradientBelowThreshold};
-  
+
   Long64_t n = ss.N();
+  ProgressBar p(n);
   for(Long64_t entry=0; entry < n; entry++){
     ss.getEntry(entry);
     
-    sum = ss.summary();
 
     // AnitaPol::AnitaPol_t pol = sum->acclaimPol();
     // Int_t peakIndex = sum->acclaimPeakIndex();    
@@ -48,24 +48,29 @@ int main(int argc, char* argv[]){
     Int_t peakIndex = 0; ///@todo set to some acclaim specific function
 
     Bool_t passesCuts = true;
+    // std::cout << sum->flags.isGood << std::endl;
     for(int i=0; i < nCut; i++){
-      int cutRetVal = preClusteringCuts[i]->apply(sum, pol,  peakIndex);
+      int cutRetVal = preClusteringCuts[i]->apply(ss.summary(), pol,  peakIndex);
 
       passesCuts = passesCuts && (cutRetVal > 0);
 
       if(!passesCuts){
+	// std::cout << entry << " failed at " << i << "\t" << preClusteringCuts[i]->getName() << std::endl;
 	break;
-      }
-
-      if(passesCuts){
-	sumTree->Fill();
       }
     }
 
-    fOut->Write();
-    fOut->Close();
-    
+    if(passesCuts){
+      (*sum) = *ss.summary();
+      
+      sumTree->Fill();
+      std::cout << entry << " passed!" << std::endl;	
+      
+    }
+    p.inc(entry, n);
   }
+  fOut->Write();
+  fOut->Close();
 
   return 0;
 }
