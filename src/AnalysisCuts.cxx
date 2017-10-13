@@ -4,9 +4,9 @@
 #include "TMath.h"
 
 
-Acclaim::AnalysisCuts::Mode mode = Acclaim::AnalysisCuts::kTraining; /// Determines the behaviour of AnalysisCut::handleDefaults
+static Acclaim::AnalysisCuts::Mode mode = Acclaim::AnalysisCuts::kTraining; /// Determines the behaviour of AnalysisCut::handleDefaults
 
-void Acclaim::AnalysisCuts::setMode(Mode m){
+void Acclaim::AnalysisCuts::setMode(Acclaim::AnalysisCuts::Mode m){
   mode = m;
 }
 

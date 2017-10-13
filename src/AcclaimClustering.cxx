@@ -12,6 +12,10 @@
 
 const int nDim = 3;
 
+ClassImp(Acclaim::Clustering::Event);
+ClassImp(Acclaim::Clustering::McEvent);
+ClassImp(Acclaim::Clustering::Cluster);
+
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
   this->pol = pol;

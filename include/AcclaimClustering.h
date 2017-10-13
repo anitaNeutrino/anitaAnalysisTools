@@ -193,9 +193,9 @@ namespace Acclaim{
       Int_t numCallsToRecursive;
 
       // The clusters
-      std::vector<Cluster> clusters; /// Vector of clusters, 
-      std::vector<Event> events; /// Vector of data events
-      std::vector<McEvent> mcEvents; /// Vector of Monte Carlo events
+      std::vector<Acclaim::Clustering::Cluster> clusters; /// Vector of clusters, 
+      std::vector<Acclaim::Clustering::Event> events; /// Vector of data events
+      std::vector<Acclaim::Clustering::McEvent> mcEvents; /// Vector of Monte Carlo events
 
       bool doneBaseClusterAssignment; /// Set to true once all read in data events were clustered to bases
 

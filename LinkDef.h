@@ -33,11 +33,16 @@
 #pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::AnalysisProf+;
 #pragma link C++ namespace Acclaim::AnalysisCuts;
+#pragma link C++ enum Acclaim::AnalysisCuts::Mode;
 #pragma link C++ class Acclaim::CutOptimizer::FisherResult+;
 
 #pragma link C++ class Acclaim::QualityCut+;
 #pragma link C++ class Acclaim::SurfSaturationCut+;
 #pragma link C++ class Acclaim::PayloadBlastCut+;
 #pragma link C++ class Acclaim::NumPointsCut+;
+
+#pragma link C++ class std::vector<Acclaim::Clustering::Event>+;
+#pragma link C++ class std::vector<Acclaim::Clustering::McEvent>+;
+#pragma link C++ class std::vector<Acclaim::Clustering::Cluster>+;
 
 #endif
