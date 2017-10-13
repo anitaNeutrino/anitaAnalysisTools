@@ -4,6 +4,46 @@
 #include "TMath.h"
 
 
+Acclaim::AnalysisCuts::Mode mode = Acclaim::AnalysisCuts::kTraining; /// Determines the behaviour of AnalysisCut::handleDefaults
+
+void Acclaim::AnalysisCuts::setMode(Mode m){
+  mode = m;
+}
+
+Acclaim::AnalysisCuts::Mode Acclaim::AnalysisCuts::getMode(){
+  return mode;
+}
+
+
+
+/** 
+ * Function which determines which reconstructed direction is of interest.
+ * 
+ * Queries the AnalysisCuts::mode variable:
+ *  if kTraining, then sets pol/peakInd to AnitaEventSummary::trainingPol()/AnitaEventSummary::trainingPeakInd()
+ *  if kAcclaimAnalysis, then ... ///@todo fill this in
+ * 
+ * @param sum is the AnitaEventSummary on which to call the function
+ * @param pol is set to the polarisation of interest
+ * @param peakInd is set to the peak index of interest
+ */
+void Acclaim::AnalysisCuts::AnalysisCut::handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd) const {
+  if(peakInd==-1){
+    if(mode == kTraining){
+      peakInd = sum->trainingPeakInd();
+      pol = sum->trainingPol();
+    }
+    else{
+      ///@todo create these functions!
+      peakInd = 0;//sum->acclaimPeakInd();
+      pol = AnitaPol::kVertical;//sum->acclaimPol();
+    }
+  }
+}
+
+
+
+
 /** 
  * I didn't realise isinf wasn't portable
  * 
@@ -487,4 +527,23 @@ int Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion::apply(cons
 int Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
   handleDefaults(sum, pol, peakInd);
   return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < sum->coherent_filtered[pol][peakInd].fracPowerWindowGradient());
+}
+
+
+
+
+/** 
+ * Checks to see if the dedispersed fracPowerWindowGradient is below threshold
+ * Threshold value defined in AnalysisSettings.conf
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 if true, 0 if false
+ */
+
+int Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
+  handleDefaults(sum, pol, peakInd);
+  return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < fThreshold);
 }

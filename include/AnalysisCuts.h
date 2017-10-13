@@ -14,7 +14,7 @@
 #include "AnitaEventSummary.h"
 
 #include <iostream>
-
+#include "AnalysisSettings.h"
 
 namespace Acclaim
 {
@@ -28,7 +28,16 @@ namespace Acclaim
   namespace AnalysisCuts
   {
 
+    /** 
+     * @enum Mode defines the behaviour of AnalysisCut::handleDefaults(...)
+     */
+    enum Mode {
+      kTraining, /// Makes handleDefaults call the AnitaEventSummary::training family of functions 
+      kAcclaimAnalysis  /// Makes handleDefaults call the AnitaEventSummary::acclaim family of functions 
+    };
 
+    static Mode getMode();
+    static void setMode(Mode mode);
 
     /**
      * @brief A class to perform a simple cut using the results stored in an AnitaEventSummary
@@ -50,19 +59,7 @@ namespace Acclaim
       inline const char* getName() const {return fName.Data();}
       inline const char* getTitle() const {return fTitle.Data();}
     protected:
-      /** 
-       * Wrapper function to get the "trainingPeak", which is defined by the member AnitaEventSummary member function 
-       * 
-       * @param sum is the AnitaEventSummary on which to call the function
-       * @param pol is set to the polarisation of interest
-       * @param peakInd is set to the peak index of interest
-       */
-      inline static void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd){
-	if(peakInd==-1){
-	  peakInd = sum->trainingPeakInd();
-	  pol = sum->trainingPol();
-	}
-      }
+      void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd) const;
       TString fName;
       TString fTitle;
       int fMaxRetVal;
@@ -294,6 +291,18 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
     };
 
+    class DedispersedFracPowerWindowGradientBelowThreshold : public AnalysisCut {
+    public:
+      DedispersedFracPowerWindowGradientBelowThreshold()
+	: AnalysisCut("DedispersedFracPowerWindowGradientAboveThreshold", ""), fThreshold(20)
+      {
+	fTitle = TString::Format("Dedispersed frac power window gradient > %lf", fThreshold);
+      }
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+    private:
+      const Double_t fThreshold;
+    };
+
 
 
     // const globals so you don't need to instantiate these yourself
@@ -319,7 +328,8 @@ namespace Acclaim
     const IsNotNorth isNotNorth;
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
-    const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;  
+    const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
+    const DedispersedFracPowerWindowGradientBelowThreshold dedispersedFracPowerWindowGradientBelowThreshold;
   }
 }
 
