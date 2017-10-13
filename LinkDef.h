@@ -41,4 +41,8 @@
 #pragma link C++ class Acclaim::PayloadBlastCut+;
 #pragma link C++ class Acclaim::NumPointsCut+;
 
+#pragma link C++ class std::vector<Acclaim::Clustering::Event>+;
+#pragma link C++ class std::vector<Acclaim::Clustering::McEvent>+;
+#pragma link C++ class std::vector<Acclaim::Clustering::Cluster>+;
+
 #endif

@@ -173,9 +173,9 @@ namespace Acclaim{
       Int_t numClusters;
       Int_t numCallsToRecursive;
 
-      std::vector<Cluster> clusters;				/// Vector of clusters, 
-      std::vector<Event> events;				/// Vector of data events
-      std::vector<McEvent> mcEvents;				/// Vector of Monte Carlo events
+      std::vector<Acclaim::Clustering::Cluster> clusters; /// Vector of clusters, 
+      std::vector<Acclaim::Clustering::Event> events; /// Vector of data events
+      std::vector<Acclaim::Clustering::McEvent> mcEvents; /// Vector of Monte Carlo events
 
       std::vector<TGraphAntarctica*> grBaseClusterCenters;	/// The locations of the bases
       std::vector<TH2DAntarctica*> hBaseClusteredEvents;	/// Histograms of events clustered to bases
