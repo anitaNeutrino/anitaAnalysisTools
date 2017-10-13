@@ -36,8 +36,8 @@ namespace Acclaim
       kAcclaimAnalysis  /// Makes handleDefaults call the AnitaEventSummary::acclaim family of functions 
     };
 
-    static Mode getMode();
-    static void setMode(Mode mode);
+    Mode getMode();
+    void setMode(Mode mode);
 
     /**
      * @brief A class to perform a simple cut using the results stored in an AnitaEventSummary

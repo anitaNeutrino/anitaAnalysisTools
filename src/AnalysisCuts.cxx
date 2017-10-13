@@ -227,7 +227,7 @@ int Acclaim::AnalysisCuts::IsGood::apply(const AnitaEventSummary* sum, AnitaPol:
   // here we handle the fact that the QualityCut, which sets this flag during reconstruction,
   // also check the clock channel, which is empty for MC generated events.
   // The num points quality cut is encoded as isVarner2, so we skip that check for the MC case.
-  bool isGood = sum->mc.weight > 0 ? sum->flags.isVarner == 0 && sum->flags.isPayloadBlast == 0 : sum->flags.isGood == 1;
+  bool isGood = sum->mc.weight > 0 ? (sum->flags.isVarner == 0 && sum->flags.isPayloadBlast == 0) : sum->flags.isGood == 1;
   return isGood;
 }
 
@@ -493,6 +493,7 @@ int Acclaim::AnalysisCuts::IsNotNorth::apply(const AnitaEventSummary* sum, Anita
  */
 int Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);
+  // std::cerr << pol << "\t" << peakInd << "\t" << sum->deconvolved_filtered[pol][peakInd].peakHilbert << "\t" << sum->coherent_filtered[pol][peakInd].peakHilbert << std::endl;
   return (sum->deconvolved_filtered[pol][peakInd].peakHilbert > sum->coherent_filtered[pol][peakInd].peakHilbert);
 }
 
@@ -545,5 +546,6 @@ int Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion::apply(
 
 int Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
   handleDefaults(sum, pol, peakInd);
+  // std::cout << sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() << "\t" << fThreshold << std::endl;
   return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < fThreshold);
 }
