@@ -10,6 +10,10 @@
 #include "TGraphAntarctica.h"
 #include "TH2DAntarctica.h"
 
+ClassImp(Acclaim::Clustering::Event);
+ClassImp(Acclaim::Clustering::McEvent);
+ClassImp(Acclaim::Clustering::Cluster);
+
 const int nDim = 3;
 
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
