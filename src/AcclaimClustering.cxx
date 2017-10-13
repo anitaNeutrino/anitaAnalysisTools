@@ -100,10 +100,6 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
 
-  maxRetestClusterSize = 10;
-  numIsolatedSmallClusters.resize(maxRetestClusterSize, 0);
-  numIsolatedSmallBaseClusters.resize(maxRetestClusterSize, 0);
-
   llCut = 250;
   maxDistCluster = 800e3; // try 800km
   numCallsToRecursive = 0;
@@ -323,11 +319,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 				    cluster.longitude, cluster.altitude);
     clusters.push_back(cluster);
     
-    numClusters = (Int_t) clusters.size();
-
     const int isMC = 0;
     for(int i=0; i < (Int_t) events.size(); i++){
-      assignSingleEventToCloserCluster(i, isMC, numClusters-1);
+      assignSingleEventToCloserCluster(i, isMC, clusters.size()-1);
     }
 
     const int numDataEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
@@ -355,13 +349,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
 void Acclaim::Clustering::LogLikelihoodMethod::findClosestEventToClustersOfSizeOne(){
 
-  for(int i=0; i < maxRetestClusterSize; i++){
-    numIsolatedSmallClusters.at(i) = 0;
-    numIsolatedSmallBaseClusters.at(i) = 0;
-  }
-
   // loop through clusters and find the small ones
-  for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
+  for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
+    const Int_t maxRetestClusterSize = 10; ///@todo review this function
     if(clusters.at(clusterInd).numDataEvents > 0 && clusters.at(clusterInd).numDataEvents <= maxRetestClusterSize){
 
 
@@ -414,23 +404,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::findClosestEventToClustersOfSizeO
       // else{
       // 	std::cout << "don't reassign " << clusterInd << "\t" << cluster.numDataEvents << std::endl;
       // }
-    }
-  }
-
-  const int numBases = BaseList::getNumBases();
-  for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
-    if(clusters.at(clusterInd).numDataEvents > 0 &&
-       clusters.at(clusterInd).numDataEvents <= maxRetestClusterSize){
-
-      if(clusterInd < numBases){
-	// if(clusters.at(clusterInd).numDataEvents==1){
-	//   std::cout << clusterInd << "\t" << clusters.at(clusterInd).numDataEvents  << std::endl;
-	// }
-	numIsolatedSmallBaseClusters.at(clusters.at(clusterInd).numDataEvents-1)++;
-      }
-      else{
-	numIsolatedSmallClusters.at(clusters.at(clusterInd).numDataEvents-1)++;
-      }
     }
   }
 }
@@ -500,7 +473,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcEventsToClusters(){
     }
     p.inc(j, nMc);
   }
-  numMcIsolatedSinglets = numSinglets;
 }
 
 
@@ -511,9 +483,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcEventsToClusters(){
 
 
 
-size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
-// size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(Adu5Pat* pat, Double_t latitude, Double_t longitude, Double_t altitude, Int_t run, UInt_t eventNumber, Double_t thetaDeg, Double_t phiDeg, Double_t sigmaThetasDeg, Double_t sigmaPhiDeg, AnitaPol::AnitaPol_t pol, Double_t weight, Double_t energy){
-  
+size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){  
 
   mcEvents.push_back(McEvent(sum,  pol, peakInd));
 
@@ -540,22 +510,20 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummar
 
 void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
   std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning events to closest cluster!" << std::endl;
-  ProgressBar p(numClusters);
+  ProgressBar p(clusters.size());
   const int isMC = 0;
-
-  
-  for(Long64_t clusterInd=0; clusterInd < numClusters; clusterInd++){
+  for(Long64_t clusterInd=0; clusterInd < (Long64_t)clusters.size(); clusterInd++){
     for(int i=0; i < (int) events.size(); i++){
       assignSingleEventToCloserCluster(i, isMC, clusterInd);
     }
-    p.inc(clusterInd, numClusters);
+    p.inc(clusterInd, clusters.size());
   }
 
   
-  hBaseClusteredEvents.resize(numClusters, NULL);
-  grBaseClusterCenters.resize(numClusters, NULL);
+  hBaseClusteredEvents.resize(clusters.size(), NULL);
+  grBaseClusterCenters.resize(clusters.size(), NULL);
 
-  for(Long64_t clusterInd=0; clusterInd < numClusters; clusterInd++){
+  for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
     if(clusters.at(clusterInd).numDataEvents > 0){
       TString name = TString::Format("hBaseClusteredEvents%d", (int)clusterInd);
       TH2DAntarctica* h = new TH2DAntarctica(name, name);
@@ -577,16 +545,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::initializeEmptyBaseList(){
-  numClusters=0;
   BaseList::makeEmptyBaseList();
 }
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 
-  numClusters = (int) BaseList::getNumBases();
   std::cout << "Info in " << __PRETTY_FUNCTION__ << ": Initializing base list..." << std::endl;
-  for(int clusterInd=0; clusterInd < numClusters; clusterInd++){
+  for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
     const BaseList::base& base = BaseList::getBase(clusterInd);
     clusters.push_back(Cluster(base));
   }
@@ -615,8 +581,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
     clusters.pop_back();
   }
   
-  numClusters = clusters.size();
-  for(int clusterInd=0; clusterInd < (int) numClusters; clusterInd++){
+  for(int clusterInd=0; clusterInd < (int) clusters.size(); clusterInd++){
     clusters.at(clusterInd).numDataEvents = 0;
   }
   doneBaseClusterAssignment = false;
@@ -658,7 +623,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
 TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTGraph(Int_t clusterInd){
 
   TGraphAntarctica* gr = NULL;
-  if(clusterInd >= 0 && clusterInd < numClusters){
+  if(clusterInd >= 0 && clusterInd < (Int_t)clusters.size()){
 
     TString name  = TString::Format("grCluster%d", clusterInd);
     TString title  = TString::Format("Cluster %d; Easting (m); Northing (m)", clusterInd);
