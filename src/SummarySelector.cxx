@@ -6,7 +6,31 @@
 #include <TStyle.h>
 #include "TCanvas.h"
 
-ClassImp(Acclaim::SummarySelector)
+ClassImp(Acclaim::SummarySelector);
+
+
+/** 
+ * Default constructor
+ * 
+ * @param tree Default parameter which is not used, for backward compatilbility reasons
+ * @param sumBranchName the name of the branch of AnitaEventSummaries, default is "sum"
+ */
+Acclaim::SummarySelector::SummarySelector(TTree* tree, const char* sumBranchName)
+: fReader(), fChain(NULL), fSumReaderValue({fReader, sumBranchName}),
+  fSum(NULL), fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false) {
+  (void) tree;
+}
+
+
+
+/** 
+ * Destructor
+ */
+Acclaim::SummarySelector::~SummarySelector()
+{
+}
+
+
 
 /** 
  * The Init() function is called when the selector needs to initialize
@@ -36,8 +60,7 @@ Bool_t Acclaim::SummarySelector::Notify()
  */
 void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
 {
-  // Info(__PRETTY_FUNCTION__, "here");
-  TString option = GetOption();
+  // TString option = GetOption();
 }
 
 
@@ -48,11 +71,11 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
  */
 void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 {
-  TString option = GetOption();
+  // TString option = GetOption();
 
-  if(fDoDemoHist){
-    fDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
-    fOutput->Add(fDemoHist);
+  if(fDoSummarySelectorDemoHist){
+    fSummarySelectorDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
+    fOutput->Add(fSummarySelectorDemoHist);
   }
 }
 
@@ -82,8 +105,8 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
   fReader.SetLocalEntry(entry);
   fSum = fSumReaderValue.Get();
 
-  if(fDemoHist){
-    fDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
+  if(fSummarySelectorDemoHist){
+    fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
   }
   return kTRUE;
 }
@@ -108,11 +131,11 @@ void Acclaim::SummarySelector::SlaveTerminate()
 void Acclaim::SummarySelector::Terminate()
 {
 
-  if(fDoDemoHist){
+  if(fDoSummarySelectorDemoHist){
     TCanvas *c1 = new TCanvas("c1","Proof ProofEvent canvas",200,10,700,700);
-    fDemoHist = dynamic_cast<TH1D *>(fOutput->FindObject("fDemoHist"));  
-    if (fDemoHist) {
-      fDemoHist->Draw("h");
+    fSummarySelectorDemoHist = dynamic_cast<TH1D *>(fOutput->FindObject("fSummarySelectorDemoHist"));  
+    if (fSummarySelectorDemoHist) {
+      fSummarySelectorDemoHist->Draw("h");
 
       // Final update
       c1->cd();

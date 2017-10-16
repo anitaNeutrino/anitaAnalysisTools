@@ -56,33 +56,54 @@ namespace Acclaim {
    * Acclaim::SummarySet::Process(&SummarySelector).
    * Make sure to set SummarySet::SetUseProof(true) to get the full multithreaded PROOF goodness.
    */
-
   class SummarySelector : public TSelector {
   public :
-    TTreeReader     fReader;					/// The tree reader
-    TTree          *fChain = 0;					/// The analyzed TTree or TChain
-    TTreeReaderValue<AnitaEventSummary> fSumReaderValue;	///The TTree reader value
-    AnitaEventSummary* fSum;					/// Summary loaded with tree entry by GetEntry(entry)
-    TH1D* fDemoHist;
-    bool fDoDemoHist;
-  
-    SummarySelector(TTree * /*tree*/ =0, const char* sumBranchName = "sum")
-      : fSumReaderValue({fReader, sumBranchName}), fDemoHist(NULL), fDoDemoHist(false) { ;}
+
+    /** Useful in derived classes */
+    TTreeReader				 fReader;			/// The tree reader
+    TTree*				 fChain;			/// The analyzed TTree or TChain
+    TTreeReaderValue<AnitaEventSummary>	 fSumReaderValue;		/// The TTree reader value
+    AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
+
+    /** For demonstration */
+    TH1D*				 fSummarySelectorDemoHist;	/// A histogram of peak[1][0].value
+    bool				 fDoSummarySelectorDemoHist;	/// Set this to true to generate and fill fSummarySelectorDemoHist
+
+    SummarySelector(TTree* t=0, const char* sumBranchName = "sum");
+    virtual ~SummarySelector();
     
-    virtual ~SummarySelector() { }
-    virtual Int_t   Version() const { return 2; }
-    virtual void    Begin(TTree *tree);
-    virtual void    SlaveBegin(TTree *tree);
-    virtual void    Init(TTree *tree);
-    virtual Bool_t  Notify();
-    virtual Bool_t  Process(Long64_t entry);
-    virtual Int_t   GetEntry(Long64_t entry, Int_t getall = 0) { return fChain ? fChain->GetTree()->GetEntry(entry, getall) : 0; }
-    virtual void    SetOption(const char *option) { fOption = option; }
-    virtual void    SetObject(TObject *obj) { fObject = obj; }
-    virtual void    SetInputList(TList *input) { fInput = input; }
-    virtual TList*  GetOutputList() const { return fOutput; }
-    virtual void    SlaveTerminate();
-    virtual void    Terminate();
+    virtual void   Begin(TTree *tree);
+    virtual void   SlaveBegin(TTree *tree);
+    virtual void   Init(TTree *tree);
+    virtual Bool_t Notify();
+    virtual Bool_t Process(Long64_t entry);
+    virtual void   SlaveTerminate();
+    virtual void   Terminate();
+    
+    virtual Int_t  Version() const					/// From ROOT
+    {
+      return 2;
+    } 
+    virtual Int_t  GetEntry(Long64_t entry, Int_t getall = 0)		/// From ROOT, Gets the local tree entry
+    { 
+      return fChain ? fChain->GetTree()->GetEntry(entry, getall) : 0;
+    } 
+    virtual void   SetOption(const char *option)			/// From ROOT, set the option
+    {
+      fOption = option;
+    } 
+    virtual void   SetObject(TObject *obj)				/// Set the current object, not sure what this does
+    {
+      fObject = obj;
+    }
+    virtual void   SetInputList(TList *input)				/// Set the input list, not sure what this does
+    {
+      fInput = input;
+    }
+    virtual TList* GetOutputList() const				/// Used to combine the objects
+    {
+      return fOutput;
+    }
 
     ClassDef(SummarySelector,0);
 
