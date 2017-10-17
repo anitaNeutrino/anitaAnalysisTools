@@ -22,17 +22,16 @@ void Acclaim::SumTreeReductionSelector::Begin(TTree* ){
 void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* ){
 
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
-  fReducedSumTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fReducedSumTreeName")));		   
+  fReducedSumTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fReducedSumTreeName")));
   
   // https://root-forum.cern.ch/t/proof-tree-merging/8097/2
-  // https://root.cern.ch/handling-large-outputs-root-files  
+  // https://root.cern.ch/handling-large-outputs-root-files
   fProofOutFile = new TProofOutputFile(fOutFileName.GetTitle(), TProofOutputFile::kMerge);
   GetOutputList()->Add(fProofOutFile);
 
   fOut = fProofOutFile->OpenFile("recreate");
   fOutTree = new TTree("sumTree", "sumTree");
   fOutTree->Branch("sum", &fOutSum);
-
 }
 
 
@@ -59,11 +58,13 @@ void Acclaim::SumTreeReductionSelector::Terminate(){
   fProofOutFile = dynamic_cast<TProofOutputFile*>(l->FindObject(fOutFileName.GetTitle()));
   if(fProofOutFile){
     TFile* f = fProofOutFile->OpenFile("read");
-    TTree* t = dynamic_cast<TTree*>(f->Get("sumTree"));
+    TTree* t = dynamic_cast<TTree*>(f->Get(fReducedSumTreeName.GetTitle()));
     if(t){
-      std::cout << "The tree has " << t->GetEntries() << " entries" << std::endl;
-      t->Scan("eventNumber:run:sum.trainingPeak().value");
+      std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
+		<< t->GetEntries() << " entries..." << std::endl;
+      t->Print();
     }
+    f->Close();
     // write to file, maybe...
   }
 }
