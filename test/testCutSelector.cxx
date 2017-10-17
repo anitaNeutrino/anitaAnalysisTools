@@ -26,8 +26,7 @@ int main(int argc, char* argv[]){
   fs.push_back("sum.trainingPeak().value");
   cts.setFormulaStrings(fs);
 
-  std::vector<const AnalysisCuts::AnalysisCut*> es(1, &AnalysisCuts::isAboveHorizontal);
-  cts.setEventSelection(es);
+  cts.addEventSelectionCut(&AnalysisCuts::isAboveHorizontal);
   
   ss.Process(&cts);
 

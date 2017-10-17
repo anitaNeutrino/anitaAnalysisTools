@@ -1,7 +1,5 @@
 #include "SummarySelector.h"
 
-#if ROOT_VERSION_CODE >= SUMMARY_SELECTOR_MIN_ROOT_VERSION
-
 #include <TH2.h>
 #include <TStyle.h>
 #include "TCanvas.h"
@@ -17,7 +15,13 @@ ClassImp(Acclaim::SummarySelector);
  * @param sumBranchName the name of the branch of AnitaEventSummaries, default is "sum"
  */
 Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
-: fReader(), fChain(NULL), fSumReaderValue({fReader, sumBranchName}),
+: fChain(NULL),
+#if USE_TTREE_READER
+  fReader(), fSumReaderValue({fReader, sumBranchName}),
+#else
+  fSumBranchName(sumBranchName),
+  fSumBranch(NULL),
+#endif
   fSum(NULL), fEventSelection(new TList), fSummarySelectorDemoHist(NULL),
   fDoSummarySelectorDemoHist(false) {
 
@@ -36,18 +40,14 @@ Acclaim::SummarySelector::~SummarySelector()
 
 
 
-void  Acclaim::SummarySelector::setEventSelection(const std::vector<const AnalysisCuts::AnalysisCut*>& eventSelection)
+/** 
+ * Add an analysis cut to fEventSelection, takes care of const casting
+ * 
+ * @param analysisCut 
+ */
+void  Acclaim::SummarySelector::addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut)
 {
-
-  fEventSelection->Clear();
-
-
-  // const TList?
-  std::vector<const AnalysisCuts::AnalysisCut*>::const_iterator it = eventSelection.begin();
-  for(; it != eventSelection.end(); ++it){
-    AnalysisCuts::AnalysisCut* c = const_cast<AnalysisCuts::AnalysisCut*>(*it);
-    fEventSelection->Add(c);
-  }
+  fEventSelection->Add(const_cast<AnalysisCuts::AnalysisCut*>(analysisCut));
 }
 
 
@@ -65,7 +65,12 @@ void  Acclaim::SummarySelector::setEventSelection(const std::vector<const Analys
  */
 void Acclaim::SummarySelector::Init(TTree *tree)
 {
+#ifdef USE_TTREE_READER  
   fReader.SetTree(tree);
+#else
+  fChain = tree;
+  fChain->SetBranchAddress(fSumBranchName, &fSum, &fSumBranch);
+#endif
 }
 
 
@@ -129,9 +134,12 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
  */
 Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 {
-
+#ifdef USE_TTREE_READER
   fReader.SetLocalEntry(entry);
   fSum = fSumReaderValue.Get();
+#else
+  fChain->GetEntry(entry);
+#endif  
 
   if(fSummarySelectorDemoHist){
     fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
@@ -191,5 +199,3 @@ void Acclaim::SummarySelector::Terminate()
     }
   }  
 }
-
-#endif

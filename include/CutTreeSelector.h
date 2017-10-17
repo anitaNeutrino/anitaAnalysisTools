@@ -31,15 +31,11 @@ namespace Acclaim {
     std::vector<Int_t> fFormulaReturnTypes;			/// Return type of the trees
     std::vector<Float_t> fFloatVals;				/// Where the formula results are written in the case of a float-like variable
     std::vector<Int_t> fIntVals;				/// Where the formula results are written in the case of a int-like variable
-    std::vector<AnalysisCuts::AnalysisCut*> fEventSelection;	/// Event selection in the form of analysis cuts, not yet implemented
     TList* fFormulaStrings;					/// Internal storage of formula strings, set these with setFormulaStrings()
     TList* fFormulas;						/// List of TTreeFormulas created from fFormulaStrings
 
 
     CutTreeSelector(const char* outFileName="CutTreeSelector.root", const char* reducedSumTreeName = "cutTree");
-    void setAnalysisCuts(const std::vector<AnalysisCuts::AnalysisCut*>& selection){ /// Not yet implemented
-      fEventSelection = selection;
-    }
     void setFormulaStrings(const std::vector<const char*>& formulaStrings);
 
     virtual void   Begin(TTree *tree);

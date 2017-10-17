@@ -2,39 +2,28 @@
 #define SummarySelector_h
 
 #include <TSelector.h>
-
-// For now, is approximate
-#define SUMMARY_SELECTOR_MIN_ROOT_VERSION ROOT_VERSION(6,0,0)
-
-#if ROOT_VERSION_CODE < SUMMARY_SELECTOR_MIN_ROOT_VERSION
-#include <iostream>
-
-namespace Acclaim{
-  class SummarySelector : public TSelector {
-  public:
-    SummarySelector(){
-      std::cerr << "Use of summary selector requires ROOT version at least " << SUMMARY_SELECTOR_MIN_ROOT_VERSION << std::endl;
-    }
-  };
-}
-
-#else
-
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
+#include "AnitaEventSummary.h"
+#include "AnalysisCuts.h"
+
+// Use the TTree reader?
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
+#define USE_TTREE_READER
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
-#include "AnitaEventSummary.h"
+#endif
 
 class TH1D;
+class TBranch;
 
 namespace Acclaim {
 
-  namespace AnalysisCuts {
-    class AnalysisCut;
-  }
+  // namespace AnalysisCuts {
+  //   class AnalysisCut;
+  // }
 
   /**
    * @class SummarySelector
@@ -64,9 +53,14 @@ namespace Acclaim {
   public :
 
     /** Useful in derived classes */
-    TTreeReader				 fReader;			/// The tree reader
     TTree*				 fChain;			/// The analyzed TTree or TChain
+#if USE_TTREE_READER
+    TTreeReader				 fReader;			/// The tree reader
     TTreeReaderValue<AnitaEventSummary>	 fSumReaderValue;		/// The TTree reader value
+#else
+    TString fSumBranchName;
+    TBranch* fSumBranch; //!
+#endif
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
     TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
 
@@ -77,7 +71,7 @@ namespace Acclaim {
     SummarySelector(const char* sumBranchName = "sum");
     virtual ~SummarySelector();
 
-    void setEventSelection(const std::vector<const AnalysisCuts::AnalysisCut*>& eventSelection);
+    void addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut);
     
     virtual void   Begin(TTree *tree);
     virtual void   SlaveBegin(TTree *tree);
@@ -118,5 +112,4 @@ namespace Acclaim {
 
 }
 
-#endif
 #endif
