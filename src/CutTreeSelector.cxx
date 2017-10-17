@@ -56,7 +56,8 @@ void  Acclaim::CutTreeSelector::setFormulaStrings(const std::vector<const char*>
 /**
  * Add input here, the slave processes can only access things in fInput
  */
-void Acclaim::CutTreeSelector::Begin(TTree* ){
+void Acclaim::CutTreeSelector::Begin(TTree* tree){
+  SummarySelector::Begin(tree); // get the selection into memory also!
   fInput->Add(&fOutFileName);
   fInput->Add(&fTreeName);
   fInput->Add(fFormulaStrings);
@@ -66,7 +67,9 @@ void Acclaim::CutTreeSelector::Begin(TTree* ){
 /**
  * Called by all slave processes. Read fInput here, init fOutput here
  */
-void Acclaim::CutTreeSelector::SlaveBegin(TTree* ){
+void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
+
+  SummarySelector::SlaveBegin(tree);
 
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
   fTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fTreeName")));
@@ -155,7 +158,6 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
       }
       i++;
     }
-
     fOutTree->Fill();
   }
 

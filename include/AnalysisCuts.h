@@ -53,12 +53,14 @@ namespace Acclaim
     class AnalysisCut : public TNamed {
     public:
 
-      AnalysisCut(const char* name, const char* title, int numApplyRetVals=2);
+      AnalysisCut(const char* name="AnalysisCut", const char* title="AnalysisCut", int numApplyRetVals=2);
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const = 0; // to be overloaded with actual cut
       inline int getMaximumReturnValue() const {return fMaxRetVal;}
     protected:
       void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd) const;
       int fMaxRetVal;
+
+      ClassDef(AnalysisCut, 0);
     };
 
     /**
@@ -71,6 +73,7 @@ namespace Acclaim
     public:
       IsAboveHorizontal() : AnalysisCut("isAboveHorizontal", "Above Horizontal") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsAboveHorizontal, 0);
     };
 
 
@@ -84,6 +87,7 @@ namespace Acclaim
     public:
       IsTaggedAsWaisPulser() : AnalysisCut("isTaggedAsWaisPulser", "Tagged As WAIS Pulser") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsTaggedAsWaisPulser, 0);
     };
 
 
@@ -97,6 +101,7 @@ namespace Acclaim
     public:
       IsTaggedAsLDBPulser() : AnalysisCut("isTaggedAsLDBPulser", "Tagged As LDB Pulser") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsTaggedAsLDBPulser, 0);
     };
 
 
@@ -111,6 +116,7 @@ namespace Acclaim
     public:
       HigherPol() : AnalysisCut("higherPol", "Polarization", AnitaPol::kNotAPol) {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns 0 for HPol, 1 for VPol
+      ClassDef(HigherPol, 0);
     };
 
     /**
@@ -122,6 +128,7 @@ namespace Acclaim
     public:
       HasSourceLocation() : AnalysisCut("hasSourceLocation", "Has Source Location") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(HasSourceLocation, 0);
     };
 
 
@@ -134,6 +141,7 @@ namespace Acclaim
     public:
       IsOnContinent() : AnalysisCut("IsOnContinent", "Reconstructs to Land") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsOnContinent, 0);
     };
 
 
@@ -146,6 +154,7 @@ namespace Acclaim
     public:
       IsTaggedAsPayloadBlast() : AnalysisCut("isTaggedAsPayloadBlast", "Tagged as Payload Blast") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsTaggedAsPayloadBlast, 0);
     };
 
 
@@ -157,6 +166,7 @@ namespace Acclaim
     public:
       IsWithin20DegreesOfSunInPhi() : AnalysisCut("isWithin20DegreesOfSunInPhi", "|#delta#phi_{sun}| < 20") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsWithin20DegreesOfSunInPhi, 0);
     };
 
     /**
@@ -167,6 +177,7 @@ namespace Acclaim
     public:
       IsGood() : AnalysisCut("isGood", "Is Good") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsGood, 0);
     };
 
 
@@ -178,6 +189,7 @@ namespace Acclaim
     public:
       GoodGPS() : AnalysisCut("goodGPS", "Good GPS") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(GoodGPS, 0);
     };
 
 
@@ -189,6 +201,7 @@ namespace Acclaim
     public:
       NonZeroStokesI() : AnalysisCut("nonZeroStokesI", "Non-zero Stokes I") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(NonZeroStokesI, 0);
     };
 
     /**
@@ -199,6 +212,7 @@ namespace Acclaim
     public:
       RealSNR() : AnalysisCut("realSNR", "Non-NaN SNR") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(RealSNR, 0);
     };
 
     /**
@@ -209,6 +223,7 @@ namespace Acclaim
     public:
       Anita3QuietTime() : AnalysisCut("quietTime", "Quiet Time") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(Anita3QuietTime, 0);
     };
 
     /**
@@ -219,6 +234,7 @@ namespace Acclaim
     public:
       CloseToMC() : AnalysisCut("closeToMC", "Near MC") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(CloseToMC, 0);
     };
 
     class CloseToWais : public AnalysisCut{
@@ -234,7 +250,8 @@ namespace Acclaim
     class IsRfTrigger : public AnalysisCut{
     public:
       IsRfTrigger() : AnalysisCut("isRfTrigger", "RF trigger") {;}
-      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol
+      ClassDef(IsRfTrigger, 0);
     };
 
     /**
@@ -244,7 +261,8 @@ namespace Acclaim
     class SmallDeltaRough : public AnalysisCut{
     public:
       SmallDeltaRough() : AnalysisCut("smallDeltaRough", "Small angle between coarse/fine maps") {;}
-      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol
+      ClassDef(SmallDeltaRough, 0);
     };
 
 
@@ -255,7 +273,8 @@ namespace Acclaim
     class IsNotTaggedAsPulser : public AnalysisCut{
     public:
       IsNotTaggedAsPulser() : AnalysisCut("isNotTaggedAsPulser", "Not pulser") {;}
-      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol
+      ClassDef(IsNotTaggedAsPulser, 0);
     };
 
     /**
@@ -265,7 +284,8 @@ namespace Acclaim
     class SignalLikeFirstStandardizedPeakMoments : public AnalysisCut{
     public:
       SignalLikeFirstStandardizedPeakMoments() : AnalysisCut("signalLikeFirstStandardizedPeakMoments", "Signal-like first standardized peak moments") {;}
-      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol 
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns the peakIndex + 1 if VPol
+      ClassDef(SignalLikeFirstStandardizedPeakMoments, 0);
     };
 
     /**
@@ -276,6 +296,7 @@ namespace Acclaim
     public:
       PassesThesisCuts() : AnalysisCut("passesThesisCuts", "Passes thesis thermal cut") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// true/false
+      ClassDef(PassesThesisCuts, 0);
     };
 
     /**
@@ -286,6 +307,7 @@ namespace Acclaim
     public:
       IsNotNorth() : AnalysisCut("isNotNorth", "Is Not North") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// true/false
+      ClassDef(IsNotNorth, 0);
     };
 
 
@@ -297,6 +319,7 @@ namespace Acclaim
     public:
       HigherPeakHilbertAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Hilbert peak is higher after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+      ClassDef(HigherPeakHilbertAfterDedispersion, 0);
     };
 
 
@@ -308,6 +331,7 @@ namespace Acclaim
     public:
       HigherImpulsivityMeasureAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "ImpulsivityMeasure is higher after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+      ClassDef(HigherImpulsivityMeasureAfterDedispersion, 0);
     };
 
 
@@ -319,6 +343,7 @@ namespace Acclaim
     public:
       LowerFracPowerWindowGradientAfterDedispersion() : AnalysisCut("HigherPeakHilbertAfterDedispersion", "Lower fracPowerWindowGradient after dedispersion") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+      ClassDef(LowerFracPowerWindowGradientAfterDedispersion, 0);
     };
 
 
@@ -336,11 +361,13 @@ namespace Acclaim
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
     private:
       const Double_t fThreshold;
+      ClassDef(DedispersedFracPowerWindowGradientBelowThreshold, 0);      
     };
 
 
     const IsAboveHorizontal isAboveHorizontal;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
+    const IsTaggedAsLDBPulser isTaggedAsLdbPulser;
     const HigherPol higherPol;
     const HasSourceLocation hasSourceLocation;
     const IsOnContinent isOnContinent;
@@ -362,8 +389,6 @@ namespace Acclaim
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
-
-
     const DedispersedFracPowerWindowGradientBelowThreshold dedispersedFracPowerWindowGradientBelowThreshold;
   }
 }

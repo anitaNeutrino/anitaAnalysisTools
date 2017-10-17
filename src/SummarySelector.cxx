@@ -101,7 +101,7 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
  */
 void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 {
-  fEventSelection = dynamic_cast<TList*>(fInput->FindObject("fEventSelection")); 
+  fEventSelection = dynamic_cast<TList*>(fInput->FindObject("fEventSelection"));
 
   if(fDoSummarySelectorDemoHist){
     fSummarySelectorDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
@@ -141,23 +141,21 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
   fChain->GetEntry(entry);
 #endif  
 
-  if(fSummarySelectorDemoHist){
-    fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
-  }
 
   Bool_t matchesSelection = true;
   TIter next(fEventSelection);
   while (TObject* obj = next()){
     const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
-
     Int_t retVal = eventSelection->apply(fSum);
     matchesSelection = matchesSelection && retVal > 0;
-
     if(!matchesSelection){
       break;
-    }    
+    }
   }
-  
+
+  if(matchesSelection && fSummarySelectorDemoHist){
+    fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
+  }
   return matchesSelection;
 }
 

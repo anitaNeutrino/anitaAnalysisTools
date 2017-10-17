@@ -3,6 +3,34 @@
 #include "RampdemReader.h"
 #include "TMath.h"
 
+ClassImp(Acclaim::AnalysisCuts::AnalysisCut);
+ClassImp(Acclaim::AnalysisCuts::IsAboveHorizontal);
+ClassImp(Acclaim::AnalysisCuts::IsTaggedAsWaisPulser);
+ClassImp(Acclaim::AnalysisCuts::IsTaggedAsLDBPulser);
+ClassImp(Acclaim::AnalysisCuts::HigherPol);
+ClassImp(Acclaim::AnalysisCuts::HasSourceLocation);
+ClassImp(Acclaim::AnalysisCuts::IsOnContinent);
+ClassImp(Acclaim::AnalysisCuts::IsTaggedAsPayloadBlast);
+ClassImp(Acclaim::AnalysisCuts::IsWithin20DegreesOfSunInPhi);
+ClassImp(Acclaim::AnalysisCuts::IsGood);
+ClassImp(Acclaim::AnalysisCuts::GoodGPS);
+ClassImp(Acclaim::AnalysisCuts::NonZeroStokesI);
+ClassImp(Acclaim::AnalysisCuts::RealSNR);
+ClassImp(Acclaim::AnalysisCuts::Anita3QuietTime);
+ClassImp(Acclaim::AnalysisCuts::CloseToMC);
+ClassImp(Acclaim::AnalysisCuts::CloseToWais);
+ClassImp(Acclaim::AnalysisCuts::IsRfTrigger);
+ClassImp(Acclaim::AnalysisCuts::SmallDeltaRough);
+ClassImp(Acclaim::AnalysisCuts::IsNotTaggedAsPulser);
+ClassImp(Acclaim::AnalysisCuts::SignalLikeFirstStandardizedPeakMoments);
+ClassImp(Acclaim::AnalysisCuts::PassesThesisCuts);
+ClassImp(Acclaim::AnalysisCuts::IsNotNorth);
+ClassImp(Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion);
+ClassImp(Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion);
+ClassImp(Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion);
+ClassImp(Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold);
+
+
 
 static Acclaim::AnalysisCuts::Mode mode = Acclaim::AnalysisCuts::kTraining; /// Determines the behaviour of AnalysisCut::handleDefaults
 
