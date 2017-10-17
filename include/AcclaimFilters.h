@@ -67,7 +67,7 @@ namespace Acclaim
       TString fTag, fDescription, fOutputName;
       Double_t fLowEdgeGHz, fHighEdgeGHz;
       mutable Double_t fPowerRemovedByNotch[AnitaPol::kNotAPol][NUM_SEAVEYS];
-      virtual void processOne(AnalysisWaveform * g);
+      virtual void processOne(AnalysisWaveform * g, const RawAnitaHeader * header = 0, int ant = 0, int pol = 0);
   
     public:
       Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz);
