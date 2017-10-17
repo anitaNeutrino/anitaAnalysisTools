@@ -588,7 +588,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
                                               10 , 12 , 14 , 16 , 18 , 20 , 40 , 60 , 80 , 100};
 
     for(int orderInd=0; orderInd < numCutOrders; orderInd++){
-      TString cutName = signalSelection[i]->getName();
+      TString cutName = signalSelection[i]->GetName();
       
       TString orderName;
       switch(orderInd){

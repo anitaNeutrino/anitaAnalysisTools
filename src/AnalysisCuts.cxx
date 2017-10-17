@@ -66,7 +66,7 @@ bool portable_isinf(double x){
  * @param mrv is the maximum value it is possible for apply() to return
  */
 Acclaim::AnalysisCuts::AnalysisCut::AnalysisCut(const char* name, const char* title, int mrv)
-    : fName(name), fTitle(title), fMaxRetVal(mrv)
+    : TNamed(name ,title), fMaxRetVal(mrv)
 {
   // just assign name, title, and maximum return value
 }

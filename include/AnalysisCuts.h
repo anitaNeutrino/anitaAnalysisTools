@@ -50,18 +50,14 @@ namespace Acclaim
      * 
      * @todo Make this inherit from TCut, and have the functionality match apply() somehow.
      */
-    class AnalysisCut {
+    class AnalysisCut : public TNamed {
     public:
 
       AnalysisCut(const char* name, const char* title, int numApplyRetVals=2);
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const = 0; // to be overloaded with actual cut
       inline int getMaximumReturnValue() const {return fMaxRetVal;}
-      inline const char* getName() const {return fName.Data();}
-      inline const char* getTitle() const {return fTitle.Data();}
     protected:
       void handleDefaults(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t& pol, Int_t& peakInd) const;
-      TString fName;
-      TString fTitle;
       int fMaxRetVal;
     };
 

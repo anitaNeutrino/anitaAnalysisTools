@@ -78,8 +78,8 @@ Acclaim::AnalysisPlot::~AnalysisPlot(){
 size_t Acclaim::AnalysisPlot::addCut(const AnalysisCuts::AnalysisCut* cut){
 
   const int nRetVals = cut->getMaximumReturnValue();
-  const char* nameStr = cut->getName();
-  const char* titleStr = cut->getTitle();
+  const char* nameStr = cut->GetName();
+  const char* titleStr = cut->GetTitle();
 
   // if we haven't allocated any histograms yes
   if(hs.size()==0){
@@ -155,7 +155,7 @@ int Acclaim::AnalysisPlot::getIndexFromCuts(const AnitaEventSummary* sum){
     if(cutResult < 0 || cutResult >= analysisCuts.at(i)->getMaximumReturnValue()){
       std::cerr << "Error in " << __PRETTY_FUNCTION__
                 << ", unexpected return value from AnalysisCut function "
-                << analysisCuts.at(i)->getName() << ". Setting AnalysisCut return to 0."
+                << analysisCuts.at(i)->GetName() << ". Setting AnalysisCut return to 0."
                 << std::endl;
       cutResult = 0;
     }
