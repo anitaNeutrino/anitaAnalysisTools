@@ -54,7 +54,7 @@ namespace Acclaim {
 
     /** Useful in derived classes */
     TTree*				 fChain;			/// The analyzed TTree or TChain
-#if USE_TTREE_READER
+#ifdef USE_TTREE_READER
     TTreeReader				 fReader;			/// The tree reader
     TTreeReaderValue<AnitaEventSummary>	 fSumReaderValue;		/// The TTree reader value
 #else

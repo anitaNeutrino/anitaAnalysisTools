@@ -16,7 +16,7 @@ ClassImp(Acclaim::SummarySelector);
  */
 Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
 : fChain(NULL),
-#if USE_TTREE_READER
+#ifdef USE_TTREE_READER
   fReader(), fSumReaderValue({fReader, sumBranchName}),
 #else
   fSumBranchName(sumBranchName),
