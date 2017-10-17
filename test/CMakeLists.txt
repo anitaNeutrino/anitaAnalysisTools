@@ -1,5 +1,5 @@
 
-set(BINARIES testAveragePowerSpectrum testFancyFFTs testFancyTTreeInterpolator testOutputConvention testProgressBar testCmdLineArgs)
+set(BINARIES testAveragePowerSpectrum testFancyFFTs testFancyTTreeInterpolator testOutputConvention testProgressBar testCmdLineArgs testCutSelector)
 
 
 foreach(binary ${BINARIES})

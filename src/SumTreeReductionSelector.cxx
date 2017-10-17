@@ -37,12 +37,12 @@ void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* ){
 
 Bool_t Acclaim::SumTreeReductionSelector::Process(Long64_t entry){
 
-  SummarySelector::Process(entry);
-  
-  *fOutSum = *fSum;
-  fOutTree->Fill();
-
-  return kTRUE;
+  Bool_t matchSelection = SummarySelector::Process(entry);
+  if(matchSelection){
+    *fOutSum = *fSum;
+    fOutTree->Fill();
+  }
+  return matchSelection;
 }
 
 void Acclaim::SumTreeReductionSelector::SlaveTerminate(){

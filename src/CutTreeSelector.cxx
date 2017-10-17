@@ -28,7 +28,7 @@ Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* t
  */
 Bool_t Acclaim::CutTreeSelector::Notify()
 {
-  fFormulas->Notify();
+  // fFormulas->Notify();
   return kTRUE;
 }
 
@@ -49,6 +49,7 @@ void  Acclaim::CutTreeSelector::setFormulaStrings(const std::vector<const char*>
   for(; it != formulaStrings.end(); ++it){
     fFormulaStrings->Add(new TObjString(*it));
   }
+  fFormulaStrings->SetOwner();
 }
 
 
@@ -79,11 +80,8 @@ void Acclaim::CutTreeSelector::SlaveBegin(TTree* ){
   fOut = fProofOutFile->OpenFile("recreate");
   fOutTree = new TTree(fTreeName.GetTitle(), fTreeName.GetTitle());
 
-  if(fFormulas){
-    fFormulas->Delete();
-    delete fFormulas;
-  }
   fFormulas = new TList();
+  fFormulas->SetOwner(true);
 
   const size_t nForm = fFormulaStrings->GetEntries();
   fIntVals.resize(nForm, 0);
@@ -103,6 +101,7 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
   SummarySelector::Init(tree);
 
   fFormulas->Delete();
+  fFormulas->SetOwner(true);
 
   const size_t nForm = fFormulaStrings->GetEntries();
   TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
@@ -142,17 +141,7 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
  */
 Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
 
-  SummarySelector::Process(entry);
-
-  Bool_t matchesSelection = true;
-  for(UInt_t i=0; i < fEventSelection.size(); i++){
-    Int_t retVal = fEventSelection[i]->apply(fSum);
-    matchesSelection = matchesSelection && retVal > 0;
-    if(!matchesSelection){
-      break;
-    }
-  }
-
+  Bool_t matchesSelection = SummarySelector::Process(entry);
   if(matchesSelection){
     int i=0;
     TIter next(fFormulas);
@@ -179,16 +168,15 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
  * Deallocate slave heap objects
  *
  */
-void Acclaim::CutTreeSelector::SlaveTerminate(){
+void Acclaim::CutTreeSelector::SlaveTerminate(){  
 
+  // fOutTree->Write();
+  // delete fOutTree;
+  // fOutTree = NULL;
+  
   fOut->Write();
   fOut->Close();
   fOut = NULL;
-  fOutTree = NULL; // should have been written to disk
-
-  fFormulaStrings->Delete();
-  delete fFormulaStrings;
-  fFormulaStrings = NULL;
 
   fFormulas->Delete();
   delete fFormulas;
@@ -205,16 +193,24 @@ void Acclaim::CutTreeSelector::SlaveTerminate(){
  */
 void Acclaim::CutTreeSelector::Terminate(){
 
-  TList* l = GetOutputList();
-  fProofOutFile = dynamic_cast<TProofOutputFile*>(l->FindObject(fOutFileName.GetTitle()));
+  fFormulaStrings->Delete();
+  delete fFormulaStrings;
+  fFormulaStrings = NULL;  
+
+  fProofOutFile = dynamic_cast<TProofOutputFile*>(fOutput->FindObject(fOutFileName.GetTitle()));
+  std::cout << fProofOutFile << std::endl;
   if(fProofOutFile){
     TFile* f = fProofOutFile->OpenFile("read");
-    TTree* t = dynamic_cast<TTree*>(f->Get(fTreeName.GetTitle()));
-    if(t){
-      std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
-		<< t->GetEntries() << " entries..." << std::endl;
-      t->Print();
+    std::cout << f << std::endl;    
+    if(f){
+      TTree* t = dynamic_cast<TTree*>(f->Get(fTreeName.GetTitle()));
+      std::cout << t << std::endl;          
+      if(t){
+	std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
+		  << t->GetEntries() << " entries..." << std::endl;
+	t->Print();
+      }
+      f->Close();
     }
-    f->Close();
   }
 }
