@@ -32,6 +32,10 @@ class TH1D;
 
 namespace Acclaim {
 
+  namespace AnalysisCuts {
+    class AnalysisCut;
+  }
+
   /**
    * @class SummarySelector
    * @brief Template TSelector to be inherited from, designed for use with SummarySet.
@@ -64,13 +68,16 @@ namespace Acclaim {
     TTree*				 fChain;			/// The analyzed TTree or TChain
     TTreeReaderValue<AnitaEventSummary>	 fSumReaderValue;		/// The TTree reader value
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
+    TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
 
     /** For demonstration */
     TH1D*				 fSummarySelectorDemoHist;	/// A histogram of peak[1][0].value
     bool				 fDoSummarySelectorDemoHist;	/// Set this to true to generate and fill fSummarySelectorDemoHist
 
-    SummarySelector(TTree* t=0, const char* sumBranchName = "sum");
+    SummarySelector(const char* sumBranchName = "sum");
     virtual ~SummarySelector();
+
+    void setEventSelection(const std::vector<const AnalysisCuts::AnalysisCut*>& eventSelection);
     
     virtual void   Begin(TTree *tree);
     virtual void   SlaveBegin(TTree *tree);

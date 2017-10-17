@@ -5,6 +5,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include "TCanvas.h"
+#include "AnalysisCuts.h"
 
 ClassImp(Acclaim::SummarySelector);
 
@@ -15,10 +16,12 @@ ClassImp(Acclaim::SummarySelector);
  * @param tree Default parameter which is not used, for backward compatilbility reasons
  * @param sumBranchName the name of the branch of AnitaEventSummaries, default is "sum"
  */
-Acclaim::SummarySelector::SummarySelector(TTree* tree, const char* sumBranchName)
+Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
 : fReader(), fChain(NULL), fSumReaderValue({fReader, sumBranchName}),
-  fSum(NULL), fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false) {
-  (void) tree;
+  fSum(NULL), fEventSelection(new TList), fSummarySelectorDemoHist(NULL),
+  fDoSummarySelectorDemoHist(false) {
+
+  fEventSelection->SetName("fEventSelection");
 }
 
 
@@ -28,7 +31,25 @@ Acclaim::SummarySelector::SummarySelector(TTree* tree, const char* sumBranchName
  */
 Acclaim::SummarySelector::~SummarySelector()
 {
+
 }
+
+
+
+void  Acclaim::SummarySelector::setEventSelection(const std::vector<const AnalysisCuts::AnalysisCut*>& eventSelection)
+{
+
+  fEventSelection->Clear();
+
+
+  // const TList?
+  std::vector<const AnalysisCuts::AnalysisCut*>::const_iterator it = eventSelection.begin();
+  for(; it != eventSelection.end(); ++it){
+    AnalysisCuts::AnalysisCut* c = const_cast<AnalysisCuts::AnalysisCut*>(*it);
+    fEventSelection->Add(c);
+  }
+}
+
 
 
 
@@ -64,6 +85,7 @@ Bool_t Acclaim::SummarySelector::Notify()
 void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
 {
   // TString option = GetOption();
+  fInput->Add(fEventSelection);
 }
 
 
@@ -74,7 +96,7 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
  */
 void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 {
-  // TString option = GetOption();
+  fEventSelection = dynamic_cast<TList*>(fInput->FindObject("fEventSelection")); 
 
   if(fDoSummarySelectorDemoHist){
     fSummarySelectorDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
@@ -84,6 +106,9 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 
 
 /** 
+ * @brief Reads the AnitaEventSummary TTree entry and sets the fSum pointer.
+ * Cycles through the fEventSelection, applying each AnalysisCut in turn.
+ * 
  * The Process() function is called for each entry in the tree (or possibly
  * keyed object in the case of PROOF) to be processed. The entry argument
  * specifies which entry in the currently loaded tree is to be processed.
@@ -100,7 +125,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
  * 
  * @param entry in the currently loaded tree
  * 
- * @return The return value is currently not used.
+ * @return true if the entry passes all the fEventSelection values
  */
 Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 {
@@ -111,7 +136,21 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
   if(fSummarySelectorDemoHist){
     fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
   }
-  return kTRUE;
+
+  Bool_t matchesSelection = true;
+  TIter next(fEventSelection);
+  while (TObject* obj = next()){
+    const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
+
+    Int_t retVal = eventSelection->apply(fSum);
+    matchesSelection = matchesSelection && retVal > 0;
+
+    if(!matchesSelection){
+      break;
+    }    
+  }
+  
+  return matchesSelection;
 }
 
 
@@ -122,6 +161,9 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
  */
 void Acclaim::SummarySelector::SlaveTerminate()
 {
+  fEventSelection->Clear(); // don't delete globals
+  delete fEventSelection;
+  fEventSelection = NULL;
 }
 
 
@@ -135,9 +177,9 @@ void Acclaim::SummarySelector::Terminate()
 {
 
   if(fDoSummarySelectorDemoHist){
-    TCanvas *c1 = new TCanvas("c1","Proof ProofEvent canvas",200,10,700,700);
     fSummarySelectorDemoHist = dynamic_cast<TH1D *>(fOutput->FindObject("fSummarySelectorDemoHist"));  
     if (fSummarySelectorDemoHist) {
+      TCanvas *c1 = new TCanvas();
       fSummarySelectorDemoHist->Draw("h");
 
       // Final update
