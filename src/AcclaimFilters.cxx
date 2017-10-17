@@ -198,7 +198,7 @@ Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz)
  * 
  * @param g is the waveform to which the notch filters should be applied
  */
-void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g){
+void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g, const RawAnitaHeader * header, int ant, int pol){
   // add small offset to frequencies to avoid inconsistent notch edges due to
   // floating point error...
   const double floatPointError = 1e-10; // plenty 
