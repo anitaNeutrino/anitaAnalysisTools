@@ -54,8 +54,8 @@ void Acclaim::Filters::generateFilterStrategies(bool saveOutput){
     // should always use some kind of alfa filter unless you have a good reason
     ALFAFilter* alfaFilter = new ALFAFilter(Bands::alfaLowPassGHz);
     
-    Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
-    Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
+    // Notch* bandHighPass = new Notch(0, Bands::anitaHighPassGHz);
+    // Notch* bandLowPass = new Notch(Bands::anitaLowPassGHz, 2);
 
     Notch* brickWall260 = new Notch(0.23, 0.29);
     Notch* brickWall370 = new Notch(0.34, 0.40);    
@@ -199,6 +199,10 @@ Acclaim::Filters::Notch::Notch(Double_t lowEdgeGHz, Double_t highEdgeGHz)
  * @param g is the waveform to which the notch filters should be applied
  */
 void Acclaim::Filters::Notch::processOne(AnalysisWaveform * g, const RawAnitaHeader * header, int ant, int pol){
+  (void) header;
+  (void) ant;
+  (void) pol;
+
   // add small offset to frequencies to avoid inconsistent notch edges due to
   // floating point error...
   const double floatPointError = 1e-10; // plenty 
@@ -285,8 +289,10 @@ Acclaim::Filters::UniformMagnitude::UniformMagnitude(){
  *  
  * @param wf is the waveform to be filtered
  */
-void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf){
-
+void Acclaim::Filters::UniformMagnitude::processOne(AnalysisWaveform* wf, const RawAnitaHeader* h, int ant, int pol){
+  (void) h;
+  (void) ant;
+  (void) pol;
   FFTWComplex* fft = wf->updateFreq();  
   for(int i=0; i< wf->Nfreq(); i++){
     fft[i].setMagPhase(i > 0 ? 1 : 0, fft[i].getPhase());

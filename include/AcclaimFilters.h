@@ -107,9 +107,12 @@ namespace Acclaim
       explicit RayleighMonitor(int numEvents);
       virtual const char * tag () const {return "RayleighMonitor";};
       virtual const char * description () const {return fDescription.Data();}
-      virtual void processOne(AnalysisWaveform* wave)
+      virtual void processOne(AnalysisWaveform* wave, const RawAnitaHeader* h=NULL, int ant=0, int pol=0)
       {
 	(void) wave;
+	(void) h;
+	(void) ant;
+	(void) pol;
 	std::cerr << "Error in " << __PRETTY_FUNCTION__
 		  << " function not implemented, use process(FilteredAnitaEvent*) instead" << std::endl;
       }
@@ -182,7 +185,7 @@ namespace Acclaim
     public:
       explicit UniformMagnitude();
       virtual ~UniformMagnitude() { ;}
-      virtual void processOne(AnalysisWaveform* wf);
+      virtual void processOne(AnalysisWaveform* wf, const RawAnitaHeader* h=NULL, int ant=0, int pol=0);
       // virtual unsigned nOutputs() const {return 0;}
       virtual const char * tag () const {return "UniformMagnitude";};
       virtual const char * description () const {return "Gives every frequency bin the same magnitude, keeping the phase constant";}
