@@ -20,12 +20,13 @@ namespace Acclaim {
     TTree* fOutTree;
     TProofOutputFile* fProofOutFile;
     TFile* fOut;
-    TString fOutFileName;
-    TString fReducedSumTreeName;
+    TNamed fOutFileName;
+    TNamed fReducedSumTreeName;
     
-    SumTreeReductionSelector(const char* outFileName="reducedSummaryFile.root", const char* reducedSumTreeName = "sumTree");
+    SumTreeReductionSelector(const char* outFileName="reduced", const char* reducedSumTreeName = "sumTree");
 
     // The minimum set required to be useful?
+    virtual void   Begin(TTree *tree);    
     virtual void   SlaveBegin(TTree *tree);
     virtual Bool_t Process(Long64_t entry);
     virtual void   SlaveTerminate();

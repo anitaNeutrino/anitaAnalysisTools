@@ -563,7 +563,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<c
     if(fSpecTrees.back()){
       std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing spectator tree. Deleting and regenerating." << std::endl;      
       delete fSpecTrees.back();
-      fSpecTrees.back() = NULL;      
+      fSpecTrees.back() = NULL;
     }
     fSpecTrees.pop_back();
   }

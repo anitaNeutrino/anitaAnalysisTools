@@ -47,8 +47,11 @@ void Acclaim::SummarySelector::Init(TTree *tree)
   fReader.SetTree(tree);
 }
 
+
+
 Bool_t Acclaim::SummarySelector::Notify()
 {
+  
   return kTRUE;
 }
 

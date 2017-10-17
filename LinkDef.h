@@ -31,6 +31,7 @@
 #pragma link C++ class Acclaim::SummarySet+;
 #pragma link C++ class Acclaim::SummarySelector+;
 #pragma link C++ class Acclaim::SumTreeReductionSelector+;
+#pragma link C++ class Acclaim::CutTreeSelector+;
 #pragma link C++ class Acclaim::AnalysisPlot+;
 #pragma link C++ class Acclaim::AnalysisProf+;
 #pragma link C++ namespace Acclaim::AnalysisCuts;

@@ -7,17 +7,26 @@
  * @param outFileName is the name to give the file containing the combined trees
  */
 Acclaim::SumTreeReductionSelector::SumTreeReductionSelector(const char* outFileName, const char* reducedSumTreeName)
-  : fOutSum(NULL), fOutTree(NULL), fOutFileName(outFileName), fReducedSumTreeName(reducedSumTreeName)
+  : fOutSum(NULL), fOutTree(NULL), fOutFileName("fOutFileName", outFileName), fReducedSumTreeName("fReducedSumTreeName",  reducedSumTreeName)
 {
   
+}
+
+void Acclaim::SumTreeReductionSelector::Begin(TTree* ){
+  // Does this mean the slaves can find this?
+  fInput->Add(&fOutFileName);
+  fInput->Add(&fReducedSumTreeName);
 }
 
 
 void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* ){
 
+  fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
+  fReducedSumTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fReducedSumTreeName")));		   
+  
   // https://root-forum.cern.ch/t/proof-tree-merging/8097/2
-  // https://root.cern.ch/handling-large-outputs-root-files
-  fProofOutFile = new TProofOutputFile(fOutFileName, TProofOutputFile::kMerge);
+  // https://root.cern.ch/handling-large-outputs-root-files  
+  fProofOutFile = new TProofOutputFile(fOutFileName.GetTitle(), TProofOutputFile::kMerge);
   GetOutputList()->Add(fProofOutFile);
 
   fOut = fProofOutFile->OpenFile("recreate");
@@ -47,7 +56,7 @@ void Acclaim::SumTreeReductionSelector::SlaveTerminate(){
 void Acclaim::SumTreeReductionSelector::Terminate(){
 
   TList* l = GetOutputList();
-  fProofOutFile = dynamic_cast<TProofOutputFile*>(l->FindObject(fOutFileName));
+  fProofOutFile = dynamic_cast<TProofOutputFile*>(l->FindObject(fOutFileName.GetTitle()));
   if(fProofOutFile){
     TFile* f = fProofOutFile->OpenFile("read");
     TTree* t = dynamic_cast<TTree*>(f->Get("sumTree"));
@@ -58,7 +67,3 @@ void Acclaim::SumTreeReductionSelector::Terminate(){
     // write to file, maybe...
   }
 }
-
-
-
-
