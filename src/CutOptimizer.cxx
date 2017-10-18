@@ -15,6 +15,7 @@
 #include "TSystem.h"
 #include "TEfficiency.h"
 #include "TDirectory.h"
+#include "TProof.h"
 
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,10,0)
 #include "TMVA/Factory.h"
@@ -22,6 +23,8 @@
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodFisher.h"
 #endif
+
+#include "CutTreeSelector.h"
 
 ClassImp(Acclaim::CutOptimizer::FisherResult)
 
@@ -472,6 +475,65 @@ Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TT
 
 
 
+void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
+
+  // // now we need to figure out if we have separate globs for signal and background
+  // // or just one for both...
+  // std::vector<TString> globs;
+  // globs.push_back(fSignalGlob);
+  // if(fBackgroundGlob != ""){
+  //   globs.push_back(fBackgroundGlob);
+  // }
+  // else{
+  //   globs.push_back(fSignalGlob); // again...
+  // }
+  // for(UInt_t g=0; g < fSpecGlobs.size(); g++){
+  //   globs.push_back(fSpecGlobs[g]);
+  // }
+  // // Then load the master AnitaEventSummary chain using my SummarySet class
+  {
+    SummarySet ssSignal(fSignalGlob);
+    ssSignal.SetUseProof(true);
+
+    CutTreeSelector ctSignal("/tmp/signalCuts.root", "signalTree");
+    for(UInt_t i=0; i < signalSelection.size(); i++){
+      ctSignal.addEventSelectionCut(signalSelection[i]);
+    }
+
+    std::vector<const char*> fsSignal;
+    fsSignal.reserve(formulaStrings.size());
+    for(UInt_t i=0; i < formulaStrings.size(); i++){
+      fsSignal.push_back(formulaStrings[i].first);
+    }
+    ctSignal.setFormulaStrings(fsSignal);
+
+    ssSignal.Process(&ctSignal);
+
+    std::cerr << "here 1 " << std::endl;
+  
+  }
+
+  {
+    SummarySet ssBackground(fBackgroundGlob);
+    ssBackground.SetUseProof(true);
+
+    CutTreeSelector ctBackground("/tmp/backgroundCuts.root", "backgroundTree");
+    for(UInt_t i=0; i < backgroundSelection.size(); i++){
+      ctBackground.addEventSelectionCut(backgroundSelection[i]);
+    }
+
+    std::vector<const char*> fsBackground;
+    fsBackground.reserve(formulaStrings.size());
+    for(UInt_t i=0; i < formulaStrings.size(); i++){
+      fsBackground.push_back(formulaStrings[i].first);
+    }
+    ctBackground.setFormulaStrings(fsBackground);
+
+    ssBackground.Process(&ctBackground);
+    std::cerr << "here 2" << std::endl;
+  }
+}
+
 /** 
  * This function does the hard work of generating a signal tree and a background tree for the TMVA to work on
  * It creates two new TTrees (signal+background) and generates a branch for each of the formula strings passed.
@@ -756,7 +818,9 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
   
     TFile* fOutFile = makeOutputFile(fileName);
 
-    generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);  
+    // generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);
+    generateSignalAndBackgroundTreesProof(signalSelection, backgroundSelection, formulaStrings);
+    return;
 
     if(!fSignalTree || !fBackgroundTree){
       std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "

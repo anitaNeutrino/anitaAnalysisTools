@@ -172,6 +172,8 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
  */
 void Acclaim::CutTreeSelector::SlaveTerminate(){  
 
+  SummarySelector::SlaveTerminate();
+
   // fOutTree->Write();
   // delete fOutTree;
   // fOutTree = NULL;
@@ -179,10 +181,11 @@ void Acclaim::CutTreeSelector::SlaveTerminate(){
   fOut->Write();
   fOut->Close();
   fOut = NULL;
-
-  fFormulas->Delete();
-  delete fFormulas;
-  fFormulas = NULL;
+  
+  // fInput->Remove(fFormulas);
+  // fFormulas->Delete();
+  // delete fFormulas;
+  // fFormulas = NULL;
 
   fFormulaReturnTypes.clear();
   fFloatVals.clear();
@@ -195,9 +198,10 @@ void Acclaim::CutTreeSelector::SlaveTerminate(){
  */
 void Acclaim::CutTreeSelector::Terminate(){
 
-  fFormulaStrings->Delete();
-  delete fFormulaStrings;
-  fFormulaStrings = NULL;  
+  // fInput->Remove(fFormulaStrings);  
+  // fFormulaStrings->Delete();
+  // delete fFormulaStrings;
+  // fFormulaStrings = NULL;  
 
   fProofOutFile = dynamic_cast<TProofOutputFile*>(fOutput->FindObject(fOutFileName.GetTitle()));
   std::cout << fProofOutFile << std::endl;

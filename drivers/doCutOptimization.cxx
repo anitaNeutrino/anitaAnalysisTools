@@ -1,6 +1,7 @@
 #include "CutOptimizer.h"
 #include "AnalysisCuts.h"
 #include <iostream>
+#include "TSystem.h" // require gSystem->Exit(0) to avoid segfault with PROOF
 
 using namespace Acclaim;
 
@@ -84,5 +85,6 @@ int main(int argc, char* argv[]){
   
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);
 
+  gSystem->Exit(0);
   return 0;
 }

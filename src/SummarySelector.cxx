@@ -167,9 +167,11 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
  */
 void Acclaim::SummarySelector::SlaveTerminate()
 {
-  fEventSelection->Clear(); // don't delete globals
-  delete fEventSelection;
-  fEventSelection = NULL;
+  // fInput->Remove(fEventSelection);
+
+  // fEventSelection->Clear(); // don't delete globals
+  // delete fEventSelection;
+  // fEventSelection = NULL;
 }
 
 

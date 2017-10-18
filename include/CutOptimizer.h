@@ -76,6 +76,9 @@ namespace Acclaim{
     void generateSignalAndBackgroundTrees(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
 					  const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
 					  const std::vector<FormulaString>& treeVars);
+    void generateSignalAndBackgroundTreesProof(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
+					       const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
+					       const std::vector<FormulaString>& treeVars);
     BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
 
     TString fSignalGlob;

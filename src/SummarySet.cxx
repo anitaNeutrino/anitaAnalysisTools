@@ -19,14 +19,21 @@
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
-      fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0), fUseProof(useProof) {
-
+      fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0),
+      fUseProof(useProof), fProof(NULL) {
+  
   init();
 }
 
 
 
 Acclaim::SummarySet::~SummarySet(){
+
+  if(fProof){
+    delete fProof;
+    fProof = NULL;
+  }
+  
   delete fChain;
   fChain = NULL;
 
@@ -50,11 +57,18 @@ Acclaim::SummarySet::~SummarySet(){
  */
 void Acclaim::SummarySet::initProof(){
 
-  if(fUseProof && !gProof){
-    TProof::Open("");
+  if(fUseProof && !fProof){
+    if(gProof){
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__
+		<< " won't start new PROOF session if one is already running!"
+		<< std::endl;
+      return;
+    }
+
+    fProof = TProof::Open("");
     const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
     TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
-    gProof->Load(loadAnita);
+    fProof->Load(loadAnita);
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
   }
   
