@@ -122,9 +122,10 @@ namespace Acclaim{
       Double_t altitude;					/// cluster center altitude
 	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
-      Double_t sumMcWeights;					/// How many MC events does this cluster contain?      
+      Double_t sumMcWeights;					/// How many MC events does this cluster contain?
+      Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
 
-      ClassDef(Cluster, 3)
+      ClassDef(Cluster, 4)
     };
 
 

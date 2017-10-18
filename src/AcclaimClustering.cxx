@@ -92,12 +92,14 @@ Acclaim::Clustering::Cluster::Cluster() {
   latitude = 0;
   longitude = 0;
   altitude = 0;
+  knownBase = 0;
 }
 
 Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
   latitude = base.latitude;
   longitude = base.longitude;
   altitude = base.altitude;
+  knownBase = 1;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
@@ -291,6 +293,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
   if(doneBaseClusterAssignment==false){
     assignEventsToBaseClusters();
   }
+
+  if(numCallsToRecursive==0){
+    std::cout << "Beginning " << __PRETTY_FUNCTION__ << std::endl;
+  }
   
   numCallsToRecursive++; // for debugging
   
@@ -348,7 +354,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
       delete hNonBaseClusteredEvents.back();
       hNonBaseClusteredEvents.pop_back();
     }
-
   }
 }
 
@@ -705,8 +710,10 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       ss.getEntry(entry);
       AnitaEventSummary* sum = ss.summary();
 
-      AnitaPol::AnitaPol_t pol = sum->trainingPol();
-      Int_t peakIndex = sum->trainingPeakInd();
+      // AnitaPol::AnitaPol_t pol = sum->trainingPol();
+      // Int_t peakIndex = sum->trainingPeakInd();
+      AnitaPol::AnitaPol_t pol = sum->mostImpulsivePol(1);
+      Int_t peakIndex = sum->mostImpulsiveInd(1);
     
       Double_t sourceLat = sum->peak[pol][peakIndex].latitude;
       Double_t sourceLon = sum->peak[pol][peakIndex].longitude;
