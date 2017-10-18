@@ -30,7 +30,6 @@ int main(int argc, char* argv[]){
   else{
     signalSelection.push_back(&AnalysisCuts::closeToMC); // Is this the right peak?
   }
-  
 
   std::vector<const AnalysisCuts::AnalysisCut *> backgroundSelection;
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
@@ -46,7 +45,7 @@ int main(int argc, char* argv[]){
 							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
 							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
 							   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
-  
+
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(preThermalCuts[i]);
     backgroundSelection.push_back(preThermalCuts[i]);

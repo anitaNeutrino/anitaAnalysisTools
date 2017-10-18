@@ -25,8 +25,10 @@ int main(int argc, char* argv[]){
   AnitaEventSummary* sum = NULL;
   sumTree->Branch("sum", &sum);
 
-  const int nCut = 9;
-  const AnalysisCuts::AnalysisCut* preClusteringCuts[nCut] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
+  const int nCut = 10;
+
+  const AnalysisCuts::AnalysisCut* preClusteringCuts[nCut] = {&AnalysisCuts::fisherScoreAboveThreshold,
+							      &AnalysisCuts::isGood, // not payload blast, SURF saturation, 
 							      &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
 							      &AnalysisCuts::goodGPS, // do we have GPS data?
 							      &AnalysisCuts::realSNR,

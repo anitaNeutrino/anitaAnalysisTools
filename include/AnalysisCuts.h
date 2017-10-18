@@ -365,6 +365,23 @@ namespace Acclaim
     };
 
 
+    /**
+     * @class FisherScoreAboveThreshold
+     * @brief An absolute cut on the fracPowerWindowGradient, rejecting events above the threshold.
+     */
+    class FisherScoreAboveThreshold : public AnalysisCut {
+    public:
+      FisherScoreAboveThreshold()
+	: AnalysisCut("FisherScoreAboveThreshold", ""), fThreshold(7.35783)
+      {
+	fTitle = TString::Format("FisherScore > %lf", fThreshold);
+      }
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+    private:
+      const Double_t fThreshold;
+      ClassDef(FisherScoreAboveThreshold, 0);
+    };
+
     const IsAboveHorizontal isAboveHorizontal;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
     const IsTaggedAsLDBPulser isTaggedAsLdbPulser;
@@ -390,6 +407,7 @@ namespace Acclaim
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
     const DedispersedFracPowerWindowGradientBelowThreshold dedispersedFracPowerWindowGradientBelowThreshold;
+    const FisherScoreAboveThreshold fisherScoreAboveThreshold;
   }
 }
 

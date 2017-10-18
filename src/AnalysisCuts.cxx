@@ -29,7 +29,7 @@ ClassImp(Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold);
-
+ClassImp(Acclaim::AnalysisCuts::FisherScoreAboveThreshold);
 
 
 static Acclaim::AnalysisCuts::Mode mode = Acclaim::AnalysisCuts::kTraining; /// Determines the behaviour of AnalysisCut::handleDefaults
@@ -62,9 +62,9 @@ void Acclaim::AnalysisCuts::AnalysisCut::handleDefaults(const AnitaEventSummary*
       pol = sum->trainingPol();
     }
     else{
-      ///@todo create these functions!
-      peakInd = 0;//sum->acclaimPeakInd();
-      pol = AnitaPol::kVertical;//sum->acclaimPol();
+      const int metric = 1;
+      peakInd = sum->mostImpulsiveInd(metric);
+      pol = sum->mostImpulsivePol(metric);
     }
   }
 }
@@ -577,3 +577,35 @@ int Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold::app
   // std::cout << sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() << "\t" << fThreshold << std::endl;
   return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < fThreshold);
 }
+
+
+
+
+
+
+/** 
+ * Checks to see if the dedispersed fracPowerWindowGradient is below threshold
+ * Threshold value defined in AnalysisSettings.conf
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 if true, 0 if false
+ */
+
+int Acclaim::AnalysisCuts::FisherScoreAboveThreshold::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
+  handleDefaults(sum, pol, peakInd);
+
+  // zeroth pass
+  // 10.534119+(0.005302*Abs_trainingPeak_dPhiSun)+(-0.011572*Abs_trainingPeak_minAbsHwAngle)+(-0.224413*trainingDeconvolvedFiltered_fracPowerWindowGradient)
+  double fs = 10.534119;
+  fs += 0.005302*sum->peak[pol][peakInd].dPhiSun();
+  fs += -0.011572*TMath::Abs(sum->peak[pol][peakInd].minAbsHwAngle());
+  fs += -0.224413*sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient();
+  
+  return (fs > fThreshold);
+}
+
+
+

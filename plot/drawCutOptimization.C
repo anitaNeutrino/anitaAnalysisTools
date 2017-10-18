@@ -461,9 +461,9 @@ void drawCutOptimization(const char* fileName){
   fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");  
   std::vector<TString> treeNames = {"signalTree", "backgroundTree"};//, "waisTree", "blastTree"};
   drawFisherPlot(f);
-  drawEfficiencies(f, true);
-  findBackgroundOutliers(f, 50);
-  plotComponents(f, 4, treeNames);
+  // drawEfficiencies(f, true);
+  // findBackgroundOutliers(f, 50);
+  // plotComponents(f, 4, treeNames);
   
   
   

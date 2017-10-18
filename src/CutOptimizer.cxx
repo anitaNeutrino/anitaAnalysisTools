@@ -477,61 +477,54 @@ Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TT
 
 void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
 
-  // // now we need to figure out if we have separate globs for signal and background
-  // // or just one for both...
-  // std::vector<TString> globs;
-  // globs.push_back(fSignalGlob);
-  // if(fBackgroundGlob != ""){
-  //   globs.push_back(fBackgroundGlob);
-  // }
-  // else{
-  //   globs.push_back(fSignalGlob); // again...
-  // }
+
+  std::vector<const char*> fs;
+  fs.reserve(formulaStrings.size());
+  for(UInt_t i=0; i < formulaStrings.size(); i++){
+    fs.push_back(formulaStrings[i].first);
+  }
+
+
+  // now we need to figure out if we have separate globs for signal and background
+  // or just one for both...
+  std::vector<TString> globs;
+  globs.push_back(fSignalGlob);
+  if(fBackgroundGlob != ""){
+    globs.push_back(fBackgroundGlob);
+  }
+  else{
+    globs.push_back(fSignalGlob); // again...
+  }
+
+  const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>* selections[2] = {&signalSelection,
+										 &backgroundSelection};
+  const char* proofFileNames[2] = {"/tmp/signalCuts.root", "/tmp/backgroundCuts.root"};
+  const char* proofTreeNames[2] = {"signalCuts", "backgroundCuts"};
   // for(UInt_t g=0; g < fSpecGlobs.size(); g++){
   //   globs.push_back(fSpecGlobs[g]);
   // }
   // // Then load the master AnitaEventSummary chain using my SummarySet class
-  {
-    SummarySet ssSignal(fSignalGlob);
-    ssSignal.SetUseProof(true);
+  const int nG = globs.size();
+  for(int g=0; g < nG; g++){
+    SummarySet ss(globs[g]);
+    ss.SetUseProof(true);
 
-    CutTreeSelector ctSignal("/tmp/signalCuts.root", "signalTree");
-    for(UInt_t i=0; i < signalSelection.size(); i++){
-      ctSignal.addEventSelectionCut(signalSelection[i]);
+    CutTreeSelector ct(proofFileNames[g], proofTreeNames[g]);
+    for(UInt_t i=0; i < selections[g]->size(); i++){
+      ct.addEventSelectionCut(selections[g]->at(i));
     }
 
-    std::vector<const char*> fsSignal;
-    fsSignal.reserve(formulaStrings.size());
-    for(UInt_t i=0; i < formulaStrings.size(); i++){
-      fsSignal.push_back(formulaStrings[i].first);
-    }
-    ctSignal.setFormulaStrings(fsSignal);
+    ct.setFormulaStrings(fs);
 
-    ssSignal.Process(&ctSignal);
-
-    std::cerr << "here 1 " << std::endl;
-  
+    ss.Process(&ct);
   }
 
-  {
-    SummarySet ssBackground(fBackgroundGlob);
-    ssBackground.SetUseProof(true);
+  TFile* signalFile = TFile::Open("/tmp/signalCuts.root");
+  fSignalTree = (TTree*) signalFile->Get("signalCuts");
 
-    CutTreeSelector ctBackground("/tmp/backgroundCuts.root", "backgroundTree");
-    for(UInt_t i=0; i < backgroundSelection.size(); i++){
-      ctBackground.addEventSelectionCut(backgroundSelection[i]);
-    }
+  TFile* backgroundFile = TFile::Open("/tmp/backgroundCuts.root");
+  fBackgroundTree = (TTree*) backgroundFile->Get("backgroundCuts");
 
-    std::vector<const char*> fsBackground;
-    fsBackground.reserve(formulaStrings.size());
-    for(UInt_t i=0; i < formulaStrings.size(); i++){
-      fsBackground.push_back(formulaStrings[i].first);
-    }
-    ctBackground.setFormulaStrings(fsBackground);
-
-    ssBackground.Process(&ctBackground);
-    std::cerr << "here 2" << std::endl;
-  }
 }
 
 /** 
@@ -820,7 +813,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
 
     // generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);
     generateSignalAndBackgroundTreesProof(signalSelection, backgroundSelection, formulaStrings);
-    return;
+    // return;
 
     if(!fSignalTree || !fBackgroundTree){
       std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "
@@ -936,22 +929,22 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
 
 
       for(unsigned i=0; i < signalSelection.size(); i++){
-        fSignalEffs[kSNR][kIfFirst][i]->SetDirectory(gDirectory);
-        fSignalEffs[kEnergy][kIfFirst][i]->SetDirectory(gDirectory);
-        fSignalEffs[kSNR][kInSequence][i]->SetDirectory(gDirectory);
-        fSignalEffs[kEnergy][kInSequence][i]->SetDirectory(gDirectory);
+        // fSignalEffs[kSNR][kIfFirst][i]->SetDirectory(gDirectory);
+        // fSignalEffs[kEnergy][kIfFirst][i]->SetDirectory(gDirectory);
+        // fSignalEffs[kSNR][kInSequence][i]->SetDirectory(gDirectory);
+        // fSignalEffs[kEnergy][kInSequence][i]->SetDirectory(gDirectory);
 
 
-        fSignalEffs[kSNR][kIfFirst][i]->Write();
-        fSignalEffs[kEnergy][kIfFirst][i]->Write();
-        fSignalEffs[kSNR][kInSequence][i]->Write();
-        fSignalEffs[kEnergy][kInSequence][i]->Write();
+        // fSignalEffs[kSNR][kIfFirst][i]->Write();
+        // fSignalEffs[kEnergy][kIfFirst][i]->Write();
+        // fSignalEffs[kSNR][kInSequence][i]->Write();
+        // fSignalEffs[kEnergy][kInSequence][i]->Write();
 
 
-        delete fSignalEffs[kSNR][kIfFirst][i];
-        delete fSignalEffs[kEnergy][kIfFirst][i];
-        delete fSignalEffs[kSNR][kInSequence][i];
-        delete fSignalEffs[kEnergy][kInSequence][i];
+        // delete fSignalEffs[kSNR][kIfFirst][i];
+        // delete fSignalEffs[kEnergy][kIfFirst][i];
+        // delete fSignalEffs[kSNR][kInSequence][i];
+        // delete fSignalEffs[kEnergy][kInSequence][i];
       }
 
       result.Write();

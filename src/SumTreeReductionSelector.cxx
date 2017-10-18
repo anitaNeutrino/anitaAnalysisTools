@@ -7,19 +7,22 @@
  * @param outFileName is the name to give the file containing the combined trees
  */
 Acclaim::SumTreeReductionSelector::SumTreeReductionSelector(const char* outFileName, const char* reducedSumTreeName)
-  : fOutSum(NULL), fOutTree(NULL), fOutFileName("fOutFileName", outFileName), fReducedSumTreeName("fReducedSumTreeName",  reducedSumTreeName)
+  : fOutSum(NULL), fOutTree(NULL), fProofOutFile(NULL), fOutFileName("fOutFileName", outFileName), fReducedSumTreeName("fReducedSumTreeName",  reducedSumTreeName)
 {
   
 }
 
-void Acclaim::SumTreeReductionSelector::Begin(TTree* ){
+void Acclaim::SumTreeReductionSelector::Begin(TTree* tree){
+  SummarySelector::Begin(tree);
+
   // Does this mean the slaves can find this?
   fInput->Add(&fOutFileName);
   fInput->Add(&fReducedSumTreeName);
 }
 
 
-void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* ){
+void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* tree){
+  SummarySelector::SlaveBegin(tree);
 
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
   fReducedSumTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fReducedSumTreeName")));
@@ -46,6 +49,8 @@ Bool_t Acclaim::SumTreeReductionSelector::Process(Long64_t entry){
 }
 
 void Acclaim::SumTreeReductionSelector::SlaveTerminate(){
+  SummarySelector::SlaveTerminate();
+
   fOut->Write();
   fOut->Close();
   fOut = NULL;
@@ -53,6 +58,7 @@ void Acclaim::SumTreeReductionSelector::SlaveTerminate(){
 }  
 
 void Acclaim::SumTreeReductionSelector::Terminate(){
+  SummarySelector::Terminate();
 
   TList* l = GetOutputList();
   fProofOutFile = dynamic_cast<TProofOutputFile*>(l->FindObject(fOutFileName.GetTitle()));
