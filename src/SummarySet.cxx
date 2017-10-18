@@ -171,6 +171,7 @@ TProfile2DAntarctica* Acclaim::SummarySet::makeAntarcticaProf(AnitaPol::AnitaPol
 
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       if(doPol[polInd]){
+        // for(int peakInd=0; peakInd < sum->nPeaks[polInd]; peakInd++){
         for(int peakInd=0; peakInd < sum->nPeaks[polInd]; peakInd++){
 
           // TODO consider removing theta < 0 once traceBackTocontinent is fixed.

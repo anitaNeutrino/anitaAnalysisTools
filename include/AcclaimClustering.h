@@ -166,10 +166,12 @@ namespace Acclaim{
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();
+      void redoSmallClusters();
 
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t maxDistCluster;					/// Only consider adding to a cluster when closer than this value
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
+      Int_t fSmallClusterSizeThreshold;
 
       Int_t numClusters;
       Int_t numCallsToRecursive;

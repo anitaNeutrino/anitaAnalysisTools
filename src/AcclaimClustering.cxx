@@ -22,6 +22,9 @@ ClassImp(Acclaim::Clustering::Cluster);
 
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
+  this->eventNumber = sum->eventNumber;
+  this->run = sum->run;
+
   this->pol = pol;
   peakIndex = peakInd;
   const AnitaEventSummary::PointingHypothesis& peak = sum->peak[pol][peakInd];
@@ -85,17 +88,20 @@ Acclaim::Clustering::McEvent::McEvent()
 
 
 Acclaim::Clustering::Cluster::Cluster() {
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
-  numDataEvents = 0;
   latitude = 0;
   longitude = 0;
   altitude = 0;
   knownBase = 0;
+  numDataEvents = 0;
+  sumMcWeights = 0;
 }
 
 Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
+  std::cerr << __PRETTY_FUNCTION__ << std::endl;
   latitude = base.latitude;
   longitude = base.longitude;
   altitude = base.altitude;
@@ -104,6 +110,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   numDataEvents = 0;
+  sumMcWeights = 0;
 }
 
 
@@ -113,6 +120,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
   llCut = 250;
   maxDistCluster = 800e3; // try 800km
   numCallsToRecursive = 0;
+  fSmallClusterSizeThreshold = 100;
   
   // can use this to move cluster around surface, 3D positions correctly becomes 2D problem
   doneBaseClusterAssignment = false;
@@ -339,6 +347,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
     }
 
     const int numDataEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
+    std::cout << "After " << numCallsToRecursive << ", " << numDataEventsUnclustered << " events are unclustered" << std::endl;
     if(numDataEventsUnclustered > 0 && lastIntegral != numDataEventsUnclustered){
       lastIntegral = hNonBaseClusteredEvents.back()->Integral();
 
@@ -353,11 +362,48 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
     else{
       delete hNonBaseClusteredEvents.back();
       hNonBaseClusteredEvents.pop_back();
+
+
+      if(numDataEventsUnclustered > 0){
+	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the clustering algorithm didn't manage to cluster "
+		  << numDataEventsUnclustered << "events" << std::endl;
+      }
     }
   }
 }
 
 
+
+void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
+
+  // here we uncluster the small clusters...
+  for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
+    Cluster& cluster = clusters.at(clusterInd);
+    if(cluster.numDataEvents < fSmallClusterSizeThreshold){
+      cluster.numDataEvents = 0; // reset cluster data event counter
+
+      for(int i=0; i < (int)events.size(); i++){
+	if(events.at(i).inCluster==clusterInd){
+	  // some reset function would be good here...
+	  events.at(i).ll = DBL_MAX;
+	  events.at(i).inCluster = -1;
+	  events.at(i).llSecondBest = DBL_MAX;
+	  events.at(i).secondClosestCluster = -1;
+	}
+      }
+    }
+  }
+
+  for(int i=0; i < (int)events.size(); i++){
+
+    if(events.at(i).inCluster < 0){
+      const Int_t isMC = 0;
+      for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
+	assignSingleEventToCloserCluster(i, isMC, clusterInd);
+      }
+    }
+  }
+}
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::findClosestEventToClustersOfSizeOne(){
@@ -522,7 +568,7 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummar
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
-  std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning events to closest cluster!" << std::endl;
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning events to base clusters!" << std::endl;
   ProgressBar p(clusters.size());
   const int isMC = 0;
   for(Long64_t clusterInd=0; clusterInd < (Long64_t)clusters.size(); clusterInd++){
@@ -565,7 +611,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::initializeEmptyBaseList(){
 void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 
   std::cout << "Info in " << __PRETTY_FUNCTION__ << ": Initializing base list..." << std::endl;
-  for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
+  for(UInt_t clusterInd=0; clusterInd < BaseList::getNumBases(); clusterInd++){
     const BaseList::base& base = BaseList::getBase(clusterInd);
     clusters.push_back(Cluster(base));
   }
@@ -669,19 +715,26 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
   for(Int_t i=0; i < (Int_t)events.size(); i++){
     event = &events.at(i);
-
-    if(clusters.at(event->inCluster).numDataEvents > 1 || event->inCluster < (Int_t)BaseList::getNumBases()){
-      clusteredDataTree->Fill();
+    if(event->inCluster >= 0){
+      if(clusters.at(event->inCluster).numDataEvents == 1 && clusters.at(event->inCluster).knownBase==0) {
+	nonBaseSingletTree->Fill();
+      }
+      else{
+	clusteredDataTree->Fill();
+      }
     }
     else{
-      nonBaseSingletTree->Fill();
+      std::cerr << "Event " << event->eventNumber << " was unclustered!\n";
+      std::cerr << "It had theta = " << event->theta << ", phi = " << event->phi << "\n";
+      std::cerr << "lon = " << event->longitude << ", lat = " << event->latitude << std::endl;
     }
   }
   
   TTree* clusteredMcTree = new TTree("clusteredMcTree", "Tree of clustered Monte Carlo ANITA events");
   McEvent* mcEvent = NULL;
   clusteredMcTree->Branch("mcEvent", &mcEvent);
-  for(Int_t j=0; j < (Int_t)mcEvents.size(); j++){
+
+  for(Int_t j=0; j < (Int_t) mcEvents.size(); j++){
     mcEvent = &mcEvents.at(j);
     clusteredMcTree->Fill();
   }
@@ -689,7 +742,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
   TTree* clusterTree = new TTree("clusterTree", "Tree of clusters");
   Cluster* cluster = NULL;
   clusterTree->Branch("cluster", &cluster);
-  for(int k=0; k < (Int_t)clusters.size(); k++){
+  for(Int_t k=0; k < (Int_t)clusters.size(); k++){
     cluster = &clusters.at(k);
     clusterTree->Fill();
   }
@@ -714,6 +767,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       // Int_t peakIndex = sum->trainingPeakInd();
       AnitaPol::AnitaPol_t pol = sum->mostImpulsivePol(1);
       Int_t peakIndex = sum->mostImpulsiveInd(1);
+
+      // std::cout << sum->eventNumber << "\t" << pol << "\t" << peakIndex << std::endl;
     
       Double_t sourceLat = sum->peak[pol][peakIndex].latitude;
       Double_t sourceLon = sum->peak[pol][peakIndex].longitude;
@@ -771,8 +826,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   assignEventsToBaseClusters();
   recursivelyAddClustersFromData(0);
+  redoSmallClusters();
   
-  assignMcEventsToClusters();  
+  assignMcEventsToClusters();
 
   writeAllGraphsAndHists();
   makeSummaryTrees();
