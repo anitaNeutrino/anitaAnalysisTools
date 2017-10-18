@@ -40,7 +40,7 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   /// @todo make this a function of coherently summed waveform SNR
   sigmaTheta = default_sigma_theta;
   sigmaPhi = default_sigma_phi;
-
+  
   ll = DBL_MAX;
   inCluster = -1;
   llSecondBest = DBL_MAX;
@@ -48,6 +48,8 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
 
   antarcticaHistBin = -1;
 
+  dThetaCluster = -999;
+  dPhiCluster = -999;
 }
 
 
@@ -112,8 +114,6 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
   numDataEvents = 0;
   sumMcWeights = 0;
 }
-
-
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
 
@@ -375,13 +375,15 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
-
+  std::cout << "In " << __PRETTY_FUNCTION__ << std::endl;
+  
   // here we uncluster the small clusters...
+  Int_t numEventsReset = 0;
   for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
     Cluster& cluster = clusters.at(clusterInd);
     if(cluster.numDataEvents < fSmallClusterSizeThreshold){
       cluster.numDataEvents = 0; // reset cluster data event counter
-
+      
       for(int i=0; i < (int)events.size(); i++){
 	if(events.at(i).inCluster==clusterInd){
 	  // some reset function would be good here...
@@ -389,13 +391,15 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
 	  events.at(i).inCluster = -1;
 	  events.at(i).llSecondBest = DBL_MAX;
 	  events.at(i).secondClosestCluster = -1;
+	  numEventsReset++;
 	}
       }
     }
   }
 
-  for(int i=0; i < (int)events.size(); i++){
+  std::cout << numEventsReset << " were reset!" << std::endl;
 
+  for(int i=0; i < (int)events.size(); i++){
     if(events.at(i).inCluster < 0){
       const Int_t isMC = 0;
       for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
@@ -716,6 +720,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
   for(Int_t i=0; i < (Int_t)events.size(); i++){
     event = &events.at(i);
     if(event->inCluster >= 0){
+      Adu5Pat pat= event->anita.pat();
+      UsefulAdu5Pat usefulPat(&pat);
+      getDeltaThetaDegDeltaPhiDegCluster(*event, clusters.at(event->inCluster), usefulPat,
+					 event->dThetaCluster, event->dPhiCluster);
+      
+      
       if(clusters.at(event->inCluster).numDataEvents == 1 && clusters.at(event->inCluster).knownBase==0) {
 	nonBaseSingletTree->Fill();
       }
