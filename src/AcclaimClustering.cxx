@@ -725,7 +725,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
       getDeltaThetaDegDeltaPhiDegCluster(*event, clusters.at(event->inCluster), usefulPat,
 					 event->dThetaCluster, event->dPhiCluster);
       
-      
       if(clusters.at(event->inCluster).numDataEvents == 1 && clusters.at(event->inCluster).knownBase==0) {
 	nonBaseSingletTree->Fill();
       }
