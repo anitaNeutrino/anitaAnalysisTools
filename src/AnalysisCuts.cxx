@@ -5,6 +5,7 @@
 
 ClassImp(Acclaim::AnalysisCuts::AnalysisCut);
 ClassImp(Acclaim::AnalysisCuts::IsAboveHorizontal);
+ClassImp(Acclaim::AnalysisCuts::IsTaggedAsPulser);
 ClassImp(Acclaim::AnalysisCuts::IsTaggedAsWaisPulser);
 ClassImp(Acclaim::AnalysisCuts::IsTaggedAsLDBPulser);
 ClassImp(Acclaim::AnalysisCuts::HigherPol);
@@ -120,7 +121,23 @@ int Acclaim::AnalysisCuts::IsAboveHorizontal::apply(const AnitaEventSummary* sum
 
 
 /**
- * Was the event tagged as a WAIS pulser (from timing info)
+ * Was the event tagged as any pulser (from timing info)?
+ *
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (unused)
+ * @param peakInd is the peak index (unused)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::AnalysisCuts::IsTaggedAsPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  (void) pol;
+  (void) peakInd;
+  return sum->flags.pulser > 0;
+}
+
+/**
+ * Was the event tagged as a WAIS pulser (from timing info)?
  *
  * @param sum is the AnitaEventSummary
  * @param pol is the polarisation (unused)

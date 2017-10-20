@@ -104,9 +104,10 @@ Acclaim::Clustering::Cluster::Cluster() {
 
 Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
   std::cerr << __PRETTY_FUNCTION__ << std::endl;
-  latitude = base.latitude;
-  longitude = base.longitude;
-  altitude = base.altitude;
+  AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
+  latitude = ac.x;
+  longitude = ac.y;
+  altitude = ac.z;
   knownBase = 1;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();

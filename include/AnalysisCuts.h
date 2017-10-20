@@ -93,6 +93,20 @@ namespace Acclaim
 
 
     /**
+     * @class IsTaggedAsPulser
+     * @brief Is the triggerTime stamp consistent with any pulser?
+     */
+
+    class IsTaggedAsPulser : public AnalysisCut
+    {
+    public:
+      IsTaggedAsPulser() : AnalysisCut("isTaggedAsPulser", "Tagged as pulser") {;}
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(IsTaggedAsPulser, 0);
+    };
+
+
+    /**
      * @class IsTaggedAsLDBPulser
      * @brief Is the triggerTime stamp consistent with the LDB pulser?
      */
@@ -383,6 +397,7 @@ namespace Acclaim
     };
 
     const IsAboveHorizontal isAboveHorizontal;
+    const IsTaggedAsWaisPulser isTaggedAsPulser;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
     const IsTaggedAsLDBPulser isTaggedAsLdbPulser;
     const HigherPol higherPol;

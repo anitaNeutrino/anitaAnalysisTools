@@ -40,6 +40,7 @@
 #pragma link C++ enum Acclaim::AnalysisCuts::Mode;
 #pragma link C++ class Acclaim::AnalysisCuts::AnalysisCut+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsAboveHorizontal+;
+#pragma link C++ class Acclaim::AnalysisCuts::IsTaggedAsPulser+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsTaggedAsWaisPulser+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsTaggedAsLDBPulser+;
 #pragma link C++ class Acclaim::AnalysisCuts::HigherPol+;
