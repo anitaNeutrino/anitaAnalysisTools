@@ -17,8 +17,7 @@ namespace Acclaim {
   /**
    * @class CutTreeSelector
    * @brief A TSelector to parallelize the creation of trees for CutOptimizer
-   * 
-   */  
+   */
   class CutTreeSelector : public SummarySelector {
   public:
 
@@ -33,7 +32,6 @@ namespace Acclaim {
     std::vector<Int_t> fIntVals;				/// Where the formula results are written in the case of a int-like variable
     TList* fFormulaStrings;					/// Internal storage of formula strings, set these with setFormulaStrings()
     TList* fFormulas;						/// List of TTreeFormulas created from fFormulaStrings
-
 
     CutTreeSelector(const char* outFileName="CutTreeSelector.root", const char* reducedSumTreeName = "cutTree");
     void setFormulaStrings(const std::vector<const char*>& formulaStrings);

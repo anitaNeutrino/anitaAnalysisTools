@@ -32,8 +32,8 @@ namespace Acclaim
      * @enum Mode defines the behaviour of AnalysisCut::handleDefaults(...)
      */
     enum Mode {
-      kTraining, /// Makes handleDefaults call the AnitaEventSummary::training family of functions 
-      kAcclaimAnalysis  /// Makes handleDefaults call the AnitaEventSummary::acclaim family of functions 
+      kTraining,	/// Makes handleDefaults call the AnitaEventSummary::training family of functions 
+      kAcclaimAnalysis  /// Makes handleDefaults call the AnitaEventSummary::mostImpulsive(1) function
     };
 
     Mode getMode();

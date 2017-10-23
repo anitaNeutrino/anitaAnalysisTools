@@ -90,7 +90,7 @@ Acclaim::Clustering::McEvent::McEvent()
 
 
 Acclaim::Clustering::Cluster::Cluster() {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
@@ -103,7 +103,7 @@ Acclaim::Clustering::Cluster::Cluster() {
 }
 
 Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
-  std::cerr << __PRETTY_FUNCTION__ << std::endl;
+  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
@@ -118,12 +118,10 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
 
-  llCut = 250;
+  llCut = 100;
   maxDistCluster = 800e3; // try 800km
   numCallsToRecursive = 0;
   fSmallClusterSizeThreshold = 100;
-  
-  // can use this to move cluster around surface, 3D positions correctly becomes 2D problem
   doneBaseClusterAssignment = false;
 }
 
@@ -367,7 +365,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
       if(numDataEventsUnclustered > 0){
 	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the clustering algorithm didn't manage to cluster "
-		  << numDataEventsUnclustered << "events" << std::endl;
+		  << numDataEventsUnclustered << " events" << std::endl;
       }
     }
   }
@@ -380,10 +378,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
   
   // here we uncluster the small clusters...
   Int_t numEventsReset = 0;
+  Int_t numClustersReset = 0;  
   for(Int_t clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
     Cluster& cluster = clusters.at(clusterInd);
     if(cluster.numDataEvents < fSmallClusterSizeThreshold){
       cluster.numDataEvents = 0; // reset cluster data event counter
+      numClustersReset++;
       
       for(int i=0; i < (int)events.size(); i++){
 	if(events.at(i).inCluster==clusterInd){
@@ -398,7 +398,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
     }
   }
 
-  std::cout << numEventsReset << " were reset!" << std::endl;
+  
+
+  std::cout << numEventsReset << " events were reset over " << numClustersReset << " clusters!" << std::endl;
+  // go through and empty non-base clusters?
+
+
+  // now do the nSquared thing
+  
 
   for(int i=0; i < (int)events.size(); i++){
     if(events.at(i).inCluster < 0){
