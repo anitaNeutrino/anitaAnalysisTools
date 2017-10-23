@@ -20,6 +20,32 @@ ClassImp(Acclaim::Clustering::Event);
 ClassImp(Acclaim::Clustering::McEvent);
 ClassImp(Acclaim::Clustering::Cluster);
 
+
+/** 
+ * @brief Calculate the angular resolution for clustering
+ * @todo Currently derived from WAIS pulses, but should probably be from MC
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol the polarisation of interest
+ * @param peakInd the peak of the map of interest
+ * @param sigma_theta the calculated theta resolution (degrees)
+ * @param sigma_phi the calculated phi resolution (degrees)
+ */
+void Acclaim::Clustering::getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi){
+
+  const double x = sum->coherent_filtered[pol][peakInd].snr;
+
+  // Fitted function was exp([0]*x + [1]) for theta/phi vs deconvolved_filtered SNR
+  const double p0Theta = -0.07144;
+  const double p1Theta = -1.016;
+  sigma_theta = exp(p0Theta*x + p1Theta);
+
+  const double p0Phi = -0.1069;
+  const double p1Phi = 0.02227;
+  sigma_phi = exp(p0Phi*x + p1Phi);
+
+}
+
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
   this->eventNumber = sum->eventNumber;
@@ -37,9 +63,9 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   phi = peak.phi;
   anita = sum->anitaLocation;
 
-  /// @todo make this a function of coherently summed waveform SNR
-  sigmaTheta = default_sigma_theta;
-  sigmaPhi = default_sigma_phi;
+  // sigmaTheta = default_sigma_theta;
+  // sigmaPhi = default_sigma_phi;
+  getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
   
   ll = DBL_MAX;
   inCluster = -1;
@@ -398,15 +424,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
     }
   }
 
-  
-
   std::cout << numEventsReset << " events were reset over " << numClustersReset << " clusters!" << std::endl;
   // go through and empty non-base clusters?
 
-
   // now do the nSquared thing
-  
-
   for(int i=0; i < (int)events.size(); i++){
     if(events.at(i).inCluster < 0){
       const Int_t isMC = 0;
@@ -720,7 +741,7 @@ TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTG
 void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
   TTree* clusteredDataTree = new TTree("clusteredDataTree", "Tree of clustered ANITA events (all multiples and base singlets)");
-  TTree* nonBaseSingletTree = new TTree("nonBaseSingletTree", "Tree of unclustered ANITA events (non-base singlets only)");  
+  TTree* nonBaseSingletTree = new TTree("nonBaseSingletTree", "Tree of unclustered ANITA events (non-base singlets only)");
   Event* event = NULL;
   clusteredDataTree->Branch("event", &event);
   nonBaseSingletTree->Branch("event", &event);  
@@ -741,9 +762,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
       }
     }
     else{
-      std::cerr << "Event " << event->eventNumber << " was unclustered!\n";
-      std::cerr << "It had theta = " << event->theta << ", phi = " << event->phi << "\n";
-      std::cerr << "lon = " << event->longitude << ", lat = " << event->latitude << std::endl;
+      // std::cerr << "Event " << event->eventNumber << " was unclustered!\n";
+      // std::cerr << "It had theta = " << event->theta << ", phi = " << event->phi << "\n";
+      // std::cerr << "lon = " << event->longitude << ", lat = " << event->latitude << std::endl;
     }
   }
   

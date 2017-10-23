@@ -25,6 +25,7 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
+    static void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
 
     /**
      * @class Event

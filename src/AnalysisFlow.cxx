@@ -363,6 +363,9 @@ Bool_t Acclaim::AnalysisFlow::isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat
 
 
 
+
+
+
 /** 
  * Applies Linda's LDB pulser selection, I've not actually tested this in a while
  * 
@@ -396,8 +399,8 @@ Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat*
     const Int_t delayGenerator = 199996850; // delay generator was not exactly 200 ms
     const Int_t constdelay = 500;
 
-    Int_t deltaTriggerTimeNs    = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected);
-    deltaTriggerTimeNs    = deltaTriggerTimeNs%(delayGenerator) - delay - constdelay;
+    Int_t deltaTriggerTimeNs = Int_t(header->triggerTimeNs) - Int_t(triggerTimeNsExpected);
+    deltaTriggerTimeNs = deltaTriggerTimeNs%(delayGenerator) - delay - constdelay;
 
     isLDB = TMath::Abs(deltaTriggerTimeNs) < cutTimeNs;
   }
