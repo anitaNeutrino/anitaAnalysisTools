@@ -49,8 +49,8 @@ Acclaim::AnalysisCuts::Mode Acclaim::AnalysisCuts::getMode(){
  * Function which determines which reconstructed direction is of interest.
  * 
  * Queries the AnalysisCuts::mode variable:
- *  if kTraining, then sets pol/peakInd to AnitaEventSummary::trainingPol()/AnitaEventSummary::trainingPeakInd()
- *  if kAcclaimAnalysis, then ... ///@todo fill this in
+ *  if kTraining, then sets pol/peakInd to AnitaEventSummary::training family of functions
+ *  if kAcclaimAnalysis, then called AnitaEventSummary::mostImpulsive(1) family of funtions
  * 
  * @param sum is the AnitaEventSummary on which to call the function
  * @param pol is set to the polarisation of interest
@@ -133,7 +133,7 @@ int Acclaim::AnalysisCuts::IsTaggedAsPulser::apply(const AnitaEventSummary* sum,
 {
   (void) pol;
   (void) peakInd;
-  return sum->flags.pulser > 0;
+  return isTaggedAsLdbPulser.apply(sum) || isTaggedAsWaisPulser.apply(sum);
 }
 
 /**
@@ -165,7 +165,10 @@ int Acclaim::AnalysisCuts::IsTaggedAsWaisPulser::apply(const AnitaEventSummary* 
 int Acclaim::AnalysisCuts::IsTaggedAsLDBPulser::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
 {
   (void) pol;
-  (void) peakInd;  
+  (void) peakInd;
+  if(AnitaVersion::get()==3){
+    if(sum->run >= 200){return false;}
+  }
   return sum->flags.pulser == AnitaEventSummary::EventFlags::LDB;
 }
 

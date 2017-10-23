@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
   OutputConvention oc(1, argv);  
   const char* glob = argv[1];
 
-  AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);
+  AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis); // not that this should matter
 
   SummarySet ss(glob);
   ss.SetUseProof(true);

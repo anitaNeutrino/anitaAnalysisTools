@@ -11,7 +11,7 @@ ClassImp(Acclaim::SummarySelector);
 /** 
  * Default constructor
  * 
- * @param tree Default parameter which is not used, for backward compatilbility reasons
+ * @param tree Default parameter which is not used, for backward compatibility reasons
  * @param sumBranchName the name of the branch of AnitaEventSummaries, default is "sum"
  */
 Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)

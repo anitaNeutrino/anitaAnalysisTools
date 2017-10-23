@@ -255,6 +255,7 @@ namespace Acclaim
     public:
       CloseToWais() : AnalysisCut("closeToWais", "Near Wais") {;}
       virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(CloseToWais, 0);
     };
 
     /**
@@ -397,7 +398,7 @@ namespace Acclaim
     };
 
     const IsAboveHorizontal isAboveHorizontal;
-    const IsTaggedAsWaisPulser isTaggedAsPulser;
+    const IsTaggedAsPulser isTaggedAsPulser;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
     const IsTaggedAsLDBPulser isTaggedAsLdbPulser;
     const HigherPol higherPol;
