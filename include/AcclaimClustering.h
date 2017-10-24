@@ -60,11 +60,11 @@ namespace Acclaim{
       Double_t dThetaCluster;					/// theta distance to cluster
       Double_t dPhiCluster;					/// phi distance to cluster
 
-      Double_t ll;						/// log likelihood = -2 * ln (...)
-      Int_t inCluster;						/// which cluster am I associated with?
+      Double_t logLikelihood;					/// log likelihood = -2 * ln (...)
+      Int_t cluster;						/// which cluster am I associated with?
 
-      Double_t llSecondBest;					/// log likelihood to second closest cluster
-      Int_t secondClosestCluster;				/// what cluster am I second closest to?
+      Double_t logLikelihood2;					/// log likelihood to second closest cluster
+      Int_t cluster2;              				/// what cluster am I second closest to?
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
 
@@ -126,6 +126,8 @@ namespace Acclaim{
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
 
+      Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
+
       ClassDef(Cluster, 4)
     };
 
@@ -151,6 +153,12 @@ namespace Acclaim{
       }
 
     private:
+      Double_t getDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster);
+      Double_t getDistSq(Acclaim::Clustering::Cluster& cluster1, const Acclaim::Clustering::Cluster& cluster2);
+      Double_t getAngDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, UsefulAdu5Pat& usefulPat);
+      Double_t getAngDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, const Adu5Pat* pat);
+      void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
+      void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, const Adu5Pat* pat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
 
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
@@ -177,14 +185,16 @@ namespace Acclaim{
       Int_t numClusters;
       Int_t numCallsToRecursive;
 
-      std::vector<Acclaim::Clustering::Cluster> clusters; /// Vector of clusters, 
-      std::vector<Acclaim::Clustering::Event> events; /// Vector of data events
-      std::vector<Acclaim::Clustering::McEvent> mcEvents; /// Vector of Monte Carlo events
+      std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,
+      std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
+      std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
 
       std::vector<TGraphAntarctica*> grBaseClusterCenters;	/// The locations of the bases
       std::vector<TH2DAntarctica*> hBaseClusteredEvents;	/// Histograms of events clustered to bases
       std::vector<TGraphAntarctica*> grNonBaseClusterCenters;	/// The locations of the non-base clusters
       std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;	/// Histograms of events clustered to non-base clusters
+      TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
+      bool fDebug;
     };
 
 
