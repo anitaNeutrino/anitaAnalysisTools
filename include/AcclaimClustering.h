@@ -18,6 +18,7 @@ class TTree;
 class TGraphAntarctica;
 class TFile;
 class TH2DAntarctica;
+class TCanvas;
 
 namespace Acclaim{
 
@@ -27,6 +28,7 @@ namespace Acclaim{
     const Double_t default_sigma_phi = 0.5;
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
+    TCanvas* drawAngularResolutionModel(double maxSnr);
 
     /**
      * @class Event

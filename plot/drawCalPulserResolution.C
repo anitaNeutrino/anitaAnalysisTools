@@ -25,10 +25,14 @@ void drawCalPulserResolution(const char* fileName = "doDataReductionCalPulser_*.
   TH1D* hSigmaWaisTheta = (TH1D*) gDirectory->FindObject("hWaisDTheta_2");
 
 
-  TF1* f1 = new TF1("f1", "exp([0]*x + [1])", 0, maxSnr);
+
+
+  // TF1* f1 = new TF1("f1", "exp([0]*x + [1])", 0, maxSnr);
+  TF1* f1 = new TF1("f1", "exp([0]*x + [1]) + [2]", 0, maxSnr);
   f1->SetParameter(0, -1);
   // f1->SetParLimits(0, 0, 2);  
   f1->SetParameter(1, 0);
+  f1->SetParameter(2, 0.1);
   // f1->SetParameter(2, 1);
   {
     auto cTemp = new TCanvas();

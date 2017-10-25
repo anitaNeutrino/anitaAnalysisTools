@@ -9,6 +9,8 @@
 #include "ProgressBar.h"
 #include "TGraphAntarctica.h"
 #include "TH2DAntarctica.h"
+#include "TF1.h"
+#include "TCanvas.h"
 
 ClassImp(Acclaim::Clustering::Event);
 ClassImp(Acclaim::Clustering::McEvent);
@@ -19,6 +21,20 @@ const int nDim = 3;
 ClassImp(Acclaim::Clustering::Event);
 ClassImp(Acclaim::Clustering::McEvent);
 ClassImp(Acclaim::Clustering::Cluster);
+
+
+/**
+ * @namespace ResolutionModel
+ * @brief Parameters defining the resolution model
+ */
+
+namespace ResolutionModel{
+  const int n = 3;
+  const double phiParams[n]   = {-2.50414e-01,  3.02406e-01, 2.43376e-01};
+  const double thetaParams[n] = {-3.83773e-01, -3.00964e-01, 1.64537e-01};
+  TString formula = "exp([0]*x + [1]) + [2]";
+}
+
 
 
 /**
@@ -46,24 +62,37 @@ void Acclaim::Clustering::getAngularResolution(const AnitaEventSummary* sum, Ani
  * @param sigma_phi the calculated phi resolution (degrees)
  */
 void Acclaim::Clustering::getAngularResolution(double x, double& sigma_theta, double& sigma_phi){
+  // see the macro plotCalPulserResolution.C for the derivation of these numbers
 
-  // Fitted function was exp([0]*x + [1]) for theta/phi vs deconvolved_filtered SNR
-  const double p0Theta = -0.07144;
-  const double p1Theta = -1.016;
-  sigma_theta = exp(p0Theta*x + p1Theta);
+  sigma_phi = exp(ResolutionModel::phiParams[0]*x + ResolutionModel::phiParams[1]) + ResolutionModel::phiParams[2];
 
-  const double p0Phi = -0.1069;
-  const double p1Phi = 0.02227;
-  sigma_phi = exp(p0Phi*x + p1Phi);
-
-  // sigma_phi = default_sigma_phi;
-  // sigma_theta = default_sigma_theta;
+  sigma_theta = exp(ResolutionModel::thetaParams[0]*x + ResolutionModel::thetaParams[1]) + ResolutionModel::thetaParams[2];
 
 }
 
+TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
+  TCanvas* c1 = new TCanvas();
 
+  TF1* fTheta = new TF1("fThetaResolutionModel", ResolutionModel::formula, 0, maxSnr);
+  TF1* fPhi = new TF1("fThetaResolutionModel", ResolutionModel::formula, 0, maxSnr);
 
+  for(int i=0; i < ResolutionModel::n; i++){
+    fTheta->SetParameter(i, ResolutionModel::thetaParams[i]);
+    fPhi->SetParameter(i, ResolutionModel::phiParams[i]);
+  }
 
+  fPhi->Draw();
+  fPhi->SetLineColor(kRed);
+  fTheta->Draw("lsame");
+  fTheta->SetLineColor(kBlue);
+  fPhi->SetBit(kCanDelete);
+  fTheta->SetBit(kCanDelete);
+
+  fPhi->SetMinimum(0.01);
+  c1->Modified();
+  c1->Update();
+  return c1;
+}
 
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
