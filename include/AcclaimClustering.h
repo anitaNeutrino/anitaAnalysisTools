@@ -25,7 +25,8 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
-    static void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
+    void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
+    void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
 
     /**
      * @class Event
@@ -37,36 +38,36 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       // determined by reconstruction
       //--------------------------------------------------------------------------------	
-      UInt_t eventNumber;					/// Event number
-      Int_t run;						/// Run
-      AnitaPol::AnitaPol_t pol;					/// Polarization
-      Int_t peakIndex;						/// Which peak in the map does this represent?
+      UInt_t eventNumber;			/// Event number
+      Int_t run;				/// Run
+      AnitaPol::AnitaPol_t pol;			/// Polarization
+      Int_t peakIndex;				/// Which peak in the map does this represent?
 
-      Double_t centre[3];//!					/// Cartesian coordinates, does not persist in ROOT
-      Double_t latitude;					/// latitude
-      Double_t longitude;					/// longitude
-      Double_t altitude;					/// longitude
-      AnitaEventSummary::PayloadLocation anita;			/// Anita's position
+      Double_t centre[3];//!			/// Cartesian coordinates, does not persist in ROOT
+      Double_t latitude;			/// latitude
+      Double_t longitude;			/// longitude
+      Double_t altitude;			/// longitude
+      AnitaEventSummary::PayloadLocation anita;	/// Anita's position
 
-      Double_t theta;						/// reconstructed theta
-      Double_t phi;						/// reconstructed phi
+      Double_t theta;				/// reconstructed theta
+      Double_t phi;				/// reconstructed phi
 
-      Double_t sigmaTheta;					/// resolution associated with this snr?
-      Double_t sigmaPhi;					/// resolution associated with this snr?
+      Double_t sigmaTheta;			/// resolution associated with this snr?
+      Double_t sigmaPhi;			/// resolution associated with this snr?
 
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
-      Double_t dThetaCluster;					/// theta distance to cluster
-      Double_t dPhiCluster;					/// phi distance to cluster
+      Double_t dThetaCluster;			/// theta distance to cluster
+      Double_t dPhiCluster;			/// phi distance to cluster
 
-      Double_t logLikelihood;					/// log likelihood = -2 * ln (...)
-      Int_t cluster;						/// which cluster am I associated with?
+      Double_t logLikelihood;			/// log likelihood = -2 * ln (...)
+      Int_t cluster;				/// which cluster am I associated with?
 
-      Double_t logLikelihood2;					/// log likelihood to second closest cluster
-      Int_t cluster2;              				/// what cluster am I second closest to?
+      Double_t logLikelihood2;			/// log likelihood to second closest cluster
+      Int_t cluster2;              		/// what cluster am I second closest to?
 
-      Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
+      Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
 
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
@@ -127,6 +128,7 @@ namespace Acclaim{
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
+      Int_t seedEvent;                   //!			/// Which event seeded the cluster?
 
       ClassDef(Cluster, 4)
     };
@@ -153,12 +155,10 @@ namespace Acclaim{
       }
 
     private:
-      Double_t getDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster);
-      Double_t getDistSq(Acclaim::Clustering::Cluster& cluster1, const Acclaim::Clustering::Cluster& cluster2);
-      Double_t getAngDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, UsefulAdu5Pat& usefulPat);
-      Double_t getAngDistSq(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, const Adu5Pat* pat);
-      void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
-      void getDeltaThetaDegDeltaPhiDegCluster(const Acclaim::Clustering::Event& event, const Acclaim::Clustering::Cluster& cluster, const Adu5Pat* pat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
+      Double_t getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster);
+      // Double_t getDistSqClusterCluster(Int_t clusterInd1, Int_t clusterInd2);
+      Double_t getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat);
+      void getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
 
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
