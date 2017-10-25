@@ -1,5 +1,5 @@
 
-set(BINARIES doNoFilters doSineSub doSineSubPlusBrickWall doRayleighFilter doCutOptimization mergeSummaryTreeFiles rmsCacheSineSub rmsCacheSineSubPlusBrickWall editSumTree doClustering doDataReduction doDataReductionCalPulser)
+set(BINARIES doNoFilters doSineSub doSineSubPlusBrickWall doRayleighFilter doCutOptimization mergeSummaryTreeFiles rmsCacheSineSub rmsCacheSineSubPlusBrickWall editSumTree doClustering doDataReduction doDataReductionCalPulser doDataReductionPayloadBlast)
 
 foreach(binary ${BINARIES})
   MESSAGE(STATUS "Process file: ${binary}")
