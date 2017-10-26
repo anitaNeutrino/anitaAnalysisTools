@@ -22,9 +22,11 @@ Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
   fSumBranchName(sumBranchName),
   fSumBranch(NULL),
 #endif
-  fSum(NULL), fEventSelection(new TList), fSummarySelectorDemoHist(NULL),
-  fDoSummarySelectorDemoHist(false) {
-
+  fSum(NULL), fEventSelection(new TList),
+  fAnalysisCutTree(NULL), fAnalysisCutReturns(), fDoAnalysisCutTree(true),
+  fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false),
+  fEventNumber(0), fRun(0)
+{
   fEventSelection->SetName("fEventSelection");
 }
 
@@ -107,6 +109,22 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     fSummarySelectorDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
     fOutput->Add(fSummarySelectorDemoHist);
   }
+
+  fAnalysisCutReturns.resize(fEventSelection->GetEntries(), 0);
+  if(fDoAnalysisCutTree){
+    fAnalysisCutTree = new TTree("analysisCutTree", "analysisCutTree");
+    fAnalysisCutTree->Branch("eventNumber", &fEventNumber);
+    fAnalysisCutTree->Branch("run", &fRun);
+
+    TIter next(fEventSelection);
+    int i=0;
+    while (TObject* obj = next()){
+      const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
+      fAnalysisCutTree->Branch(eventSelection->GetName(), &fAnalysisCutReturns.at(i));
+      i++;
+    }
+    fOutput->Add(fAnalysisCutTree);
+  }
 }
 
 
@@ -144,18 +162,34 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 
   Bool_t matchesSelection = true;
   TIter next(fEventSelection);
+  int i=0;
   while (TObject* obj = next()){
     const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
     Int_t retVal = eventSelection->apply(fSum);
+    fAnalysisCutReturns.at(i) = retVal;
+    i++;
+
     matchesSelection = matchesSelection && retVal > 0;
-    if(!matchesSelection){
+
+    // we can break out of the loop early if we're not storing the results
+    // of all the cuts, and the selection doesn't match all the cuts
+    if(!fDoAnalysisCutTree && !matchesSelection){
       break;
     }
   }
 
+  // if doing the demo hist, then fill event passes the cut
   if(matchesSelection && fSummarySelectorDemoHist){
     fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
   }
+
+  // If storing the analysis cut result, then update
+  if(fDoAnalysisCutTree && fAnalysisCutTree){
+    fEventNumber = fSum->eventNumber;
+    fRun = fSum->run;
+    fAnalysisCutTree->Fill();
+  }
+
   return matchesSelection;
 }
 

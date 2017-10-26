@@ -21,10 +21,6 @@ class TBranch;
 
 namespace Acclaim {
 
-  // namespace AnalysisCuts {
-  //   class AnalysisCut;
-  // }
-
   /**
    * @class SummarySelector
    * @brief Template TSelector to be inherited from, designed for use with SummarySet.
@@ -63,6 +59,10 @@ namespace Acclaim {
 #endif
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
     TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
+
+    TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on
+    std::vector<Int_t>                   fAnalysisCutReturns;		/// Stores the results as the cuts are processed in sequence
+    bool fDoAnalysisCutTree;						/// Switches on/off the analysis cut result tree
 
     /** For demonstration */
     TH1D*				 fSummarySelectorDemoHist;	/// A histogram of peak[1][0].value
@@ -105,6 +105,11 @@ namespace Acclaim {
     {
       return fOutput;
     }
+
+
+  private:
+    UInt_t fEventNumber;
+    Int_t fRun;
 
     ClassDef(SummarySelector,0);
 
