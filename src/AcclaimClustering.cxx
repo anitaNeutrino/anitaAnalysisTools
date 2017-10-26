@@ -18,16 +18,13 @@ ClassImp(Acclaim::Clustering::Cluster);
 
 const int nDim = 3;
 
-ClassImp(Acclaim::Clustering::Event);
-ClassImp(Acclaim::Clustering::McEvent);
-ClassImp(Acclaim::Clustering::Cluster);
-
 
 /**
  * @namespace ResolutionModel
  * @brief Parameters defining the resolution model
+ * 
+ * See the macro plotCalPulserResolution.C for the derivation of these numbers
  */
-
 namespace ResolutionModel{
   const int n = 3;
   const double phiParams[n]   = {-2.50414e-01,  3.02406e-01, 2.43376e-01};
@@ -62,7 +59,6 @@ void Acclaim::Clustering::getAngularResolution(const AnitaEventSummary* sum, Ani
  * @param sigma_phi the calculated phi resolution (degrees)
  */
 void Acclaim::Clustering::getAngularResolution(double x, double& sigma_theta, double& sigma_phi){
-  // see the macro plotCalPulserResolution.C for the derivation of these numbers
 
   sigma_phi = exp(ResolutionModel::phiParams[0]*x + ResolutionModel::phiParams[1]) + ResolutionModel::phiParams[2];
 

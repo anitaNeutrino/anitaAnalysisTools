@@ -190,11 +190,10 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
  * Constructor for the payload blast cut, contains some hard coded numbers
  * 
  * If the values are changed please increment the ClassDef counter in the header file.
- * @return 
  */
 Acclaim::PayloadBlastCut::PayloadBlastCut(){
   ratioCutHigh = 2.8;
-  ratioCutLow = -1; // no longer used
+  // ratioCutLow = -1; // no longer used
   maxRatio = 0;
   maxRatioPhi = -1;
   maxRatioPol = AnitaPol::kNotAPol;
@@ -230,77 +229,96 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
     }
   }
 
-  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){      
+  AnitaPol::AnitaPol_t maxPol = AnitaPol::kNotAPol;
+  AnitaRing::AnitaRing_t maxRing = AnitaRing::kNotARing;
+  int maxPhi = -1;
+
+  int nBottomOrMidGreaterThanTop = 0;
+
+  double largestPeakToPeak = -DBL_MAX;
+  double correspondingTopPeakToPeak = -DBL_MAX;
+
+  for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
+
+    double largestPeakToPeakPol = -DBL_MAX; // stored per polarisation
+    double correspondingTopPeakToPeakPol = -DBL_MAX;
+
     for(int phi=0; phi < NUM_PHI; phi++){
 
-      // skip ALFA channels/ALFA cross talk
-      if(anitaVersion==3 && pol==AnitaPol::kVertical && phi==7){
-	continue;
-      }
+      // skip ALFA channel
       if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==4){
 	continue;
       }
+      // ALFA cross talk
+      if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==12){
+	continue;
+      }
+      // and channel with occasionally broken amplifer
+      if(anitaVersion==3 && pol==AnitaPol::kVertical && phi==7){
+	continue;
+      }
+      // ... luckily none of those are next to each other
+      // and real blasts have enough power do many phi-sectors
 
-      int topAnt = phi;
-      int bottomAnt = 2*NUM_PHI + phi;
 
-      TGraph* grTop = useful->getGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
-      TGraph* grBottom = useful->getGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
-
-      // quick hack to fix this version of Linda's MC
+      // first get the top ring
+      TGraph* grTop = useful->getGraph(phi, (AnitaPol::AnitaPol_t) pol);
       const int nT = grTop->GetN() == NUM_SAMP ? quickFixMC(grTop->GetN(), grTop->GetX()) : grTop->GetN();
-      const int nB = grBottom->GetN() == NUM_SAMP ? quickFixMC(grBottom->GetN(), grBottom->GetX()) : grBottom->GetN();
+      Double_t maxY, maxX, minY, minX;
+      RootTools::getLocalMaxToMinWithinLimits(grTop, maxY, maxX, minY, minX, grTop->GetX()[0], grTop->GetX()[nT-1]+1e-10);
 
-      while(grTop->GetN() > nT) grTop->RemovePoint(grTop->GetN()-1);
-      while(grBottom->GetN() > nB) grBottom->RemovePoint(grBottom->GetN()-1);
-      
-      // const AnalysisWaveform* waveTop = fEv->getRawGraph(topAnt, (AnitaPol::AnitaPol_t) pol);
-      // const TGraphAligned* grTop = waveTop->uneven();
-      // const AnalysisWaveform* waveBottom = fEv->getRawGraph(bottomAnt, (AnitaPol::AnitaPol_t) pol);
-      // const TGraphAligned* grBottom = waveBottom->uneven();
-
-      Double_t maxYTop, maxXTop, minYTop, minXTop;
-      RootTools::getLocalMaxToMin((const TGraph*)grTop, maxYTop, maxXTop, minYTop, minXTop);
-
-      Double_t maxYBottom, maxXBottom, minYBottom, minXBottom;
-      RootTools::getLocalMaxToMin((const TGraph*) grBottom, maxYBottom, maxXBottom, minYBottom, minXBottom);
-
+      Double_t peakToPeakTop = (maxY - minY);
       delete grTop;
-      delete grBottom;
-      
-      double ratio = (maxYBottom - minYBottom)/(maxYTop - minYTop);
 
 
-      // If we were passed a summary, update the internal storage
-      if(sum){
-        if(ratio > sum->flags.maxBottomToTopRatio[pol]){
-          sum->flags.maxBottomToTopRatio[pol] = ratio;
-          sum->flags.maxBottomToTopRatioSector[pol] = phi;
-        }
-        if(ratio < sum->flags.minBottomToTopRatio[pol]){
-          sum->flags.minBottomToTopRatio[pol] = ratio;
-          sum->flags.minBottomToTopRatioSector[pol] = pol;
-        }
+      // then get the mid/bottom rings
+      for(int ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
+
+	int ant = ring*NUM_PHI + phi;
+
+	TGraph* gr = useful->getGraph(ant, (AnitaPol::AnitaPol_t) pol);
+	const int n = gr->GetN() == NUM_SAMP ? quickFixMC(gr->GetN(), gr->GetX()) : gr->GetN();
+	Double_t maxY, maxX, minY, minX;
+      	RootTools::getLocalMaxToMinWithinLimits(gr, maxY, maxX, minY, minX, gr->GetX()[0], gr->GetX()[n-1]+1e-10);
+
+	Double_t peakToPeak = (maxY - minY);
+	if(peakToPeak > largestPeakToPeakPol){
+	  maxPhi = phi;
+	  maxRing = (AnitaRing::AnitaRing_t) ring;
+	  largestPeakToPeakPol = peakToPeak;
+	  correspondingTopPeakToPeakPol = peakToPeakTop;
+	}
+
+	if(peakToPeak > peakToPeakTop){
+	  nBottomOrMidGreaterThanTop++;
+	}
+
+	delete gr;
       }
+    }
 
-      if(ratio > maxRatio){
-	maxRatio = ratio;
-	maxRatioPhi = phi;
-	maxRatioPol = (AnitaPol::AnitaPol_t) pol;
-      }
+    if(sum){
+      sum->flags.maxBottomToTopRatio[pol] = largestPeakToPeakPol/correspondingTopPeakToPeakPol;
+      sum->flags.maxBottomToTopRatioSector[pol] = maxPhi + maxRing*NUM_PHI;
+    }
+
+    if(largestPeakToPeakPol > largestPeakToPeak){
+      maxPol = (AnitaPol::AnitaPol_t) pol;
+      largestPeakToPeak = largestPeakToPeakPol;
+      correspondingTopPeakToPeak = correspondingTopPeakToPeakPol;
     }
   }
 
+
+  double maxRatio = largestPeakToPeak/correspondingTopPeakToPeak;
   if(maxRatio > ratioCutHigh || maxRatio < ratioCutLow){
-    // std::cerr << eventNumberDQ << "\t" << maxRatio << std::endl;
-    // std::cerr << "failed!:" << std::endl;
-    // std::cerr << "\t" << maxRatio << "\t" << maxRatioPhi << "\t" << maxRatioPol << std::endl;    
     eventPassesCut = false;
   }
   else{
     eventPassesCut = true;
   }
   if(sum!=NULL){
+    sum->flags.nSectorsWhereBottomExceedsTop = nBottomOrMidGreaterThanTop;
     if(eventPassesCut){
       sum->flags.isPayloadBlast = 0;
     }

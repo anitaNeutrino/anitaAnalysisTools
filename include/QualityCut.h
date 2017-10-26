@@ -96,7 +96,7 @@ namespace Acclaim{
    * 
    */
   class PayloadBlastCut : public QualityCut {
-    ClassDef(Acclaim::PayloadBlastCut, 1);    
+    ClassDef(Acclaim::PayloadBlastCut, 2);
     
   protected:
     double ratioCutHigh;
@@ -124,7 +124,7 @@ namespace Acclaim{
    * 
    */
   class NumPointsCut : public QualityCut {
-    ClassDef(Acclaim::NumPointsCut, 1);    
+    ClassDef(Acclaim::NumPointsCut, 1);
     
   protected:
     int numPointsCutLow; // presumably don't need a cut on the other side of this...
