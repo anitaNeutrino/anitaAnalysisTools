@@ -60,6 +60,7 @@ namespace Acclaim {
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
     TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
 
+    TString                              fAnalysisCutTreeName;          /// Name of optional tree
     TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on
     std::vector<Int_t>                   fAnalysisCutReturns;		/// Stores the results as the cuts are processed in sequence
     bool fDoAnalysisCutTree;						/// Switches on/off the analysis cut result tree

@@ -69,8 +69,6 @@ void Acclaim::CutTreeSelector::Begin(TTree* tree){
  */
 void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
 
-  SummarySelector::SlaveBegin(tree);
-
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
   fTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fTreeName")));
   fFormulaStrings = dynamic_cast<TList*>(fInput->FindObject("fFormulaStrings"));
@@ -90,6 +88,8 @@ void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
   fIntVals.resize(nForm, 0);
   fFloatVals.resize(nForm, 0);
   fFormulaReturnTypes.resize(nForm, 0);
+
+  SummarySelector::SlaveBegin(tree); // Optional analysisCutTree needs to be booked after TProofOutputFile
 }
 
 
@@ -214,7 +214,7 @@ void Acclaim::CutTreeSelector::Terminate(){
       if(t){
 	std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
 		  << t->GetEntries() << " entries..." << std::endl;
-	t->Print();
+	// t->Print();
       }
       f->Close();
     }

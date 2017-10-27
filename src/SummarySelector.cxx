@@ -23,7 +23,8 @@ Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
   fSumBranch(NULL),
 #endif
   fSum(NULL), fEventSelection(new TList),
-  fAnalysisCutTree(NULL), fAnalysisCutReturns(), fDoAnalysisCutTree(true),
+  fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
+  fAnalysisCutReturns(), fDoAnalysisCutTree(true),
   fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false),
   fEventNumber(0), fRun(0)
 {
@@ -112,7 +113,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 
   fAnalysisCutReturns.resize(fEventSelection->GetEntries(), 0);
   if(fDoAnalysisCutTree){
-    fAnalysisCutTree = new TTree("analysisCutTree", "analysisCutTree");
+    fAnalysisCutTree = new TTree(fAnalysisCutTreeName, fAnalysisCutTreeName);
     fAnalysisCutTree->Branch("eventNumber", &fEventNumber);
     fAnalysisCutTree->Branch("run", &fRun);
 
@@ -123,7 +124,6 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
       fAnalysisCutTree->Branch(eventSelection->GetName(), &fAnalysisCutReturns.at(i));
       i++;
     }
-    fOutput->Add(fAnalysisCutTree);
   }
 }
 

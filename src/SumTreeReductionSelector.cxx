@@ -22,7 +22,6 @@ void Acclaim::SumTreeReductionSelector::Begin(TTree* tree){
 
 
 void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* tree){
-  SummarySelector::SlaveBegin(tree);
 
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
   fReducedSumTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fReducedSumTreeName")));
@@ -35,6 +34,9 @@ void Acclaim::SumTreeReductionSelector::SlaveBegin(TTree* tree){
   fOut = fProofOutFile->OpenFile("recreate");
   fOutTree = new TTree("sumTree", "sumTree");
   fOutTree->Branch("sum", &fOutSum);
+
+  SummarySelector::SlaveBegin(tree); // Optional analysisCutTree needs to be booked after TProofOutputFile
+
 }
 
 
@@ -68,7 +70,7 @@ void Acclaim::SumTreeReductionSelector::Terminate(){
     if(t){
       std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
 		<< t->GetEntries() << " entries..." << std::endl;
-      t->Print();
+      // t->Print();
     }
     f->Close();
     // write to file, maybe...
