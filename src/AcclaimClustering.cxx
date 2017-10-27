@@ -198,10 +198,10 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod(){
   llCut = 100;
   maxDistCluster = 800e3; // try 800km
   numCallsToRecursive = 0;
-  fSmallClusterSizeThreshold = 100;
   doneBaseClusterAssignment = false;
   hClusters = new TH2DAntarctica("hClusters", "hClusters");
   fDebug = false;
+  fUseBaseList = true;
 }
 
 Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
@@ -552,7 +552,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
   Int_t numClustersReset = 0;
   for(UInt_t clusterInd=0; clusterInd < clusters.size(); clusterInd++){
     Cluster& cluster = clusters.at(clusterInd);
-    if(cluster.numDataEvents < fSmallClusterSizeThreshold){
+    if(cluster.numDataEvents < SmallClusterSizeThreshold){
       cluster.numDataEvents = 0; // reset cluster data event counter
       numClustersReset++;
 
@@ -1013,7 +1013,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::writeAllGraphsAndHists(){
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
-  initializeBaseList();
+
+  if(fUseBaseList){
+    initializeBaseList();
+  }
+  else{
+    std::cout << "Info in " << __PRETTY_FUNCTION__ << ": not using base list!" << std::endl;
+  }
   readInSummaries(mcGlob);
 
   char* fakeArgv0 = const_cast<char*>(outFileName);

@@ -145,6 +145,8 @@ namespace Acclaim{
     class LogLikelihoodMethod {
     public:
 
+      static const Int_t SmallClusterSizeThreshold = 100;
+
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
 
@@ -154,6 +156,11 @@ namespace Acclaim{
 
       Int_t getNumClusters(){
 	return numClusters;
+      }
+
+      bool GetUseBaseList(){return fUseBaseList;}
+      void SetUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
+	fUseBaseList = useBaseList;
       }
 
     private:
@@ -182,7 +189,6 @@ namespace Acclaim{
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t maxDistCluster;					/// Only consider adding to a cluster when closer than this value
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
-      Int_t fSmallClusterSizeThreshold;
 
       Int_t numClusters;
       Int_t numCallsToRecursive;
@@ -197,6 +203,7 @@ namespace Acclaim{
       std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;	/// Histograms of events clustered to non-base clusters
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       bool fDebug;
+      bool fUseBaseList;
     };
 
 
