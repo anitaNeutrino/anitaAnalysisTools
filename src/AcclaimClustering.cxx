@@ -9,6 +9,7 @@
 #include "ProgressBar.h"
 #include "TGraphAntarctica.h"
 #include "TH2DAntarctica.h"
+#include "TArrowAntarctica.h"
 #include "TF1.h"
 #include "TCanvas.h"
 
@@ -152,6 +153,18 @@ Acclaim::Clustering::Event::Event(){
   dPhiCluster = -999;
 
 }
+
+
+
+/** 
+ * Make a TArrowAntarctica that points from ANITA to the event's location on the continent
+ * 
+ * @return the TArrowAntarctica
+ */
+TArrowAntarctica* Acclaim::Clustering::Event::makeArrowFromAnitaToEvent(){
+  return new TArrowAntarctica(anita.longitude, anita.latitude, longitude, latitude);
+}
+
 
 
 

@@ -19,6 +19,7 @@ class TGraphAntarctica;
 class TFile;
 class TH2DAntarctica;
 class TCanvas;
+class TArrowAntarctica;
 
 namespace Acclaim{
 
@@ -73,7 +74,8 @@ namespace Acclaim{
 
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
-	
+      TArrowAntarctica* makeArrowFromAnitaToEvent();
+
       virtual ~Event(){ ;}
       ClassDef(Event, 3)
     };

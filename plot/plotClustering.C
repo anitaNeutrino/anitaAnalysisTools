@@ -69,52 +69,78 @@ void drawEvents(TFile* f, int clusterInd){
   clusterTree->SetBranchAddress("cluster", &cluster);
   clusterTree->GetEntry(clusterInd);
 
-  int nEvents = cluster->numDataEvents;
+
+  const char* eventTreeName = (cluster->numDataEvents > 1 || cluster->knownBase > 0) ? "clusteredDataTree" : "nonBaseSingletTree";
   
-
-  if(nEvents < )
-  
-  TString name = TString::Format("hCluster%d", clusterInd);
-  TH2DAntarctica* h = new TH2DAntarctica(name, name);
-  TGraphAntarctica* grAnita = new TGraphAntarctica();
-
-  TTree* clusterTree = (TTree*)f->Get("clusterTree");
-  TString cutString = TString::Format("Entry$==%d", clusterInd);
-  TCut cut = cutString.Data();
-  TGraphAntarctica* grClusterPosition = new TGraphAntarctica(clusterTree, "longitude", "latitude", cut);
-
-  
-  TTree* clusteredDataTree = (TTree*)f->Get("clusteredDataTree");
-
-
-  
+  TTree* eventTree = (TTree*)f->Get(eventTreeName);
   Acclaim::Clustering::Event* event = NULL;
-  clusteredDataTree->SetBranchAddress("event", &event);
+  eventTree->SetBranchAddress("event", &event);
 
   
-  Long64_t n = clusteredDataTree->GetEntries();
-  Acclaim::ProgressBar p(n);
-  for(Long64_t entry=0; entry < n; entry++){
-    clusteredDataTree->GetEntry(entry);
+  TString eventCutString = TString::Format("cluster==%d", clusterInd);
+  TCut eventCut = eventCutString.Data();
+  TGraphAntarctica* grAnita = new TGraphAntarctica(eventTree, "anita.longitude", "anita.latitude", eventCut);
 
-    if(event->cluster==clusterInd){
-      h->Fill(event->longitude, event->latitude);
-      grAnita->SetPoint(grAnita->GetN(), event->anita.longitude, event->anita.latitude);
+  TString clusterCutString = TString::Format("Entry$==%d", clusterInd);
+  TCut clusterCut = clusterCutString.Data();
+  TGraphAntarctica* grClusterPosition = new TGraphAntarctica(clusterTree, "longitude", "latitude", clusterCut);
+
+  std::vector<TArrowAntarctica*> arrows;
+
+  
+  int nEvents = cluster->numDataEvents;
+  if(nEvents > Acclaim::Clustering::LogLikelihoodMethod::SmallClusterSizeThreshold){
+
+    TString name = TString::Format("hCluster%d", clusterInd);
+    TH2DAntarctica* h = new TH2DAntarctica(name, name);
+
+    Long64_t n = eventTree->GetEntries();
+    Acclaim::ProgressBar p(n);
+    for(Long64_t entry=0; entry < n; entry++){
+      eventTree->GetEntry(entry);
+
+      if(event->cluster==clusterInd){
+	h->Fill(event->longitude, event->latitude);
+      }
+
+      p.inc(entry, n);
     }
+
+    h->Draw("colz");
+    grAnita->SetMarkerSize(0.1);
     
-    p.inc(entry, n);
+  }
+  else{
+
+    Long64_t n = eventTree->GetEntries();
+    Acclaim::ProgressBar p(n);
+    for(Long64_t entry=0; entry < n; entry++){
+      eventTree->GetEntry(entry);
+
+      if(event->cluster==clusterInd){
+	arrows.push_back(event->makeArrowFromAnitaToEvent());
+	arrows.back()->SetLineWidth(2);
+      }
+
+      p.inc(entry, n);
+    }
+
+    TGraphAntarctica* grEvents = new TGraphAntarctica(eventTree, "longitude", "latitude", eventCut);
+    grEvents->Draw();
+
+    for(auto& arrow : arrows){
+      arrow->Draw();
+    }
+
   }
 
-  h->Draw("colz");
   grAnita->SetMarkerColor(kGreen);
-  grAnita->SetMarkerSize(0.1);  
-  grAnita->Draw("psame");
+  grAnita->Draw();
   
   grClusterPosition->SetMarkerStyle(kFullStar);
   grClusterPosition->SetMarkerColor(kRed);
   
   grClusterPosition->Draw("psame");
-  
 }
 
 
@@ -123,10 +149,13 @@ void plotClustering(const char* fileName = "doClustering_2017-10-18_10-35-07.roo
   TFile* f = TFile::Open(fileName);
   if(!f) return;
 
-  drawAllClusterTGraphs(f);
+  // drawAllClusterTGraphs(f);
 
-  new TCanvas();
   drawEvents(f, 0);
+  new TCanvas();
+  for(int i=1; i < 16; i++){
+    drawEvents(f, i);
+  }
 
 
   return;
