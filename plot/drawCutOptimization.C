@@ -172,6 +172,9 @@ void drawFisherPlot(TFile* f){
   double xLow = hBackInt->GetXaxis()->GetBinLowEdge(0);
   double xHigh = hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX());
 
+  // TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
+  // const double nPassPreThermalCut = backgroundTree->GetEntries();
+  std::cerr << "There were " << nPassPreThermalCut << " events passing pre-thermal cuts" << std::endl;
   std::cerr << fitStart << "\t" << fitEnd << std::endl;
   // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
   TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x - [3]*x*x*x + [4]*x*x*x*x)", xLow, xHigh);
