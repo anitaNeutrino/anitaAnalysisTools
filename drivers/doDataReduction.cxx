@@ -23,7 +23,6 @@ int main(int argc, char* argv[]){
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
   
-  reduce.addEventSelectionCut(&AnalysisCuts::fisherScoreAboveThreshold);
   reduce.addEventSelectionCut(&AnalysisCuts::isGood);
   reduce.addEventSelectionCut(&AnalysisCuts::smallDeltaRough);
   reduce.addEventSelectionCut(&AnalysisCuts::goodGPS);
@@ -32,7 +31,8 @@ int main(int argc, char* argv[]){
   reduce.addEventSelectionCut(&AnalysisCuts::higherPeakHilbertAfterDedispersion);
   reduce.addEventSelectionCut(&AnalysisCuts::higherImpulsivityMeasureAfterDedispersion);
   reduce.addEventSelectionCut(&AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion);
-  reduce.addEventSelectionCut(&AnalysisCuts::dedispersedFracPowerWindowGradientBelowThreshold);
+  reduce.addEventSelectionCut(&AnalysisCuts::fisherScoreAboveThreshold);
+  // reduce.addEventSelectionCut(&AnalysisCuts::dedispersedFracPowerWindowGradientBelowThreshold);
 
   ss.Process(&reduce);
   

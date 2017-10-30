@@ -29,7 +29,7 @@ ClassImp(Acclaim::AnalysisCuts::IsNotNorth);
 ClassImp(Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion);
-ClassImp(Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold);
+// ClassImp(Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold);
 ClassImp(Acclaim::AnalysisCuts::FisherScoreAboveThreshold);
 
 
@@ -94,10 +94,10 @@ bool portable_isinf(double x){
  * @param title is the cut title
  * @param mrv is the maximum value it is possible for apply() to return
  */
-Acclaim::AnalysisCuts::AnalysisCut::AnalysisCut(const char* name, const char* title, int mrv)
-    : TNamed(name ,title), fMaxRetVal(mrv)
+Acclaim::AnalysisCuts::AnalysisCut::AnalysisCut(int mrv)
+    : fMaxRetVal(mrv)
 {
-  // just assign name, title, and maximum return value
+  // just assign maximum return value
 }
 
 
@@ -581,22 +581,22 @@ int Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion::apply(
 
 
 
-/** 
- * Checks to see if the dedispersed fracPowerWindowGradient is below threshold
- * Threshold value defined in AnalysisSettings.conf
- * 
- * @param sum is the AnitaEventSummary
- * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
- * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
- * 
- * @return 1 if true, 0 if false
- */
+// /** 
+//  * Checks to see if the dedispersed fracPowerWindowGradient is below threshold
+//  * Threshold value defined in AnalysisSettings.conf
+//  * 
+//  * @param sum is the AnitaEventSummary
+//  * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+//  * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+//  * 
+//  * @return 1 if true, 0 if false
+//  */
 
-int Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
-  handleDefaults(sum, pol, peakInd);
-  // std::cout << sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() << "\t" << fThreshold << std::endl;
-  return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < fThreshold);
-}
+// int Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {  
+//   handleDefaults(sum, pol, peakInd);
+//   // std::cout << sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() << "\t" << fThreshold << std::endl;
+//   return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() < fThreshold);
+// }
 
 
 
@@ -623,7 +623,7 @@ int Acclaim::AnalysisCuts::FisherScoreAboveThreshold::apply(const AnitaEventSumm
   fs += 0.005302*sum->peak[pol][peakInd].dPhiSun();
   fs += -0.011572*TMath::Abs(sum->peak[pol][peakInd].minAbsHwAngle());
   fs += -0.224413*sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient();
-  
+
   return (fs > fThreshold);
 }
 

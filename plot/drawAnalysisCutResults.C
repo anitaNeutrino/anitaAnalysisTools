@@ -35,15 +35,15 @@ void drawAnalysisCutResults(const char* fileName, bool asPercentage=false){
   const Long64_t totalEvents = t->GetEntries();
 
   const char* col = "|";
-  const char* border = "+";
-  const char* row = "---";
+  const char* bdr = "+";
+  const char* row = "-";
 
   const char* pc = asPercentage ? "%" : "";
   const double toPercentage = 100./totalEvents;
-  
 
-  std::cout << col << "cut" << col    << "in seq" << col << "if only" << col << "if not" << std::endl;
-  std::cout << col << row   << border << row           << col << row             << col << row            << std::endl;
+  std::cout << "There are " << totalEvents << " events " << std::endl;
+  std::cout << col << "cut" << col << "in seq" << col << "if only" << col << "if not" << col << std::endl;
+  std::cout << col << row   << bdr << row      << bdr << row       << bdr << row      << col << std::endl;
   TCut inSeqCut = "1";
 
  
@@ -80,11 +80,14 @@ void drawAnalysisCutResults(const char* fileName, bool asPercentage=false){
       nIfOnly *= toPercentage;
       nIfNot  *= toPercentage;
       std::cout << std::fixed;
-      std::cout << std::setprecision(2);      
+      std::cout << std::setprecision(2);
+    }
+    else{
+      std::cout << std::setprecision(10);
     }
     
     
-    std::cout << col << cutName << col << nInSeq << pc << col << nIfOnly << pc << col << nIfNot << pc << std::endl;
+    std::cout << col << cutName << col << nInSeq << pc << col << nIfOnly << pc << col << nIfNot << pc << col << std::endl;
     
   }
 
