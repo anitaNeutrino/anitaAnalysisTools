@@ -16,10 +16,9 @@ int main(int argc, char* argv[]){
   const char* signalGlob = argv[1];
   const char* backgroundGlob = argc >= 2 ? argv[2] : NULL;
 
+  AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);
+
   CutOptimizer co(signalGlob, backgroundGlob, true, true);
-
-
-
 
   std::vector<const AnalysisCuts::AnalysisCut *> signalSelection;
   TString sg = signalGlob;
@@ -34,17 +33,17 @@ int main(int argc, char* argv[]){
   std::vector<const AnalysisCuts::AnalysisCut *> backgroundSelection;
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
-  backgroundSelection.push_back(&AnalysisCuts::isNotTaggedAsPulser); // not a pulser...
 
   const int nGen = 8;
-  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isGood, // not payload blast, SURF saturation, 
-							   &AnalysisCuts::smallDeltaRough, // agreement between coarse/fine peak
-							   &AnalysisCuts::goodGPS, // do we have GPS data?
+
+  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isNotTaggedAsPulser,
+							   &AnalysisCuts::isGood,
+							   &AnalysisCuts::smallDeltaRough,
+							   &AnalysisCuts::goodGPS,
 							   &AnalysisCuts::realSNR,
 							   &AnalysisCuts::isRfTrigger,
 							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
-							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
-							   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
+							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion};
 
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(preThermalCuts[i]);
@@ -70,8 +69,8 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeakInd()", false)); // debugging
   
   // map info
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().dPhiSun())", true)); // delta phi sun
-  treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().minAbsHwAngle())", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().dPhiSun())", true)); // delta phi sun
+  // treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().minAbsHwAngle())", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().fracPowerWindowGradient()", true));
 
   std::vector<const AnalysisCuts::AnalysisCut*> waisCuts;

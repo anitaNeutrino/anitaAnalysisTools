@@ -325,6 +325,18 @@ namespace Acclaim
       ClassDef(IsNotNorth, 0);
     };
 
+    /**
+     * @class AcceptableHardwareAngle
+     * @brief Is the peak close enough to the hardware angle?
+     */
+    class AcceptableHardwareAngle : public AnalysisCut {
+    public:
+      AcceptableHardwareAngle() : AnalysisCut(), fMinAbsHardwareAngleDegrees(65) {;}
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// true/false
+      ClassDef(AcceptableHardwareAngle, 0);
+    private:
+      const Double_t fMinAbsHardwareAngleDegrees;
+    };
 
     /**
      * @class HigherPeakHilbertAfterDedispersion
@@ -419,6 +431,7 @@ namespace Acclaim
     const SignalLikeFirstStandardizedPeakMoments signalLikeFirstStandardizedPeakMoments;
     const PassesThesisCuts passesThesisThermalCut;
     const IsNotNorth isNotNorth;
+    const AcceptableHardwareAngle acceptableHardwareAngle;
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;

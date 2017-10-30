@@ -11,9 +11,9 @@
 #include "RootTools.h"
 #include "TH2D.h"
 
-const int numRfTriggersA3 = 77e6;
+const int numPreFisherEvents = 78e6; //8298605; //77e6;
 const double numDesiredBackground = 0.5; //ish
-const double backgroundAcceptance = numDesiredBackground/numRfTriggersA3;
+const double backgroundAcceptance = numDesiredBackground/numPreFisherEvents;
 double fisherCutVal = 999;
 
 Acclaim::CutOptimizer::FisherResult* fr = NULL;
@@ -191,7 +191,7 @@ void drawFisherPlot(TFile* f){
   //                               hBackInt->GetXaxis()->GetBinLowEdge(0),
   //                               hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX()));
 
-  std::cerr << "With " << numRfTriggersA3 << " RF triggers, and only wanting " << numDesiredBackground << " to pass cuts..." << std::endl;
+  std::cerr << "With " << numPreFisherEvents << " RF triggers, and only wanting " << numDesiredBackground << " to pass cuts..." << std::endl;
   std::cerr << "I have a background acceptance of " << backgroundAcceptance << std::endl;
   double requiredFisherScore = fBackExp->GetX(backgroundAcceptance, 0.001, 100);
   std::cerr << "Extrapolating my fit to that acceptance, I get a fisher score at " << requiredFisherScore << std::endl;

@@ -121,7 +121,9 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     int i=0;
     while (TObject* obj = next()){
       const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
-      fAnalysisCutTree->Branch(eventSelection->GetName(), &fAnalysisCutReturns.at(i));
+      TString name = eventSelection->GetName();
+      name.ReplaceAll("Acclaim::AnalysisCuts::", "");
+      fAnalysisCutTree->Branch(name, &fAnalysisCutReturns.at(i));
       i++;
     }
   }

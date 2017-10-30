@@ -23,6 +23,7 @@ int main(int argc, char* argv[]){
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
   
+  reduce.addEventSelectionCut(&AnalysisCuts::isNotTaggedAsPulser);
   reduce.addEventSelectionCut(&AnalysisCuts::isGood);
   reduce.addEventSelectionCut(&AnalysisCuts::smallDeltaRough);
   reduce.addEventSelectionCut(&AnalysisCuts::goodGPS);

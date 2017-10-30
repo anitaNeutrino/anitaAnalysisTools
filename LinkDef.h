@@ -61,6 +61,7 @@
 #pragma link C++ class Acclaim::AnalysisCuts::SignalLikeFirstStandardizedPeakMoments+;
 #pragma link C++ class Acclaim::AnalysisCuts::PassesThesisCuts+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsNotNorth+;
+#pragma link C++ class Acclaim::AnalysisCuts::AcceptableHardwareAngle+;
 #pragma link C++ class Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion+;
 #pragma link C++ class Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion+;
 #pragma link C++ class Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion+;

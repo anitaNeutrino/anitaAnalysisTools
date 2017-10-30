@@ -513,8 +513,7 @@ int Acclaim::AnalysisCuts::PassesThesisCuts::apply(const AnitaEventSummary* sum,
 
 
 /** 
- * Applies my thesis cuts in sequence, warts and all.
- * Hopefully this analysis will do better...
+ * Does this event point within 90 degrees of north?
  * 
  * @param sum is the AnitaEventSummary
  * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
@@ -525,6 +524,23 @@ int Acclaim::AnalysisCuts::PassesThesisCuts::apply(const AnitaEventSummary* sum,
 int Acclaim::AnalysisCuts::IsNotNorth::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
   handleDefaults(sum, pol, peakInd);  
   return (TMath::Abs(sum->peak[pol][peakInd].dPhiNorth()) > 90);
+
+}
+
+
+
+/** 
+ * Is this peak close enough to the hardware angle?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::AnalysisCuts::AcceptableHardwareAngle::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+  handleDefaults(sum, pol, peakInd);
+  return (TMath::Abs(sum->peak[pol][peakInd].minAbsHwAngle()) < fMinAbsHardwareAngleDegrees);
 
 }
 
