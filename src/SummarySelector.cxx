@@ -26,7 +26,7 @@ Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
   fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
   fAnalysisCutReturns(), fDoAnalysisCutTree(true),
   fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false),
-  fEventNumber(0), fRun(0)
+  fEventNumber(0), fRun(0), fWeight(0)
 {
   fEventSelection->SetName("fEventSelection");
 }
@@ -116,6 +116,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     fAnalysisCutTree = new TTree(fAnalysisCutTreeName, fAnalysisCutTreeName);
     fAnalysisCutTree->Branch("eventNumber", &fEventNumber);
     fAnalysisCutTree->Branch("run", &fRun);
+    fAnalysisCutTree->Branch("weight", &fWeight);
 
     TIter next(fEventSelection);
     int i=0;
@@ -189,6 +190,7 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
   if(fDoAnalysisCutTree && fAnalysisCutTree){
     fEventNumber = fSum->eventNumber;
     fRun = fSum->run;
+    fWeight = fSum->weight();
     fAnalysisCutTree->Fill();
   }
 

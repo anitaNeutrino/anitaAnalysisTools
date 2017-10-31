@@ -111,6 +111,7 @@ namespace Acclaim {
   private:
     UInt_t fEventNumber;
     Int_t fRun;
+    Double_t fWeight;
 
     ClassDef(SummarySelector,0);
 
