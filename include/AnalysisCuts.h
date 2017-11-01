@@ -409,6 +409,27 @@ namespace Acclaim
       ClassDef(FisherScoreAboveThreshold, 0);
     };
 
+    /**
+     * @class DoesNotPointToKnownMovingSource
+     * @brief Remove events that point at known moving sources
+     */
+    class DoesNotPointToKnownMovingSource : public AnalysisCut {
+    public:
+      DoesNotPointToKnownMovingSource()
+	: AnalysisCut(),
+	  fDeltaPhiDegFlights(5), fCloseEnoughToFlightMetres(1100e3),
+	  fDeltaPhiDegTraverses(5), fCloseEnoughToTraverseMetres(700e3)
+      {;}
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+    private:
+      const Double_t fDeltaPhiDegFlights;
+      const Double_t fCloseEnoughToFlightMetres;
+      const Double_t fDeltaPhiDegTraverses;
+      const Double_t fCloseEnoughToTraverseMetres;
+      ClassDef(DoesNotPointToKnownMovingSource, 0);
+    };
+
+
     const IsAboveHorizontal isAboveHorizontal;
     const IsTaggedAsPulser isTaggedAsPulser;
     const IsTaggedAsWaisPulser isTaggedAsWaisPulser;
@@ -435,8 +456,8 @@ namespace Acclaim
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
-    // const DedispersedFracPowerWindowGradientBelowThreshold dedispersedFracPowerWindowGradientBelowThreshold;
     const FisherScoreAboveThreshold fisherScoreAboveThreshold;
+    const DoesNotPointToKnownMovingSource doesNotPointToKnownMovingSource;
   }
 }
 
