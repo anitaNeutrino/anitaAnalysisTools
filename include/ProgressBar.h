@@ -32,6 +32,8 @@ namespace Acclaim
     void status();
 
     void inc(Long64_t& entry, Long64_t numEntries);
+    void inc(UInt_t& entry, Long64_t numEntries);
+    void inc(Int_t& entry, Long64_t numEntries);
 
     static void mainLoopSigintHandle(int param);
     static int progState;

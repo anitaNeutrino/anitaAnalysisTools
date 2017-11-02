@@ -115,6 +115,37 @@ void Acclaim::ProgressBar::operator++(int){
 
 
 
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief New primary function to move through main for loop in analysis program
+ *
+ * This function wraps the Long64_t implementation of inc
+ * 
+ * @param entry is a reference to the loop varible, assumed to start at 0.
+ * @param numEntries is the maximum entry, assumed that the loop condition is entry < numEntries
+ */
+void Acclaim::ProgressBar::inc(UInt_t& entry, Long64_t numEntries){
+  Long64_t entryL64 = entry;
+  inc(entryL64, numEntries);
+  entry = entryL64;
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/** 
+ * @brief New primary function to move through main for loop in analysis program
+ *
+ * This function wraps the Long64_t implementation of inc
+ * 
+ * @param entry is a reference to the loop varible, assumed to start at 0.
+ * @param numEntries is the maximum entry, assumed that the loop condition is entry < numEntries
+ */
+void Acclaim::ProgressBar::inc(Int_t& entry, Long64_t numEntries){
+  Long64_t entryL64 = entry;
+  inc(entryL64, numEntries);
+  entry = entryL64;
+}
+
 
 
 //---------------------------------------------------------------------------------------------------------
