@@ -13,6 +13,7 @@
 #include "AnitaConventions.h"
 #include "BaseList.h"
 #include "AnitaEventSummary.h"
+#include "TKDTree.h"
 
 class TTree;
 class TGraphAntarctica;
@@ -50,6 +51,8 @@ namespace Acclaim{
       Double_t latitude;			/// latitude
       Double_t longitude;			/// longitude
       Double_t altitude;			/// longitude
+      Double_t easting; //!                     /// easting
+      Double_t northing;//!                     /// northing
       AnitaEventSummary::PayloadLocation anita;	/// Anita's position
 
       Double_t theta;				/// reconstructed theta
@@ -187,6 +190,7 @@ namespace Acclaim{
       void resetClusters();
       Double_t getSumOfMcWeights();
       void redoSmallClusters();
+      void initKDTree();
 
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t maxDistCluster;					/// Only consider adding to a cluster when closer than this value
@@ -198,6 +202,7 @@ namespace Acclaim{
       std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,
       std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
+      TKDTreeID* fKDTree;                                       /// ROOT's implementation of a KDTree, typedef'd for int/double
 
       std::vector<TGraphAntarctica*> grBaseClusterCenters;	/// The locations of the bases
       std::vector<TH2DAntarctica*> hBaseClusteredEvents;	/// Histograms of events clustered to bases

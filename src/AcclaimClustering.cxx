@@ -102,6 +102,7 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   latitude = peak.latitude;
   longitude = peak.longitude;
   altitude = peak.altitude;
+  RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   theta = peak.theta;
@@ -128,6 +129,8 @@ Acclaim::Clustering::Event::Event(){
   latitude = 0;
   longitude = 0;
   altitude = 0;
+  easting = DBL_MAX;
+  northing = DBL_MAX;
   theta = -9999;
   phi = -9999;
   anita.reset();
@@ -1021,6 +1024,35 @@ void Acclaim::Clustering::LogLikelihoodMethod::writeAllGraphsAndHists(){
 }
 
 
+void Acclaim::Clustering::LogLikelihoodMethod::initKDTree(){
+  // std::cout << "About to build KDTree" << std::endl;
+  std::vector<double> eastings;
+  std::vector<double> northings;
+  for(UInt_t eventInd = 0; eventInd < events.size(); eventInd++){
+    const Event& event = events.at(eventInd);
+    eastings.push_back(event.easting);
+    northings.push_back(event.northing);
+  }
+
+  const int binSize = 100000; // meters... too small?
+  fKDTree = new TKDTreeID(events.size(), 2, binSize);
+  fKDTree->SetData(0, &eastings[0]);
+  fKDTree->SetData(1, &northings[0]);
+  fKDTree->Build();
+  // std::cout << "Built!" << std::endl;
+
+  // const int nTest = 10;
+  // std::vector<int> nns(nTest);
+  // std::vector<double> dists(nTest);
+  // fKDTree->FindNearestNeighbors(&events.at(0).easting, nTest, &nns[0], &dists[0]);
+  // std::cout << "The ten nearest neighbours of events[0] at " << events[0].longitude << "," << events[0].latitude << " are:" << std::endl;
+  // for(int i=0; i < nTest; i++){
+  //   std::cout << "events[" << nns[i] << "] at " << events[nns[i]].longitude << ", " << events[nns[i]].longitude << std::endl;
+  // }
+
+  
+}
+
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
@@ -1034,6 +1066,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": not using base list!" << std::endl;
   }
   readInSummaries(mcGlob);
+
+  initKDTree();
+  return;
 
   char* fakeArgv0 = const_cast<char*>(outFileName);
   OutputConvention oc(1, &fakeArgv0);
