@@ -369,8 +369,8 @@ int Acclaim::AnalysisCuts::CloseToMC::apply(const AnitaEventSummary* sum, AnitaP
   if(sum->mc.weight > 0){ // for non-MC events, return false
     close = false;
     // kinda arbitrary here... but should get use close enough
-    const double dPhiClose = 5;
-    const double dThetaClose = 3;
+    const double dPhiClose = 5.5;
+    const double dThetaClose = 3.5;
     
     double dPhi = sum->peak[pol][peakInd].dPhiMC();
     if(TMath::Abs(dPhi) < dPhiClose){
@@ -399,11 +399,11 @@ int Acclaim::AnalysisCuts::CloseToWais::apply(const AnitaEventSummary* sum, Anit
 {
   handleDefaults(sum, pol, peakInd);
   bool close = false;
-  if(sum->mc.weight > 0){ // for non-MC events, return false
+  if(sum->mc.weight <= 0){ // for non-MC events, return false
     close = false;
     // kinda arbitrary here... but should get use close enough
-    const double dPhiClose = 5;
-    const double dThetaClose = 3;
+    const double dPhiClose = 5.5;
+    const double dThetaClose = 3.5;
     
     double dPhi = sum->peak[pol][peakInd].dPhiWais();
     if(TMath::Abs(dPhi) < dPhiClose){
