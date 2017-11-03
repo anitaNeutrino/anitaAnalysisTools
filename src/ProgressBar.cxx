@@ -178,8 +178,12 @@ void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
     }
     numBreakTries++;
   }
-  
-  (*this)++;
+
+  int diff = entry - counter;
+  for(int i=0; i < diff; i++){
+    // std::cout << counter << "\t" << entry << std::endl;
+    (*this)++;
+  }
 }
 
 
