@@ -165,10 +165,13 @@ namespace Acclaim{
       
       TGraphAntarctica* makeClusterSummaryTGraph(Int_t clusterInd);
 
-      bool GetUseBaseList(){return fUseBaseList;}
-      void SetUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
+      bool getUseBaseList(){return fUseBaseList;}
+      void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
+
+      bool getDebug(){return fDebug;}
+      void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
 
     private:
       Double_t getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster);
@@ -199,6 +202,7 @@ namespace Acclaim{
 
 
       void DBSCAN();
+      void OPTICS();
       void rangeQueryEastingNorthing(Int_t eventInd, Int_t numNearbyEN, std::vector<Int_t>& seed);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t dPoint(Int_t eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);

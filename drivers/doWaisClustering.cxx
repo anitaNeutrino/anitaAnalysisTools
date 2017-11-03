@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
   const char* mcGlob = argc >= 2 ? argv[2] : NULL;
 
   Clustering::LogLikelihoodMethod clusterer;
-  clusterer.SetUseBaseList(false);
+  clusterer.setUseBaseList(false);
   
   clusterer.doClustering(dataGlob, mcGlob, outFileName);
 

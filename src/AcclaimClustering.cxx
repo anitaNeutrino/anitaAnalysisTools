@@ -222,7 +222,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fFunctor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2)
 {
   grTestMinimizerWalk = NULL;
-  llCut = 10;
+  llCut = 40;
   // fTestEvent1 = 55850024;
   // fTestEvent2 = 60424781;
   fTestEvent1 = 61259774;
@@ -238,7 +238,6 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
 
   fMaxFitterAttempts = 1;
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2");
-  // std::cout << fMinimizer << std::endl;
   fMinimizer->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
   fMinimizer->SetTolerance(0.0001);
   fMinimizer->SetPrintLevel(0);
@@ -1281,7 +1280,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::initKDTree(){
     std::cout << "The ten nearest neighbours of events[0] at " << events[0].longitude << "," << events[0].latitude << " are:" << std::endl;
     for(int i=0; i < nTest; i++){
       std::cout << "events[" << nns[i] << "] at " << events[nns[i]].longitude << ", " << events[nns[i]].longitude << std::endl;
-    } 
+    }
+
+
+    std::vector<Int_t> neighbours;
+    const double rangeEN = 700e3;
+    fKDTree->FindInRange(&events.at(0).easting, rangeEN, neighbours);
+    std::cout << "There are " << neighbours.size() << " events within a sphere of radius " << rangeEN << std::endl;
   }
 }
 
@@ -1293,7 +1298,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::rangeQueryEastingNorthing(Int_t e
   std::vector<double> distsEN(numNearbyEN);
   fKDTree->FindNearestNeighbors(&events.at(0).easting, numNearbyEN, &neighbourEventInds[0], &distsEN[0]);
   for(int i=0; i < numNearbyEN; i++){
-    Double_t ll = d(eventInd, neighbourEventInds[i]);
+    // Double_t ll = d(eventInd, neighbourEventInds[i]);
+    Double_t ll = dFit(eventInd, neighbourEventInds[i]);
 
     if(ll < event.nearestNeighbourLogLikelihood){
       event.nearestNeighbourEventNumber = events.at(neighbourEventInds[i]).eventNumber;
@@ -1338,9 +1344,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   const Int_t nBins = 1024; //(lastEventNumber + 1) - firstEventNumber;
   // const Int_t stride = 50;
   std::cout << nBins << "\t" << firstEventNumber << "\t" << lastEventNumber << std::endl;
-  TH2D* hUnfitted = new TH2D("hUnfitted_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
+  TH2D* hUnfit = new TH2D("hUnfit_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
   TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
-
+  TH2D* hFitVsUnfitted = new TH2D("hFit_vs_unfit", "Fitted vs. unfitted WAIS event-event log-likelihood; Unfitted log-likelihood; Fitted log-likelihood", 1024, 0, 1024, 1024, 0, 1024);
+  TH1D* hUnfitMinusFit = new TH1D("hFit_minus_unfit", "(Unfitted - fitted) WAIS event-event log-likelihood; #delta (log likelihood)", 1024, -512, 512);
+  
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     const Event& event1 = events.at(eventInd);
 
@@ -1393,10 +1401,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     double dist = d(eventInd, eventInd2);
     Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
       
-    hUnfitted->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
+    hUnfit->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
 
     double distFitted = dFit(eventInd, eventInd2);
     hFit->Fill(angleBetweenEvents*TMath::RadToDeg(), distFitted);
+
+    hFitVsUnfitted->Fill(dist, distFitted);
+    hUnfitMinusFit->Fill(dist - distFitted);
 
     p.inc(eventInd, events.size());
   }
@@ -1404,11 +1415,34 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   hWais->Write();
   delete hWais;
   
-  hUnfitted->Write();
-  delete hUnfitted;
+  hUnfit->Write();
+  delete hUnfit;
+
+  hFit->Write();
+  delete hFit;
+
+  hFitVsUnfitted->Write();
+  delete hFitVsUnfitted;
+
+  hUnfitMinusFit->Write();
+  delete hUnfitMinusFit;
   
 }
 
+
+void Acclaim::Clustering::LogLikelihoodMethod::OPTICS(){
+
+  // const int kUndefined = -2;
+  // const int kNoise = -1;
+
+  // coreDist = undefined if numNeighbours < fMinPts
+  //          = distance to the fMinPts-th closest point
+
+
+  // reachabilityDist defined from point point a to point b
+  // reachabilityDist = undefined if numNeighbours < fMinPts
+  //                  = max(coreDist, )
+}
 
 void Acclaim::Clustering::LogLikelihoodMethod::DBSCAN(){
 
@@ -1477,7 +1511,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::DBSCAN(){
 void Acclaim::Clustering::LogLikelihoodMethod::doClusteringDBSCAN(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
-  // initKDTree();
+  initKDTree();
+  setDebug(false);
+  // return;
   // DBSCAN();
   const char* fakeArgv[2] = {outFileName, "DBSCAN"};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
