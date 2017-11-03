@@ -219,8 +219,10 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fMinimizer(NULL),
   fFunctor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2)
 {
-
+  grTest = NULL;
   llCut = 10;
+  fTestEvent1 = 55850024;
+  fTestEvent2 = 60424781;  
   fFitHorizonDistM = 700e3;
   numCallsToRecursive = 0;
   doneBaseClusterAssignment = false;
@@ -229,9 +231,11 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fDebug = false;
   fUseBaseList = true;
 
+  fMaxFitterAttempts = 1;
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2");
   // std::cout << fMinimizer << std::endl;
   fMinimizer->SetMaxFunctionCalls(1e4); // for Minuit/Minuit2
+  fMinimizer->SetTolerance(0.001); 
   fMinimizer->SetPrintLevel(0);
   fMinimizer->SetFunction(fFunctor);
   
@@ -354,10 +358,20 @@ void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventC
 
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat(const Double_t* params){
+
   // Double_t sourceLon = params[0];
   // Double_t sourceLat = params[1];
   Double_t sourceEasting = params[0];
   Double_t sourceNorthing = params[1];
+
+  if(events.at(fFitEventInd1).eventNumber==fTestEvent1){
+    if(events.at(fFitEventInd2).eventNumber==fTestEvent2){
+      if(grTest){
+	grTest->SetPoint(grTest->GetN(), sourceEasting, sourceNorthing);
+      }
+    }
+  }
+
   Double_t sourceAlt = RampdemReader::SurfaceAboveGeoidEN(sourceEasting, sourceNorthing);
   Double_t sourceLon, sourceLat;
   RampdemReader::EastingNorthingToLonLat(sourceEasting, sourceNorthing, sourceLon, sourceLat);
@@ -392,26 +406,101 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
   Double_t ll12 = dAsym(eventInd1, eventInd2);
   Double_t ll21 = dAsym(eventInd2, eventInd1);
 
+  // we actually want to start at the WORSE of the two sources, apparently
+  // which is very unintuitive
   Int_t which = ll21 < ll12 ? eventInd1 : eventInd2;
+
+  if(events.at(eventInd1).eventNumber==fTestEvent1){
+    if(events.at(eventInd2).eventNumber==fTestEvent2){
+      grTest = new TGraph();
+    }
+  }
 
   fMinimizer->SetVariable(0, "sourceEasting", events.at(which).easting, 0.001);
   fMinimizer->SetVariable(1, "sourceNorthing", events.at(which).northing, 0.001);
 
   int old_level = gErrorIgnoreLevel; 
-  gErrorIgnoreLevel = 1001; 
-  bool valid = fMinimizer->Minimize();
+  gErrorIgnoreLevel = 1001;
+  bool validMinimum = false;
+  std::vector<double> minima;
+  for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
+    validMinimum = fMinimizer->Minimize();
+    minima.push_back(fMinimizer->MinValue());
+    if(!validMinimum){
+      fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 0.001);
+      fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 0.001);
+    }
+  }
   gErrorIgnoreLevel = old_level;
 
-  if(!valid && fDebug){ // do the same thing again, this time with error messages!
+  if(grTest){
+    grTest->SetName("grTest");
+    grTest->Write();
+    delete grTest;
+    grTest = NULL;
+  }
+
+
+  if((!validMinimum && fDebug) || fMinimizer->MinValue() > 100){ // do the same thing again, this time with error messages!
     int old_print_level = fMinimizer->PrintLevel();
     fMinimizer->SetPrintLevel(3);
     fMinimizer->SetVariable(0, "sourceEasting", events.at(which).easting, 0.001);
     fMinimizer->SetVariable(1, "sourceNorthing", events.at(which).northing, 0.001);
-    fMinimizer->Minimize();
+    for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
+      validMinimum = fMinimizer->Minimize();
+      if(!validMinimum){
+	fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 0.001);
+	fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 0.001);
+      }
+      
+    }
     fMinimizer->SetPrintLevel(old_print_level);
-  }
 
-  return fMinimizer->MinValue();
+    AnitaVersion::set(3);
+    double waisLon = AnitaLocations::getWaisLongitude();
+    double waisLat = AnitaLocations::getWaisLatitude();
+    double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
+
+    Double_t llWais1 = dPoint(fFitEventInd1,
+			      waisLon,
+			      waisLat,
+			      waisModelAlt);
+    Double_t llWais2 = dPoint(fFitEventInd2,
+			      waisLon,
+			      waisLat,
+			      waisModelAlt);
+    Double_t llWais1b = dPoint(fFitEventInd1,
+			       waisLon,
+			       waisLat,
+			       waisModelAlt, true);
+    Double_t llWais2b = dPoint(fFitEventInd2,
+			       waisLon,
+			       waisLat,
+			       waisModelAlt, true);
+    std::cout << "The fitter minima were ";
+    for(UInt_t i=0; i < minima.size(); i++){
+      std::cout << minima[i] << " ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "Just for fun trying true WAIS location..." << std::endl;
+    std::cout << "event 1: run " << events.at(eventInd1).run << ", eventNumber " << events.at(eventInd1).eventNumber << std::endl;
+    std::cout << "event 2: run " << events.at(eventInd2).run << ", eventNumber " << events.at(eventInd2).eventNumber << std::endl;    
+    std::cout << "llWais1 = " << llWais1 << "\t" << llWais1b << std::endl;
+    std::cout << "llWais2 = " << llWais2 << "\t" << llWais2b << std::endl;
+    std::cout << "Seed was at " << events.at(which).easting << "\t" << events.at(which).northing << "\t"
+	      << events.at(which).longitude << "\t" << events.at(which).latitude << "\t" << TMath::Max(ll21, ll12) << std::endl;
+
+    int e1 = eventInd1;
+    std::cout << "event 1 was at " << events.at(e1).easting << "\t" << events.at(e1).northing << "\t" << events.at(e1).longitude << "\t" << events.at(e1).latitude << "\t" << ll12 << std::endl;
+    int e2 = eventInd2;
+    std::cout << "event 2 was at " << events.at(e2).easting << "\t" << events.at(e2).northing << "\t" << events.at(e2).longitude << "\t" << events.at(e2).latitude << "\t" << ll21 << std::endl;        
+    std::cout << std::endl;
+  }
+  Double_t ll = fMinimizer->MinValue();
+
+  return ll;
+
 }
 
 
@@ -1257,21 +1346,64 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     }
   }
 
+
+  /// fTestEvent1
+  /// fTestEvent2
+
   const Int_t nBins = 2048; //(lastEventNumber + 1) - firstEventNumber;
   const Int_t stride = 50;
   std::cout << nBins << "\t" << firstEventNumber << "\t" << lastEventNumber << std::endl;
   TProfile2D* h = new TProfile2D("h_d_vs_eventNumbers", "h_d_vs_eventNumbers", nBins, firstEventNumber, lastEventNumber+1, nBins, firstEventNumber, lastEventNumber+1);
   TH2D* h2 = new TH2D("h2_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
   TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
+
+
   
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd+=stride){
     const Event& event1 = events.at(eventInd);
+
+    // if(event1.eventNumber!=fTestEvent1) continue;
+
     TVector3 event1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.latitude, event1.longitude, event1.altitude).v();
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
     TVector3 anitaToEvent1 = event1Pos - anita1Pos;
     
     for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
       const Event& event2 = events.at(eventInd2);
+
+      // if(event2.eventNumber!=fTestEvent2) continue;
+
+      if(event1.eventNumber==fTestEvent1){
+	if(event2.eventNumber==fTestEvent2){
+	  std::cout << "doing single event test!" << std::endl;
+	  AnitaVersion::set(3);
+	  double waisEasting, waisNorthing;
+	  RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
+	  double delta = 100e3;
+	  const int nBins = 1024;
+	  TH2D* hParams = new TH2D("hSingleEventTest", "param vs. e/n",
+				   // nBins, -1090000, -1065000,
+				   // nBins, -484200, -483600);
+				   nBins, waisEasting-delta, waisEasting+delta,
+				   nBins, waisNorthing-delta, waisNorthing+delta);
+
+	  fFitEventInd1 = eventInd;
+	  fFitEventInd2 = eventInd2;
+	  double params[2] = {0,0};
+	  for(int by=1; by <= hParams->GetNbinsY(); by++){
+	    params[1] = hParams->GetYaxis()->GetBinCenter(by);
+	    for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
+	      params[0] = hParams->GetXaxis()->GetBinCenter(bx);
+	      double ll = evalPairLogLikelihoodAtLonLat(params);
+	      // std::cout << params[0] << "\t" << params[1] << "\t" << ll << std::endl;
+	      hParams->Fill(params[0], params[1], ll);
+	    }
+	  }
+	  std::cout << "done!" << std::endl;
+	  hParams->Write();
+	  delete hParams;
+	}
+      }
 
       TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
       TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();

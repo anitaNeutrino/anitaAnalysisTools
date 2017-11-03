@@ -205,8 +205,11 @@ namespace Acclaim{
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
       Int_t fFitEventInd1; /// The index of the first event in the pairwise fit
       Int_t fFitEventInd2; /// The index of the second event in the pairwise fit
+      Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
       Double_t dFit(Int_t eventInd1, Int_t eventInd2);
+      UInt_t fTestEvent1; /// For debugging
+      UInt_t fTestEvent2; /// For debugging
 
       
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
@@ -228,6 +231,7 @@ namespace Acclaim{
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       bool fDebug;
       bool fUseBaseList;
+      TGraph* grTest;
 
       ROOT::Math::Minimizer* fMinimizer;
       ROOT::Math::Functor fFunctor;
