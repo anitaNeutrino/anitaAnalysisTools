@@ -22,6 +22,8 @@ ClassImp(Acclaim::Clustering::Cluster);
 
 const int nDim = 3;
 
+const double FITTER_INPUT_SCALING = 1e-4;
+const double FITTER_OUTPUT_SCALING = 1./FITTER_INPUT_SCALING;
 
 /**
  * @namespace ResolutionModel
@@ -219,10 +221,13 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fMinimizer(NULL),
   fFunctor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2)
 {
-  grTest = NULL;
+  grTestMinimizerWalk = NULL;
   llCut = 10;
-  fTestEvent1 = 55850024;
-  fTestEvent2 = 60424781;  
+  // fTestEvent1 = 55850024;
+  // fTestEvent2 = 60424781;
+  fTestEvent1 = 61259774;
+  fTestEvent2 = 55730926;
+
   fFitHorizonDistM = 700e3;
   numCallsToRecursive = 0;
   doneBaseClusterAssignment = false;
@@ -235,7 +240,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2");
   // std::cout << fMinimizer << std::endl;
   fMinimizer->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
-  fMinimizer->SetTolerance(0.001);
+  fMinimizer->SetTolerance(0.0001);
   fMinimizer->SetPrintLevel(0);
   fMinimizer->SetFunction(fFunctor);
   
@@ -361,13 +366,13 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
 
   // Double_t sourceLon = params[0];
   // Double_t sourceLat = params[1];
-  Double_t sourceEasting = 1000*params[0];
-  Double_t sourceNorthing = 1000*params[1];
+  Double_t sourceEasting = FITTER_OUTPUT_SCALING*params[0];
+  Double_t sourceNorthing = FITTER_OUTPUT_SCALING*params[1];
 
   if(events.at(fFitEventInd1).eventNumber==fTestEvent1){
     if(events.at(fFitEventInd2).eventNumber==fTestEvent2){
-      if(grTest){
-	grTest->SetPoint(grTest->GetN(), sourceEasting, sourceNorthing);
+      if(grTestMinimizerWalk){
+	grTestMinimizerWalk->SetPoint(grTestMinimizerWalk->GetN(), sourceEasting, sourceNorthing);
       }
     }
   }
@@ -412,12 +417,12 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
 
   if(events.at(eventInd1).eventNumber==fTestEvent1){
     if(events.at(eventInd2).eventNumber==fTestEvent2){
-      grTest = new TGraph();
+      grTestMinimizerWalk = new TGraph();
     }
   }
 
-  fMinimizer->SetVariable(0, "sourceEasting", 0.001*events.at(which).easting, 0.001);
-  fMinimizer->SetVariable(1, "sourceNorthing", 0.001*events.at(which).northing, 0.001);
+  fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
+  fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*events.at(which).northing, 1);
 
   int old_level = gErrorIgnoreLevel; 
   gErrorIgnoreLevel = 1001;
@@ -427,30 +432,30 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
     validMinimum = fMinimizer->Minimize();
     minima.push_back(fMinimizer->MinValue());
     if(!validMinimum){
-      fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 0.001);
-      fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 0.001);
+      fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 1);
+      fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 1);
     }
   }
   gErrorIgnoreLevel = old_level;
 
-  if(grTest){
-    grTest->SetName("grTest");
-    grTest->Write();
-    delete grTest;
-    grTest = NULL;
+  if(grTestMinimizerWalk){
+    grTestMinimizerWalk->SetName("grTestMinimizerWalk");
+    grTestMinimizerWalk->Write();
+    delete grTestMinimizerWalk;
+    grTestMinimizerWalk = NULL;
   }
 
 
   if((!validMinimum && fDebug) || fMinimizer->MinValue() > 100){ // do the same thing again, this time with error messages!
     int old_print_level = fMinimizer->PrintLevel();
     fMinimizer->SetPrintLevel(3);
-    fMinimizer->SetVariable(0, "sourceEasting", 0.001*events.at(which).easting, 0.001);
-    fMinimizer->SetVariable(1, "sourceNorthing", 0.001*events.at(which).northing, 0.001);
+    fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
+    fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*events.at(which).northing, 1);
     for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
       validMinimum = fMinimizer->Minimize();
       if(!validMinimum){
-	fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 0.001);
-	fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 0.001);
+	fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 1);
+	fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 1);
       }
       
     }
@@ -1357,12 +1362,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   TH2D* h2 = new TH2D("h2_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
   TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
 
-
-  
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd+=stride){
     const Event& event1 = events.at(eventInd);
 
-    // if(event1.eventNumber!=fTestEvent1) continue;
+    if(event1.eventNumber!=fTestEvent1) continue;
 
     TVector3 event1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.latitude, event1.longitude, event1.altitude).v();
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
@@ -1371,7 +1374,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
       const Event& event2 = events.at(eventInd2);
 
-      // if(event2.eventNumber!=fTestEvent2) continue;
+      if(event2.eventNumber!=fTestEvent2) continue;
 
       if(event1.eventNumber==fTestEvent1){
 	if(event2.eventNumber==fTestEvent2){
@@ -1391,12 +1394,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
 	  fFitEventInd2 = eventInd2;
 	  double params[2] = {0,0};
 	  for(int by=1; by <= hParams->GetNbinsY(); by++){
-	    params[1] = 0.001*hParams->GetYaxis()->GetBinCenter(by);
+	    params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
 	    for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
-	      params[0] = hParams->GetXaxis()->GetBinCenter(bx);
-	      double ll = 0.001*evalPairLogLikelihoodAtLonLat(params);
+	      params[0] = FITTER_INPUT_SCALING*hParams->GetXaxis()->GetBinCenter(bx);
+	      double ll = evalPairLogLikelihoodAtLonLat(params);
 	      // std::cout << params[0] << "\t" << params[1] << "\t" << ll << std::endl;
-	      hParams->Fill(params[0], params[1], ll);
+	      hParams->Fill(FITTER_OUTPUT_SCALING*params[0], FITTER_OUTPUT_SCALING*params[1], ll);
 	    }
 	  }
 	  std::cout << "done!" << std::endl;

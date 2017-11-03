@@ -231,7 +231,7 @@ namespace Acclaim{
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       bool fDebug;
       bool fUseBaseList;
-      TGraph* grTest;
+      TGraph* grTestMinimizerWalk;
 
       ROOT::Math::Minimizer* fMinimizer;
       ROOT::Math::Functor fFunctor;
