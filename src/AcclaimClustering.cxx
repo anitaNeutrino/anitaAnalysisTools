@@ -234,8 +234,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fMaxFitterAttempts = 1;
   fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2");
   // std::cout << fMinimizer << std::endl;
-  fMinimizer->SetMaxFunctionCalls(1e4); // for Minuit/Minuit2
-  fMinimizer->SetTolerance(0.001); 
+  fMinimizer->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
+  fMinimizer->SetTolerance(0.001);
   fMinimizer->SetPrintLevel(0);
   fMinimizer->SetFunction(fFunctor);
   
@@ -361,8 +361,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
 
   // Double_t sourceLon = params[0];
   // Double_t sourceLat = params[1];
-  Double_t sourceEasting = params[0];
-  Double_t sourceNorthing = params[1];
+  Double_t sourceEasting = 1000*params[0];
+  Double_t sourceNorthing = 1000*params[1];
 
   if(events.at(fFitEventInd1).eventNumber==fTestEvent1){
     if(events.at(fFitEventInd2).eventNumber==fTestEvent2){
@@ -416,8 +416,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
     }
   }
 
-  fMinimizer->SetVariable(0, "sourceEasting", events.at(which).easting, 0.001);
-  fMinimizer->SetVariable(1, "sourceNorthing", events.at(which).northing, 0.001);
+  fMinimizer->SetVariable(0, "sourceEasting", 0.001*events.at(which).easting, 0.001);
+  fMinimizer->SetVariable(1, "sourceNorthing", 0.001*events.at(which).northing, 0.001);
 
   int old_level = gErrorIgnoreLevel; 
   gErrorIgnoreLevel = 1001;
@@ -444,8 +444,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
   if((!validMinimum && fDebug) || fMinimizer->MinValue() > 100){ // do the same thing again, this time with error messages!
     int old_print_level = fMinimizer->PrintLevel();
     fMinimizer->SetPrintLevel(3);
-    fMinimizer->SetVariable(0, "sourceEasting", events.at(which).easting, 0.001);
-    fMinimizer->SetVariable(1, "sourceNorthing", events.at(which).northing, 0.001);
+    fMinimizer->SetVariable(0, "sourceEasting", 0.001*events.at(which).easting, 0.001);
+    fMinimizer->SetVariable(1, "sourceNorthing", 0.001*events.at(which).northing, 0.001);
     for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
       validMinimum = fMinimizer->Minimize();
       if(!validMinimum){
@@ -1391,10 +1391,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
 	  fFitEventInd2 = eventInd2;
 	  double params[2] = {0,0};
 	  for(int by=1; by <= hParams->GetNbinsY(); by++){
-	    params[1] = hParams->GetYaxis()->GetBinCenter(by);
+	    params[1] = 0.001*hParams->GetYaxis()->GetBinCenter(by);
 	    for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
 	      params[0] = hParams->GetXaxis()->GetBinCenter(bx);
-	      double ll = evalPairLogLikelihoodAtLonLat(params);
+	      double ll = 0.001*evalPairLogLikelihoodAtLonLat(params);
 	      // std::cout << params[0] << "\t" << params[1] << "\t" << ll << std::endl;
 	      hParams->Fill(params[0], params[1], ll);
 	    }
