@@ -96,6 +96,17 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
   return c1;
 }
 
+/** 
+ * Since we're not saving the useful pat, 
+ * this might need to be explicitly called 
+ * when reading from a tree in the future
+ */
+void Acclaim::Clustering::Event::setupUsefulPat(){
+  Adu5Pat pat = anita.pat();
+  usefulPat = UsefulAdu5Pat(&pat);
+}
+
+
 Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
   this->eventNumber = sum->eventNumber;
@@ -130,6 +141,8 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
 
   nearestNeighbourEventNumber = 0;
   nearestNeighbourLogLikelihood = DBL_MAX;
+
+  setupUsefulPat();
 }
 
 
@@ -338,13 +351,13 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getDistSqEventCluster(Int_t e
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
+void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
   const Cluster& cluster = clusters.at(clusterInd);
   const Event& event = events.at(eventInd);
 
   Double_t thetaWave, phiWave;
-  usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
+  event.usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
   Double_t thetaDeg = -1*TMath::RadToDeg()*thetaWave;
   Double_t phiDeg = TMath::RadToDeg()*phiWave;
 
@@ -379,16 +392,6 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
   Double_t sourceAlt = RampdemReader::SurfaceAboveGeoidEN(sourceEasting, sourceNorthing);
   Double_t sourceLon, sourceLat;
   RampdemReader::EastingNorthingToLonLat(sourceEasting, sourceNorthing, sourceLon, sourceLat);
-
-  // const Event& event1 = events.at(fFitEventInd1);
-  // Double_t newPhi = event1.phi + params[0];
-  // Double_t newTheta = event1.theta + params[1];
-  // Adu5Pat pat = event1.anita.pat();
-  // UsefulAdu5Pat usefulPat(&pat);
-
-  // Double_t sourceLon, sourceLat, sourceAlt, thetaAdjustment;  
-  // usefulPat.traceBackToContinent(newPhi*TMath::DegToRad(), -1*newTheta*TMath::DegToRad(),
-  // 				 &sourceLon, &sourceLat, &sourceAlt, &thetaAdjustment);
 
   Double_t ll = 0;
   ll += dPoint(fFitEventInd1, sourceLon, sourceLat, sourceAlt, true);
@@ -516,11 +519,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double
 
   const Event& event = events.at(eventInd);
 
-  Adu5Pat pat = event.anita.pat();
-  UsefulAdu5Pat usefulPat(&pat);
-
   Double_t theta, phi;
-  usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, theta, phi);
+  event.usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, theta, phi);
   theta = -1*TMath::RadToDeg()*theta;
   phi = TMath::RadToDeg()*phi;
 
@@ -530,7 +530,7 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double
   Double_t ll = dTheta*dTheta + dPhi*dPhi;
 
   if(addOverHorizonPenalty){
-    Double_t distM = usefulPat.getDistanceFromSource(sourceLat, sourceLon, sourceAlt);    
+    Double_t distM = event.usefulPat.getDistanceFromSource(sourceLat, sourceLon, sourceAlt);    
     if(distM >= fFitHorizonDistM){
       double distOverHorizonM = fabs(distM - fFitHorizonDistM);
       ll += distOverHorizonM;
@@ -546,13 +546,13 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double
 
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat){
+Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd){
 
   const Cluster& cluster = clusters.at(clusterInd);
   const Event& event = events.at(eventInd);
 
   Double_t deltaThetaDeg, deltaPhiDeg;
-  getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, clusterInd, usefulPat, deltaThetaDeg, deltaPhiDeg);
+  getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, clusterInd, deltaThetaDeg, deltaPhiDeg);
 
   Double_t dThetaNorm = deltaThetaDeg/event.sigmaTheta;
   Double_t dPhiNorm = deltaPhiDeg/event.sigmaPhi;
@@ -567,7 +567,7 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_
 		<< ", ll = " << angSq << std::endl;
       std::cout << "cluster lon/lat/alt = " << cluster.longitude << ", " << cluster.latitude << ", " << cluster.altitude << std::endl;
       std::cout << "event lon/lat/alt = " << event.longitude << ", " << event.latitude << ", " << event.altitude << std::endl;
-      std::cout << "anita lon/lat/alt = " << usefulPat.longitude << ", " << usefulPat.latitude << ", " << usefulPat.altitude << std::endl;
+      std::cout << "anita lon/lat/alt = " << event.usefulPat.longitude << ", " << event.usefulPat.latitude << ", " << event.usefulPat.altitude << std::endl;
     }
   }
 
@@ -815,15 +815,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::findClosestEventToClustersOfSizeO
 
 	// skip events in the cluster under test
 	if(events.at(eventInd).cluster!=clusterInd){
-	  Adu5Pat pat = events.at(eventInd).anita.pat();
-	  UsefulAdu5Pat usefulPat(&pat);
-	  Double_t dist = usefulPat.getDistanceFromSource(cluster.latitude,
-							  cluster.longitude,
-							  cluster.altitude);
+	  Double_t dist = events.at(eventInd).usefulPat.getDistanceFromSource(cluster.latitude,
+									      cluster.longitude,
+									      cluster.altitude);
 
 	  // this is where proper collision detection would be useful...
 	  if(dist < fFitHorizonDistM){
-	    Double_t ll = getAngDistSqEventCluster(eventInd, clusterInd, usefulPat);
+	    Double_t ll = getAngDistSqEventCluster(eventInd, clusterInd);
 
 	    if(ll < llCut){
 
@@ -865,16 +863,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::findClosestEventToClustersOfSizeO
 
 void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(Int_t i, Int_t isMC, Int_t clusterInd){
   Event& event = isMC==0 ? events.at(i) : mcEvents.at(i);
-  const Adu5Pat pat = event.anita.pat();
-  UsefulAdu5Pat usefulPat(&pat);
 
   Cluster& cluster = clusters.at(clusterInd);
 
-  Double_t distM = usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
+  Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
 
   if(distM < maxDistCluster){ // are we even close?
 
-    Double_t ll = getAngDistSqEventCluster(i, clusterInd, usefulPat);
+    Double_t ll = getAngDistSqEventCluster(i, clusterInd);
 
     if(ll < llCut){ // within the cut?
 
@@ -1114,10 +1110,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
   for(Int_t eventInd=0; eventInd < (Int_t)events.size(); eventInd++){
     event = &events.at(eventInd);
     if(event->cluster >= 0){
-      Adu5Pat pat= event->anita.pat();
-      UsefulAdu5Pat usefulPat(&pat);
-      getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, event->cluster, usefulPat,
-					      event->dThetaCluster, event->dPhiCluster);
+      getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, event->cluster, event->dThetaCluster, event->dPhiCluster);
 
       if(clusters.at(event->cluster).numDataEvents == 1 && clusters.at(event->cluster).knownBase==0) {
 	nonBaseSingletTree->Fill();

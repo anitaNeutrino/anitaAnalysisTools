@@ -79,10 +79,12 @@ namespace Acclaim{
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
+      mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
 
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       TArrowAntarctica* makeArrowFromAnitaToEvent();
+      void setupUsefulPat();
 
       virtual ~Event(){ ;}
       ClassDef(Event, 4)
@@ -176,8 +178,8 @@ namespace Acclaim{
     private:
       Double_t getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster);
       // Double_t getDistSqClusterCluster(Int_t clusterInd1, Int_t clusterInd2);
-      Double_t getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat);
-      void getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, UsefulAdu5Pat& usefulPat, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
+      Double_t getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd);
+      void getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
 
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
