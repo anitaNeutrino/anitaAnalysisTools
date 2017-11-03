@@ -415,10 +415,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
   // which is very unintuitive
   Int_t which = ll21 < ll12 ? eventInd1 : eventInd2;
 
-  if(events.at(eventInd1).eventNumber==fTestEvent1){
-    if(events.at(eventInd2).eventNumber==fTestEvent2){
-      grTestMinimizerWalk = new TGraph();
-    }
+  if(fDebug && events.at(eventInd1).eventNumber==fTestEvent1 && events.at(eventInd2).eventNumber==fTestEvent2){
+    grTestMinimizerWalk = new TGraph();
   }
 
   fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
@@ -446,7 +444,7 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
   }
 
 
-  if((!validMinimum && fDebug) || fMinimizer->MinValue() > 100){ // do the same thing again, this time with error messages!
+  if((!validMinimum && fDebug)){ // do the same thing again, this time with error messages!
     int old_print_level = fMinimizer->PrintLevel();
     fMinimizer->SetPrintLevel(3);
     fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
@@ -457,7 +455,6 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
 	fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 1);
 	fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 1);
       }
-      
     }
     fMinimizer->SetPrintLevel(old_print_level);
 
@@ -466,41 +463,24 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
     double waisLat = AnitaLocations::getWaisLatitude();
     double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
 
-    Double_t llWais1 = dPoint(fFitEventInd1,
-			      waisLon,
-			      waisLat,
-			      waisModelAlt);
-    Double_t llWais2 = dPoint(fFitEventInd2,
-			      waisLon,
-			      waisLat,
-			      waisModelAlt);
-    Double_t llWais1b = dPoint(fFitEventInd1,
-			       waisLon,
-			       waisLat,
-			       waisModelAlt, true);
-    Double_t llWais2b = dPoint(fFitEventInd2,
-			       waisLon,
-			       waisLat,
-			       waisModelAlt, true);
-    std::cout << "The fitter minima were ";
-    for(UInt_t i=0; i < minima.size(); i++){
-      std::cout << minima[i] << " ";
-    }
-    std::cout << std::endl;
-    
-    std::cout << "Just for fun trying true WAIS location..." << std::endl;
-    std::cout << "event 1: run " << events.at(eventInd1).run << ", eventNumber " << events.at(eventInd1).eventNumber << std::endl;
-    std::cout << "event 2: run " << events.at(eventInd2).run << ", eventNumber " << events.at(eventInd2).eventNumber << std::endl;    
-    std::cout << "llWais1 = " << llWais1 << "\t" << llWais1b << std::endl;
-    std::cout << "llWais2 = " << llWais2 << "\t" << llWais2b << std::endl;
-    std::cout << "Seed was at " << events.at(which).easting << "\t" << events.at(which).northing << "\t"
+    Double_t llWais1 = dPoint(fFitEventInd1, waisLon, waisLat, waisModelAlt);
+    Double_t llWais2 = dPoint(fFitEventInd2, waisLon, waisLat, waisModelAlt);
+    Double_t llWais1b = dPoint(fFitEventInd1, waisLon, waisLat, waisModelAlt, true);
+    Double_t llWais2b = dPoint(fFitEventInd2, waisLon, waisLat, waisModelAlt, true);
+    std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ": The fitter minimum is " << fMinimizer->MinValue() << std::endl;
+    std::cerr << "event 1: run " << events.at(eventInd1).run << ", eventNumber " << events.at(eventInd1).eventNumber << std::endl;
+    std::cerr << "event 2: run " << events.at(eventInd2).run << ", eventNumber " << events.at(eventInd2).eventNumber << std::endl;
+    std::cerr << "Just for fun trying true WAIS location..." << std::endl;
+    std::cerr << "llWais1 = " << llWais1 << "\t" << llWais1b << std::endl;
+    std::cerr << "llWais2 = " << llWais2 << "\t" << llWais2b << std::endl;
+    std::cerr << "Seed was at " << events.at(which).easting << "\t" << events.at(which).northing << "\t"
 	      << events.at(which).longitude << "\t" << events.at(which).latitude << "\t" << TMath::Max(ll21, ll12) << std::endl;
 
-    int e1 = eventInd1;
-    std::cout << "event 1 was at " << events.at(e1).easting << "\t" << events.at(e1).northing << "\t" << events.at(e1).longitude << "\t" << events.at(e1).latitude << "\t" << ll12 << std::endl;
-    int e2 = eventInd2;
-    std::cout << "event 2 was at " << events.at(e2).easting << "\t" << events.at(e2).northing << "\t" << events.at(e2).longitude << "\t" << events.at(e2).latitude << "\t" << ll21 << std::endl;        
-    std::cout << std::endl;
+    const int e1 = eventInd1;
+    std::cerr << "event 1 was at " << events.at(e1).easting << "\t" << events.at(e1).northing << "\t" << events.at(e1).longitude << "\t" << events.at(e1).latitude << "\t" << ll12 << std::endl;
+    const int e2 = eventInd2;
+    std::cerr << "event 2 was at " << events.at(e2).easting << "\t" << events.at(e2).northing << "\t" << events.at(e2).longitude << "\t" << events.at(e2).latitude << "\t" << ll21 << std::endl;        
+    std::cerr << std::endl;
   }
   Double_t ll = fMinimizer->MinValue();
 
@@ -595,15 +575,6 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_
 
   return angSq;
 }
-
-
-// Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd, const Adu5Pat* pat){
-//   UsefulAdu5Pat usefulPat(pat);
-//   return getAngDistSqEventCluster(event, cluster, usefulPat);
-// }
-
-
-
 
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::getSumOfMcWeights(){
@@ -1352,86 +1323,90 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   }
 
 
-  /// fTestEvent1
-  /// fTestEvent2
+  TH1D* hWais = new TH1D("hWais", "Log-likelihood - WAIS", 2048, 0, 2048);
+  AnitaVersion::set(3);
+  double waisLon = AnitaLocations::getWaisLongitude();
+  double waisLat = AnitaLocations::getWaisLatitude();
+  double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
 
-  const Int_t nBins = 2048; //(lastEventNumber + 1) - firstEventNumber;
-  const Int_t stride = 50;
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    Double_t llWais = dPoint(eventInd, waisLon, waisLat, waisModelAlt);
+    hWais->Fill(llWais);
+  }
+
+  TRandom3 randy(123);
+  const Int_t nBins = 1024; //(lastEventNumber + 1) - firstEventNumber;
+  // const Int_t stride = 50;
   std::cout << nBins << "\t" << firstEventNumber << "\t" << lastEventNumber << std::endl;
-  TProfile2D* h = new TProfile2D("h_d_vs_eventNumbers", "h_d_vs_eventNumbers", nBins, firstEventNumber, lastEventNumber+1, nBins, firstEventNumber, lastEventNumber+1);
-  TH2D* h2 = new TH2D("h2_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
-  TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 2048, 0, 2048);
+  TH2D* hUnfitted = new TH2D("hUnfitted_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
+  TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
 
-  for(UInt_t eventInd=0; eventInd < events.size(); eventInd+=stride){
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     const Event& event1 = events.at(eventInd);
 
-    if(event1.eventNumber!=fTestEvent1) continue;
+    // if(event1.eventNumber!=fTestEvent1) continue;
 
     TVector3 event1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.latitude, event1.longitude, event1.altitude).v();
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
     TVector3 anitaToEvent1 = event1Pos - anita1Pos;
     
-    for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
-      const Event& event2 = events.at(eventInd2);
+    // for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
+    // for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
+    const int eventInd2 = randy.Uniform(0, events.size());
+    const Event& event2 = events.at(eventInd2);
 
-      if(event2.eventNumber!=fTestEvent2) continue;
+    // if(event2.eventNumber!=fTestEvent2) continue;
 
-      if(event1.eventNumber==fTestEvent1){
-	if(event2.eventNumber==fTestEvent2){
-	  std::cout << "doing single event test!" << std::endl;
-	  AnitaVersion::set(3);
-	  double waisEasting, waisNorthing;
-	  RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
-	  double delta = 100e3;
-	  const int nBins = 1024;
-	  TH2D* hParams = new TH2D("hSingleEventTest", "param vs. e/n",
-				   // nBins, -1090000, -1065000,
-				   // nBins, -484200, -483600);
-				   nBins, waisEasting-delta, waisEasting+delta,
-				   nBins, waisNorthing-delta, waisNorthing+delta);
+    if(fDebug && event1.eventNumber==fTestEvent1 && event2.eventNumber==fTestEvent2){
+      std::cerr << "Info in " << __PRETTY_FUNCTION__ << " mapping parameter space around WAIS for a single event test!" << std::endl;
+      AnitaVersion::set(3);
+      double waisEasting, waisNorthing;
+      RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
+      double delta = 100e3;
+      const int nBins = 1024;
+      TH2D* hParams = new TH2D("hSingleEventTest", "param vs. e/n",
+			       // nBins, -1090000, -1065000,
+			       // nBins, -484200, -483600);
+			       nBins, waisEasting-delta, waisEasting+delta,
+			       nBins, waisNorthing-delta, waisNorthing+delta);
 
-	  fFitEventInd1 = eventInd;
-	  fFitEventInd2 = eventInd2;
-	  double params[2] = {0,0};
-	  for(int by=1; by <= hParams->GetNbinsY(); by++){
-	    params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
-	    for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
-	      params[0] = FITTER_INPUT_SCALING*hParams->GetXaxis()->GetBinCenter(bx);
-	      double ll = evalPairLogLikelihoodAtLonLat(params);
-	      // std::cout << params[0] << "\t" << params[1] << "\t" << ll << std::endl;
-	      hParams->Fill(FITTER_OUTPUT_SCALING*params[0], FITTER_OUTPUT_SCALING*params[1], ll);
-	    }
-	  }
-	  std::cout << "done!" << std::endl;
-	  hParams->Write();
-	  delete hParams;
+      fFitEventInd1 = eventInd;
+      fFitEventInd2 = eventInd2;
+      double params[2] = {0,0};
+      for(int by=1; by <= hParams->GetNbinsY(); by++){
+	params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
+	for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
+	  params[0] = FITTER_INPUT_SCALING*hParams->GetXaxis()->GetBinCenter(bx);
+	  double ll = evalPairLogLikelihoodAtLonLat(params);
+	  hParams->Fill(FITTER_OUTPUT_SCALING*params[0], FITTER_OUTPUT_SCALING*params[1], ll);
 	}
       }
-
-      TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
-      TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
-      TVector3 anitaToEvent2 = event2Pos - anita2Pos;
-      // std::cout << events.at(eventInd).eventNumber << "\t" <<  events.at(eventInd2).eventNumber << std::endl;
-
-      double dist = d(eventInd, eventInd2);
-      h->Fill(event1.eventNumber, event2.eventNumber, dist);
-      h->Fill(event2.eventNumber, event1.eventNumber, dist);
-
-      Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
-      
-      h2->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
-
-      double distFitted = dFit(eventInd, eventInd2);
-      hFit->Fill(angleBetweenEvents*TMath::RadToDeg(), distFitted);      
-      
+      std::cout << "done!" << std::endl;
+      hParams->Write();
+      delete hParams;
     }
+
+    TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
+    TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
+    TVector3 anitaToEvent2 = event2Pos - anita2Pos;
+
+    double dist = d(eventInd, eventInd2);
+    Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
+      
+    hUnfitted->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
+
+    double distFitted = dFit(eventInd, eventInd2);
+    hFit->Fill(angleBetweenEvents*TMath::RadToDeg(), distFitted);
+
     p.inc(eventInd, events.size());
   }
+
+  hWais->Write();
+  delete hWais;
   
+  hUnfitted->Write();
+  delete hUnfitted;
   
-  
-  h->Write();
-  delete h;
 }
 
 
