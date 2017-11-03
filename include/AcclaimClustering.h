@@ -14,6 +14,8 @@
 #include "BaseList.h"
 #include "AnitaEventSummary.h"
 #include "TKDTree.h"
+#include "Math/Minimizer.h"
+#include "Math/Functor.h"
 
 class TTree;
 class TGraphAntarctica;
@@ -73,6 +75,9 @@ namespace Acclaim{
       Double_t logLikelihood2;			/// log likelihood to second closest cluster
       Int_t cluster2;              		/// what cluster am I second closest to?
 
+      UInt_t nearestNeighbourEventNumber;       /// What is the eventNumber of the event am I closest to?
+      Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
+
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
 
       Event();
@@ -80,7 +85,7 @@ namespace Acclaim{
       TArrowAntarctica* makeArrowFromAnitaToEvent();
 
       virtual ~Event(){ ;}
-      ClassDef(Event, 3)
+      ClassDef(Event, 4)
     };
 
 
@@ -156,12 +161,9 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
+      void doClusteringDBSCAN(const char* dataGlob, const char* mcGlob, const char* outFileName);
       
       TGraphAntarctica* makeClusterSummaryTGraph(Int_t clusterInd);
-
-      Int_t getNumClusters(){
-	return numClusters;
-      }
 
       bool GetUseBaseList(){return fUseBaseList;}
       void SetUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
@@ -191,12 +193,27 @@ namespace Acclaim{
       Double_t getSumOfMcWeights();
       void redoSmallClusters();
       void initKDTree();
+      Double_t d(Int_t eventInd1, Int_t eventInd2);
+      Double_t dAsym(Int_t eventInd1, Int_t eventInd2);
+      void testTriangleInequality();
 
+
+      void DBSCAN();
+      void rangeQueryEastingNorthing(Int_t eventInd, Int_t numNearbyEN, std::vector<Int_t>& seed);
+      void makeAndWriteNSquaredEventEventHistograms();
+      Double_t dPoint(Int_t eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
+      Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
+      Int_t fFitEventInd1; /// The index of the first event in the pairwise fit
+      Int_t fFitEventInd2; /// The index of the second event in the pairwise fit
+      Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
+      Double_t dFit(Int_t eventInd1, Int_t eventInd2);
+
+      
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t maxDistCluster;					/// Only consider adding to a cluster when closer than this value
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
 
-      Int_t numClusters;
+      // Int_t numClusters;
       Int_t numCallsToRecursive;
 
       std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,
@@ -211,6 +228,9 @@ namespace Acclaim{
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       bool fDebug;
       bool fUseBaseList;
+
+      ROOT::Math::Minimizer* fMinimizer;
+      ROOT::Math::Functor fFunctor;
     };
 
 
