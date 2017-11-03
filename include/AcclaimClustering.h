@@ -198,7 +198,8 @@ namespace Acclaim{
       Double_t getSumOfMcWeights();
       void redoSmallClusters();
       void initKDTree();
-      Double_t d(Int_t eventInd1, Int_t eventInd2);
+      Double_t dMin(Int_t eventInd1, Int_t eventInd2);
+      Double_t dSum(Int_t eventInd1, Int_t eventInd2);
       Double_t dAsym(Int_t eventInd1, Int_t eventInd2);
       void testTriangleInequality();
 

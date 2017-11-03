@@ -491,8 +491,13 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
 }
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::d(Int_t eventInd1, Int_t eventInd2){
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dMin(Int_t eventInd1, Int_t eventInd2){
   return TMath::Min(dAsym(eventInd1, eventInd2), dAsym(eventInd2, eventInd1));
+}
+
+
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dSum(Int_t eventInd1, Int_t eventInd2){
+  return dAsym(eventInd1, eventInd2) + dAsym(eventInd2, eventInd1);
 }
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(Int_t eventInd1, Int_t eventInd2){
@@ -1226,12 +1231,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::testTriangleInequality(){
 
     for(UInt_t j=0; j < numENNeighbours; j++){
 
-      Double_t d_ij = d(i,j);
+      Double_t d_ij = dMin(i,j);
 
       for(UInt_t k=0; k < numENNeighbours; k++){
 
-	Double_t d_ik = d(i, k);
-	Double_t d_jk = d(j, k);
+	Double_t d_ik = dMin(i, k);
+	Double_t d_jk = dMin(j, k);
 
 	if(d_ik > d_ij + d_jk){
 	  std::cerr << i << "\t" << j << "\t" << k << " fails!" << std::endl;
@@ -1391,7 +1396,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
     TVector3 anitaToEvent2 = event2Pos - anita2Pos;
 
-    double dist = d(eventInd, eventInd2);
+    double dist = dSum(eventInd, eventInd2);
     Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
       
     hUnfit->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
