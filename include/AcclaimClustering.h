@@ -202,6 +202,7 @@ namespace Acclaim{
       Double_t dSum(Int_t eventInd1, Int_t eventInd2);
       Double_t dAsym(Int_t eventInd1, Int_t eventInd2);
       void testTriangleInequality();
+      void sortEventIndices(Int_t eventInd, std::vector<Int_t>& eventIndicesToSort);
 
 
       void DBSCAN();

@@ -549,6 +549,22 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double
 
 
 
+void Acclaim::Clustering::LogLikelihoodMethod::sortEventIndices(Int_t eventInd, std::vector<Int_t>& unsortedIndices){
+
+  std::vector<std::pair<Double_t, Int_t> > sortable;
+  sortable.reserve(unsortedIndices.size());
+
+  for(UInt_t i=0; i < unsortedIndices.size(); i++){
+    Int_t thisEventInd = unsortedIndices[i];
+    sortable.push_back(std::make_pair(dSum(eventInd, thisEventInd), thisEventInd));
+  }
+  std::sort(sortable.begin(), sortable.end());
+
+  for(UInt_t i=0; i < unsortedIndices.size(); i++){
+    unsortedIndices[i] = sortable[i].second;
+  }
+}
+
 
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd){
