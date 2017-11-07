@@ -74,12 +74,15 @@ namespace Acclaim{
 
       Double_t logLikelihood2;			/// log likelihood to second closest cluster
       Int_t cluster2;              		/// what cluster am I second closest to?
+      
+      UInt_t numNeighbours;                     /// How many neighbouring events were found within queryRegion?
 
       UInt_t nearestNeighbourEventNumber;       /// What is the eventNumber of the event am I closest to?
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
+
 
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
@@ -148,6 +151,40 @@ namespace Acclaim{
     };
 
 
+    /**
+     * @class DistIndex
+     * Slightly over-engineered pair, with some default values
+     * which allows sorting of eventIndices based on separation
+     */
+    class DistIndex {
+    public:
+      DistIndex() : d(-1), i(-1) {;}    
+      DistIndex(Int_t eventInd) : d(-1), i(eventInd) {;}
+      DistIndex(Double_t distance, Int_t eventInd) : d(distance), i(eventInd) {;}
+
+      friend bool operator<(const DistIndex &di1, const DistIndex &di2){
+	return di1.d < di2.d;
+      }
+      friend bool operator<=(const DistIndex &di1, const DistIndex &di2){
+	return di1.d <= di2.d;
+      }
+      friend bool operator>(const DistIndex &di1, const DistIndex &di2){
+	return di1.d > di2.d;
+      }
+      friend bool operator>=(const DistIndex &di1, const DistIndex &di2){
+	return di1.d >= di2.d;
+      }
+      friend bool operator==(const DistIndex &di1, const DistIndex &di2){
+	return di1.d == di2.d;
+      }
+      friend bool operator!=(const DistIndex &di1, const DistIndex &di2){
+	return di1.d != di2.d;
+      }
+      Double_t d;
+      Int_t i;
+    };
+    
+
     
     /**
      * @class LogLikelihoodMethod
@@ -202,12 +239,14 @@ namespace Acclaim{
       Double_t dSum(Int_t eventInd1, Int_t eventInd2);
       Double_t dAsym(Int_t eventInd1, Int_t eventInd2);
       void testTriangleInequality();
-      void sortEventIndices(Int_t eventInd, std::vector<Int_t>& eventIndicesToSort);
-
-
+      void sortEventIndices(Int_t eventInd, std::vector<Int_t>& unsorted, std::vector<DistIndex>& sorted);
+      bool isCorePointDBSCAN(Event& event);
+      void testAngleFindingSpeed();
+      
       void DBSCAN();
       void OPTICS();
-      void rangeQueryEastingNorthing(Int_t eventInd, Int_t numNearbyEN, std::vector<Int_t>& seed);
+      const UInt_t fMinPts = 4;
+      void rangeQueryEastingNorthing(Int_t eventInd, Double_t range, std::vector<Int_t>& seed);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t dPoint(Int_t eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
@@ -237,6 +276,7 @@ namespace Acclaim{
       std::vector<TGraphAntarctica*> grNonBaseClusterCenters;	/// The locations of the non-base clusters
       std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;	/// Histograms of events clustered to non-base clusters
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
+      TH2DAntarctica* hEvents;
       bool fDebug;
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
