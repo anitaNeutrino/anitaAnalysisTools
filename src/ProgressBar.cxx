@@ -12,20 +12,19 @@
 
 Int_t Acclaim::ProgressBar::progState = 0;
 
-
-
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Default constructor - don't use this
 */
 Acclaim::ProgressBar::ProgressBar(){
   std::cerr << "Assuming 100 events in ProgressBar" << std::endl;
-  maxEntry = 100;
-  counter = 0;
-  percentage = 0;
-  watch.Start(kTRUE);
-  setHandler = 0;
-  numBreakTries = 0;
+  fMaxEntry = 100;
+  fCounter = 0;
+  fPercentage = 0;
+  fWatch.Start(kTRUE);
+  fSetHandler = 0;
+  fNumBreakTries = 0;
+  fLastProgState = 0;
 }
 
 
@@ -39,12 +38,13 @@ Acclaim::ProgressBar::ProgressBar(){
  * @param maxEntryInit is the number of events you want to loop over
 */
 Acclaim::ProgressBar::ProgressBar(Long64_t maxEntryInit){
-  maxEntry = maxEntryInit;
-  counter = 0;
-  percentage = 0;
-  watch.Start(kTRUE);
-  setHandler = 0;
-  numBreakTries = 0;
+  fMaxEntry = maxEntryInit;
+  fCounter = 0;
+  fPercentage = 0;
+  fWatch.Start(kTRUE);
+  fSetHandler = 0;
+  fNumBreakTries = 0;
+  fLastProgState = 0;  
 }
 
 
@@ -58,10 +58,10 @@ Acclaim::ProgressBar::ProgressBar(Long64_t maxEntryInit){
 */
 void Acclaim::ProgressBar::operator++(int){
 
-  if(percentage>=100) return;
+  if(fPercentage>=100) return;
   
-  // Stops the watch
-  Int_t seconds = Int_t(watch.RealTime());
+  // Stops the fWatch
+  Int_t seconds = Int_t(fWatch.RealTime());
   Int_t hours = seconds / 3600;
   hours = hours < 0 ? 0 : hours;
   seconds = seconds - hours * 3600;
@@ -70,14 +70,14 @@ void Acclaim::ProgressBar::operator++(int){
   
   seconds = seconds - mins * 60;
   
-  counter++;
-  double ratio = double(counter)/maxEntry;
-  // std::cout << ratio << "\t" << counter << "\t" << maxEntry << std::endl;
+  fCounter++;
+  double ratio = double(fCounter)/fMaxEntry;
+  // std::cout << ratio << "\t" << fCounter << "\t" << maxEntry << std::endl;
 
-  if(ratio*100 > percentage){
+  if(ratio*100 > fPercentage){
 
-    while(ratio*100 > percentage){
-      percentage++;
+    while(ratio*100 > fPercentage){
+      fPercentage++;
     }
 
     // fprintf(stderr, "\n\033[F\033[J");
@@ -85,21 +85,21 @@ void Acclaim::ProgressBar::operator++(int){
     // fprintf(stderr, "\033[F\033[J");
     fprintf(stderr, "\r");
 
-    // Show the percentage complete.
+    // Show the fPercentage complete.
     fprintf(stderr, ANSI_COLOR_RED);
-    fprintf(stderr, "%3u%%", (UInt_t)(percentage) );
+    fprintf(stderr, "%3u%%", (UInt_t)(fPercentage) );
     fprintf(stderr, ANSI_COLOR_RESET); 
     fprintf(stderr, " [");
 
     // Show the load bar.
     fprintf(stderr, ANSI_COLOR_BLUE);
     fprintf(stderr, "%02d:%02d:%02d", hours, mins, seconds);
-    for (UInt_t i=8; i<percentage; i++){
+    for (UInt_t i=8; i<fPercentage; i++){
       fprintf(stderr, "=");
     }
     fprintf(stderr, ANSI_COLOR_RESET);
  
-    Int_t startSpace = percentage > 8 ? percentage : 8;
+    Int_t startSpace = fPercentage > 8 ? fPercentage : 8;
     for (Int_t i=startSpace; i<100; i++){
       fprintf(stderr, " ");
     }
@@ -107,8 +107,8 @@ void Acclaim::ProgressBar::operator++(int){
     fprintf(stderr, "]");
   }
 
-  if(percentage>=100) fprintf(stderr, "\n");
-  watch.Start(kFALSE);
+  if(fPercentage>=100) fprintf(stderr, "\n");
+  fWatch.Start(kFALSE);
   return;
 
 }
@@ -158,14 +158,15 @@ void Acclaim::ProgressBar::inc(Int_t& entry, Long64_t numEntries){
  * @param numEntries is the maximum entry, assumed that the loop condition is entry < numEntries
  */
 void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
+  numEntries = numEntries < 0 ? fMaxEntry : numEntries;
 
-  if(setHandler==0){
+  if(fSetHandler==0){
     signal (SIGINT, Acclaim::ProgressBar::mainLoopSigintHandle);
-    setHandler = 1;
+    fSetHandler = 1;
   }
 
-  if(setHandler==1 && progState!=0){
-    if(numBreakTries==0)
+  if(fSetHandler==1 && fLastProgState!=0){
+    if(fNumBreakTries==0)
     {
       std::cerr << "Program with ProgressBar received SIGINT, will try and exit main loop gracefully. " << std::endl;
       entry=numEntries;
@@ -176,14 +177,15 @@ void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
       signal(SIGINT, SIG_DFL); // now sigint points to the default handler again
       raise(SIGINT); // raise sigint
     }
-    numBreakTries++;
+    fNumBreakTries++;
   }
 
-  int diff = entry - counter;
+  int diff = entry - fCounter;
   for(int i=0; i < diff; i++){
-    // std::cout << counter << "\t" << entry << std::endl;
+    // std::cout << fCounter << "\t" << entry << std::endl;
     (*this)++;
   }
+  fLastProgState = progState;
 }
 
 
@@ -195,7 +197,7 @@ void Acclaim::ProgressBar::inc(Long64_t& entry, Long64_t numEntries){
  * @brief For debugging, prints state of internal variables
 */
 void Acclaim::ProgressBar::status(){
-  std::cout << percentage << "\t" << counter << "\t" << maxEntry << std::endl;
+  std::cout << fPercentage << "\t" << fCounter << "\t" << fMaxEntry << std::endl;
 }
 
 
