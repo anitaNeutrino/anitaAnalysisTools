@@ -1070,10 +1070,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
 }
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::initializeEmptyBaseList(){
-  BaseList::makeEmptyBaseList();
-}
-
 
 void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 

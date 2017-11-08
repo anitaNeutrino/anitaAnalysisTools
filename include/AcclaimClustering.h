@@ -213,16 +213,18 @@ namespace Acclaim{
 
     private:
       Double_t getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster);
-      // Double_t getDistSqClusterCluster(Int_t clusterInd1, Int_t clusterInd2);
       Double_t getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd);
       void getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
 
+
+
+
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
-      size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
+      size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd);
+
       void initializeBaseList();
-      void initializeEmptyBaseList();
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
