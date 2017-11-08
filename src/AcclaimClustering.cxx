@@ -25,7 +25,7 @@ const int nDim = 3;
 const double FITTER_INPUT_SCALING = 1e-4;
 const double FITTER_OUTPUT_SCALING = 1./FITTER_INPUT_SCALING;
 
-
+#include "AcclaimOpenMP.h"
 
 /**
  * @namespace ResolutionModel
@@ -203,7 +203,6 @@ Acclaim::Clustering::McEvent::McEvent()
 
 
 Acclaim::Clustering::Cluster::Cluster() {
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
@@ -234,22 +233,27 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
 }
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
+  fFitEvent1(NULL),
+  fFitEvent2(NULL),
   fMinimizer(NULL),
   fFunctor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2)
 {
   grTestMinimizerWalk = NULL;
-  llCut = 40;
+  llCut = 100;
   // fTestEvent1 = 55850024;
   // fTestEvent2 = 60424781;
-  fTestEvent1 = 61259774;
-  fTestEvent2 = 55730926;
+  fTestEvent1 = 58900975; //61259774;
+  fTestEvent2 = 55699027; //55730926;
 
   fFitHorizonDistM = 700e3;
   numCallsToRecursive = 0;
   doneBaseClusterAssignment = false;
   fKDTree = NULL;
   hClusters = new TH2DAntarctica("hClusters", "hClusters");
+  hEvents = NULL;
+  // hEvents = makeUnevenlyBinnedEventHistogram();
   hEvents = new TH2DAntarctica("hEvents", "hEvents");
+
   fDebug = false;
   fUseBaseList = true;
 
@@ -260,6 +264,46 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fMinimizer->SetPrintLevel(0);
   fMinimizer->SetFunction(fFunctor);
 
+}
+
+
+TH2DAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeUnevenlyBinnedEventHistogram(){
+
+  if(!hClusters){
+    hClusters = new TH2DAntarctica("hClusters", "hClusters");
+  }
+  
+  std::vector<Double_t> x(hClusters->GetNbinsX()+1);
+  for(int i=0; i <= hClusters->GetNbinsX(); i++){
+    x.at(i) = hClusters->GetXaxis()->GetBinUpEdge(i);
+  }
+  std::vector<Double_t> y(hClusters->GetNbinsX()+1);
+  for(int i=0; i <= hClusters->GetNbinsY(); i++){
+    y.at(i) = hClusters->GetYaxis()->GetBinUpEdge(i);
+  }
+
+  // now uneven-ize the bins
+  double easting, northing;
+  RampdemReader::LonLatToEastingNorthing(167, -78, easting, northing);  
+  const double fineBinWidthEasting = 5e2;
+  const double fineBinWidthNorthing = 5e2;
+  const double fineRangeEasting = 700e3;
+  const double fineRangeNorthing = 700e3;
+  for(double binEasting = easting-fineRangeEasting; binEasting <= easting + fineRangeEasting; binEasting += fineBinWidthEasting){
+    x.push_back(binEasting);
+  }
+  for(double binNorthing = northing-fineRangeNorthing; binNorthing <= northing+fineRangeNorthing; binNorthing += fineBinWidthNorthing){
+    y.push_back(binNorthing);
+  }
+
+  std::sort(x.begin(), x.end());
+  std::sort(y.begin(), y.end());  
+
+  if(hEvents){
+    delete hEvents;
+  }
+  hEvents = new TH2DAntarctica("hEvents", "hEvents", x, y);
+  return hEvents;
 }
 
 Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
@@ -379,14 +423,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventC
 
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat(const Double_t* params){
-
-  // Double_t sourceLon = params[0];
-  // Double_t sourceLat = params[1];
+  
   Double_t sourceEasting = FITTER_OUTPUT_SCALING*params[0];
   Double_t sourceNorthing = FITTER_OUTPUT_SCALING*params[1];
-
-  if(events.at(fFitEventInd1).eventNumber==fTestEvent1){
-    if(events.at(fFitEventInd2).eventNumber==fTestEvent2){
+  if(fFitEvent1->eventNumber==fTestEvent1){
+    if(fFitEvent2->eventNumber==fTestEvent2){
       if(grTestMinimizerWalk){
 	grTestMinimizerWalk->SetPoint(grTestMinimizerWalk->GetN(), sourceEasting, sourceNorthing);
       }
@@ -398,8 +439,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
   RampdemReader::EastingNorthingToLonLat(sourceEasting, sourceNorthing, sourceLon, sourceLat);
 
   Double_t ll = 0;
-  ll += dPoint(fFitEventInd1, sourceLon, sourceLat, sourceAlt, true);
-  ll += dPoint(fFitEventInd2, sourceLon, sourceLat, sourceAlt, true);
+  ll += dPoint(*fFitEvent1, sourceLon, sourceLat, sourceAlt, true);
+  ll += dPoint(*fFitEvent2, sourceLon, sourceLat, sourceAlt, true);
 
   if(fMinimizer->PrintLevel() > 0){
     std::cout << sourceEasting << "\t" << sourceNorthing << "\t" << sourceLon << "\t" << sourceLat << "\t" << ll << std::endl;
@@ -409,24 +450,24 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
 
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t eventInd2){
+// Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t eventInd2){
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(const Event& event1, const Event& event2){
+  fFitEvent1 = &event1;
+  fFitEvent2 = &event2;
 
-  fFitEventInd1 = eventInd1;
-  fFitEventInd2 = eventInd2;
-
-  Double_t ll12 = dAsym(eventInd1, eventInd2);
-  Double_t ll21 = dAsym(eventInd2, eventInd1);
+  Double_t ll12 = dAsym(event1, event2);
+  Double_t ll21 = dAsym(event2, event1);
 
   // we actually want to start at the WORSE of the two sources, apparently
   // which is very unintuitive
-  Int_t which = ll21 < ll12 ? eventInd1 : eventInd2;
+  const Event* which = ll21 < ll12 ? fFitEvent1 : fFitEvent2;
 
-  if(fDebug && events.at(eventInd1).eventNumber==fTestEvent1 && events.at(eventInd2).eventNumber==fTestEvent2){
+  if(fFitEvent1->eventNumber==fTestEvent1 && fFitEvent2->eventNumber==fTestEvent2){
     grTestMinimizerWalk = new TGraph();
   }
 
-  fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
-  fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*events.at(which).northing, 1);
+  fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
+  fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
 
   int old_level = gErrorIgnoreLevel;
   gErrorIgnoreLevel = 1001;
@@ -453,8 +494,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
   if((!validMinimum && fDebug)){ // do the same thing again, this time with error messages!
     int old_print_level = fMinimizer->PrintLevel();
     fMinimizer->SetPrintLevel(3);
-    fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*events.at(which).easting, 1);
-    fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*events.at(which).northing, 1);
+    fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
+    fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
     for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
       validMinimum = fMinimizer->Minimize();
       if(!validMinimum){
@@ -468,48 +509,46 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(Int_t eventInd1, Int_t e
     double waisLon = AnitaLocations::getWaisLongitude();
     double waisLat = AnitaLocations::getWaisLatitude();
     double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
-
-    Double_t llWais1 = dPoint(fFitEventInd1, waisLon, waisLat, waisModelAlt);
-    Double_t llWais2 = dPoint(fFitEventInd2, waisLon, waisLat, waisModelAlt);
-    Double_t llWais1b = dPoint(fFitEventInd1, waisLon, waisLat, waisModelAlt, true);
-    Double_t llWais2b = dPoint(fFitEventInd2, waisLon, waisLat, waisModelAlt, true);
+    const Event& event1 = *fFitEvent1;
+    const Event& event2 = *fFitEvent2;
+    Double_t llWais1 = dPoint(event1, waisLon, waisLat, waisModelAlt);
+    Double_t llWais2 = dPoint(event2, waisLon, waisLat, waisModelAlt);
+    Double_t llWais1b = dPoint(event1, waisLon, waisLat, waisModelAlt, true);
+    Double_t llWais2b = dPoint(event2, waisLon, waisLat, waisModelAlt, true);
     std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ": The fitter minimum is " << fMinimizer->MinValue() << std::endl;
-    std::cerr << "event 1: run " << events.at(eventInd1).run << ", eventNumber " << events.at(eventInd1).eventNumber << std::endl;
-    std::cerr << "event 2: run " << events.at(eventInd2).run << ", eventNumber " << events.at(eventInd2).eventNumber << std::endl;
+    std::cerr << "event 1: run " << event1.run << ", eventNumber " << event1.eventNumber << std::endl;
+    std::cerr << "event 2: run " << event2.run << ", eventNumber " << event2.eventNumber << std::endl;
     std::cerr << "Just for fun trying true WAIS location..." << std::endl;
     std::cerr << "llWais1 = " << llWais1 << "\t" << llWais1b << std::endl;
     std::cerr << "llWais2 = " << llWais2 << "\t" << llWais2b << std::endl;
-    std::cerr << "Seed was at " << events.at(which).easting << "\t" << events.at(which).northing << "\t"
-	      << events.at(which).longitude << "\t" << events.at(which).latitude << "\t" << TMath::Max(ll21, ll12) << std::endl;
+    std::cerr << "Seed was at " << which->easting << "\t" << which->northing << "\t"
+	      << which->longitude << "\t" << which->latitude << "\t" << TMath::Max(ll21, ll12) << std::endl;
 
-    const int e1 = eventInd1;
-    std::cerr << "event 1 was at " << events.at(e1).easting << "\t" << events.at(e1).northing << "\t" << events.at(e1).longitude << "\t" << events.at(e1).latitude << "\t" << ll12 << std::endl;
-    const int e2 = eventInd2;
-    std::cerr << "event 2 was at " << events.at(e2).easting << "\t" << events.at(e2).northing << "\t" << events.at(e2).longitude << "\t" << events.at(e2).latitude << "\t" << ll21 << std::endl;
+    std::cerr << "event 1 was at " << event1.easting << "\t" << event1.northing << "\t" << event1.longitude << "\t" << event1.latitude << "\t" << ll12 << std::endl;
+    std::cerr << "event 2 was at " << event2.easting << "\t" << event2.northing << "\t" << event2.longitude << "\t" << event2.latitude << "\t" << ll21 << std::endl;
     std::cerr << std::endl;
   }
+  
+  fFitEasting  = fMinimizer->X()[0]*FITTER_OUTPUT_SCALING;
+  fFitNorthing = fMinimizer->X()[1]*FITTER_OUTPUT_SCALING;
   Double_t ll = fMinimizer->MinValue();
 
   return ll;
 }
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::dMin(Int_t eventInd1, Int_t eventInd2){
-  return TMath::Min(dAsym(eventInd1, eventInd2), dAsym(eventInd2, eventInd1));
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dMin(const Event& event1, const Event& event2){
+  return TMath::Min(dAsym(event1, event2), dAsym(event2, event1));
 }
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::dSum(Int_t eventInd1, Int_t eventInd2){
-  return dAsym(eventInd1, eventInd2) + dAsym(eventInd2, eventInd1);
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dSum(const Event& event1, const Event& event2){
+  return dAsym(event1, event2) + dAsym(event2, event1);
 }
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(Int_t eventInd1, Int_t eventInd2){
-
-  const Event& event2 = events.at(eventInd2);
-  return dPoint(eventInd1, event2.longitude, event2.latitude, event2.altitude);
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(const Event& event1, const Event& event2){
+  return dPoint(event1, event2.longitude, event2.latitude, event2.altitude);
 }
-
-
 
 
 /**
@@ -523,9 +562,10 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(Int_t eventInd1, Int_t 
  *
  * @return the log-likelihood
  */
-Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty){
+// Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(Int_t eventInd, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty){
+Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(const Event& event, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty){  
 
-  const Event& event = events.at(eventInd);
+  // const Event& event = events.at(eventInd);
 
   Double_t theta, phi;
   event.usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, theta, phi);
@@ -561,10 +601,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::sortEventIndices(Int_t eventInd, 
 
   sorted.clear();
   sorted.reserve(unsorted.size());
+  const Event& event1 = events.at(eventInd);
 
   for(UInt_t i=0; i < unsorted.size(); i++){
     Int_t thisEventInd = unsorted[i];
-    sorted.push_back(DistIndex(dSum(eventInd, thisEventInd), thisEventInd));
+    const Event& event2 = events.at(thisEventInd);
+    sorted.push_back(DistIndex(dSum(event1, event2), thisEventInd));
   }
   std::sort(sorted.begin(), sorted.end());
 
@@ -1203,7 +1245,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       Double_t thetaAdjustment = sum->peak[pol][peakIndex].theta_adjustment_needed;
 
       /// @todo remove the snr < 100 hack!!!
-      if(sourceLat > -999 && sourceLon > -999 && snrHack < 100 && TMath::Abs(thetaAdjustment) < 1e-10){
+      /// @todo maybe remove the run hack!!!
+      if(sum->run > 160 && sourceLat > -999 && sourceLon > -999 && snrHack < 100 && TMath::Abs(thetaAdjustment) < 1e-10){
 
 	if(sum->mc.weight > 0){
 	  addMcEvent(sum,  pol, peakIndex);
@@ -1254,15 +1297,16 @@ void Acclaim::Clustering::LogLikelihoodMethod::testTriangleInequality(){
 
   ProgressBar p(events.size());
   for(UInt_t i=0; i < events.size(); i++){
-
+    const Event& event_i = events.at(i);
     for(UInt_t j=0; j < numENNeighbours; j++){
+      const Event& event_j = events.at(j);      
 
-      Double_t d_ij = dMin(i,j);
+      Double_t d_ij = dMin(event_i,event_j);
 
       for(UInt_t k=0; k < numENNeighbours; k++){
-
-	Double_t d_ik = dMin(i, k);
-	Double_t d_jk = dMin(j, k);
+	const Event& event_k = events.at(k);      
+	Double_t d_ik = dMin(event_i, event_k);
+	Double_t d_jk = dMin(event_j, event_k);
 
 	if(d_ik > d_ij + d_jk){
 	  std::cerr << i << "\t" << j << "\t" << k << " fails!" << std::endl;
@@ -1334,129 +1378,132 @@ void Acclaim::Clustering::LogLikelihoodMethod::testAngleFindingSpeed(){
   
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
 
-    if(eventInd==197){
-      TH2DAntarctica* hTest = new TH2DAntarctica("hTest", "hTest");
-      TH2DAntarctica* hTest2 = new TH2DAntarctica("hTest2", "hTest2");  
+    // if(eventInd < 200){
     
-      Event& event = events.at(eventInd);
-      const double deltaThetaMax = llCutSqrt*event.sigmaTheta; /// height of the error ellipse at phi=0
-      const double deltaPhiMax = llCutSqrt*event.sigmaPhi;     /// height of the error ellipse at theta=0
+    Event& event = events.at(eventInd);
+    const double deltaThetaMax = llCutSqrt*event.sigmaTheta; /// height of the error ellipse at phi=0
+    const double deltaPhiMax = llCutSqrt*event.sigmaPhi;     /// height of the error ellipse at theta=0
 
-      const int nSweepPoints = 100;
+    const int nSweepPoints = 10;
 
-      double minEasting = DBL_MAX;
-      double maxEasting = -DBL_MAX;
-      double minNorthing = DBL_MAX;
-      double maxNorthing = -DBL_MAX;
+    double minEasting = DBL_MAX;
+    double maxEasting = -DBL_MAX;
+    double minNorthing = DBL_MAX;
+    double maxNorthing = -DBL_MAX;
     
-      double deltaPhi = -deltaPhiMax;
-      double deltaPhiStep = 2*deltaPhiMax/(nSweepPoints-1);
-      for(int i=0; i < nSweepPoints; i++){
-	double deltaPhiNorm = deltaPhi/event.sigmaPhi;
-	double underSqrtSign = llCut - deltaPhiNorm*deltaPhiNorm;
-	underSqrtSign = underSqrtSign < 0 ? 0 : underSqrtSign;
-	double deltaTheta = event.sigmaTheta*TMath::Sqrt(underSqrtSign);
+    double deltaPhi = -deltaPhiMax;
+    double deltaPhiStep = 2*deltaPhiMax/(nSweepPoints-1);
+    std::vector<Int_t> histBinsToConsider;
       
+    for(int i=0; i < nSweepPoints; i++){
+      double deltaPhiNorm = deltaPhi/event.sigmaPhi;
+      double underSqrtSign = llCut - deltaPhiNorm*deltaPhiNorm;
+      underSqrtSign = underSqrtSign < 0 ? 0 : underSqrtSign;
+      double deltaTheta = event.sigmaTheta*TMath::Sqrt(underSqrtSign);
       
-	const double thetaWaveHigh     = -1*TMath::DegToRad()*(event.theta + deltaTheta);
-	const double thetaWaveLow     = -1*TMath::DegToRad()*(event.theta - deltaTheta);
-	const double phiWave     = TMath::DegToRad()*(event.phi + deltaPhi);
+      const double thetaWaveHigh     = -1*TMath::DegToRad()*(event.theta + deltaTheta);
+      const double thetaWaveLow     = -1*TMath::DegToRad()*(event.theta - deltaTheta);
+      const double phiWave     = TMath::DegToRad()*(event.phi + deltaPhi);
 
-	const int nQuadraticSolutions = 2;
-	const double thetaWaves[nQuadraticSolutions] = {thetaWaveLow, thetaWaveHigh};
+      const int nQuadraticSolutions = 2;
+      const double thetaWaves[nQuadraticSolutions] = {thetaWaveLow, thetaWaveHigh};
 
-	for(int j=0; j < nQuadraticSolutions; j++){
-	  double lon, lat, alt, thetaAdjust;
-	  event.usefulPat.traceBackToContinent(phiWave, thetaWaves[j], &lon, &lat, &alt, &thetaAdjust, 0);
+      for(int j=0; j < nQuadraticSolutions; j++){
+	double lon, lat, alt, thetaAdjust;
+	event.usefulPat.traceBackToContinent(phiWave, thetaWaves[j], &lon, &lat, &alt, &thetaAdjust, 0);
 
-	  if(lat < -60){
-	    int bin = hTest->Fill(lon, lat);
-	    // std::cout << i << "\t" << bin << "\t" << deltaPhi << "\t" << deltaTheta << "\t" << lon << "\t" << lat << std::endl;
-	    Double_t easting, northing;
-	    RampdemReader::LonLatToEastingNorthing(lon, lat, easting, northing);
-
-	    if(easting < minEasting){
-	      minEasting = easting;
-	    }
-	    if(easting > maxEasting){
-	      maxEasting = easting;
-	    }
-	    if(northing < minNorthing){
-	      minNorthing = northing;
-	    }
-	    if(northing > maxNorthing){
-	      maxNorthing = northing;
-	    }	
-	  }
-	}
-
-	deltaPhi += deltaPhiStep;
-      }
-
-      // std::cout << "min/max are: " << minEasting << "\t" << maxEasting << "\t" << minNorthing << "\t" << maxNorthing << std::endl;
-      std::vector<Int_t> histBinsToConsider;
-
-      TAxis* xAxis = hTest2->GetXaxis();
-      TAxis* yAxis = hTest2->GetYaxis();    
-      int bxLow = xAxis->FindBin(minEasting);
-      int bxHigh = xAxis->FindBin(maxEasting);    
-      int byLow = yAxis->FindBin(minNorthing);
-      int byHigh = yAxis->FindBin(maxNorthing);
-
-      for(int by = byLow; by <= byHigh; by++){
-	double northing = yAxis->GetBinCenter(by);
-	for(int bx = bxLow; bx <= bxHigh; bx++){
-	  double easting = xAxis->GetBinCenter(bx);
-	  double lon, lat, alt;
-	
-	  RampdemReader::EastingNorthingToLonLat(easting, northing, lon, lat);
-	  alt = RampdemReader::SurfaceAboveGeoid(lon, lat);
-
-	  Double_t theta, phi;
-	  event.usefulPat.getThetaAndPhiWave(lon, lat, alt, theta, phi);
-	  theta = -1*TMath::RadToDeg()*theta;
-	  phi = TMath::RadToDeg()*phi;
-
-	  double deltaTheta = (theta - event.theta)/event.sigmaTheta;
-	  double deltaPhi = RootTools::getDeltaAngleDeg(phi, event.phi)/event.sigmaPhi;
-	  double binLL = deltaPhi*deltaPhi + deltaTheta*deltaTheta;
-
-	  std::cout << bx << "\t" << by << "\t" << easting << "\t" << northing << "\t" << theta << "\t" << phi << "\t" << deltaTheta*event.sigmaTheta << "\t" << deltaPhi*event.sigmaPhi << "\t" << binLL << std::endl;	
-
-	  if(binLL < llCut){
-	    int bin = hTest2->Fill(lon, lat, 1);
+	if(lat < -60){
+	  // std::cout << i << "\t" << bin << "\t" << deltaPhi << "\t" << deltaTheta << "\t" << lon << "\t" << lat << std::endl;
+	  Double_t easting, northing;
+	  RampdemReader::LonLatToEastingNorthing(lon, lat, easting, northing);
+	  int bin = hEvents->FindBin(easting, northing);
+	  if(std::find(histBinsToConsider.begin(), histBinsToConsider.end(), bin)==histBinsToConsider.end()){
 	    histBinsToConsider.push_back(bin);
-
-	    std::cout << "Passes" << std::endl;
 	  }
-	  else{
-	    std::cout << "fails" << std::endl;
+
+	  if(easting < minEasting){
+	    minEasting = easting;
+	  }
+	  if(easting > maxEasting){
+	    maxEasting = easting;
+	  }
+	  if(northing < minNorthing){
+	    minNorthing = northing;
+	  }
+	  if(northing > maxNorthing){
+	    maxNorthing = northing;
 	  }
 	}
       }
 
-      int numEvents = 0;
-      for(UInt_t eventInd2=0; eventInd2 < events.size(); eventInd2++){
-	Event& event2 = events.at(eventInd2);
-	if(std::find(histBinsToConsider.begin(), histBinsToConsider.end(), event2.antarcticaHistBin) != histBinsToConsider.end()) {
-	  numEvents++;
-	}
-      }
-      p.inc(eventInd, events.size());
-      std::cout << "eventInd = " << eventInd << ", must consider " << numEvents << " of " << events.size() << " over " << histBinsToConsider.size() << " bins " << std::endl;
-      std::cout << "the angular error deltaPhiMax = " << deltaPhiMax << ", deltaThetaMax = " << deltaThetaMax << std::endl;
-      grandTotal += numEvents;
-
-      hTest->Write();
-      delete hTest;
-      hTest2->Write();
-      delete hTest2;
+      deltaPhi += deltaPhiStep;
     }
-  }
-  std::cout << "This brings to grand total to " << grandTotal << std::endl;
-  
 
+    TAxis* xAxis = hEvents->GetXaxis();
+    TAxis* yAxis = hEvents->GetYaxis();
+    int bxLow = xAxis->FindBin(minEasting);
+    int bxHigh = xAxis->FindBin(maxEasting);
+    int byLow = yAxis->FindBin(minNorthing);
+    int byHigh = yAxis->FindBin(maxNorthing);
+
+    for(int by = byLow; by <= byHigh; by++){
+      double northing = yAxis->GetBinCenter(by);
+      for(int bx = bxLow; bx <= bxHigh; bx++){
+	double easting = xAxis->GetBinCenter(bx);
+	double lon, lat, alt;
+
+	RampdemReader::EastingNorthingToLonLat(easting, northing, lon, lat);
+	alt = RampdemReader::SurfaceAboveGeoid(lon, lat);
+
+	Double_t theta, phi;
+	event.usefulPat.getThetaAndPhiWave(lon, lat, alt, theta, phi);
+	theta = -1*TMath::RadToDeg()*theta;
+	phi = TMath::RadToDeg()*phi;
+
+	double deltaTheta = (theta - event.theta)/event.sigmaTheta;
+	double deltaPhi = RootTools::getDeltaAngleDeg(phi, event.phi)/event.sigmaPhi;
+	double binLL = deltaPhi*deltaPhi + deltaTheta*deltaTheta;
+
+	// std::cout << bx << "\t" << by << "\t" << event.easting - easting << "\t" << event.northing - northing << std::endl;
+	// std::cout << theta << "\t" << phi << std::endl;
+	// std::cout << deltaTheta*event.sigmaTheta << "\t" << deltaPhi*event.sigmaPhi << std::endl;
+	// std::cout << event.sigmaTheta << "\t" << event.sigmaPhi << std::endl;
+	// std::cout << binLL << std::endl;
   
+	if(binLL < llCut){
+	  int bin = hEvents->FindBin(easting, northing);
+	  if(std::find(histBinsToConsider.begin(), histBinsToConsider.end(), bin)==histBinsToConsider.end()){
+	    histBinsToConsider.push_back(bin);
+	  }
+	}
+      }
+    }
+
+    int numEvents = 0;
+    int nn = 0;
+    for(UInt_t eventInd2=0; eventInd2 < events.size(); eventInd2++){      
+      Event& event2 = events.at(eventInd2);
+      if(std::find(histBinsToConsider.begin(), histBinsToConsider.end(), event2.antarcticaHistBin) != histBinsToConsider.end()) {
+	
+	double ll = dSum(event, event2);
+	if(ll > llCut){
+	  ll = dFit(event, event2);
+	}
+	if(ll < llCut){
+	  nn++;
+	}
+	
+	numEvents++;
+      }
+    }
+    p.inc(eventInd, events.size());
+    std::cout << "eventInd = " << eventInd << ", must consider " << numEvents << " of " << events.size() << " over " << histBinsToConsider.size() << " bins " << std::endl;
+    std::cout << "I found " << nn << " neighbours " << std::endl;
+    std::cout << "the angular error deltaPhiMax = " << deltaPhiMax << ", deltaThetaMax = " << deltaThetaMax << std::endl;
+    grandTotal += numEvents;
+  }
+  
+  std::cout << "This brings to grand total to " << grandTotal << std::endl;
   std::cout << "done!" << std::endl;
   return;
 }
@@ -1469,18 +1516,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::rangeQueryEastingNorthing(Int_t e
   std::vector<Int_t> nearbyEventInds;
   fKDTree->FindInRange(&event.easting, range, nearbyEventInds);
 
-  int nn = 0;
+  int nn = 0;  
   for(UInt_t i=0; i < nearbyEventInds.size(); i++){
     int eventInd2 = nearbyEventInds[i];
 
     if(eventInd2 != eventInd){
+      const Event& event2 = events.at(eventInd2);
 
-      double ll = dSum(eventInd, eventInd2);
+      double ll = dSum(event, event2);
       if(fDebug){
 	std::cout << "pair " << eventInd << ", " << eventInd2 << ", initial ll = " << ll;
       }
       if(ll > llCut){
-	ll = dFit(eventInd, eventInd2);
+	ll = dFit(event, event2);
 	if(fDebug){
 	  std::cout << ", fitted ll = " << ll;
 	}
@@ -1516,7 +1564,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     }
   }
 
-
   TH1D* hWais = new TH1D("hWais", "Log-likelihood - WAIS", 2048, 0, 2048);
   AnitaVersion::set(3);
   double waisLon = AnitaLocations::getWaisLongitude();
@@ -1524,7 +1571,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-    Double_t llWais = dPoint(eventInd, waisLon, waisLat, waisModelAlt);
+    const Event& event = events.at(eventInd);
+    Double_t llWais = dPoint(event, waisLon, waisLat, waisModelAlt);
     hWais->Fill(llWais);
   }
 
@@ -1537,6 +1585,18 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   TH2D* hFitVsUnfitted = new TH2D("hFit_vs_unfit", "Fitted vs. unfitted WAIS event-event log-likelihood; Unfitted log-likelihood; Fitted log-likelihood", 1024, 0, 1024, 1024, 0, 1024);
   TH1D* hUnfitMinusFit = new TH1D("hFit_minus_unfit", "(Unfitted - fitted) WAIS event-event log-likelihood; #delta (log likelihood)", 1024, -512, 512);
 
+  TH2D* hUnfitSqrt = new TH2D("hUnfitSqrt_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);  
+  TH2D* hFitSqrt = new TH2D("hFitSqrt_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
+  TH2D* hFitSqrtVsUnfittedSqrt = new TH2D("hFitSqrt_vs_unfitSqrt", "Fitted vs. unfitted WAIS event-event log-likelihood; Unfitted log-likelihood; Fitted log-likelihood", 1024, 0, 1024, 1024, 0, 1024);
+  TH1D* hUnfitSqrtMinusFitSqrt = new TH1D("hFitSqrt_minus_unfitSqrt", "(Unfitted - fitted) WAIS event-event log-likelihood; #delta (log likelihood)", 1024, -512, 512);
+  
+  TH2DAntarctica* hEventPos = new TH2DAntarctica("hEventPos", "Event Position");
+  TH2DAntarctica* hFittedPos = new TH2DAntarctica("hFittedPos", "Fitted Pair position");
+
+  TGraphAntarctica* grAnita = new TGraphAntarctica();
+  // TGraphAntarctica* grEventPos = new TGraphAntarctica();
+  // TGraphAntarctica* grFittedPos = new TGraphAntarctica();  
+
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     const Event& event1 = events.at(eventInd);
 
@@ -1546,28 +1606,24 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
     TVector3 anitaToEvent1 = event1Pos - anita1Pos;
 
-    // for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
-    // for(UInt_t eventInd2=eventInd; eventInd2 < events.size(); eventInd2+=stride){
     const int eventInd2 = randy.Uniform(0, events.size());
     const Event& event2 = events.at(eventInd2);
-
+    grAnita->SetPoint(grAnita->GetN(), event1.anita.longitude, event1.anita.latitude);
     // if(event2.eventNumber!=fTestEvent2) continue;
 
-    if(fDebug && event1.eventNumber==fTestEvent1 && event2.eventNumber==fTestEvent2){
+    if(event1.eventNumber==fTestEvent1 && event2.eventNumber==fTestEvent2){
       std::cerr << "Info in " << __PRETTY_FUNCTION__ << " mapping parameter space around WAIS for a single event test!" << std::endl;
       AnitaVersion::set(3);
       double waisEasting, waisNorthing;
       RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
       double delta = 100e3;
       const int nBins = 1024;
-      TH2D* hParams = new TH2D("hSingleEventTest", "param vs. e/n",
+      TH2D* hParams = new TH2D("hSingleEventTest", "Event-event fitted log likelihood; Easting (km); Northing (km); L_{sum}",
 			       // nBins, -1090000, -1065000,
 			       // nBins, -484200, -483600);
 			       nBins, waisEasting-delta, waisEasting+delta,
 			       nBins, waisNorthing-delta, waisNorthing+delta);
 
-      fFitEventInd1 = eventInd;
-      fFitEventInd2 = eventInd2;
       double params[2] = {0,0};
       for(int by=1; by <= hParams->GetNbinsY(); by++){
 	params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
@@ -1580,26 +1636,80 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
       std::cout << "done!" << std::endl;
       hParams->Write();
       delete hParams;
+
+      TGraphAntarctica* grTestEvent1 = new TGraphAntarctica();
+      grTestEvent1->SetPointEastingNorthing(0, event1.easting, event1.northing);
+      grTestEvent1->SetName("grTestEvent1");
+      grTestEvent1->Write();
+      delete grTestEvent1;
+
+      TGraphAntarctica* grTestEvent2 = new TGraphAntarctica();
+      grTestEvent2->SetPointEastingNorthing(0, event2.easting, event2.northing);
+      grTestEvent2->SetName("grTestEvent2");
+      grTestEvent2->Write();
+      delete grTestEvent2;
+
+      TGraphAntarctica* grWaisTrue = new TGraphAntarctica();
+      grWaisTrue->SetPoint(0, AnitaLocations::LONGITUDE_WAIS_A3, AnitaLocations::LATITUDE_WAIS_A3);
+      grWaisTrue->SetName("grWaisTrue");
+      grWaisTrue->Write();
+      delete grWaisTrue;
+
     }
 
     TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
     TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
     TVector3 anitaToEvent2 = event2Pos - anita2Pos;
 
-    double dist = dSum(eventInd, eventInd2);
+    double dist = dSum(event1, event2);
     Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
 
-    hUnfit->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
 
-    double distFitted = dFit(eventInd, eventInd2);
+    hUnfit->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
+    hUnfitSqrt->Fill(angleBetweenEvents*TMath::RadToDeg(), TMath::Sqrt(dist));
+
+    // if(dist > 1000){
+    //   std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+    // }
+
+    double distFitted = dFit(event1, event2);
     hFit->Fill(angleBetweenEvents*TMath::RadToDeg(), distFitted);
+    hFitSqrt->Fill(angleBetweenEvents*TMath::RadToDeg(), TMath::Sqrt(distFitted));
+
+    double fitLon, fitLat;
+    RampdemReader::EastingNorthingToLonLat(fFitEasting, fFitNorthing, fitLon, fitLat);
+    hFittedPos->Fill(fitLon, fitLat);
+    hEventPos->Fill(event1.longitude, event1.latitude);    
+    // grFittedPos->SetPointEastingNorthing(grFittedPos->GetN(), fFitEasting, fFitNorthing);
+    // grEventPos->SetPointEastingNorthing(grEventPos->GetN(), event1.easting, event1.northing);    
 
     hFitVsUnfitted->Fill(dist, distFitted);
     hUnfitMinusFit->Fill(dist - distFitted);
+    hFitSqrtVsUnfittedSqrt->Fill(TMath::Sqrt(dist), TMath::Sqrt(distFitted));
+    hUnfitSqrtMinusFitSqrt->Fill(TMath::Sqrt(dist) - TMath::Sqrt(distFitted));
 
     p.inc(eventInd, events.size());
   }
 
+  grAnita->SetName("grAnita");
+  grAnita->Write();
+  delete grAnita;
+  
+  hFittedPos->Write();
+  delete hFittedPos;
+
+  hEventPos->Write();
+  delete hEventPos;
+
+  // grFittedPos->SetName("grFittedPos");
+  // grFittedPos->Write();
+  // delete grFittedPos;
+
+  // grEventPos->SetName("grEventPos");
+  // grEventPos->Write();
+  // delete grEventPos;
+  
+  
   hWais->Write();
   delete hWais;
 
@@ -1690,27 +1800,26 @@ void Acclaim::Clustering::LogLikelihoodMethod::DBSCAN(){
 	    event2.cluster = clusterInd;
 	    clusters.at(clusterInd).numDataEvents++;
 	  }
-	  else if(event2.cluster >= 0){
-	    /**
-	     * OK, this is a Ben Strutt addition to the DBSCAN algorithm...
-	     * If we had an exhaustive queryRegion scan, I don't think we should be able to get here.
-	     * But without an exhaustive scan we need to consider the possibility
-	     * that we didn't consider the event/event2 connection from the event2 side
-	     * If event 2 is a core point in the other cluster
-	     * Then then event2's cluster is the same as event's cluster.
-	     * However, if event2 is NOT a core point, then they are not the same cluster.
-	     */
-	    if(isCorePointDBSCAN(event2)){
-	      Int_t clusterToDie = event2.cluster;
-	      Int_t clusterToLive = event.cluster; // == clusterInd?
-	      for(UInt_t i=0; i < events.size(); i++){
-		if(events[i].cluster == clusterToDie){
-		  events[i].cluster = clusterToLive;
-		}
-	      }
-	    }
-	  }
-
+	  // else if(event2.cluster >= 0){
+	  //   /**
+	  //    * OK, this is a Ben Strutt addition to the DBSCAN algorithm...
+	  //    * If we had an exhaustive queryRegion scan, I don't think we should be able to get here.
+	  //    * But without an exhaustive scan we need to consider the possibility
+	  //    * that we didn't consider the event/event2 connection from the event2 side
+	  //    * If event 2 is a core point in the other cluster
+	  //    * Then then event2's cluster is the same as event's cluster.
+	  //    * However, if event2 is NOT a core point, then they are not the same cluster.
+	  //    */
+	  //   if(isCorePointDBSCAN(event2)){
+	  //     Int_t clusterToDie = event2.cluster;
+	  //     Int_t clusterToLive = event.cluster; // == clusterInd?
+	  //     for(UInt_t i=0; i < events.size(); i++){
+	  // 	if(events[i].cluster == clusterToDie){
+	  // 	  events[i].cluster = clusterToLive;
+	  // 	}
+	  //     }
+	  //   }
+	  // }
 	  else if(event2.cluster == kUndefined){
 	    event2.cluster = clusterInd;
 	    clusters.at(clusterInd).numDataEvents++;
@@ -1719,7 +1828,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::DBSCAN(){
 	    p.inc(numEventsProcessed, events.size());
 	    numEventsProcessed++;
 	    std::cout << numEventsProcessed << " of " << events.size() << std::endl;
-
+	  }
+	  else{
+	    std::cerr << "Error in " << __PRETTY_FUNCTION__ << " shouldn't get here! event2.cluster = " << event2.cluster << std::endl;
 	  }
 	}
       }
@@ -1740,10 +1851,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClusteringDBSCAN(const char* da
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
   TFile* fOut = oc.makeFile();
   
-  testAngleFindingSpeed();
+  // testAngleFindingSpeed();
   
 
-  // // makeAndWriteNSquaredEventEventHistograms();
+  makeAndWriteNSquaredEventEventHistograms();
   // makeSummaryTrees();
   fOut->Write();
   fOut->Close();
@@ -1763,20 +1874,21 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     initializeBaseList();
   }
   else{
-    std::cout << "Info in " << __PRETTY_FUNCTION__ << ": not using base list!" << std::endl;
+   std::cout << "Info in " << __PRETTY_FUNCTION__ << ": not using base list!" << std::endl;
   }
-  readInSummaries(mcGlob);
+  // readInSummaries(mcGlob);
 
 
   char* fakeArgv0 = const_cast<char*>(outFileName);
   OutputConvention oc(1, &fakeArgv0);
   TFile* fOut = oc.makeFile();
 
-  assignEventsToBaseClusters();
+  llCut = 1000;
+  assignEventsToBaseClusters();  
   recursivelyAddClustersFromData(0);
-  redoSmallClusters();
+  // redoSmallClusters();
 
-  assignMcEventsToClusters();
+  // assignMcEventsToClusters();
 
   writeAllGraphsAndHists();
   makeSummaryTrees();

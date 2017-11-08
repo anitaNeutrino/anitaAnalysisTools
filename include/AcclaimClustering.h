@@ -16,6 +16,7 @@
 #include "TKDTree.h"
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
+#include "AcclaimOpenMP.h"
 
 class TTree;
 class TGraphAntarctica;
@@ -82,8 +83,6 @@ namespace Acclaim{
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
-
-
       Event();
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       TArrowAntarctica* makeArrowFromAnitaToEvent();
@@ -235,9 +234,9 @@ namespace Acclaim{
       Double_t getSumOfMcWeights();
       void redoSmallClusters();
       void initKDTree();
-      Double_t dMin(Int_t eventInd1, Int_t eventInd2);
-      Double_t dSum(Int_t eventInd1, Int_t eventInd2);
-      Double_t dAsym(Int_t eventInd1, Int_t eventInd2);
+      Double_t dMin(const Event& event1, const Event& event2);
+      Double_t dSum(const Event& event1, const Event& event2);
+      Double_t dAsym(const Event& event1, const Event& event2);
       void testTriangleInequality();
       void sortEventIndices(Int_t eventInd, std::vector<Int_t>& unsorted, std::vector<DistIndex>& sorted);
       bool isCorePointDBSCAN(Event& event);
@@ -248,15 +247,18 @@ namespace Acclaim{
       const UInt_t fMinPts = 4;
       void rangeQueryEastingNorthing(Int_t eventInd, Double_t range, std::vector<Int_t>& seed);
       void makeAndWriteNSquaredEventEventHistograms();
-      Double_t dPoint(Int_t eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
+      Double_t dPoint(const Event& eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
-      Int_t fFitEventInd1; /// The index of the first event in the pairwise fit
-      Int_t fFitEventInd2; /// The index of the second event in the pairwise fit
+      const Event* fFitEvent1; /// First event in the pairwise fit
+      const Event* fFitEvent2; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
-      Double_t dFit(Int_t eventInd1, Int_t eventInd2);
+      Double_t dFit(const Event& event1, const Event& event2);
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
+      Double_t fFitEasting;  /// Where the fitter found the potential source could come from
+      Double_t fFitNorthing; /// Where the fitter found the potential source could come from
+      TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
 
       
       Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
