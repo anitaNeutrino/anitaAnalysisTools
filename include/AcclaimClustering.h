@@ -35,6 +35,15 @@ namespace Acclaim{
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
     TCanvas* drawAngularResolutionModel(double maxSnr);
 
+    template <class T>
+    Bool_t isVaguelyNearMcMurdo(const T& t){
+      return t.longitude >= 150 && t.longitude < 180 && t.latitude >= -85 && t.latitude < -75;
+    }
+    template <class T>
+    Bool_t inSandbox(const T& t){
+      return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
+    }
+
     /**
      * @class Event
      * @brief Minimum required information about an ANITA event to be clustered
@@ -75,11 +84,12 @@ namespace Acclaim{
 
       Double_t logLikelihood2;			/// log likelihood to second closest cluster
       Int_t cluster2;              		/// what cluster am I second closest to?
-      
+
       UInt_t numNeighbours;                     /// How many neighbouring events were found within queryRegion?
 
       UInt_t nearestNeighbourEventNumber;       /// What is the eventNumber of the event am I closest to?
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
+      Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
@@ -87,9 +97,10 @@ namespace Acclaim{
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       TArrowAntarctica* makeArrowFromAnitaToEvent();
       void setupUsefulPat();
+      void resetClusteringNumbers();
 
       virtual ~Event(){ ;}
-      ClassDef(Event, 4)
+      ClassDef(Event, 5)
     };
 
 
@@ -144,7 +155,9 @@ namespace Acclaim{
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
-      Int_t seedEvent;                   //!			/// Which event seeded the cluster?
+      Int_t seedEvent; //!			                /// Which event seeded the cluster?
+
+      void resetClusteringNumbers();
 
       ClassDef(Cluster, 4)
     };
@@ -230,7 +243,6 @@ namespace Acclaim{
       void assignMcEventsToClusters();
       void assignEventsToBaseClusters();
       void writeAllGraphsAndHists();
-      void findClosestEventToClustersOfSizeOne();
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();
@@ -243,10 +255,11 @@ namespace Acclaim{
       void sortEventIndices(Int_t eventInd, std::vector<Int_t>& unsorted, std::vector<DistIndex>& sorted);
       bool isCorePointDBSCAN(Event& event);
       void testAngleFindingSpeed();
-      
+      Int_t removeLargeBasesNearMcMurdo();
+
       void DBSCAN();
       void OPTICS();
-      const UInt_t fMinPts = 4;
+      const UInt_t fMinPts = 1;
       void rangeQueryEastingNorthing(Int_t eventInd, Double_t range, std::vector<Int_t>& seed);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t dPoint(const Event& eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
@@ -262,9 +275,8 @@ namespace Acclaim{
       Double_t fFitNorthing; /// Where the fitter found the potential source could come from
       TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
 
-      
-      Double_t llCut;						/// The cut-off for log-likelihood, which defines the boundary of a cluster
-      Double_t maxDistCluster;					/// Only consider adding to a cluster when closer than this value
+      Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
+      Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
 
       // Int_t numClusters;
@@ -274,6 +286,8 @@ namespace Acclaim{
       std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
       TKDTreeID* fKDTree;                                       /// ROOT's implementation of a KDTree, typedef'd for int/double
+      std::vector<Double_t> fEventEastings;
+      std::vector<Double_t> fEventNorthings;
 
       std::vector<TGraphAntarctica*> grBaseClusterCenters;	/// The locations of the bases
       std::vector<TH2DAntarctica*> hBaseClusteredEvents;	/// Histograms of events clustered to bases

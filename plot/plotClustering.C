@@ -156,43 +156,119 @@ void drawResolutionDistributions(TFile* f, int whichCluster = -1){
   const Long64_t nClusters = clusterTree->GetEntries();
   const Long64_t nEvents = eventTree->GetEntries();
 
-  const double thetaDegRange = 2.5;
-  const double phiDegRange = 5;
-  const double maxPlotLL = 100;
+  const double thetaDegRange = 5;
+  const double phiDegRange = 10;
+  const double maxPlotLL = 300;
 
+  TGraphAntarctica* grPlottedClusters = new TGraphAntarctica();
+
+  int numInVeryLargeKnownClusters = 0;
   for(int clusterInd = 0; clusterInd < nClusters; clusterInd++){
 
     if(whichCluster >= 0 && clusterInd != whichCluster) continue;
 
     clusterTree->GetEntry(clusterInd);
-    TString inCluster = TString::Format("cluster==%d", clusterInd);
+    if(cluster->numDataEvents > 1000 && Acclaim::Clustering::isVaguelyNearMcMurdo(*cluster)){
 
-    TString thetaName = TString::Format("hDeltaTheta%d", clusterInd);
-    TH1D* hDeltaTheta = new TH1D(thetaName, "#delta#theta", 1024, -thetaDegRange, thetaDegRange);
+      const int nBins = 128;
+      TString baseName = TString::Format("lon %4.2lf, lat%4.2lf: n=%d ", cluster->longitude,  cluster->latitude, cluster->numDataEvents);
+      numInVeryLargeKnownClusters += cluster->numDataEvents;
 
-    TString phiName = TString::Format("hDeltaPhi%d", clusterInd);
-    TH1D* hDeltaPhi = new TH1D(phiName, "#delta#phi", 1024, -phiDegRange, phiDegRange);
+      grPlottedClusters->SetPoint(grPlottedClusters->GetN(), cluster->longitude, cluster->latitude);
 
-    TString llName = TString::Format("hLL%d", clusterInd);
-    TH1D* hLL = new TH1D(llName, "Log Likelihood", 1024, 0, maxPlotLL);
+      TString inCluster = TString::Format("cluster==%d", clusterInd);
 
-    eventTree->Draw(TString("event.dThetaCluster>>") + thetaName, inCluster, "goff");
-    eventTree->Draw(TString("event.dPhiCluster>>") + phiName, inCluster, "goff");
-    eventTree->Draw(TString("event.logLikelihood>>") + llName, inCluster, "goff");
+      TString thetaName = TString::Format("hDeltaTheta%d", clusterInd);
+      TH1D* hDeltaTheta = new TH1D(thetaName, baseName + "#delta#theta", nBins, -thetaDegRange, thetaDegRange);
 
-    auto c1 = new TCanvas();
-    c1->Divide(2);
-    c1->cd(1);
-    hDeltaPhi->Draw();
-    hDeltaTheta->Draw("same");
-    c1->cd(2);
-    gPad->SetLogy(1);
-    hLL->Draw();
+      TString phiName = TString::Format("hDeltaPhi%d", clusterInd);
+      TH1D* hDeltaPhi = new TH1D(phiName, baseName + "#delta#phi", nBins, -phiDegRange, phiDegRange);
+
+      TString llName = TString::Format("hLL%d", clusterInd);
+      TH1D* hLL = new TH1D(llName, baseName + "Log Likelihood", nBins, 0, maxPlotLL);
+
+      eventTree->Draw(TString("event.dThetaCluster>>") + thetaName, inCluster, "goff");
+      eventTree->Draw(TString("event.dPhiCluster>>") + phiName, inCluster, "goff");
+      eventTree->Draw(TString("event.logLikelihood>>") + llName, inCluster, "goff");
+
+      hDeltaTheta->SetLineColor(kBlue);
+      hDeltaPhi->SetLineColor(kRed);
+
+      auto c1 = new TCanvas();
+      c1->Divide(2);
+      c1->cd(1);
+      hDeltaPhi->Draw();
+      hDeltaTheta->Draw("same");
+      c1->cd(2);
+      gPad->SetLogy(1);
+      hLL->Draw();
+    }
   }
+  if(grPlottedClusters->GetN() > 0){
+    new TCanvas();
+    grPlottedClusters->SetMarkerStyle(8);
+    grPlottedClusters->SetMarkerColor(kMagenta);
+    grPlottedClusters->Draw("p");
+  }
+  else{
+    delete grPlottedClusters;
+  }
+  int numTotal = eventTree->GetEntries();
+
+  std::cout << "Total events " << numTotal << std::endl;
+  std::cout << "Num in very large clusters " << numInVeryLargeKnownClusters << std::endl;
+  std::cout << "Diff = " << numTotal - numInVeryLargeKnownClusters << std::endl;
+
 }
 
 
-void plotClustering(const char* fileName = "doClustering_2017-10-18_10-35-07.root"){
+
+
+void drawClusters(TFile* f){
+
+  TTree* clusterTree = (TTree*)f->Get("clusterTree");
+  Acclaim::Clustering::Cluster* cluster = NULL;
+  clusterTree->SetBranchAddress("cluster", &cluster);
+
+  TTree* eventTree = (TTree*)f->Get("clusteredDataTree");
+  Acclaim::Clustering::Event* event = NULL;
+  eventTree->SetBranchAddress("event", &event);
+
+  TTree* eventTree2 = (TTree*)f->Get("nonBaseSingletTree");
+  Acclaim::Clustering::Event* event2 = NULL;
+  eventTree2->SetBranchAddress("event", &event2);
+
+  const Long64_t nClusters = clusterTree->GetEntries();
+  const Long64_t nEvents = eventTree->GetEntries();
+
+  const double thetaDegRange = 5;
+  const double phiDegRange = 10;
+  const double maxPlotLL = 300;
+
+  TGraphAntarctica* grPlottedClusters = new TGraphAntarctica();
+
+  int numInVeryLargeKnownClusters = 0;
+  int colInd = 2;
+  for(int clusterInd = 0; clusterInd < nClusters; clusterInd++){
+
+    clusterTree->GetEntry(clusterInd);
+    if(cluster->numDataEvents > 0){
+
+      TString cut = TString::Format("cluster==%d", clusterInd);
+      TGraphAntarctica* gr = new TGraphAntarctica(eventTree, "longitude", "latitude", cut.Data());
+      gr->SetName(TString::Format("grCluster%d", clusterInd));
+      gr->SetMarkerColor(colInd);
+      colInd++;
+      gr->Draw();
+    }
+  }
+  TGraphAntarctica* gr = new TGraphAntarctica(eventTree2, "longitude", "latitude");
+  gr->Draw();
+}
+
+
+
+void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.root"){
 
   TFile* f = TFile::Open(fileName);
   if(!f) return;
@@ -204,8 +280,9 @@ void plotClustering(const char* fileName = "doClustering_2017-10-18_10-35-07.roo
   // for(int i=1; i < 16; i++){
   //   drawEvents(f, i);
   // }
+  drawClusters(f);
 
-  drawResolutionDistributions(f, 0);
+  // drawResolutionDistributions(f);
 
   return;
   printClusterMultiplicityTable(f);
