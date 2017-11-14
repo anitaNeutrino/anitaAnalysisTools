@@ -18,7 +18,6 @@
 #pragma link C++ class Acclaim::Clustering::Event+;
 #pragma link C++ class Acclaim::Clustering::McEvent+;
 #pragma link C++ class Acclaim::Clustering::Cluster+;
-#pragma link C++ class Acclaim::Clustering::DistIndex+;
 #pragma link C++ class Acclaim::Clustering::LogLikelihoodMethod+;
 
 #pragma link C++ class Acclaim::RayleighHist+;

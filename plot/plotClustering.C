@@ -256,10 +256,16 @@ void drawClusters(TFile* f){
 
       TString cut = TString::Format("cluster==%d", clusterInd);
       TGraphAntarctica* gr = new TGraphAntarctica(eventTree, "longitude", "latitude", cut.Data());
+      if(gr->GetN() == 0){
+	delete gr;
+	gr =  new TGraphAntarctica(eventTree2, "longitude", "latitude", cut.Data());
+      }
+
       gr->SetName(TString::Format("grCluster%d", clusterInd));
       gr->SetMarkerColor(colInd);
       colInd++;
       gr->Draw();
+      std::cout << clusterInd << "\t" << gr->GetN() << "\t" << cluster->numDataEvents << std::endl;
     }
   }
   TGraphAntarctica* gr = new TGraphAntarctica(eventTree2, "longitude", "latitude");

@@ -31,6 +31,8 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
+    const Double_t default_range_easting_northing = 700e3;
+
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
     TCanvas* drawAngularResolutionModel(double maxSnr);
@@ -139,7 +141,7 @@ namespace Acclaim{
     class Cluster{
     public:
       Cluster();
-      // Cluster(const Event& seedEvent);
+      Cluster(const Event& seedEvent);
       Cluster(const BaseList::base& base);
 
       virtual ~Cluster(){ ;}	
@@ -161,41 +163,6 @@ namespace Acclaim{
 
       ClassDef(Cluster, 4)
     };
-
-
-    /**
-     * @class DistIndex
-     * Slightly over-engineered pair, with some default values
-     * which allows sorting of eventIndices based on separation
-     */
-    class DistIndex {
-    public:
-      DistIndex() : d(-1), i(-1) {;}    
-      DistIndex(Int_t eventInd) : d(-1), i(eventInd) {;}
-      DistIndex(Double_t distance, Int_t eventInd) : d(distance), i(eventInd) {;}
-
-      friend bool operator<(const DistIndex &di1, const DistIndex &di2){
-	return di1.d < di2.d;
-      }
-      friend bool operator<=(const DistIndex &di1, const DistIndex &di2){
-	return di1.d <= di2.d;
-      }
-      friend bool operator>(const DistIndex &di1, const DistIndex &di2){
-	return di1.d > di2.d;
-      }
-      friend bool operator>=(const DistIndex &di1, const DistIndex &di2){
-	return di1.d >= di2.d;
-      }
-      friend bool operator==(const DistIndex &di1, const DistIndex &di2){
-	return di1.d == di2.d;
-      }
-      friend bool operator!=(const DistIndex &di1, const DistIndex &di2){
-	return di1.d != di2.d;
-      }
-      Double_t d;
-      Int_t i;
-    };
-    
 
     
     /**
@@ -252,15 +219,11 @@ namespace Acclaim{
       Double_t dSum(const Event& event1, const Event& event2);
       Double_t dAsym(const Event& event1, const Event& event2);
       void testTriangleInequality();
-      void sortEventIndices(Int_t eventInd, std::vector<Int_t>& unsorted, std::vector<DistIndex>& sorted);
-      bool isCorePointDBSCAN(Event& event);
       void testAngleFindingSpeed();
       Int_t removeLargeBasesNearMcMurdo();
 
-      void DBSCAN();
-      void OPTICS();
-      const UInt_t fMinPts = 1;
-      void rangeQueryEastingNorthing(Int_t eventInd, Double_t range, std::vector<Int_t>& seed);
+      void doEventEventClustering();      
+      void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t dPoint(const Event& eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
@@ -274,7 +237,7 @@ namespace Acclaim{
       Double_t fFitEasting;  /// Where the fitter found the potential source could come from
       Double_t fFitNorthing; /// Where the fitter found the potential source could come from
       TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
-
+      std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
       Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
