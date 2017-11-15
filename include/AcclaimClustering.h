@@ -52,6 +52,7 @@ namespace Acclaim{
      */
     class Event{
     public:
+      const static int nThresholds = 5;
 
       //--------------------------------------------------------------------------------
       // determined by reconstruction
@@ -81,11 +82,8 @@ namespace Acclaim{
       Double_t dThetaCluster;			/// theta distance to cluster
       Double_t dPhiCluster;			/// phi distance to cluster
 
-      Double_t logLikelihood[2];		/// log likelihood = -2 * ln (...)
-      Int_t cluster[2];				/// which cluster am I associated with?
-
-      Double_t logLikelihood2[2];		/// log likelihood to second closest cluster
-      Int_t cluster2[2];			/// what cluster am I second closest to?
+      Double_t logLikelihood[nThresholds];		/// log likelihood = -2 * ln (...)
+      Int_t cluster[nThresholds];				/// which cluster am I associated with?
 
       UInt_t numNeighbours;                     /// How many neighbouring events were found within queryRegion?
 
@@ -102,7 +100,7 @@ namespace Acclaim{
       void resetClusteringNumbers();
 
       virtual ~Event(){ ;}
-      ClassDef(Event, 5)
+      ClassDef(Event, 7)
     };
 
 
@@ -156,13 +154,15 @@ namespace Acclaim{
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
       Int_t index;                                              /// Where am I in the cluster array?
+      Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
+      Double_t llEventCut; /// and what's the value of that cut?
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
       Int_t seedEvent; //!			                /// Which event seeded the cluster?
 
       void resetClusteringNumbers();
 
-      ClassDef(Cluster, 4)
+      ClassDef(Cluster, 5)
     };
 
     
@@ -238,7 +238,7 @@ namespace Acclaim{
       Double_t fFitNorthing; /// Where the fitter found the potential source could come from
       TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
-      Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
+      // Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
 

@@ -234,9 +234,9 @@ void drawClusters(TFile* f){
   Acclaim::Clustering::Event* event = NULL;
   eventTree->SetBranchAddress("event", &event);
 
-  TTree* eventTree2 = (TTree*)f->Get("nonBaseSingletTree");
-  Acclaim::Clustering::Event* event2 = NULL;
-  eventTree2->SetBranchAddress("event", &event2);
+  // TTree* eventTree2 = (TTree*)f->Get("nonBaseSingletTree");
+  // Acclaim::Clustering::Event* event2 = NULL;
+  // eventTree2->SetBranchAddress("event", &event2);
 
   const Long64_t nClusters = clusterTree->GetEntries();
   const Long64_t nEvents = eventTree->GetEntries();
@@ -248,28 +248,50 @@ void drawClusters(TFile* f){
   TGraphAntarctica* grPlottedClusters = new TGraphAntarctica();
 
   int numInVeryLargeKnownClusters = 0;
-  int colInd = 2;
+  const int n = Acclaim::Clustering::Event::nThresholds;
+  
+  int colInd[n] = {0};
+  for(int i=0; i < n; i++){
+    colInd[i] = 2;
+  }
+  
+  std::vector<TGraphAntarctica*> grs[n];
+  
   for(int clusterInd = 0; clusterInd < nClusters; clusterInd++){
 
     clusterTree->GetEntry(clusterInd);
     if(cluster->numDataEvents > 0){
 
-      TString cut = TString::Format("cluster[0]==%d", clusterInd);
+      TString cut = TString::Format("cluster[%d]==%d", cluster->llEventCutInd, clusterInd);
       TGraphAntarctica* gr = new TGraphAntarctica(eventTree, "longitude", "latitude", cut.Data());
-      if(gr->GetN() == 0){
-	delete gr;
-	gr =  new TGraphAntarctica(eventTree2, "longitude", "latitude", cut.Data());
-      }
+      //  if(gr->GetN() == 0){	
+      // 	delete gr;
+      // 	gr =  new TGraphAntarctica(eventTree2, "longitude", "latitude", cut.Data());
+      // }
 
-      gr->SetName(TString::Format("grCluster%d", clusterInd));
-      gr->SetMarkerColor(colInd);
-      colInd++;
-      gr->Draw();
+      gr->SetName(TString::Format("grCluster%d_%d", clusterInd, cluster->llEventCutInd));
+      gr->SetMarkerColor(colInd[cluster->llEventCutInd]);
+      colInd[cluster->llEventCutInd]++;
+
+      grs[cluster->llEventCutInd].push_back(gr);
+      
+      // gr->Draw();
       std::cout << clusterInd << "\t" << gr->GetN() << "\t" << cluster->numDataEvents << std::endl;
     }
   }
-  TGraphAntarctica* gr = new TGraphAntarctica(eventTree2, "longitude", "latitude");
-  gr->Draw();
+
+  for(int i=0; i < n; i++){
+    new TCanvas();
+    int numClusteredEvents = 0;
+    for(unsigned j=0; j < grs[i].size(); j++){
+      grs[i][j]->Draw();
+      numClusteredEvents = grs[i][j]->GetN(); 
+    }    
+    std::cout << i << "\t" << numClusteredEvents << std::endl;
+  }
+  
+  // TGraphAntarctica* gr = new TGraphAntarctica(eventTree2, "longitude", "latitude");
+  // gr->Draw();
 }
 
 
