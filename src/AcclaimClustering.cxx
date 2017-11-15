@@ -199,7 +199,7 @@ Acclaim::Clustering::McEvent::McEvent()
 
 
 
-Acclaim::Clustering::Cluster::Cluster() {
+Acclaim::Clustering::Cluster::Cluster(Int_t i) {
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
@@ -210,9 +210,10 @@ Acclaim::Clustering::Cluster::Cluster() {
   resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
+  index = i;
 }
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
   // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
@@ -229,10 +230,11 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base) {
   resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
+  index = i;
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const Event& event) {
+Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   latitude = event.longitude;
   longitude = event.latitude;
@@ -242,6 +244,7 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event) {
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
+  index = i;
 }
 
 
@@ -369,9 +372,7 @@ Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
 
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster){
-  // const Cluster& cluster = clusters.at(clusterInd);
-  const Event& event = events.at(eventInd);
+Double_t Acclaim::Clustering::LogLikelihoodMethod::getDistSqEventCluster(const Event& event, const Acclaim::Clustering::Cluster& cluster){
   Double_t d2=0;
   for(int dim=0; dim < nDim; dim++){
     Double_t d = cluster.centre[dim] - event.centre[dim];
@@ -382,10 +383,10 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getDistSqEventCluster(Int_t e
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
+void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventCluster(const Event& event, const Cluster& cluster, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
-  const Cluster& cluster = clusters.at(clusterInd);
-  const Event& event = events.at(eventInd);
+  // const Cluster& cluster = clusters.at(clusterInd);
+  // const Event& event = events.at(eventInd);
 
   Double_t thetaWave, phiWave;
   event.usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
@@ -395,12 +396,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventC
   deltaThetaDeg = (thetaDeg - event.theta);
   deltaPhiDeg = Acclaim::RootTools::getDeltaAngleDeg(phiDeg, event.phi);
 
-  if(fDebug){
-    if(event.cluster < 0 && eventInd == cluster.seedEvent){
-      std::cout << "event theta = " << event.theta  << ", cluster theta = " << thetaDeg << std::endl;
-      std::cout << "event phi = " << event.phi  << ", cluster phi = " << phiDeg << std::endl;
-    }
-  }
+  // if(fDebug){
+  //   if(event.cluster < 0 && eventInd == cluster.seedEvent){
+  //     std::cout << "event theta = " << event.theta  << ", cluster theta = " << thetaDeg << std::endl;
+  //     std::cout << "event phi = " << event.phi  << ", cluster phi = " << phiDeg << std::endl;
+  //   }
+  // }
 }
 
 
@@ -568,30 +569,28 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(const Event& event, Do
 
 
 
-Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd){
-
-  const Cluster& cluster = clusters.at(clusterInd);
-  const Event& event = events.at(eventInd);
+Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(const Event& event, const Cluster& cluster){
+// Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd){  
 
   Double_t deltaThetaDeg, deltaPhiDeg;
-  getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, clusterInd, deltaThetaDeg, deltaPhiDeg);
+  getDeltaThetaDegDeltaPhiDegEventCluster(event, cluster, deltaThetaDeg, deltaPhiDeg);
 
   Double_t dThetaNorm = deltaThetaDeg/event.sigmaTheta;
   Double_t dPhiNorm = deltaPhiDeg/event.sigmaPhi;
   Double_t angSq =  dThetaNorm*dThetaNorm + dPhiNorm*dPhiNorm;
-  if(fDebug){
-    // if(event.cluster < 0 && event.antarcticaHistBin == cluster.antarcticaHistBin){
-    if(event.cluster < 0 && eventInd == cluster.seedEvent){
-      std::cout << event.eventNumber << std::endl;
-      std::cout << "dTheta = " << deltaThetaDeg  << ", dPhi = " << deltaPhiDeg
-		<< ", sigmaTheta = " << event.sigmaTheta << ", sigmaPhi = " << event.sigmaPhi
-		<< ", dThetaNorm = " << dThetaNorm << ", dPhiNorm = " << dPhiNorm
-		<< ", ll = " << angSq << std::endl;
-      std::cout << "cluster lon/lat/alt = " << cluster.longitude << ", " << cluster.latitude << ", " << cluster.altitude << std::endl;
-      std::cout << "event lon/lat/alt = " << event.longitude << ", " << event.latitude << ", " << event.altitude << std::endl;
-      std::cout << "anita lon/lat/alt = " << event.usefulPat.longitude << ", " << event.usefulPat.latitude << ", " << event.usefulPat.altitude << std::endl;
-    }
-  }
+  // if(fDebug){
+  //   // if(event.cluster < 0 && event.antarcticaHistBin == cluster.antarcticaHistBin){
+  //   if(event.cluster < 0 && eventInd == cluster.seedEvent){
+  //     std::cout << event.eventNumber << std::endl;
+  //     std::cout << "dTheta = " << deltaThetaDeg  << ", dPhi = " << deltaPhiDeg
+  // 		<< ", sigmaTheta = " << event.sigmaTheta << ", sigmaPhi = " << event.sigmaPhi
+  // 		<< ", dThetaNorm = " << dThetaNorm << ", dPhiNorm = " << dPhiNorm
+  // 		<< ", ll = " << angSq << std::endl;
+  //     std::cout << "cluster lon/lat/alt = " << cluster.longitude << ", " << cluster.latitude << ", " << cluster.altitude << std::endl;
+  //     std::cout << "event lon/lat/alt = " << event.longitude << ", " << event.latitude << ", " << event.altitude << std::endl;
+  //     std::cout << "anita lon/lat/alt = " << event.usefulPat.longitude << ", " << event.usefulPat.latitude << ", " << event.usefulPat.altitude << std::endl;
+  //   }
+  // }
 
 
   return angSq;
@@ -681,12 +680,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
   if(counter > minBinContent){ // then we create a new cluster and do the whole thing again
 
-
     for(int dim=0; dim < nDim; dim++){
       tempCluster.centre[dim] /= counter;
     }
-
-
 
     AnitaGeomTool* geom = AnitaGeomTool::Instance();
     geom->getLatLonAltFromCartesian(tempCluster.centre,
@@ -700,7 +696,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
       const Event& event = events.at(eventInd);
       if(event.cluster < 0 && event.antarcticaHistBin==globalMaxBin){
-	Double_t dSq = getDistSqEventCluster(eventInd, tempCluster);
+	Double_t dSq = getDistSqEventCluster(event, tempCluster);
 	if(dSq < minDSq){
 	  minDSq = dSq;
 	  eventIndClosestToBinMean = eventInd;
@@ -708,7 +704,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
       }
     }
 
-    Cluster seedCluster;
+    Cluster seedCluster(clusters.size());
     const Event& seedEvent = events.at(eventIndClosestToBinMean);
     seedCluster.latitude = seedEvent.latitude;
     seedCluster.longitude = seedEvent.longitude;
@@ -735,7 +731,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
     const int isMC = 0;
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-      assignSingleEventToCloserCluster(eventInd, isMC, clusters.size()-1);
+      assignSingleEventToCloserCluster(eventInd, isMC, clusters.back());
     }
 
     const int numDataEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
@@ -807,7 +803,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
     if(events.at(eventInd).cluster < 0){
       const Int_t isMC = 0;
       for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
-	assignSingleEventToCloserCluster(eventInd, isMC, clusterInd);
+	Cluster& cluster = clusters.at(clusterInd);
+	assignSingleEventToCloserCluster(eventInd, isMC, cluster);
       }
     }
   }
@@ -817,24 +814,22 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(Int_t i, Int_t isMC, Int_t clusterInd){
+void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(Int_t i, Int_t isMC, Cluster& cluster){
   Event& event = isMC==0 ? events.at(i) : mcEvents.at(i);
-
-  Cluster& cluster = clusters.at(clusterInd);
 
   Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
 
   if(distM < fFitHorizonDistM){ // are we even close?
 
-    Double_t ll = getAngDistSqEventCluster(i, clusterInd);
+    Double_t ll = getAngDistSqEventCluster(event, cluster);
 
     if(ll < llClusterCut){ // within the cut?
 
-      if(fDebug){
-	if(event.cluster < 0){
-	  std::cout << "clusterInd = " << clusterInd << ", i = " << i << ", ll = " << ll << ", event.ll = " << event.logLikelihood << ", event.cluster = " << event.cluster << std::endl;
-	}
-      }
+      // if(fDebug){
+      // 	if(event.cluster < 0){
+      // 	  std::cout << "clusterInd = " << clusterInd << ", i = " << i << ", ll = " << ll << ", event.ll = " << event.logLikelihood << ", event.cluster = " << event.cluster << std::endl;
+      // 	}
+      // }
 
       // if(!isMC){
       // 	std::cout << ll << std::endl;
@@ -846,7 +841,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(
 	event.logLikelihood2 = event.logLikelihood;
 
 	event.logLikelihood = ll;
-	event.cluster = clusterInd;
+	event.cluster = cluster.index;
 
 	if(isMC==0){
 	  if(event.cluster2 >= 0){
@@ -872,8 +867,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcEventsToClusters(){
   std::cerr  << "Info in " << __PRETTY_FUNCTION__ << ": starting!" << std::endl;
   ProgressBar p(nMc);
   for(UInt_t j=0; j < nMc; j++){
-    for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
-      assignSingleEventToCloserCluster(j, isMC, clusterInd);
+    for(UInt_t clusterInd=0; clusterInd < clusters.size(); clusterInd++){
+      Cluster& cluster = clusters.at(clusterInd);
+      assignSingleEventToCloserCluster(j, isMC, cluster);
     }
     if(mcEvents.at(j).cluster < 0){
       numSinglets+=mcEvents.at(j).weight;
@@ -920,8 +916,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
   ProgressBar p(clusters.size());
   const int isMC = 0;
   for(UInt_t clusterInd=0; clusterInd < clusters.size(); clusterInd++){
+    Cluster& cluster = clusters.at(clusterInd);
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-      assignSingleEventToCloserCluster(eventInd, isMC, clusterInd);
+      assignSingleEventToCloserCluster(eventInd, isMC, cluster);
     }
 
     clusters.at(clusterInd).antarcticaHistBin = hClusters->Fill(clusters.at(clusterInd).longitude, clusters.at(clusterInd).latitude);
@@ -959,7 +956,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
   std::cout << "Info in " << __PRETTY_FUNCTION__ << ": Initializing base list..." << std::endl;
   for(UInt_t clusterInd=0; clusterInd < BaseList::getNumBases(); clusterInd++){
     const BaseList::base& base = BaseList::getBase(clusterInd);
-    clusters.push_back(Cluster(base));
+    clusters.push_back(Cluster(base, clusters.size()));
   }
 }
 
@@ -1062,7 +1059,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
   for(Int_t eventInd=0; eventInd < (Int_t)events.size(); eventInd++){
     event = &events.at(eventInd);
     if(event->cluster >= 0){
-      getDeltaThetaDegDeltaPhiDegEventCluster(eventInd, event->cluster, event->dThetaCluster, event->dPhiCluster);
+      const Cluster& cluster = clusters.at(event->cluster);
+      getDeltaThetaDegDeltaPhiDegEventCluster(*event, cluster, event->dThetaCluster, event->dPhiCluster);
     }
     if(event->cluster < 0 || (clusters.at(event->cluster).numDataEvents == 1 && clusters.at(event->cluster).knownBase==0)) {
       nonBaseSingletTree->Fill();
@@ -1665,11 +1663,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       if(matchedClusters.size()==0){
 
 	// make a new cluster
-	Cluster nc(event1);
+	Cluster nc(event1, clusters.size());
 	clusters.push_back(nc);
 
-	UInt_t newClusterInd = clusters.size() - 1;
-	matchedClusters.push_back(newClusterInd);
+	matchedClusters.push_back(nc.index);
       }
 
       Int_t minClusterInd = TMath::LocMin(matchedClusters.size(), &matchedClusters[0]);

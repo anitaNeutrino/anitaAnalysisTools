@@ -140,9 +140,9 @@ namespace Acclaim{
      */
     class Cluster{
     public:
-      Cluster();
-      Cluster(const Event& seedEvent);
-      Cluster(const BaseList::base& base);
+      Cluster(Int_t i=-1);
+      Cluster(const Event& seedEvent, Int_t i=-1);
+      Cluster(const BaseList::base& base, Int_t i=-1);
 
       virtual ~Cluster(){ ;}	
 
@@ -155,6 +155,7 @@ namespace Acclaim{
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
+      Int_t index;                                              /// Where am I in the cluster array?
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
       Int_t seedEvent; //!			                /// Which event seeded the cluster?
@@ -192,17 +193,16 @@ namespace Acclaim{
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
 
     private:
-      Double_t getDistSqEventCluster(Int_t eventInd, const Acclaim::Clustering::Cluster& cluster);
-      Double_t getAngDistSqEventCluster(Int_t eventInd, Int_t clusterInd);
-      void getDeltaThetaDegDeltaPhiDegEventCluster(Int_t eventInd, Int_t clusterInd, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
-
+      Double_t getDistSqEventCluster(const Event& event, const Cluster& cluster);
+      Double_t getAngDistSqEventCluster(const Event& event, const Cluster& cluster);
+      void getDeltaThetaDegDeltaPhiDegEventCluster(const Event& event, const Cluster& cluster, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
 
 
 
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
-      void assignSingleEventToCloserCluster(Int_t pointInd, Int_t isMC, Int_t clusterInd);
+      void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster);
 
       void initializeBaseList();
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
