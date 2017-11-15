@@ -55,7 +55,7 @@ namespace Acclaim{
 
       //--------------------------------------------------------------------------------
       // determined by reconstruction
-      //--------------------------------------------------------------------------------	
+      //--------------------------------------------------------------------------------
       UInt_t eventNumber;			/// Event number
       Int_t run;				/// Run
       AnitaPol::AnitaPol_t pol;			/// Polarization
@@ -81,11 +81,11 @@ namespace Acclaim{
       Double_t dThetaCluster;			/// theta distance to cluster
       Double_t dPhiCluster;			/// phi distance to cluster
 
-      Double_t logLikelihood;			/// log likelihood = -2 * ln (...)
-      Int_t cluster;				/// which cluster am I associated with?
+      Double_t logLikelihood[2];		/// log likelihood = -2 * ln (...)
+      Int_t cluster[2];				/// which cluster am I associated with?
 
-      Double_t logLikelihood2;			/// log likelihood to second closest cluster
-      Int_t cluster2;              		/// what cluster am I second closest to?
+      Double_t logLikelihood2[2];		/// log likelihood to second closest cluster
+      Int_t cluster2[2];			/// what cluster am I second closest to?
 
       UInt_t numNeighbours;                     /// How many neighbouring events were found within queryRegion?
 

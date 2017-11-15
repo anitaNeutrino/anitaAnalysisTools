@@ -168,10 +168,13 @@ Acclaim::Clustering::Event::Event(){
 
 
 void Acclaim::Clustering::Event::resetClusteringNumbers(){
-  logLikelihood = DBL_MAX;
-  cluster = -1;
-  logLikelihood2 = DBL_MAX;
-  cluster2 = -1;
+
+  for(int z=0; z<2; z++){
+    logLikelihood[z] = DBL_MAX;
+    cluster[z] = -1;
+    logLikelihood2[z] = DBL_MAX;
+    cluster2[z] = -1;
+  }
   nearestNeighbourEventNumber = 0;
   nearestNeighbourLogLikelihood = DBL_MAX;
   dThetaCluster = -999;
@@ -616,7 +619,7 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t
   // find unclustered events
   for(int i=0; i < (Int_t) events.size(); i++){
     Event& event = events.at(i);
-    if(event.cluster < 0){
+    if(event.cluster[0] < 0){
       event.antarcticaHistBin = h->Fill(event.longitude, event.latitude);
     }
   }
@@ -656,7 +659,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
   Cluster tempCluster;
   for(UInt_t i=0; i < events.size(); i++){
     const Event& event = events.at(i);
-    if(event.cluster < 0 && event.antarcticaHistBin==globalMaxBin){
+    if(event.cluster[0] < 0 && event.antarcticaHistBin==globalMaxBin){
       for(int dim=0; dim < nDim; dim++){
 	tempCluster.centre[dim] += event.centre[dim];
       }
@@ -695,7 +698,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
     Double_t minDSq = DBL_MAX;
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
       const Event& event = events.at(eventInd);
-      if(event.cluster < 0 && event.antarcticaHistBin==globalMaxBin){
+      if(event.cluster[0] < 0 && event.antarcticaHistBin==globalMaxBin){
 	Double_t dSq = getDistSqEventCluster(event, tempCluster);
 	if(dSq < minDSq){
 	  minDSq = dSq;
@@ -786,7 +789,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
       numClustersReset++;
 
       for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-	if(events.at(eventInd).cluster==static_cast<Int_t>(clusterInd)){
+	if(events.at(eventInd).cluster[0]==static_cast<Int_t>(clusterInd)){
 	  // some reset function would be good here...
 	  events.at(eventInd).resetClusteringNumbers();
 	  numEventsReset++;
@@ -800,7 +803,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::redoSmallClusters(){
 
   // now do the nSquared thing
   for(int eventInd=0; eventInd < (int)events.size(); eventInd++){
-    if(events.at(eventInd).cluster < 0){
+    if(events.at(eventInd).cluster[0] < 0){
       const Int_t isMC = 0;
       for(int clusterInd=0; clusterInd < (Int_t)clusters.size(); clusterInd++){
 	Cluster& cluster = clusters.at(clusterInd);
@@ -835,17 +838,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(
       // 	std::cout << ll << std::endl;
       // }
 
-      if(ll < event.logLikelihood){ // the best event?
+      if(ll < event.logLikelihood[0]){ // the best event?
 
-	event.cluster2 = event.cluster;
-	event.logLikelihood2 = event.logLikelihood;
+	event.cluster2[0] = event.cluster[0];
+	event.logLikelihood2[0] = event.logLikelihood[0];
 
-	event.logLikelihood = ll;
-	event.cluster = cluster.index;
+	event.logLikelihood[0] = ll;
+	event.cluster[0] = cluster.index;
 
 	if(isMC==0){
-	  if(event.cluster2 >= 0){
-	    clusters.at(event.cluster2).numDataEvents--;
+	  if(event.cluster2[0] >= 0){
+	    clusters.at(event.cluster2[0]).numDataEvents--;
 	  }
 	  cluster.numDataEvents++;
 	}
@@ -871,7 +874,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcEventsToClusters(){
       Cluster& cluster = clusters.at(clusterInd);
       assignSingleEventToCloserCluster(j, isMC, cluster);
     }
-    if(mcEvents.at(j).cluster < 0){
+    if(mcEvents.at(j).cluster[0] < 0){
       numSinglets+=mcEvents.at(j).weight;
     }
     p.inc(j, nMc);
@@ -936,7 +939,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignEventsToBaseClusters(){
       hBaseClusteredEvents[clusterInd] = h;
 
       for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-	if(events.at(eventInd).cluster == static_cast<Int_t>(clusterInd)){
+	if(events.at(eventInd).cluster[0] == static_cast<Int_t>(clusterInd)){
 	  h->Fill(events.at(eventInd).longitude, events.at(eventInd).latitude);
 	}
       }
@@ -965,17 +968,21 @@ void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-    events.at(eventInd).logLikelihood = DBL_MAX;
-    events.at(eventInd).logLikelihood2 = DBL_MAX;
-    events.at(eventInd).cluster = -1;
-    events.at(eventInd).cluster2 = -1;
+    for(int z=0; z < 2; z++){
+      events.at(eventInd).logLikelihood[z] = DBL_MAX;
+      events.at(eventInd).logLikelihood2[z] = DBL_MAX;
+      events.at(eventInd).cluster[z] = -1;
+      events.at(eventInd).cluster2[z] = -1;
+    }
   }
 
   for(UInt_t eventInd=0; eventInd < mcEvents.size(); eventInd++){
-    mcEvents.at(eventInd).logLikelihood = DBL_MAX;
-    mcEvents.at(eventInd).logLikelihood2 = DBL_MAX;
-    mcEvents.at(eventInd).cluster = -1;
-    mcEvents.at(eventInd).cluster2 = -1;
+    for(int z=0; z < 2; z++){    
+      mcEvents.at(eventInd).logLikelihood[z] = DBL_MAX;
+      mcEvents.at(eventInd).logLikelihood2[z] = DBL_MAX;
+      mcEvents.at(eventInd).cluster[z] = -1;
+      mcEvents.at(eventInd).cluster2[z] = -1;
+    }
   }
 
   const UInt_t numBases = BaseList::getNumBases();
@@ -1036,7 +1043,7 @@ TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTG
     // AnitaGeomTool* geom = AnitaGeomTool::Instance();
 
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-      if(events.at(eventInd).cluster==clusterInd){
+      if(events.at(eventInd).cluster[0]==clusterInd){
 	gr->SetPoint(gr->GetN(), events.at(eventInd).longitude, events.at(eventInd).latitude);
       }
     }
@@ -1058,11 +1065,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
   for(Int_t eventInd=0; eventInd < (Int_t)events.size(); eventInd++){
     event = &events.at(eventInd);
-    if(event->cluster >= 0){
-      const Cluster& cluster = clusters.at(event->cluster);
+    if(event->cluster[0] >= 0){
+      const Cluster& cluster = clusters.at(event->cluster[0]);
       getDeltaThetaDegDeltaPhiDegEventCluster(*event, cluster, event->dThetaCluster, event->dPhiCluster);
     }
-    if(event->cluster < 0 || (clusters.at(event->cluster).numDataEvents == 1 && clusters.at(event->cluster).knownBase==0)) {
+    if(event->cluster[0] < 0 || (clusters.at(event->cluster[0]).numDataEvents == 1 && clusters.at(event->cluster[0]).knownBase==0)) {
       nonBaseSingletTree->Fill();
     }
     else{
@@ -1387,7 +1394,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   llFitThreshold = llFitThreshold < 0 ? llRange : llFitThreshold;
 
   Event& event = events.at(eventInd);
-  event.cluster2 = 1;
+  event.cluster2[0] = 1;
 
   nearbyEvents.clear();
   nearbyEventLLs.clear();
@@ -1652,9 +1659,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       for(UInt_t i=0; i < event2Inds.size(); i++){
 	UInt_t event2Ind = event2Inds.at(i);
 	Event& event2 = events.at(event2Ind);
-	if(event2.cluster >= 0){
-	  if(std::find(matchedClusters.begin(), matchedClusters.end(), event2.cluster)==matchedClusters.end()){
-	    matchedClusters.push_back(event2.cluster);
+	if(event2.cluster[0] >= 0){
+	  if(std::find(matchedClusters.begin(), matchedClusters.end(), event2.cluster[0])==matchedClusters.end()){
+	    matchedClusters.push_back(event2.cluster[0]);
 	  }
 	}
       }
@@ -1673,11 +1680,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       Int_t thisCluster = matchedClusters.at(minClusterInd); // we will mark all events as in this cluster
 
       // mark event1 as in the minCluster
-      if(event1.cluster != thisCluster){
-	if(event1.cluster > 0){
-	  clusters.at(event1.cluster).numDataEvents--;
+      if(event1.cluster[0] != thisCluster){
+	if(event1.cluster[0] > 0){
+	  clusters.at(event1.cluster[0]).numDataEvents--;
 	}
-	event1.cluster = thisCluster;
+	event1.cluster[0] = thisCluster;
 	clusters.at(thisCluster).numDataEvents++;
       }
 
@@ -1685,10 +1692,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       for(UInt_t i=0; i < event2Inds.size(); i++){
 	Event& event2 = events.at(event2Inds.at(i));
 
-	if(event2.cluster >= 0){
-	  clusters.at(event2.cluster).numDataEvents--;
+	if(event2.cluster[0] >= 0){
+	  clusters.at(event2.cluster[0]).numDataEvents--;
 	}
-	event2.cluster = thisCluster;
+	event2.cluster[0] = thisCluster;
 	clusters.at(thisCluster).numDataEvents++;
       }
 
@@ -1698,9 +1705,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	Event& event2 = events.at(event2Ind);
 
 	// if the event is in any of the matched clusters, reassign it
-	if(std::find(matchedClusters.begin(), matchedClusters.end(), event2.cluster)!=matchedClusters.end()){
-	  clusters.at(event2.cluster).numDataEvents--;
-	  event2.cluster = thisCluster;
+	if(std::find(matchedClusters.begin(), matchedClusters.end(), event2.cluster[0])!=matchedClusters.end()){
+	  clusters.at(event2.cluster[0]).numDataEvents--;
+	  event2.cluster[0] = thisCluster;
 	  clusters.at(thisCluster).numDataEvents++;
 	}
       }

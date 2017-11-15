@@ -76,7 +76,7 @@ void drawEvents(TFile* f, int clusterInd){
   eventTree->SetBranchAddress("event", &event);
 
 
-  TString eventCutString = TString::Format("cluster==%d", clusterInd);
+  TString eventCutString = TString::Format("cluster[0]==%d", clusterInd);
   TCut eventCut = eventCutString.Data();
   TGraphAntarctica* grAnita = new TGraphAntarctica(eventTree, "anita.longitude", "anita.latitude", eventCut);
 
@@ -98,7 +98,7 @@ void drawEvents(TFile* f, int clusterInd){
     for(Long64_t entry=0; entry < n; entry++){
       eventTree->GetEntry(entry);
 
-      if(event->cluster==clusterInd){
+      if(event->cluster[0]==clusterInd){
 	h->Fill(event->longitude, event->latitude);
       }
 
@@ -116,7 +116,7 @@ void drawEvents(TFile* f, int clusterInd){
     for(Long64_t entry=0; entry < n; entry++){
       eventTree->GetEntry(entry);
 
-      if(event->cluster==clusterInd){
+      if(event->cluster[0]==clusterInd){
 	arrows.push_back(event->makeArrowFromAnitaToEvent());
 	arrows.back()->SetLineWidth(2);
       }
@@ -176,7 +176,7 @@ void drawResolutionDistributions(TFile* f, int whichCluster = -1){
 
       grPlottedClusters->SetPoint(grPlottedClusters->GetN(), cluster->longitude, cluster->latitude);
 
-      TString inCluster = TString::Format("cluster==%d", clusterInd);
+      TString inCluster = TString::Format("cluster[0]==%d", clusterInd);
 
       TString thetaName = TString::Format("hDeltaTheta%d", clusterInd);
       TH1D* hDeltaTheta = new TH1D(thetaName, baseName + "#delta#theta", nBins, -thetaDegRange, thetaDegRange);
@@ -254,7 +254,7 @@ void drawClusters(TFile* f){
     clusterTree->GetEntry(clusterInd);
     if(cluster->numDataEvents > 0){
 
-      TString cut = TString::Format("cluster==%d", clusterInd);
+      TString cut = TString::Format("cluster[0]==%d", clusterInd);
       TGraphAntarctica* gr = new TGraphAntarctica(eventTree, "longitude", "latitude", cut.Data());
       if(gr->GetN() == 0){
 	delete gr;
