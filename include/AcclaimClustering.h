@@ -177,7 +177,6 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
-      void doClusteringDBSCAN(const char* dataGlob, const char* mcGlob, const char* outFileName);
       
       TGraphAntarctica* makeClusterSummaryTGraph(Int_t clusterInd);
 

@@ -17,8 +17,7 @@ int main(int argc, char* argv[]){
 
   Clustering::LogLikelihoodMethod clusterer;
   // clusterer.setDebug(true);
-  // clusterer.doClustering(dataGlob, mcGlob, outFileName);
-  clusterer.doClusteringDBSCAN(dataGlob, mcGlob, outFileName);
+  clusterer.doClustering(dataGlob, mcGlob, outFileName);
 
   return 0;
 }
