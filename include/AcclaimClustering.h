@@ -52,7 +52,6 @@ namespace Acclaim{
      */
     class Event{
     public:
-      const static int nThresholds = 5;
 
       //--------------------------------------------------------------------------------
       // determined by reconstruction
@@ -79,28 +78,31 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
-      Double_t dThetaCluster;			/// theta distance to cluster
-      Double_t dPhiCluster;			/// phi distance to cluster
-
-      Double_t logLikelihood[nThresholds];		/// log likelihood = -2 * ln (...)
-      Int_t cluster[nThresholds];				/// which cluster am I associated with?
-
-      UInt_t numNeighbours;                     /// How many neighbouring events were found within queryRegion?
+      Int_t nThresholds;
+      Int_t* cluster;//[nThresholds]		/// which cluster am I associated with?
+      Double_t* dThetaCluster;//[nThresholds]	/// theta distance to cluster
+      Double_t* dPhiCluster;//[nThresholds]     /// phi distance to cluster
 
       UInt_t nearestNeighbourEventNumber;       /// What is the eventNumber of the event am I closest to?
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
       Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
+      Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
-      Event();
-      Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
+
+      Event(Int_t nT=0);
+      Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
+      Event(const Event& event);
+
       TArrowAntarctica* makeArrowFromAnitaToEvent();
       void setupUsefulPat();
       void resetClusteringNumbers();
+      void deleteArrays();
+      void setNThresholds(int n);
 
-      virtual ~Event(){ ;}
-      ClassDef(Event, 7)
+      virtual ~Event();
+      ClassDef(Event, 8)
     };
 
 
@@ -114,13 +116,8 @@ namespace Acclaim{
       Double_t weight;						/// MC information
       Double_t energy;						/// MC information
 
-      McEvent();
-      McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd)
-	: Event(sum, pol,  peakInd)
-      {
-	weight = sum->mc.weight;
-	energy = sum->mc.energy;
-      }
+      McEvent(Int_t nT = 0);
+      McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
 
       virtual ~McEvent(){;}
 	

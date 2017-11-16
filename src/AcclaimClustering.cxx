@@ -109,11 +109,13 @@ void Acclaim::Clustering::Event::setupUsefulPat(){
 }
 
 
-Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
+Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT)
+  : nThresholds(0), cluster(NULL),
+    dThetaCluster(NULL), dPhiCluster(NULL)
+{
 
   this->eventNumber = sum->eventNumber;
   this->run = sum->run;
-
   this->pol = pol;
   peakIndex = peakInd;
   const AnitaEventSummary::PointingHypothesis& peak = sum->peak[pol][peakInd];
@@ -126,21 +128,21 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   theta = peak.theta;
   phi = peak.phi;
   anita = sum->anitaLocation;
-
-  // sigmaTheta = default_sigma_theta;
-  // sigmaPhi = default_sigma_phi;
   getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
-
   antarcticaHistBin = -1;
 
+  setNThresholds(nT);
   resetClusteringNumbers();
-
   setupUsefulPat();
 }
 
 
 
-Acclaim::Clustering::Event::Event(){
+Acclaim::Clustering::Event::Event(Int_t nT)
+  : nThresholds(0), cluster(NULL),
+    dThetaCluster(NULL), dPhiCluster(NULL)
+{
+
   latitude = 0;
   longitude = 0;
   altitude = 0;
@@ -149,34 +151,129 @@ Acclaim::Clustering::Event::Event(){
   theta = -9999;
   phi = -9999;
   anita.reset();
-
   eventNumber = 0;
   run = 0;
   pol = AnitaPol::kNotAPol;
   peakIndex = -1;
-
-  // convert to degrees
   sigmaTheta = default_sigma_theta;
   sigmaPhi = default_sigma_phi;
-
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
   antarcticaHistBin = -1;
-  resetClusteringNumbers();
+  setNThresholds(nT);
+  resetClusteringNumbers();  
 }
+
+
+Acclaim::Clustering::Event::~Event(){
+  deleteArrays();
+}
+
+Acclaim::Clustering::Event::Event(const Event& event){
+
+  eventNumber = event.eventNumber;
+  run = event.run;
+  pol = event.pol;
+  peakIndex = event.peakIndex;
+  for(int i=0; i < 3; i++){
+    centre[i] = event.centre[i];
+  }
+  latitude = event.latitude;
+  longitude = event.longitude;
+  altitude = event.altitude;
+  easting = event.easting;
+  northing = event.northing;
+  anita = event.anita;
+  theta = event.theta;
+  phi = event.phi;
+  sigmaTheta = event.sigmaTheta;
+  sigmaPhi = event.sigmaPhi;
+  nThresholds = event.nThresholds;
+  cluster = new Int_t[nThresholds];
+  dThetaCluster = new Double_t[nThresholds];
+  dPhiCluster = new Double_t[nThresholds];
+  for(int z=0; z < nThresholds; z++){
+    cluster[z] = event.cluster[z];
+    dThetaCluster[z] = event.dThetaCluster[z];
+    dPhiCluster[z] = event.dPhiCluster[z];
+  }
+  nearestNeighbourEventNumber = event.nearestNeighbourEventNumber;
+  nearestNeighbourLogLikelihood = event.nearestNeighbourLogLikelihood;
+  eventEventClustering = event.eventEventClustering;
+  nearestKnownBaseLogLikelihood = event.nearestKnownBaseLogLikelihood;
+  antarcticaHistBin = event.antarcticaHistBin;
+  usefulPat = event.usefulPat;
+}
+
+
+void Acclaim::Clustering::Event::deleteArrays(){
+  if(cluster){
+    delete [] cluster;
+    cluster = NULL;
+  }
+  if(dPhiCluster){
+    delete [] dPhiCluster;
+    cluster = NULL;
+  }
+  if(dThetaCluster){
+    delete [] dThetaCluster;
+    dThetaCluster = NULL;
+  }
+  nThresholds = 0;
+}
+
+
+
+/** 
+ * Set the N threshold arrays copying what was in there
+ *  before into the new array, if long enough
+ * 
+ * @param n The size to set the internal arrays to
+ */
+void Acclaim::Clustering::Event::setNThresholds(Int_t n){
+
+  std::vector<Int_t> tempCluster;
+  std::vector<Double_t> tempDPhiCluster;
+  std::vector<Double_t> tempDThetaCluster;
+  
+  if(nThresholds){
+    tempCluster.insert(tempCluster.begin(), cluster, cluster+nThresholds);
+    tempDPhiCluster.insert(tempDPhiCluster.begin(), dPhiCluster, dPhiCluster+nThresholds);
+    tempDThetaCluster.insert(tempDThetaCluster.begin(), dThetaCluster, dThetaCluster+nThresholds);
+  }
+
+  deleteArrays();
+  nThresholds = n;
+  cluster = new Int_t[n];
+  dPhiCluster = new Double_t[n];
+  dThetaCluster = new Double_t[n];
+
+  int nz = TMath::Min((int)tempCluster.size(), nThresholds);
+  for(Int_t z=0; z < nz; z++){
+    cluster[z] = tempCluster[z];
+    dPhiCluster[z] = tempDPhiCluster[z];
+    dThetaCluster[z] = tempDThetaCluster[z];
+  }
+  for(Int_t z=nz; z < nThresholds; z++){
+    cluster[z] = -1;
+    dPhiCluster[z] = -999;
+    dThetaCluster[z] = -999;
+  }
+}
+
 
 
 void Acclaim::Clustering::Event::resetClusteringNumbers(){
 
-  for(UInt_t z=0; z<nThresholds; z++){
-    logLikelihood[z] = DBL_MAX;
+  for(Int_t z=0; z<nThresholds; z++){
     cluster[z] = -1;
+    dThetaCluster[z] = -999;
+    dPhiCluster[z] = -999;    
   }
   nearestNeighbourEventNumber = 0;
   nearestNeighbourLogLikelihood = DBL_MAX;
-  dThetaCluster = -999;
-  dPhiCluster = -999;
+  nearestKnownBaseLogLikelihood = DBL_MAX; 
   eventEventClustering = true;
 }
 
@@ -193,10 +290,37 @@ TArrowAntarctica* Acclaim::Clustering::Event::makeArrowFromAnitaToEvent(){
 
 
 
-Acclaim::Clustering::McEvent::McEvent()
-  : Event(){
+
+
+
+
+
+
+Acclaim::Clustering::McEvent::McEvent(Int_t nT)
+  : Event(nT){
   weight = 0; energy=0;
 }
+
+Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT)
+  : Event(sum, pol,  peakInd, nT)
+{
+  weight = sum->mc.weight;
+  energy = sum->mc.energy;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -839,13 +963,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(
       // 	std::cout << ll << std::endl;
       // }
 
-      if(ll < event.logLikelihood[0]){ // the best event?
+      if(ll < event.nearestKnownBaseLogLikelihood){ // the best event?
 
 	if(isMC==0 && event.cluster[0] >= 0){ // remove from previous cluster
 	  clusters.at(event.cluster[0]).numDataEvents--;
 	}	
 
-	event.logLikelihood[0] = ll;
+	event.nearestKnownBaseLogLikelihood = ll;
 	event.cluster[0] = cluster.index;
 
 	if(isMC==0){
@@ -890,7 +1014,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignMcEventsToClusters(){
 
 size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
-  mcEvents.push_back(McEvent(sum,  pol, peakInd));
+  mcEvents.push_back(McEvent(sum,  pol, peakInd, llEventCuts.size()));
 
   return mcEvents.size();
 }
@@ -902,7 +1026,7 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSumm
 
 size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
-  events.push_back(Event(sum, pol, peakInd));
+  events.push_back(Event(sum, pol, peakInd, llEventCuts.size()));
 
   return events.size();
 }
@@ -968,14 +1092,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     for(UInt_t z=0; z < llEventCuts.size(); z++){
-      events.at(eventInd).logLikelihood[z] = DBL_MAX;
       events.at(eventInd).cluster[z] = -1;
     }
   }
 
   for(UInt_t eventInd=0; eventInd < mcEvents.size(); eventInd++){
     for(UInt_t z=0; z < llEventCuts.size(); z++){    
-      mcEvents.at(eventInd).logLikelihood[z] = DBL_MAX;
       mcEvents.at(eventInd).cluster[z] = -1;
     }
   }
@@ -1052,33 +1174,80 @@ TGraphAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeClusterSummaryTG
 
 void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
-  TTree* clusteredDataTree = new TTree("clusteredDataTree", "Tree of clustered ANITA events (all multiples and base singlets)");
-  // TTree* nonBaseSingletTree = new TTree("nonBaseSingletTree", "Tree of unclustered ANITA events (non-base singlets only)");
-  Event* event = NULL;
-  clusteredDataTree->Branch("event", &event);
-  // nonBaseSingletTree->Branch("event", &event);
+  // first set the unknown cluster locations as the mean of the 
+  // cartesian positions
+  for(UInt_t clusterInd=0; clusterInd < clusters.size(); clusterInd++){
+    Cluster& cluster = clusters.at(clusterInd);
 
-  for(Int_t eventInd=0; eventInd < (Int_t)events.size(); eventInd++){
-    event = &events.at(eventInd);
-    if(event->cluster[0] >= 0){
-      const Cluster& cluster = clusters.at(event->cluster[0]);
-      getDeltaThetaDegDeltaPhiDegEventCluster(*event, cluster, event->dThetaCluster, event->dPhiCluster);
+    if(cluster.knownBase==0){
+    
+      cluster.centre[0] = 0; // reset the 
+      cluster.centre[1] = 0; // cartesian 
+      cluster.centre[2] = 0; // coordinates
+      int eventCounter = 0;
+    
+      for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+	const Event& event = events.at(eventInd);
+	for(UInt_t z = 0; z < llEventCuts.size(); z++){
+	  if(event.cluster[z]==(Int_t)clusterInd){
+	    cluster.centre[0] += event.centre[0];
+	    cluster.centre[1] += event.centre[1];
+	    cluster.centre[2] += event.centre[2];
+	    eventCounter++;
+	  }
+	}
+      }
+      if(eventCounter > 0){
+	cluster.centre[0]/=eventCounter;
+	cluster.centre[1]/=eventCounter;
+	cluster.centre[2]/=eventCounter;
+      }
+
+      AnitaGeomTool* geom = AnitaGeomTool::Instance();
+      geom->getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
+				      cluster.longitude, cluster.altitude);      
+
+      if(eventCounter != cluster.numDataEvents){
+	std::cerr << "Error in " << __PRETTY_FUNCTION__
+		  << ": was expecting " << cluster.numDataEvents
+		  << " in cluster " << clusterInd << ", but counted "
+		  << eventCounter << std::endl;
+      }
     }
-    // if(event->cluster[0] < 0 || (clusters.at(event->cluster[0]).numDataEvents == 1 && clusters.at(event->cluster[0]).knownBase==0)) {
-    //   nonBaseSingletTree->Fill();
-    // }
-    // else{
-    clusteredDataTree->Fill();
-    // }
   }
 
-  TTree* clusteredMcTree = new TTree("clusteredMcTree", "Tree of clustered Monte Carlo ANITA events");
-  McEvent* mcEvent = NULL;
-  clusteredMcTree->Branch("mcEvent", &mcEvent);
 
-  for(Int_t j=0; j < (Int_t) mcEvents.size(); j++){
+  
+  
+  TTree* eventTree = new TTree("eventTree", "Tree of clustered ANITA events");
+  Event* event = NULL;
+  eventTree->Branch("event", &event);
+  
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    event = &events.at(eventInd);
+
+    for(UInt_t z = 0; z < llEventCuts.size(); z++){
+      if(event->cluster[z] >= 0){
+	const Cluster& cluster = clusters.at(event->cluster[z]);
+	getDeltaThetaDegDeltaPhiDegEventCluster(*event, cluster, event->dThetaCluster[z], event->dPhiCluster[z]);
+      }
+      else {
+	std::cerr << "Error in " << __PRETTY_FUNCTION__
+		  << ": eventNumber " << event->eventNumber
+		  << " has a cluster[" << z << "] number "
+		  << event->cluster[z] << std::endl;
+      }
+    }
+    eventTree->Fill();
+  }
+
+  TTree* mcEventTree = new TTree("mcEventTree", "Tree of clustered Monte Carlo ANITA events");
+  McEvent* mcEvent = NULL;
+  mcEventTree->Branch("mcEvent", &mcEvent);
+
+  for(UInt_t j=0; j < mcEvents.size(); j++){
     mcEvent = &mcEvents.at(j);
-    clusteredMcTree->Fill();
+    mcEventTree->Fill();
   }
 
   TTree* clusterTree = new TTree("clusterTree", "Tree of clusters");
@@ -1398,6 +1567,23 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   double lookup[2] = {event.easting, event.northing};
   fKDTree->FindInRange(lookup, rangeEastingNorthing, nearbyEventIndsEastingNorthing);
 
+
+  /**
+   * since we only get event2Ind > event1Ind, we need to allow the closest
+   * event from previously to ensure you can get in the correct cluster
+   * if we didn't do this, the final event in a real cluster of events on 
+   * the continent would't be considered by the algorithm.
+   */
+  if(event.nearestNeighbourLogLikelihood < llRange){
+    for(UInt_t j=0; j < events.size(); j++){
+      if(events.at(j).eventNumber==event.nearestNeighbourEventNumber){
+	nearbyEvents.push_back(j);
+	nearbyEventLLs.push_back(event.nearestNeighbourLogLikelihood);
+	break;
+      }
+    }
+  }
+  
   // Loop through those and calculate the log-likelihoods
   for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
     int eventInd2 = nearbyEventIndsEastingNorthing[i];
@@ -1405,7 +1591,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
     // only consider if eventInd2 > eventInd
     // this ensures that each pair only gets considered once
     // when 2 is in 1's lookup and not vice-versa
-    if(true){//}eventInd2 > eventInd){
+    if(eventInd2 > eventInd){
       Event& event2 = events.at(eventInd2);
       if(event2.eventEventClustering){
 
