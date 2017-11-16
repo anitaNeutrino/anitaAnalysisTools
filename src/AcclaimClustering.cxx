@@ -356,6 +356,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
   antarcticaHistBin = -1;
   seedEvent = -1;
   index = i;
+  llEventCutInd = 0;
 }
 
 
@@ -370,6 +371,7 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   index = i;
+  llEventCutInd = 0;
 }
 
 
@@ -380,11 +382,8 @@ void Acclaim::Clustering::Cluster::resetClusteringNumbers(){
 
 
 
-Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
-  fFitEvent1(NULL),
-  fFitEvent2(NULL),
-  fMinimizer(NULL),
-  fFunctor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2)
+Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
+  : fROOTgErrorIgnoreLevel(gErrorIgnoreLevel)
 {
   grTestMinimizerWalk = NULL;
   llClusterCut = 100;
@@ -411,11 +410,21 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod() :
   fUseBaseList = true;
 
   fMaxFitterAttempts = 1;
-  fMinimizer = ROOT::Math::Factory::CreateMinimizer("Minuit2");
-  fMinimizer->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
-  fMinimizer->SetTolerance(0.0001);
-  fMinimizer->SetPrintLevel(0);
-  fMinimizer->SetFunction(fFunctor);
+
+  int nThreads = Acclaim::OpenMP::getMaxThreads();
+  fFitEvent1s.resize(nThreads, NULL);
+  fFitEvent2s.resize(nThreads, NULL);
+  fFitEastings.resize(nThreads, 0);
+  fFitNorthings.resize(nThreads, 0);
+  for(int t=0; t < nThreads; t++){
+    fMinimizers.push_back(ROOT::Math::Factory::CreateMinimizer("Minuit2"));
+    fFunctors.push_back(new ROOT::Math::Functor(this, &Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat, 2));    
+    fMinimizers.at(t)->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
+    fMinimizers.at(t)->SetTolerance(0.0001);
+    fMinimizers.at(t)->SetPrintLevel(0);
+    fMinimizers.at(t)->SetFunction(*fFunctors.back());
+    
+  }
 }
 
 
@@ -537,8 +546,9 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
 
   Double_t sourceEasting = FITTER_OUTPUT_SCALING*params[0];
   Double_t sourceNorthing = FITTER_OUTPUT_SCALING*params[1];
-  if(fFitEvent1->eventNumber==fTestEvent1){
-    if(fFitEvent2->eventNumber==fTestEvent2){
+  int t = OpenMP::thread();
+  if(fFitEvent1s.at(t)->eventNumber==fTestEvent1){
+    if(fFitEvent2s.at(t)->eventNumber==fTestEvent2){
       if(grTestMinimizerWalk){
 	grTestMinimizerWalk->SetPoint(grTestMinimizerWalk->GetN(), sourceEasting, sourceNorthing);
       }
@@ -550,10 +560,10 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
   RampdemReader::EastingNorthingToLonLat(sourceEasting, sourceNorthing, sourceLon, sourceLat);
 
   Double_t ll = 0;
-  ll += dPoint(*fFitEvent1, sourceLon, sourceLat, sourceAlt, true);
-  ll += dPoint(*fFitEvent2, sourceLon, sourceLat, sourceAlt, true);
+  ll += dPoint(*fFitEvent1s.at(t), sourceLon, sourceLat, sourceAlt, true);
+  ll += dPoint(*fFitEvent2s.at(t), sourceLon, sourceLat, sourceAlt, true);
 
-  if(fMinimizer->PrintLevel() > 0){
+  if(fMinimizers.at(t)->PrintLevel() > 0){
     std::cout << sourceEasting << "\t" << sourceNorthing << "\t" << sourceLon << "\t" << sourceLat << "\t" << ll << std::endl;
   }
   return ll;
@@ -562,36 +572,38 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
 
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(const Event& event1, const Event& event2){
-  fFitEvent1 = &event1;
-  fFitEvent2 = &event2;
+
+  int t = Acclaim::OpenMP::thread();
+  ROOT::Math::Minimizer* minimizer = fMinimizers.at(t);
+  
+  fFitEvent1s.at(t) = &event1;
+  fFitEvent2s.at(t) = &event2;
 
   Double_t ll12 = dAsym(event1, event2);
   Double_t ll21 = dAsym(event2, event1);
 
   // we actually want to start at the WORSE of the two sources, apparently
   // which is very unintuitive
-  const Event* which = ll21 < ll12 ? fFitEvent1 : fFitEvent2;
+  const Event* which = ll21 < ll12 ? fFitEvent1s.at(t) : fFitEvent2s.at(t);
 
-  if(fFitEvent1->eventNumber==fTestEvent1 && fFitEvent2->eventNumber==fTestEvent2){
+  if(fFitEvent1s.at(t)->eventNumber==fTestEvent1 && fFitEvent2s.at(t)->eventNumber==fTestEvent2){
     grTestMinimizerWalk = new TGraph();
   }
 
-  fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
-  fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
+  
+  minimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
+  minimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
 
-  int old_level = gErrorIgnoreLevel;
-  gErrorIgnoreLevel = 1001;
   bool validMinimum = false;
   std::vector<double> minima;
   for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
-    validMinimum = fMinimizer->Minimize();
-    minima.push_back(fMinimizer->MinValue());
+    validMinimum = minimizer->Minimize();
+    minima.push_back(minimizer->MinValue());
     if(!validMinimum){
-      fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 1);
-      fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 1);
+      minimizer->SetVariable(0, "sourceEasting", minimizer->X()[0], 1);
+      minimizer->SetVariable(1, "sourceNorthing", minimizer->X()[1], 1);
     }
   }
-  gErrorIgnoreLevel = old_level;
 
   if(grTestMinimizerWalk){
     grTestMinimizerWalk->SetName("grTestMinimizerWalk");
@@ -602,30 +614,31 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(const Event& event1, con
 
 
   if((!validMinimum && fDebug)){ // do the same thing again, this time with error messages!
-    int old_print_level = fMinimizer->PrintLevel();
-    fMinimizer->SetPrintLevel(3);
-    fMinimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
-    fMinimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
+    int old_print_level = minimizer->PrintLevel();
+    gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
+    minimizer->SetPrintLevel(3);
+    minimizer->SetVariable(0, "sourceEasting", FITTER_INPUT_SCALING*which->easting, 1);
+    minimizer->SetVariable(1, "sourceNorthing", FITTER_INPUT_SCALING*which->northing, 1);
     for(int attempt=0; attempt < fMaxFitterAttempts && !validMinimum; attempt++){
-      validMinimum = fMinimizer->Minimize();
+      validMinimum = minimizer->Minimize();
       if(!validMinimum){
-	fMinimizer->SetVariable(0, "sourceEasting", fMinimizer->X()[0], 1);
-	fMinimizer->SetVariable(1, "sourceNorthing", fMinimizer->X()[1], 1);
+	minimizer->SetVariable(0, "sourceEasting", minimizer->X()[0], 1);
+	minimizer->SetVariable(1, "sourceNorthing", minimizer->X()[1], 1);
       }
     }
-    fMinimizer->SetPrintLevel(old_print_level);
+    minimizer->SetPrintLevel(old_print_level);
 
     AnitaVersion::set(3);
     double waisLon = AnitaLocations::getWaisLongitude();
     double waisLat = AnitaLocations::getWaisLatitude();
     double waisModelAlt = RampdemReader::SurfaceAboveGeoid(waisLon, waisLat);
-    const Event& event1 = *fFitEvent1;
-    const Event& event2 = *fFitEvent2;
+    const Event& event1 = *fFitEvent1s.at(t);
+    const Event& event2 = *fFitEvent2s.at(t);
     Double_t llWais1 = dPoint(event1, waisLon, waisLat, waisModelAlt);
     Double_t llWais2 = dPoint(event2, waisLon, waisLat, waisModelAlt);
     Double_t llWais1b = dPoint(event1, waisLon, waisLat, waisModelAlt, true);
     Double_t llWais2b = dPoint(event2, waisLon, waisLat, waisModelAlt, true);
-    std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ": The fitter minimum is " << fMinimizer->MinValue() << std::endl;
+    std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ": The fitter minimum is " << minimizer->MinValue() << std::endl;
     std::cerr << "event 1: run " << event1.run << ", eventNumber " << event1.eventNumber << std::endl;
     std::cerr << "event 2: run " << event2.run << ", eventNumber " << event2.eventNumber << std::endl;
     std::cerr << "Just for fun trying true WAIS location..." << std::endl;
@@ -637,11 +650,12 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(const Event& event1, con
     std::cerr << "event 1 was at " << event1.easting << "\t" << event1.northing << "\t" << event1.longitude << "\t" << event1.latitude << "\t" << ll12 << std::endl;
     std::cerr << "event 2 was at " << event2.easting << "\t" << event2.northing << "\t" << event2.longitude << "\t" << event2.latitude << "\t" << ll21 << std::endl;
     std::cerr << std::endl;
+    gErrorIgnoreLevel = 1001;
   }
 
-  fFitEasting  = fMinimizer->X()[0]*FITTER_OUTPUT_SCALING;
-  fFitNorthing = fMinimizer->X()[1]*FITTER_OUTPUT_SCALING;
-  Double_t ll = fMinimizer->MinValue();
+  fFitEastings.at(t) = minimizer->X()[0]*FITTER_OUTPUT_SCALING;
+  fFitNorthings.at(t) = minimizer->X()[1]*FITTER_OUTPUT_SCALING;
+  Double_t ll = minimizer->MinValue();
 
   return ll;
 }
@@ -1216,6 +1230,16 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 		  << eventCounter << std::endl;
       }
     }
+
+    // set numDataEvents
+    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+      const Event& event = events.at(eventInd);
+      for(int z=0; z < event.nThresholds; z++){
+	if(clusterInd==(UInt_t)event.cluster[z]){
+	  cluster.numDataEvents++;
+	}
+      }
+    }
   }
 
 
@@ -1588,29 +1612,27 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
     }
   }
 
-// #define ACCLAIM_OPENMP 1
+
+  // move swapping global error level stuff out of parallelized loop
+  // this used to be around the minimizer->minimize() 
+  fROOTgErrorIgnoreLevel = gErrorIgnoreLevel;
+  gErrorIgnoreLevel = 1001;
+
+
+
   
-  // Loop through those and calculate the log-likelihoods
-// #ifdef ACCLAIM_OPENMP
-
-//   int nThreads = OpenMP::getMaxThreads();
-//   std::vector<std::vector<Int_t> > nearbyEventsParallel(nThreads);
-//   std::vector<std::vector<Double_t> > nearbyEventLLsParallel(nThreads);
-//   int numElements = 0;
-// #pragma omp parallel reduction(+:numElements)
-//   {
-//     int threadInd = OpenMP::thread();
-//     std::vector<Int_t>& nearbyEventsLoop = nearbyEventsParallel.at(threadInd);
-//     std::vector<Double_t>& nearbyEventLLsLoop = nearbyEventLLsParallel.at(threadInd);
-// #pragma omp for
-
-// #else
-  std::vector<Int_t>& nearbyEventsLoop = nearbyEvents;
-  std::vector<Double_t>& nearbyEventLLsLoop = nearbyEventLLs;
-// #endif
-
+  int mt = OpenMP::getMaxThreads();
+  std::vector<std::vector<Int_t> > nearbyEventsParallel(mt);
+  std::vector<std::vector<Double_t> > nearbyEventLLsParallel(mt);
+  std::vector<Double_t > event1MinLL(mt, DBL_MAX);
+  std::vector<UInt_t> event1MinLLEvent2EventNumber(mt, 0);
+#pragma omp for
   for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
     int eventInd2 = nearbyEventIndsEastingNorthing[i];
+
+    int t = OpenMP::thread();      
+    std::vector<Int_t>& nearbyEventsLoop = OpenMP::isEnabled ? nearbyEventsParallel.at(t) : nearbyEvents;    
+    std::vector<Double_t>& nearbyEventLLsLoop = OpenMP::isEnabled ? nearbyEventLLsParallel.at(t) : nearbyEventLLs;        
 
     // only consider if eventInd2 > eventInd
     // this ensures that each pair only gets considered once
@@ -1632,10 +1654,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
 	}
 
 	// is this event's nearest neighbour?
-	if(ll < event.nearestNeighbourLogLikelihood){
-	  event.nearestNeighbourLogLikelihood = ll;
-	  event.nearestNeighbourEventNumber = event2.eventNumber;
+	if(ll < event1MinLL.at(t)){
+	  event1MinLL.at(t) = ll;
+	  event1MinLLEvent2EventNumber.at(t) = event2.eventNumber;
 	}
+	// if(ll < event.nearestNeighbourLogLikelihood){
+	//   event.nearestNeighbourLogLikelihood = ll;
+	//   event.nearestNeighbourEventNumber = event2.eventNumber;
+	// }
 
 	// is this event2's nearest neighbour?
 	if(ll < event2.nearestNeighbourLogLikelihood){
@@ -1658,15 +1684,33 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
       }
     }
   }
-// #ifdef ACCLAIM_OPENMP
-//     numElements = nearbyEventsLoop.size();
-//   }
-//   nearbyEvents.reserve(numElements);
-//   nearbyEventLLs.reserve(numElements);
-//   for(UInt_t t=0; t < nearbyEventsParallel.size(); t++){
-//     nearbyEvents.insert(nearbyEvents.end(), nearbyEventsParallel.at(t).begin(), nearbyEventsParallel.at(t).end());
-//   }
-// #endif
+
+  // need to copy the parallel stuff into resultant vector
+  if(OpenMP::isEnabled){
+    UInt_t numEvents = 0;
+    for(UInt_t t=0; t < nearbyEventsParallel.size(); t++){
+      numEvents += nearbyEventsParallel.size();
+    }
+    nearbyEvents.reserve(numEvents);
+    nearbyEventLLs.reserve(numEvents);
+    
+    for(UInt_t t=0; t < nearbyEventsParallel.size(); t++){
+      nearbyEvents.insert(nearbyEvents.end(), nearbyEventsParallel.at(t).begin(), nearbyEventsParallel.at(t).end());
+      nearbyEventLLs.insert(nearbyEventLLs.end(), nearbyEventLLsParallel.at(t).begin(), nearbyEventLLsParallel.at(t).end());
+    }
+  }
+
+  int minI = OpenMP::isEnabled ? TMath::LocMin(event1MinLL.size(), &event1MinLL[0]) : 0;
+  event.nearestNeighbourLogLikelihood = event1MinLL.at(minI);
+  event.nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
+  
+  std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
+  for(unsigned i=0; i < nearbyEvents.size(); i++){
+    std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
+  }
+
+
+  gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
 }
 
 
@@ -1800,7 +1844,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     hFitSqrt->Fill(angleBetweenEvents*TMath::RadToDeg(), TMath::Sqrt(distFitted));
 
     double fitLon, fitLat;
-    RampdemReader::EastingNorthingToLonLat(fFitEasting, fFitNorthing, fitLon, fitLat);
+    int t = OpenMP::thread();
+    RampdemReader::EastingNorthingToLonLat(fFitEastings.at(t), fFitNorthings.at(t), fitLon, fitLat);
     hFittedPos->Fill(fitLon, fitLat);
     hEventPos->Fill(event1.longitude, event1.latitude);
     // grFittedPos->SetPointEastingNorthing(grFittedPos->GetN(), fFitEasting, fFitNorthing);
@@ -1863,10 +1908,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   double llNearbyThreshold = TMath::MaxElement(llEventCuts.size(), &llEventCuts.at(0)); // ignore if greater than this
 
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
-
+  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
+  //   const Event& event1 = events.at(event1Ind);
+  //   std::cout << event1.eventNumber << "\t";    
+  //   for(int z=0; z < event1.nThresholds; z++){
+  //     std::cout << event1.cluster[z] << "\t";
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // exit(0);
+  
   ProgressBar p(events.size());
-  for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
-
+  for(UInt_t event1Ind=0; event1Ind < 1; event1Ind++){
+  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){    
     Event& event1 = events.at(event1Ind);
     if(event1.eventEventClustering){
 
@@ -1928,6 +1982,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	  }
 	}
 
+	std::cout << event1.eventNumber << "\t" << z << "\t" << event1.cluster[z] << std::endl;
+
+
+	
 	// quick check that we remove all events from the other clusters
 	// for(UInt_t m=0; m < matchedClusters.size(); m++){
 	//   if(matchedClusters.at(m)!=thisCluster && clusters.at(matchedClusters.at(m)).numDataEvents > 0){
@@ -2015,8 +2073,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   }
   hEvents->Write();
 
-  writeAllGraphsAndHists();
-  makeSummaryTrees();
+  // writeAllGraphsAndHists();
+  // makeSummaryTrees();
   fOut->Write();
   fOut->Close();
 

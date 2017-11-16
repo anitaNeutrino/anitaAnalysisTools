@@ -1,10 +1,12 @@
 #ifndef ACCLAIM_OPENMP_H
 #define ACCLAIM_OPENMP_H
 
-#include <vector>
-// #include <algorithm>
-// #include <numeric>
-#include <iostream>
+#ifdef ACCLAIM_OPENMP
+#include <omp.h>
+#endif
+
+
+
 
 namespace Acclaim {
 
@@ -15,139 +17,59 @@ namespace Acclaim {
    */
 
   namespace OpenMP {
-    int getNumThreads();
-    int getMaxThreads();
-    int thread();
 
-    // This is an incomplete reimplementation of this...
-    // https://computing.llnl.gov/tutorials/openMP/#REDUCTION
-    enum ReductionMethod {
-      kNone,
-      kSum,
-      kProduct,
-      kMax,
-      kMin
-    };
+
+#ifdef ACCLAIM_OPENMP
+    const bool isEnabled = true; /// Defined as true if compiled with OpenMP support, false otherwise
+#else
+    const bool isEnabled = false;/// Defined as true if compiled with OpenMP support, false otherwise
+#endif
+
+    /** 
+     * Access the currently existing number of threads
+     * To know how many threads there will be, or how many
+     * you should prepare for, use getMaxThreads()
+     * @return the current number of threads
+     */
     
-    template <class T>
-    class ThreadVar {
-    public:
-      ThreadVar(T initialValue = 0, ReductionMethod m=kSum)
-	: fReductionMethod(m),
-	  fValues(getMaxThreads(), initialValue),
-	  fTouched(getMaxThreads(), false)
-      {}
-
-      inline void operator++(int){
-	touched();
-	fValues[thread()]++;
-      }
-      inline void operator--(int){
-	touched();
-	fValues[thread()]--;
-      }
-      inline void operator+=(const T& rhs){
-	touched();
-	fValues[thread()]+=rhs;
-      }
-      inline void operator-=(const T& rhs){
-	touched();	
-	fValues[thread()]-=rhs;
-      }
-      inline void operator*=(const T& rhs){
-	touched();	
-	fValues[thread()]*=rhs;
-      }
-      inline void operator/=(const T& rhs){
-	touched();	
-	fValues[thread()]/=rhs;
-      }
-      inline void operator=(const T& rhs){
-	touched();	
-	fValues[thread()]=rhs;
-      }
-
-      /** 
-       * If you're in the pragma loop, return the thread local value
-       * If you're out of the prama loop, return the reduced value
-       * Is this a good idea?
-       */
-      operator T() const {
-	if(getNumThreads() > 1){
-	  return fValues[thread()];
-	}
-	else{
-	  return reduction();
-	}
-      }
-
-    private:
-
-      inline void touched(){
-	fTouched[thread()] = true;
-      }
-
-      /** 
-       * Combine the thread local data to a single value
-       * Exactly how that is done depends on the fReductionValue enum
-       */
-      T reduction() const {
-	switch (fReductionMethod){
-	  case kSum:		return sum();
-	  case kNone: 	        return fValues[0];
-	  case kProduct:	return product();
-	  case kMax:		return max();
-	  case kMin:		return min();	  	    	    
-    	  default:		return sum();
-	}
-      }
-      
-
-      T sum() const {
-	T rv = 0;
-	for(unsigned i=0; i < fValues.size(); i++){
-	  rv += fValues[i];
-	}
-	return rv;
-      }
-
-      T product() const {
-	T rv = 1;
-	for(unsigned i=0; i < fValues.size(); i++){
-	  rv *= fValues[i];
-	}
-	return rv;
-      }      
+    inline int getNumThreads(){
+#ifdef ACCLAIM_OPENMP
+      return omp_get_num_threads();
+#else
+      return 1;
+#endif
+    }
 
 
-      T max() const {
-	T mv = fValues[0];
-	for(unsigned i=1; i < fValues.size(); i++){
-	  if(fTouched[i] && fValues[i] > mv){
-	    mv = fValues[i];
-	  }
-	}
-	return mv;
-      }      
 
-      T min() const {
-	T mv = fValues[0];
-	for(unsigned i=1; i < fValues.size(); i++){
-	  if(fTouched[i] && fValues[i] < mv){
-	    mv = fValues[i];
-	  }
-	}
-	return mv;
-      }
-      
-      ReductionMethod fReductionMethod;
-      std::vector<T> fValues;
-      std::vector<bool> fTouched;
-      
-    };
+    /** 
+     * Gets the maxmimum number of threads, (probably the same as the number of machine cores)
+     * This is how many threads you should exect in normal circumstances
+     * 
+     * @return The maximum number of threads
+     */    
+    inline int getMaxThreads(){
+#ifdef ACCLAIM_OPENMP
+      return omp_get_max_threads();
+#else
+      return 1;
+#endif
+    }
+
+
+    /** 
+     * Which thread am I in?
+     * 
+     * @return the thread index, from 0 to getNumThreads() - 1
+     */
+    inline int thread(){
+#ifdef ACCLAIM_OPENMP
+      return omp_get_thread_num();
+#else
+      return 0;
+#endif
+    }
   }
-
-  
 }
 
 #endif //ACCLAIM_OPENMP_H

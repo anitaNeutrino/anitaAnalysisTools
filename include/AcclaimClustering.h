@@ -223,15 +223,15 @@ namespace Acclaim{
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t dPoint(const Event& eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
-      const Event* fFitEvent1; /// First event in the pairwise fit
-      const Event* fFitEvent2; /// Second event in the pairwise fit
+      std::vector<const Event*> fFitEvent1s; /// First event in the pairwise fit
+      std::vector<const Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
       Double_t dFit(const Event& event1, const Event& event2);
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
-      Double_t fFitEasting;  /// Where the fitter found the potential source could come from
-      Double_t fFitNorthing; /// Where the fitter found the potential source could come from
+      std::vector<Double_t> fFitEastings;  /// Where the fitter found the potential source could come from
+      std::vector<Double_t> fFitNorthings; /// Where the fitter found the potential source could come from
       TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
       // Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
@@ -258,8 +258,9 @@ namespace Acclaim{
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
 
-      ROOT::Math::Minimizer* fMinimizer;
-      ROOT::Math::Functor fFunctor;
+      std::vector<ROOT::Math::Minimizer*> fMinimizers;
+      std::vector<ROOT::Math::Functor*> fFunctors;
+      Int_t fROOTgErrorIgnoreLevel;
     };
 
 

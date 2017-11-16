@@ -257,6 +257,7 @@ void drawClusters(TFile* f){
   for(int clusterInd = 0; clusterInd < nClusters; clusterInd++){
 
     clusterTree->GetEntry(clusterInd);
+  // }
     if(cluster->numDataEvents > 0){
 
       TString cut = TString::Format("cluster[%d]==%d", cluster->llEventCutInd, clusterInd);
@@ -269,7 +270,6 @@ void drawClusters(TFile* f){
       gr->SetName(TString::Format("grCluster%d_%d", clusterInd, cluster->llEventCutInd));
       gr->SetMarkerColor(colInd[cluster->llEventCutInd]);
       colInd[cluster->llEventCutInd]++;
-
       grs[cluster->llEventCutInd].push_back(gr);
       
       // gr->Draw();
@@ -285,8 +285,6 @@ void drawClusters(TFile* f){
     }
   }
   
-  // TGraphAntarctica* gr = new TGraphAntarctica(eventTree2, "longitude", "latitude");
-  // gr->Draw();
 }
 
 
