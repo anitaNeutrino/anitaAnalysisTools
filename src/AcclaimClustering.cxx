@@ -15,6 +15,7 @@
 #include <limits.h>
 #include "RampdemReader.h"
 #include "Math/Factory.h"
+#include "AcclaimOpenMP.h"
 
 ClassImp(Acclaim::Clustering::Event);
 ClassImp(Acclaim::Clustering::McEvent);
@@ -25,7 +26,6 @@ const int nDim = 3;
 const double FITTER_INPUT_SCALING = 1e-4;
 const double FITTER_OUTPUT_SCALING = 1./FITTER_INPUT_SCALING;
 
-#include "AcclaimOpenMP.h"
 
 /**
  * @namespace ResolutionModel
@@ -678,11 +678,11 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(const Event& event1, co
 /**
  * Evaluate the log-likelihood distance from any event to an arbitrary point
  *
- * @param eventInd1 is the index of the event of interest
+ * @param event is the index of the event of interest
  * @param sourceLon is the source longitude
  * @param sourceLat is the source latitude
  * @param sourceAlt is the source altitude
- * @param bool is an option to add a penalty term in LL for (approximately) being over the horizon
+ * @param addOverHorizonPenalty is an option to add a penalty term in LL for (approximately) being over the horizon
  *
  * @return the log-likelihood
  */
@@ -1619,6 +1619,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   gErrorIgnoreLevel = 1001;
 
 
+  // here we remove the events where eventNumber2 > eventNumber1 in advance of the threading
+  // to try and balance the workload between the threads...
+  std::vector<Int_t> nearbyEventIndsEastingNorthingTrimmed;
+  nearbyEventIndsEastingNorthingTrimmed.reserve(nearbyEventIndsEastingNorthing.size());
+  for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
+    int eventInd2 = nearbyEventIndsEastingNorthing.at(i);
+    if(events.at(eventInd2).eventNumber > event.eventNumber){
+      nearbyEventIndsEastingNorthingTrimmed.push_back(nearbyEventIndsEastingNorthing.at(i));
+    }
+  }
+
 
   
   int mt = OpenMP::getMaxThreads();
@@ -1626,9 +1637,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   std::vector<std::vector<Double_t> > nearbyEventLLsParallel(mt);
   std::vector<Double_t > event1MinLL(mt, DBL_MAX);
   std::vector<UInt_t> event1MinLLEvent2EventNumber(mt, 0);
-#pragma omp for
-  for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
-    int eventInd2 = nearbyEventIndsEastingNorthing[i];
+#pragma omp parallel for
+  for(UInt_t i=0; i < nearbyEventIndsEastingNorthingTrimmed.size(); i++){
+    int eventInd2 = nearbyEventIndsEastingNorthingTrimmed[i];
 
     int t = OpenMP::thread();      
     std::vector<Int_t>& nearbyEventsLoop = OpenMP::isEnabled ? nearbyEventsParallel.at(t) : nearbyEvents;    
@@ -1704,11 +1715,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   event.nearestNeighbourLogLikelihood = event1MinLL.at(minI);
   event.nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
   
-  std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
-  for(unsigned i=0; i < nearbyEvents.size(); i++){
-    std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
-  }
-
+  // std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
+  // for(unsigned i=0; i < nearbyEvents.size(); i++){
+  //   std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
+  // }
 
   gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
 }
@@ -1919,7 +1929,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   // exit(0);
   
   ProgressBar p(events.size());
-  for(UInt_t event1Ind=0; event1Ind < 1; event1Ind++){
+  for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
   // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){    
     Event& event1 = events.at(event1Ind);
     if(event1.eventEventClustering){
@@ -1982,7 +1992,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	  }
 	}
 
-	std::cout << event1.eventNumber << "\t" << z << "\t" << event1.cluster[z] << std::endl;
+	// std::cout << event1.eventNumber << "\t" << z << "\t" << event1.cluster[z] << std::endl;
 
 
 	
@@ -2073,8 +2083,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   }
   hEvents->Write();
 
-  // writeAllGraphsAndHists();
-  // makeSummaryTrees();
+  writeAllGraphsAndHists();
+  makeSummaryTrees();
   fOut->Write();
   fOut->Close();
 
