@@ -32,6 +32,7 @@ namespace Acclaim{
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
     const Double_t default_range_easting_northing = 700e3;
+    const Double_t default_horizon_distance = 700e3;
 
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
@@ -71,6 +72,7 @@ namespace Acclaim{
 
       Double_t theta;				/// reconstructed theta
       Double_t phi;				/// reconstructed phi
+      Double_t thetaAdjustmentRequired;         /// the adjustment from traceBackToContinent
 
       Double_t sigmaTheta;			/// resolution associated with this snr?
       Double_t sigmaPhi;			/// resolution associated with this snr?
@@ -87,6 +89,7 @@ namespace Acclaim{
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
       Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
       Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
+      Double_t selfLogLikelihood;               /// If the event is above the continent surface, this may be non-zero
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
@@ -172,6 +175,8 @@ namespace Acclaim{
     public:
 
       static const Int_t SmallClusterSizeThreshold = 100;
+      static Double_t dPoint(const Event& eventInd1, Double_t sourceLon,
+			     Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
 
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
@@ -221,7 +226,6 @@ namespace Acclaim{
       void doEventEventClustering();      
       void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
       void makeAndWriteNSquaredEventEventHistograms();
-      Double_t dPoint(const Event& eventInd1, Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
       std::vector<const Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Event*> fFitEvent2s; /// Second event in the pairwise fit

@@ -98,6 +98,8 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
 }
 
 
+
+
 /**
  * Since we're not saving the useful pat,
  * this might need to be explicitly called
@@ -106,6 +108,16 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
 void Acclaim::Clustering::Event::setupUsefulPat(){
   Adu5Pat pat = anita.pat();
   usefulPat = UsefulAdu5Pat(&pat);
+  const double maxThetaAdjust = 10*TMath::DegToRad();
+  usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
+  if(latitude < -90){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", for eventNumber " << eventNumber << "\n";
+    std::cerr << "Doing traceBackToContinenet again in debug mode!\n";
+    usefulPat.setDebug(true);
+    usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
+    usefulPat.setDebug(false);
+  }
+  selfLogLikelihood = LogLikelihoodMethod::dPoint(*this, longitude, latitude, altitude, true);
 }
 
 
@@ -127,6 +139,8 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   theta = peak.theta;
   phi = peak.phi;
+  thetaAdjustmentRequired = peak.theta_adjustment_needed;
+  selfLogLikelihood = -9999;
   anita = sum->anitaLocation;
   getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
   antarcticaHistBin = -1;
@@ -150,6 +164,8 @@ Acclaim::Clustering::Event::Event(Int_t nT)
   northing = DBL_MAX;
   theta = -9999;
   phi = -9999;
+  thetaAdjustmentRequired = -9999;
+  selfLogLikelihood = -9999;
   anita.reset();
   eventNumber = 0;
   run = 0;
@@ -189,6 +205,8 @@ Acclaim::Clustering::Event::Event(const Event& event){
   phi = event.phi;
   sigmaTheta = event.sigmaTheta;
   sigmaPhi = event.sigmaPhi;
+  thetaAdjustmentRequired = event.thetaAdjustmentRequired;
+  selfLogLikelihood = event.selfLogLikelihood;
   nThresholds = event.nThresholds;
   cluster = new Int_t[nThresholds];
   dThetaCluster = new Double_t[nThresholds];
@@ -397,7 +415,6 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fTestEvent1 = 58900975;
   fTestEvent2 = 55699027;
 
-  fFitHorizonDistM = 700e3;
   numCallsToRecursive = 0;
   doneBaseClusterAssignment = false;
   fKDTree = NULL;
@@ -700,8 +717,8 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dPoint(const Event& event, Do
 
   if(addOverHorizonPenalty){
     Double_t distM = event.usefulPat.getDistanceFromSource(sourceLat, sourceLon, sourceAlt);
-    if(distM >= fFitHorizonDistM){
-      double distOverHorizonM = fabs(distM - fFitHorizonDistM);
+    if(distM >= default_horizon_distance){
+      double distOverHorizonM = fabs(distM - default_horizon_distance);
       ll += distOverHorizonM;
     }
   }
@@ -961,7 +978,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(
 
   Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
 
-  if(distM < fFitHorizonDistM){ // are we even close?
+  if(distM < default_horizon_distance){ // are we even close?
 
     Double_t ll = getAngDistSqEventCluster(event, cluster);
 
@@ -1258,10 +1275,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 	getDeltaThetaDegDeltaPhiDegEventCluster(*event, cluster, event->dThetaCluster[z], event->dPhiCluster[z]);
       }
       else {
-	std::cerr << "Error in " << __PRETTY_FUNCTION__
-		  << ": eventNumber " << event->eventNumber
-		  << " has a cluster[" << z << "] number "
-		  << event->cluster[z] << std::endl;
+	// std::cerr << "Error in " << __PRETTY_FUNCTION__
+	// 	  << ": eventNumber " << event->eventNumber
+	// 	  << " has a cluster[" << z << "] number "
+	// 	  << event->cluster[z] << std::endl;
       }
     }
     eventTree->Fill();
@@ -1294,6 +1311,9 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
     n = ss.N();
     Int_t numReadIn = 0;
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
+
+    bool notUsingSandbox = TString(summaryGlob).Contains("wais");
+
     ProgressBar p(n);
     for(Long64_t entry=0; entry < n; entry++){
 
@@ -1302,22 +1322,21 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
       // AnitaPol::AnitaPol_t pol = sum->trainingPol();
       // Int_t peakIndex = sum->trainingPeakInd();
-      AnitaPol::AnitaPol_t pol = sum->mostImpulsivePol(1);
-      Int_t peakIndex = sum->mostImpulsiveInd(1);
+      AnitaPol::AnitaPol_t pol = sum->trainingPol();
+      Int_t peakIndex = sum->trainingPeakInd();
+      // AnitaPol::AnitaPol_t pol = sum->mostImpulsivePol(1);
+      // Int_t peakIndex = sum->mostImpulsiveInd(1);
 
       // std::cout << sum->eventNumber << "\t" << pol << "\t" << peakIndex << std::endl;
-
-      Double_t sourceLat = sum->peak[pol][peakIndex].latitude;
-      Double_t sourceLon = sum->peak[pol][peakIndex].longitude;
       Double_t snrHack = sum->deconvolved_filtered[pol][peakIndex].snr;
-      Double_t thetaAdjustment = sum->peak[pol][peakIndex].theta_adjustment_needed;
-
 
       /// @todo remove the snr < 100 hack!!!
       /// @todo maybe remove the run hack!!!
-      // if(sourceLat > -999 && sourceLon > -999 && snrHack < 100 && TMath::Abs(thetaAdjustment) < 1e-10){
-      if(inSandbox(sum->peak[pol][peakIndex]) && sourceLat > -999 && sourceLon > -999 && snrHack < 100 && TMath::Abs(thetaAdjustment) < 1e-10){	
-      // if(sum->run > 160 && sourceLat > -999 && sourceLon > -999 && snrHack < 100 && TMath::Abs(thetaAdjustment) < 1e-10){
+      if(sum->run > 160
+	 && (notUsingSandbox || inSandbox(sum->peak[pol][peakIndex]))
+	 && sum->peak[pol][peakIndex].theta < 0
+	 && snrHack < 100){
+	
 	if(sum->mc.weight > 0){
 	  addMcEvent(sum,  pol, peakIndex);
 	}
@@ -1715,10 +1734,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   event.nearestNeighbourLogLikelihood = event1MinLL.at(minI);
   event.nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
   
-  // std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
-  // for(unsigned i=0; i < nearbyEvents.size(); i++){
-  //   std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
-  // }
+  std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
+  for(unsigned i=0; i < nearbyEvents.size(); i++){
+    std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
+  }
 
   gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
 }
@@ -1920,7 +1939,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
   // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
   //   const Event& event1 = events.at(event1Ind);
-  //   std::cout << event1.eventNumber << "\t";    
+  //   std::cout << event1.eventNumber << "\t";
   //   for(int z=0; z < event1.nThresholds; z++){
   //     std::cout << event1.cluster[z] << "\t";
   //   }
@@ -1929,8 +1948,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   // exit(0);
   
   ProgressBar p(events.size());
-  for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
-  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){    
+  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
+  for(UInt_t event1Ind=0; event1Ind < 1; event1Ind++){
     Event& event1 = events.at(event1Ind);
     if(event1.eventEventClustering){
 
@@ -2059,21 +2078,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   bool fRemoveLargeBasesNearMcMurdo = true;
 
-  if(fRemoveLargeBasesNearMcMurdo){
-    int numRemoved = removeLargeBasesNearMcMurdo();
-    std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
-    std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
-  }
-  fDebug=true;
-  initKDTree();
-  fDebug=false;
+  // if(fRemoveLargeBasesNearMcMurdo){
+  //   int numRemoved = removeLargeBasesNearMcMurdo();
+  //   std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
+  //   std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
+  // }
+  // initKDTree();
 
-  // testAngleFindingSpeed();
-  // DBSCAN();
-  doEventEventClustering();
+  // doEventEventClustering();
 
   // makeAndWriteNSquaredEventEventHistograms();
-  const char* fakeArgv[2] = {outFileName, "DBSCAN"};
+  const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
   TFile* fOut = oc.makeFile();
 
@@ -2092,6 +2107,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
 
 }
+
+
+
+
 
 
 
