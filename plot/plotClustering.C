@@ -287,6 +287,36 @@ void drawClusters(TFile* f){
   
 }
 
+void plotDebug(TFile* f){
+
+
+  TH2D* h = (TH2D*) f->Get("hSingleEventTest");
+
+  if(h){
+    TGraphAntarctica* gr1 = (TGraphAntarctica*) f->Get("grTestEvent1");
+    TGraphAntarctica* gr2 = (TGraphAntarctica*) f->Get("grTestEvent2");
+    TGraphAntarctica* grWais = (TGraphAntarctica*) f->Get("grWaisTrue");
+    TGraphAntarctica* grWalk = (TGraphAntarctica*) f->Get("grTestMinimizerWalk");
+    TGraphAntarctica* grValue = (TGraphAntarctica*) f->Get("grTestMinimizerValue");
+
+
+    gr1->SetMarkerStyle(8); gr1->SetMarkerColor(kMagenta);
+    gr2->SetMarkerStyle(8); gr2->SetMarkerColor(kCyan);
+    grWais->SetMarkerStyle(8); grWais->SetMarkerColor(kRed);
+
+    new TCanvas();
+    h->Draw("colz");
+    gr1->Draw("psame");
+    gr2->Draw("psame");
+    grWais->Draw("psame");
+    grWalk->Draw("lsame");
+
+    new TCanvas();
+    grValue->Draw();
+  }
+}
+
+
 
 
 void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.root"){
@@ -301,7 +331,8 @@ void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.roo
   // for(int i=1; i < 16; i++){
   //   drawEvents(f, i);
   // }
-  drawClusters(f);
+  plotDebug(f);
+  // drawClusters(f);
 
   // drawResolutionDistributions(f);
 

@@ -66,8 +66,8 @@ namespace Acclaim{
       Double_t latitude;			/// latitude
       Double_t longitude;			/// longitude
       Double_t altitude;			/// longitude
-      Double_t easting; //!                     /// easting
-      Double_t northing;//!                     /// northing
+      Double_t easting;                         /// easting
+      Double_t northing;                        /// northing
       AnitaEventSummary::PayloadLocation anita;	/// Anita's position
 
       Double_t theta;				/// reconstructed theta
@@ -93,6 +93,7 @@ namespace Acclaim{
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
       mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
+      mutable Bool_t fDebug; //!
 
       Event(Int_t nT=0);
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
@@ -103,6 +104,7 @@ namespace Acclaim{
       void resetClusteringNumbers();
       void deleteArrays();
       void setNThresholds(int n);
+      double logLikelihoodFromPoint(double sourceLon, double sourceLat, double sourceAlt, bool addOverHorizonPenalty=false) const;
 
       virtual ~Event();
       ClassDef(Event, 8)
@@ -175,8 +177,6 @@ namespace Acclaim{
     public:
 
       static const Int_t SmallClusterSizeThreshold = 100;
-      static Double_t dPoint(const Event& eventInd1, Double_t sourceLon,
-			     Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty=false);
 
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
@@ -261,9 +261,10 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
+      TGraph* grTestMinimizerValue;
 
       std::vector<ROOT::Math::Minimizer*> fMinimizers;
-      std::vector<ROOT::Math::Functor*> fFunctors;
+      std::vector<ROOT::Math::Functor> fFunctors;
       Int_t fROOTgErrorIgnoreLevel;
     };
 
