@@ -1839,10 +1839,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   event.nearestNeighbourLogLikelihood = event1MinLL.at(minI);
   event.nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
   
-  std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
-  for(unsigned i=0; i < nearbyEvents.size(); i++){
-    std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
-  }
+  // std::cout << "\n" << nearbyEvents.size() << "\t" << nearbyEventLLs.size() << std::endl;
+  // for(unsigned i=0; i < nearbyEvents.size(); i++){
+  //   std::cout << nearbyEvents[i] << "\t" << nearbyEventLLs[i] << std::endl;
+  // }
 
   gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
 }
@@ -2056,19 +2056,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   double llNearbyThreshold = TMath::MaxElement(llEventCuts.size(), &llEventCuts.at(0)); // ignore if greater than this
 
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
-  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
-  //   const Event& event1 = events.at(event1Ind);
-  //   std::cout << event1.eventNumber << "\t";
-  //   for(int z=0; z < event1.nThresholds; z++){
-  //     std::cout << event1.cluster[z] << "\t";
-  //   }
-  //   std::cout << std::endl;
-  // }
-  // exit(0);
   
   ProgressBar p(events.size());
-  // for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
-  for(UInt_t event1Ind=0; event1Ind < 1; event1Ind++){
+  for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
+  // for(UInt_t event1Ind=0; event1Ind < 1; event1Ind++){
     Event& event1 = events.at(event1Ind);
     if(event1.eventEventClustering){
 
@@ -2197,16 +2188,15 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   bool fRemoveLargeBasesNearMcMurdo = true;
 
-  // if(fRemoveLargeBasesNearMcMurdo){
-  //   int numRemoved = removeLargeBasesNearMcMurdo();
-  //   std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
-  //   std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
-  // }
-  // initKDTree();
+  if(fRemoveLargeBasesNearMcMurdo){
+    // int numRemoved = removeLargeBasesNearMcMurdo();
+    // std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
+    // std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
+  }
+  initKDTree();
 
-  // doEventEventClustering();
+  doEventEventClustering();
 
-  // makeAndWriteNSquaredEventEventHistograms();
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
   TFile* fOut = oc.makeFile();
@@ -2217,8 +2207,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   }
   hEvents->Write();
 
-  makeAndWriteNSquaredEventEventHistograms();
-  // writeAllGraphsAndHists();  
+  // makeAndWriteNSquaredEventEventHistograms();
+  writeAllGraphsAndHists();  
   makeSummaryTrees();
   fOut->Write();
   fOut->Close();

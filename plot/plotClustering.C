@@ -331,8 +331,8 @@ void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.roo
   // for(int i=1; i < 16; i++){
   //   drawEvents(f, i);
   // }
-  plotDebug(f);
-  // drawClusters(f);
+  // plotDebug(f);
+  drawClusters(f);
 
   // drawResolutionDistributions(f);
 
