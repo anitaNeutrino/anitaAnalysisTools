@@ -203,18 +203,17 @@ namespace Acclaim{
       Long64_t readInSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
-      void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster);
+      void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
 
       void initializeBaseList();
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
-      void assignEventsToBaseClusters();
+      void doKnownBaseClustering(double forcedLLCut = -1);
       void writeAllGraphsAndHists();
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();
-      void redoSmallClusters();
       void initKDTree();
       Double_t dMin(const Event& event1, const Event& event2);
       Double_t dSum(const Event& event1, const Event& event2);
@@ -245,7 +244,8 @@ namespace Acclaim{
       // Int_t numClusters;
       Int_t numCallsToRecursive;
 
-      std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,
+      std::vector<std::vector<Acclaim::Clustering::Cluster> >clusters;	/// Vector of clusters,
+      // std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,      
       std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
       TKDTreeID* fKDTree;                                       /// ROOT's implementation of a KDTree, typedef'd for int/double
