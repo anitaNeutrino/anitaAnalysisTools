@@ -65,7 +65,7 @@
 #pragma link C++ class Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion+;
 #pragma link C++ class Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion+;
 #pragma link C++ class Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion+;
-#pragma link C++ class Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold+;
+//#pragma link C++ class Acclaim::AnalysisCuts::DedispersedFracPowerWindowGradientBelowThreshold+;
 #pragma link C++ class Acclaim::AnalysisCuts::FisherScoreAboveThreshold+;
 #pragma link C++ class Acclaim::AnalysisCuts::DoesNotPointToKnownMovingSource+;
 
