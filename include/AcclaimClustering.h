@@ -184,8 +184,6 @@ namespace Acclaim{
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
       
-      TGraphAntarctica* makeClusterSummaryTGraph(Int_t clusterInd);
-
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
@@ -229,8 +227,8 @@ namespace Acclaim{
       void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
-      std::vector<const Event*> fFitEvent1s; /// First event in the pairwise fit
-      std::vector<const Event*> fFitEvent2s; /// Second event in the pairwise fit
+      std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
+      std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
       Double_t dFit(const Event& event1, const Event& event2);
