@@ -225,7 +225,7 @@ void drawResolutionDistributions(TFile* f, int whichCluster = -1){
 
 void drawClusters(TFile* f){
 
-  TTree* clusterTree = (TTree*)f->Get("clusterTree");
+  TTree* clusterTree = (TTree*)f->Get("clusterTree1");
   Acclaim::Clustering::Cluster* cluster = NULL;
   clusterTree->SetBranchAddress("cluster", &cluster);
 

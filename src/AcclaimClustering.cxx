@@ -138,7 +138,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(){
 Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty) const {
 
   Double_t thetaSource, phiSource;
-  usefulPat.getThetaAndPhiWave(sourceLon, sourceLat, sourceAlt, thetaSource, phiSource);
+  usefulPat.getThetaAndPhiWave2(sourceLon, sourceLat, sourceAlt, thetaSource, phiSource);
   thetaSource = -1*TMath::RadToDeg()*thetaSource;
   phiSource = TMath::RadToDeg()*phiSource;
 
@@ -192,6 +192,8 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
   antarcticaHistBin = -1;
   fDebug = false;
+  nearestKnownBaseLogLikelihood = DBL_MAX;
+  nearestKnownBaseCluster = -1;
 
   setNThresholds(nT);
   resetClusteringNumbers();
@@ -226,6 +228,8 @@ Acclaim::Clustering::Event::Event(Int_t nT)
   }
   antarcticaHistBin = -1;
   fDebug = false;
+  nearestKnownBaseLogLikelihood = DBL_MAX;
+  nearestKnownBaseCluster = -1;
 
   setNThresholds(nT);
   resetClusteringNumbers();  
@@ -270,6 +274,7 @@ Acclaim::Clustering::Event::Event(const Event& event){
   nearestNeighbourLogLikelihood = event.nearestNeighbourLogLikelihood;
   eventEventClustering = event.eventEventClustering;
   nearestKnownBaseLogLikelihood = event.nearestKnownBaseLogLikelihood;
+  nearestKnownBaseCluster = event.nearestKnownBaseCluster;
   antarcticaHistBin = event.antarcticaHistBin;
   fDebug = event.fDebug;
   usefulPat = event.usefulPat;
@@ -342,7 +347,8 @@ void Acclaim::Clustering::Event::resetClusteringNumbers(){
   }
   nearestNeighbourEventNumber = 0;
   nearestNeighbourLogLikelihood = DBL_MAX;
-  nearestKnownBaseLogLikelihood = DBL_MAX;
+  // nearestKnownBaseLogLikelihood = DBL_MAX;
+  // nearestKnownBaseCluster = -1;
   eventEventClustering = true;
 }
 
@@ -367,7 +373,8 @@ TArrowAntarctica* Acclaim::Clustering::Event::makeArrowFromAnitaToEvent(){
 
 Acclaim::Clustering::McEvent::McEvent(Int_t nT)
   : Event(nT){
-  weight = 0; energy=0;
+  weight = 0;
+  energy=0;
 }
 
 Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT)
@@ -408,7 +415,6 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
 }
 
 Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
@@ -430,7 +436,6 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
 
 
 Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
   latitude = event.longitude;
   longitude = event.latitude;
   altitude = event.altitude;
@@ -619,7 +624,7 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getDistSqEventCluster(const E
 void Acclaim::Clustering::LogLikelihoodMethod::getDeltaThetaDegDeltaPhiDegEventCluster(const Event& event, const Cluster& cluster, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg){
 
   Double_t thetaWave, phiWave;
-  event.usefulPat.getThetaAndPhiWave(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
+  event.usefulPat.getThetaAndPhiWave2(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
   Double_t thetaDeg = -1*TMath::RadToDeg()*thetaWave;
   Double_t phiDeg = TMath::RadToDeg()*phiWave;
 
@@ -913,7 +918,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 
   // in case this hasn't been done already
   if(doneBaseClusterAssignment==false){
-    doKnownBaseClustering();
+    // doKnownBaseClustering();
   }
 
   if(numCallsToRecursive==0){
@@ -1056,7 +1061,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(In
 void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(Int_t i, Int_t isMC, Cluster& cluster, Int_t z, double llCut){
   Event& event = isMC==0 ? events.at(i) : mcEvents.at(i);
 
+  // std::cout << llCut << "\t";
   llCut = llCut < 0 ? cluster.llEventCut : llCut; // default llCut < 0 means use cluster stored value
+  // if(cluster.index==19){
+  //   std::cout << cluster.llEventCut << "\t" << llCut << std::endl;
+  // }
 
   Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
 
@@ -1064,20 +1073,23 @@ void Acclaim::Clustering::LogLikelihoodMethod::assignSingleEventToCloserCluster(
 
     Double_t ll = getAngDistSqEventCluster(event, cluster);
 
-    if(ll < llCut && ll < event.nearestKnownBaseLogLikelihood){
+    if(ll <= event.nearestKnownBaseLogLikelihood){
       event.nearestKnownBaseLogLikelihood = ll;
+      event.nearestKnownBaseCluster = cluster.index;
 
-      if(!isMC){
-	int previousBestClusterIndex = event.cluster[z];
-	if(previousBestClusterIndex >= 0){
-	  clusters.at(z).at(previousBestClusterIndex).numDataEvents--;
-	  // if(clusters.at(z).at(previousBestClusterIndex).numDataEvents < 0){
-	  //   std::cout << z << "\t" << clusters.at(z).at(previousBestClusterIndex).index << "\t" << clusters.at(z).at(previousBestClusterIndex).numDataEvents << std::endl;
-	  // }
+      if(ll < llCut){
+	if(!isMC){
+	  int previousBestClusterIndex = event.cluster[z];
+	  if(previousBestClusterIndex >= 0){
+	    clusters.at(z).at(previousBestClusterIndex).numDataEvents--;
+	    // if(clusters.at(z).at(previousBestClusterIndex).numDataEvents < 0){
+	    //   std::cout << z << "\t" << clusters.at(z).at(previousBestClusterIndex).index << "\t" << clusters.at(z).at(previousBestClusterIndex).numDataEvents << std::endl;
+	    // }
+	  }
+	  cluster.numDataEvents++;
 	}
-	cluster.numDataEvents++;
+	event.cluster[z] = cluster.index;
       }
-      event.cluster[z] = cluster.index;
     }
   }
 }
@@ -1137,70 +1149,27 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummar
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doKnownBaseClustering(double nonDefaultLLCut){
+// void Acclaim::Clustering::LogLikelihoodMethod::doKnownBaseClustering(double nonDefaultLLCut){
 
-  std::cout << "Info in " << __PRETTY_FUNCTION__ << " assigning events to base clusters!" << std::endl;
-  const int isMC = 0;
-  // for(UInt_t z=0; z < clusters.size(); z++){
+void Acclaim::Clustering::LogLikelihoodMethod::forEachEventFindClosestKnownBase(int z){
 
-  std::cout << "Looping through all/events/clusters" << std::endl;
-  UInt_t tempZ = 0;
-  ProgressBar p(clusters.at(tempZ).size());
-  for(UInt_t clusterInd=0; clusterInd < clusters.at(tempZ).size(); clusterInd++){
-    Cluster& cluster = clusters.at(tempZ).at(clusterInd);
-    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-      assignSingleEventToCloserCluster(eventInd, isMC, cluster, tempZ, nonDefaultLLCut);
-    }
-
-    if(clusters.at(tempZ).at(clusterInd).antarcticaHistBin < 0){
-      clusters.at(tempZ).at(clusterInd).antarcticaHistBin = hClusters->Fill(cluster.longitude, cluster.latitude);
-    }
-    p.inc(clusterInd, clusters.at(tempZ).size());
-  }
-
-  ProgressBar p2(events.size());
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     Event& event = events.at(eventInd);
-    for(UInt_t z=0; z < clusters.size(); z++){
-      if(z!=tempZ){
-	Int_t clusterInd = event.cluster[tempZ];
-	if(clusterInd >= 0){
-	  Cluster& cluster = clusters.at(z).at(clusterInd);
-	  if(cluster.index != (int)clusterInd){
-	    std::cerr << __PRETTY_FUNCTION__ << "...???" << std::endl;
-	  }
-	  double llCut = nonDefaultLLCut < 0 ? cluster.llEventCut : nonDefaultLLCut; // default llCut < 0 means use cluster stored value
-	  if(event.nearestKnownBaseLogLikelihood < llCut){
-	    event.cluster[z] = clusterInd;
-	    cluster.numDataEvents++;
-	  }
+    for(UInt_t clusterInd=0; clusterInd < clusters.at(z).size(); clusterInd++){
+      Cluster& cluster = clusters.at(z).at(clusterInd);
+
+      Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);      
+      if(distM < default_horizon_distance){ // are we even close?
+
+	Double_t ll = getAngDistSqEventCluster(event, cluster);
+
+	if(ll <= event.nearestKnownBaseLogLikelihood){
+	  event.nearestKnownBaseLogLikelihood = ll;
+	  event.nearestKnownBaseCluster = cluster.index;
 	}
       }
     }
-    p2.inc(eventInd);
   }
-
-  // hBaseClusteredEvents.resize(clusters.size(), NULL);
-  // grBaseClusterCenters.resize(clusters.size(), NULL);
-
-  // for(UInt_t clusterInd=0; clusterInd < clusters.size(); clusterInd++){
-  //   if(clusters.at(clusterInd).numDataEvents > 0){
-  //     TString name = TString::Format("hBaseClusteredEvents%u", clusterInd);
-  //     TH2DAntarctica* h = new TH2DAntarctica(name, name);
-  //     hBaseClusteredEvents[clusterInd] = h;
-
-  //     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-  // 	if(events.at(eventInd).cluster[0] == static_cast<Int_t>(clusterInd)){
-  // 	  h->Fill(events.at(eventInd).longitude, events.at(eventInd).latitude);
-  // 	}
-  //     }
-
-  //     grBaseClusterCenters.at(clusterInd) = new TGraphAntarctica(BaseList::getBase(clusterInd));
-  //     grBaseClusterCenters.at(clusterInd)->SetName(TString::Format("grClusterCenter%u", clusterInd));
-  //   }
-  // }
-
-  doneBaseClusterAssignment = true;
 }
 
 
@@ -1342,16 +1311,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 		    << eventCounter << std::endl;
 	}
       }
-
-      // set numDataEvents
-      for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-	const Event& event = events.at(eventInd);
-	for(int z=0; z < event.nThresholds; z++){
-	  if(clusterInd==(UInt_t)event.cluster[z]){
-	    cluster.numDataEvents++;
-	  }
-	}
-      }
+      // std::cout << "in summary making " << z << "\t" << clusterInd << "\t" << cluster.numDataEvents << std::endl;
     }
   }
 
@@ -1411,7 +1371,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
     Int_t numReadIn = 0;
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-    bool notUsingSandbox = true;
+    bool useSandbox = true;
     // bool notUsingSandbox = TString(summaryGlob).Contains("wais");    
 
     ProgressBar p(n);
@@ -1436,7 +1396,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       /// @todo remove the snr > 160 hack???
       /// @todo remove the run hack!!!
       if(sum->run > 160
-	 && (notUsingSandbox || inSandbox(sum->peak[pol][peakIndex]))
+	 && (!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
 	 && sum->peak[pol][peakIndex].theta < 0
 	 && snrHack < 100){
 	
@@ -1654,7 +1614,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::testAngleFindingSpeed(){
 	alt = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(lon, lat);
 
 	Double_t theta, phi;
-	event.usefulPat.getThetaAndPhiWave(lon, lat, alt, theta, phi);
+	event.usefulPat.getThetaAndPhiWave2(lon, lat, alt, theta, phi);
 	theta = -1*TMath::RadToDeg()*theta;
 	phi = TMath::RadToDeg()*phi;
 
@@ -1766,7 +1726,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   }
 
 
-  
+
   int mt = OpenMP::getMaxThreads();
   std::vector<std::vector<Int_t> > nearbyEventsParallel(mt);
   std::vector<std::vector<Double_t> > nearbyEventLLsParallel(mt);
@@ -1776,9 +1736,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   for(UInt_t i=0; i < nearbyEventIndsEastingNorthingTrimmed.size(); i++){
     int eventInd2 = nearbyEventIndsEastingNorthingTrimmed[i];
 
-    int t = OpenMP::thread();      
-    std::vector<Int_t>& nearbyEventsLoop = OpenMP::isEnabled ? nearbyEventsParallel.at(t) : nearbyEvents;    
-    std::vector<Double_t>& nearbyEventLLsLoop = OpenMP::isEnabled ? nearbyEventLLsParallel.at(t) : nearbyEventLLs;        
+    int t = OpenMP::thread();
+    std::vector<Int_t>& nearbyEventsLoop = OpenMP::isEnabled ? nearbyEventsParallel.at(t) : nearbyEvents;
+    std::vector<Double_t>& nearbyEventLLsLoop = OpenMP::isEnabled ? nearbyEventLLsParallel.at(t) : nearbyEventLLs;
 
     // only consider if eventInd2 > eventInd
     // this ensures that each pair only gets considered once
@@ -1804,10 +1764,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
 	  event1MinLL.at(t) = ll;
 	  event1MinLLEvent2EventNumber.at(t) = event2.eventNumber;
 	}
-	// if(ll < event.nearestNeighbourLogLikelihood){
-	//   event.nearestNeighbourLogLikelihood = ll;
-	//   event.nearestNeighbourEventNumber = event2.eventNumber;
-	// }
 
 	// is this event2's nearest neighbour?
 	if(ll < event2.nearestNeighbourLogLikelihood){
@@ -1833,18 +1789,22 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
 
   // need to copy the parallel stuff into resultant vector
   if(OpenMP::isEnabled){
-    UInt_t numEvents = 0;
+    UInt_t numEvents = nearbyEvents.size();
     for(UInt_t t=0; t < nearbyEventsParallel.size(); t++){
-      numEvents += nearbyEventsParallel.size();
+      numEvents += nearbyEventsParallel.at(t).size();
     }
     nearbyEvents.reserve(numEvents);
     nearbyEventLLs.reserve(numEvents);
-    
+
     for(UInt_t t=0; t < nearbyEventsParallel.size(); t++){
       nearbyEvents.insert(nearbyEvents.end(), nearbyEventsParallel.at(t).begin(), nearbyEventsParallel.at(t).end());
       nearbyEventLLs.insert(nearbyEventLLs.end(), nearbyEventLLsParallel.at(t).begin(), nearbyEventLLsParallel.at(t).end());
     }
   }
+
+  std::cout << eventInd << "\t" << nearbyEvents.size() << "\t"
+	    << event.nearestNeighbourEventNumber << "\t"
+	    << event.nearestNeighbourLogLikelihood << std::endl;
 
   int minI = OpenMP::isEnabled ? TMath::LocMin(event1MinLL.size(), &event1MinLL[0]) : 0;
   event.nearestNeighbourLogLikelihood = event1MinLL.at(minI);
@@ -2078,7 +2038,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       std::vector<Double_t> eventEventLLs;
       nearbyEvents(event1Ind, event2Inds, eventEventLLs, llNearbyThreshold, llFitThreshold);
 
-#pragma omp parallel for
+// #pragma omp parallel for
       for(UInt_t z=0; z < llEventCuts.size(); z++){
 
 	std::vector<Int_t> matchedClusters;
@@ -2106,11 +2066,16 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	  matchedClusters.push_back(nc.index);
 	}
 
-	Int_t thisCluster = TMath::MinElement(matchedClusters.size(), &matchedClusters.at(0));
+	Int_t thisCluster = TMath::MinElement(matchedClusters.size(), &matchedClusters[0]);
+
+	// if(z==0){
+	//   std::cout << clusters[z][80].numDataEvents << std::endl;
+	// }
 
 	// mark event1 as in the minCluster
-	if(event1.cluster[z] >= 0){
-	  clusters.at(z).at(event1.cluster[z]).numDataEvents--;
+	Int_t oldCluster1Ind = event1.cluster[z];
+	if(oldCluster1Ind >= 0){
+	  clusters.at(z).at(oldCluster1Ind).numDataEvents--;
 	}
 	event1.cluster[z] = thisCluster;
 	clusters.at(z).at(thisCluster).numDataEvents++;
@@ -2118,13 +2083,18 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	// loop through all matched events, and put them in the appropriate cluster
 	for(UInt_t i=0; i < event2Inds.size(); i++){
 	  if(eventEventLLs.at(i) <= llEventCuts.at(z)){
-	    Event& event2 = events.at(event2Inds.at(i));
-
-	    if(event2.cluster[z] >= 0){
-	      clusters.at(z).at(event2.cluster[z]).numDataEvents--;
+	    Int_t event2Ind = event2Inds.at(i);
+	    Event& event2 = events.at(event2Ind);
+	    Int_t oldCluster2Ind = event2.cluster[z];
+	    if(oldCluster2Ind >= 0){
+	      clusters.at(z).at(oldCluster2Ind).numDataEvents--;
 	    }
 	    event2.cluster[z] = thisCluster;
 	    clusters.at(z).at(thisCluster).numDataEvents++;
+
+	    // if(z==0 && thisCluster==19){
+	    //   std::cout << event1Ind << "\t" << event2Ind << "\t" << clusters.at(z).at(thisCluster).numDataEvents << std::endl;
+	    // }
 	  }
 	}
       }
@@ -2139,35 +2109,40 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
 Int_t Acclaim::Clustering::LogLikelihoodMethod::removeLargeBasesNearMcMurdo(){
 
-  fUseBaseList = true;
-  if(fUseBaseList){
-    initializeBaseList();
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    Event& event = events.at(eventInd);
+    if(event.nearestKnownBaseLogLikelihood < llClusterCut){
+      int clusterInd = event.nearestKnownBaseCluster;
+      for(UInt_t z=0; z < clusters.size(); z++){
+	event.cluster[z] = clusterInd;
+	clusters.at(z).at(clusterInd).numDataEvents++;
+      }
+    }
   }
-  doKnownBaseClustering(llClusterCut);
+
   const int manyEvents = 1000;
   int numRemoved=0;
+  for(UInt_t clusterInd=0; clusterInd < clusters.at(0).size(); clusterInd++){
+    Cluster& cluster = clusters.at(0).at(clusterInd);
 
-  for(UInt_t z=0; z < llEventCuts.size(); z++){
-    for(UInt_t clusterInd=0; clusterInd < clusters.at(z).size(); clusterInd++){
-      Cluster& cluster = clusters.at(z).at(clusterInd);
-
-      // remove these guys!
-      if(cluster.numDataEvents >= manyEvents && isVaguelyNearMcMurdo(cluster)){
-	for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-	  Event& event = events.at(eventInd);
-	  if(event.cluster[z]==(int)clusterInd){
-	    events.at(eventInd).eventEventClustering = false;
-	    numRemoved++;
-	  }
+    // remove these guys!
+    if(cluster.numDataEvents >= manyEvents && isVaguelyNearMcMurdo(cluster)){
+      for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+	Event& event = events.at(eventInd);
+	if(event.cluster[0]==(int)clusterInd){
+	  events.at(eventInd).eventEventClustering = false;
+	  numRemoved++;
 	}
       }
-      else{
-	cluster.resetClusteringNumbers();
-	for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-	  Event& event = events.at(eventInd);
-	  if(event.cluster[z]==(int)clusterInd){
-	    events.at(eventInd).eventEventClustering = true;
-	  }
+    }
+    else{
+      for(UInt_t z=0; z < llEventCuts.size(); z++){
+	clusters.at(z).at(clusterInd).resetClusteringNumbers();
+      }
+      for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+	Event& event = events.at(eventInd);
+	if(event.cluster[0]==(int)clusterInd){
+	  events.at(eventInd).resetClusteringNumbers();
 	}
       }
     }
@@ -2176,21 +2151,45 @@ Int_t Acclaim::Clustering::LogLikelihoodMethod::removeLargeBasesNearMcMurdo(){
 }
 
 
+
+
+void Acclaim::Clustering::LogLikelihoodMethod::setInitialBaseClusters(){
+
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    Event& event = events.at(eventInd);
+    Int_t clusterInd = event.nearestKnownBaseCluster;
+
+    if(clusterInd >= 0){
+      for(int z=0; z < event.nThresholds; z++){
+	Cluster& cluster = clusters.at(z).at(clusterInd);
+	if(event.nearestKnownBaseLogLikelihood < cluster.llEventCut){
+	  cluster.numDataEvents++;
+	  event.cluster[z] = cluster.index;
+	  // std::cout << eventInd << "\t" << z << "\t" << cluster.index << "\t" << event.nearestKnownBaseLogLikelihood << "\t" << cluster.llEventCut << "\t" << cluster.numDataEvents << std::endl;
+	}
+      }
+    }
+  }
+}
+
+
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
-  setDebug(false);
+
+  initializeBaseList();
+  forEachEventFindClosestKnownBase(0);
 
   bool fRemoveLargeBasesNearMcMurdo = true;
-
   if(fRemoveLargeBasesNearMcMurdo){
     int numRemoved = removeLargeBasesNearMcMurdo();
     std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
     std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
   }
+
+  setInitialBaseClusters();
   initKDTree();
-  doKnownBaseClustering();
-  // doEventEventClustering();
+  doEventEventClustering();
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));

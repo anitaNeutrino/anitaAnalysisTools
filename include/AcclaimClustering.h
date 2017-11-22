@@ -89,10 +89,11 @@ namespace Acclaim{
       Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
       Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
       Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
+      Int_t nearestKnownBaseCluster;            /// How far to the nearest known base?      
       Double_t selfLogLikelihood;               /// If the event is above the continent surface, this may be non-zero
 
       Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
-      mutable UsefulAdu5Pat usefulPat; //!      /// Only construct this once, mutable since not const correct
+      UsefulAdu5Pat usefulPat; //!              /// Only construct this once
       mutable Bool_t fDebug; //!
 
       Event(Int_t nT=0);
@@ -107,7 +108,7 @@ namespace Acclaim{
       double logLikelihoodFromPoint(double sourceLon, double sourceLat, double sourceAlt, bool addOverHorizonPenalty=false) const;
 
       virtual ~Event();
-      ClassDef(Event, 8)
+      ClassDef(Event, 9)
     };
 
 
@@ -209,7 +210,9 @@ namespace Acclaim{
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
-      void doKnownBaseClustering(double forcedLLCut = -1);
+      // void doKnownBaseClustering(double forcedLLCut = -1);
+      void setInitialBaseClusters();
+      void forEachEventFindClosestKnownBase(int z);
       void writeAllGraphsAndHists();
       void makeSummaryTrees();
       void resetClusters();
