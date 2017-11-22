@@ -265,7 +265,7 @@ namespace Acclaim{
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
-
+      TGraph* grTestMinimumPosition;
       std::vector<ROOT::Math::Minimizer*> fMinimizers;
       std::vector<ROOT::Math::Functor> fFunctors;
       Int_t fROOTgErrorIgnoreLevel;

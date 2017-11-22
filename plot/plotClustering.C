@@ -296,21 +296,33 @@ void plotDebug(TFile* f){
     TGraphAntarctica* gr1 = (TGraphAntarctica*) f->Get("grTestEvent1");
     TGraphAntarctica* gr2 = (TGraphAntarctica*) f->Get("grTestEvent2");
     TGraphAntarctica* grWais = (TGraphAntarctica*) f->Get("grWaisTrue");
+    TGraphAntarctica* grMinPos = (TGraphAntarctica*) f->Get("grTestMinimumPosition");    
     TGraphAntarctica* grWalk = (TGraphAntarctica*) f->Get("grTestMinimizerWalk");
     TGraphAntarctica* grValue = (TGraphAntarctica*) f->Get("grTestMinimizerValue");
 
 
-    gr1->SetMarkerStyle(8); gr1->SetMarkerColor(kMagenta);
-    gr2->SetMarkerStyle(8); gr2->SetMarkerColor(kCyan);
-    grWais->SetMarkerStyle(8); grWais->SetMarkerColor(kRed);
+    gr1->SetMarkerStyle(8); gr1->SetMarkerColor(kCyan);
+    gr2->SetMarkerStyle(8); gr2->SetMarkerColor(kGreen);
+    grMinPos->SetMarkerStyle(8); grMinPos->SetMarkerColor(kRed);
+    grWais->SetMarkerStyle(8); grWais->SetMarkerColor(kBlack);
 
-    new TCanvas();
+    auto c1 = new TCanvas();
     h->Draw("colz");
     gr1->Draw("psame");
     gr2->Draw("psame");
     grWais->Draw("psame");
+    grMinPos->Draw("psame");
     grWalk->Draw("lsame");
+    c1->SetLogz(1);
 
+    auto l1 = new TLegend();
+    l1->AddEntry(gr1, "Event a (nudged down)", "p");
+    l1->AddEntry(gr2, "Event b (nudged down)", "p");
+    l1->AddEntry(grMinPos, "Fitted position, x", "p");
+    l1->AddEntry(grWais, "True WAIS", "p");
+    l1->AddEntry(grWalk, "Minuit's journey", "l");
+    l1->Draw();
+    
     new TCanvas();
     grValue->Draw();
   }
@@ -331,8 +343,8 @@ void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.roo
   // for(int i=1; i < 16; i++){
   //   drawEvents(f, i);
   // }
-  // plotDebug(f);
-  drawClusters(f);
+  plotDebug(f);
+  // drawClusters(f);
 
   // drawResolutionDistributions(f);
 

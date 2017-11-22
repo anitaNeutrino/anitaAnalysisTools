@@ -493,8 +493,9 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   llEventCuts.push_back(3000);
   llEventCuts.push_back(4000);
 
-  fTestEvent1 = 61033430; //57066562; //61212068; //61229387; //58900975;
-  fTestEvent2 = 61424151; //49108174; //61056775; // 61010978; //61056775; //55699027;
+  // both above horizon; good improvement; actual test
+  fTestEvent1 = 55510391; // 61156660; //61033430;
+  fTestEvent2 = 61338514; //55789194; //61424151;
 
   numCallsToRecursive = 0;
   doneBaseClusterAssignment = false;
@@ -791,6 +792,14 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dFit(const Event& event1, con
 
   fFitEastings.at(t) = minimizer->X()[0]*FITTER_OUTPUT_SCALING;
   fFitNorthings.at(t) = minimizer->X()[1]*FITTER_OUTPUT_SCALING;
+
+  if(fFitEvent1s.at(t)->eventNumber==fTestEvent1 && fFitEvent2s.at(t)->eventNumber==fTestEvent2){
+    grTestMinimumPosition = new TGraph(1, &fFitEastings.at(t), &fFitNorthings.at(t));
+    grTestMinimumPosition->SetName("grTestMinimumPosition");
+    grTestMinimumPosition->Write();
+    delete grTestMinimumPosition;
+    grTestMinimumPosition = NULL;
+  }
   Double_t ll = minimizer->MinValue();
 
   return ll;
@@ -1371,7 +1380,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
     Int_t numReadIn = 0;
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-    bool useSandbox = true;
+    bool useSandbox = false; //true;
     // bool notUsingSandbox = TString(summaryGlob).Contains("wais");    
 
     ProgressBar p(n);
@@ -1888,7 +1897,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
     TVector3 anitaToEvent1 = event1Pos - anita1Pos;
 
-    const int eventInd2 = event2Inds.at(eventInd);
+    const int eventInd2 = 29695; //event2Inds.at(eventInd);
     const Event& event2 = events.at(eventInd2);
     grAnita->SetPoint(grAnita->GetN(), event1.anita.longitude, event1.anita.latitude);
     // if(event2.eventNumber!=fTestEvent2) continue;
@@ -1947,19 +1956,27 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     TVector3 anitaToEvent2 = event2Pos - anita2Pos;
 
     double dist = dMin(event1, event2);
-    Double_t angleBetweenEvents = anitaToEvent1.Angle(anitaToEvent2);
+    Double_t angleBetweenEvents = TMath::RadToDeg()*anitaToEvent1.Angle(anitaToEvent2);
 
-
-    hUnfit->Fill(angleBetweenEvents*TMath::RadToDeg(), dist);
-    hUnfitSqrt->Fill(angleBetweenEvents*TMath::RadToDeg(), TMath::Sqrt(dist));
-
-    // if(dist > 1000){
-    //   std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
-    // }
+    
+    hUnfit->Fill(angleBetweenEvents, dist);
+    hUnfitSqrt->Fill(angleBetweenEvents, TMath::Sqrt(dist));
 
     double distFitted = dFit(event1, event2);
-    hFit->Fill(angleBetweenEvents*TMath::RadToDeg(), distFitted);
-    hFitSqrt->Fill(angleBetweenEvents*TMath::RadToDeg(), TMath::Sqrt(distFitted));
+    hFit->Fill(angleBetweenEvents, distFitted);
+    hFitSqrt->Fill(angleBetweenEvents, TMath::Sqrt(distFitted));
+
+    // if(dist > 1000 && distFitted < 10){
+    //   std::cout << dist << "\t" << distFitted << "\t" << angleBetweenEvents << "\t" << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+    // }
+
+    if(event1.theta > -5.5 && event2.theta > -5.5){
+      std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+    }
+    // if(fabs(event1.thetaAdjustmentRequired) > 1e-2 && fabs(event2.thetaAdjustmentRequired) > 1e-2){
+    //   std::cout << dist << "\t" << distFitted << "\t" << angleBetweenEvents << "\t" << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+    // }
+       
 
     double fitLon, fitLat;
     int t = OpenMP::thread();
@@ -2177,19 +2194,21 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   readInSummaries(dataGlob);
 
+  
+
   initializeBaseList();
-  forEachEventFindClosestKnownBase(0);
+  // forEachEventFindClosestKnownBase(0);
 
-  bool fRemoveLargeBasesNearMcMurdo = true;
-  if(fRemoveLargeBasesNearMcMurdo){
-    int numRemoved = removeLargeBasesNearMcMurdo();
-    std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
-    std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
-  }
+  // bool fRemoveLargeBasesNearMcMurdo = true;
+  // if(fRemoveLargeBasesNearMcMurdo){
+  //   int numRemoved = removeLargeBasesNearMcMurdo();
+  //   std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
+  //   std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
+  // }
 
-  setInitialBaseClusters();
-  initKDTree();
-  doEventEventClustering();
+  // setInitialBaseClusters();
+  // initKDTree();
+  // doEventEventClustering();
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
@@ -2200,6 +2219,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     event.antarcticaHistBin = hEvents->Fill(event.longitude, event.latitude);
   }
   hEvents->Write();
+
+  makeAndWriteNSquaredEventEventHistograms();
 
   writeAllGraphsAndHists();  
   makeSummaryTrees();
