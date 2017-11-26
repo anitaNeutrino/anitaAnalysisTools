@@ -1414,10 +1414,10 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	    mcEvents.reserve(mcEvents.size() + n);
 	  }
 	  // if(sum->eventNumber==914599568){
-	  if((entry%10)==0){	    
-	    addMcEvent(sum,  pol, peakIndex);
-	    numReadIn++;	    
-	  }
+	  // if((entry%10)==0){	    
+	  addMcEvent(sum,  pol, peakIndex);
+	  numReadIn++;	    
+	  // }
 	}
 	else{
 	  if(entry==0){
@@ -1769,9 +1769,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
 	  }
 	}
 
-	if(event->eventNumber==914599568){
-	  std::cout << t << "\t" << event2.eventNumber << "\t" << ll << std::endl;
-	}
+	// if(event->eventNumber==914599568){
+	//   std::cout << t << "\t" << event2.eventNumber << "\t" << ll << std::endl;
+	// }
 	
 
 	// is this event's nearest neighbour?
@@ -2056,6 +2056,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   double llFitThreshold = TMath::MinElement(llEventCuts.size(), &llEventCuts.at(0)); // fit if greater than this
   double llNearbyThreshold = TMath::MaxElement(llEventCuts.size(), &llEventCuts.at(0)); // ignore if greater than this
 
+  std::cout << __PRETTY_FUNCTION__ << std::endl;
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
 
   ProgressBar p(events.size());
@@ -2146,6 +2147,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
   double llFitThreshold = TMath::MinElement(llEventCuts.size(), &llEventCuts.at(0)); // fit if greater than this
   double llNearbyThreshold = TMath::MaxElement(llEventCuts.size(), &llEventCuts.at(0)); // ignore if greater than this
 
+  std::cout << __PRETTY_FUNCTION__ << std::endl;
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
 
   ProgressBar p(mcEvents.size());
@@ -2248,6 +2250,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::setInitialBaseClusters(){
 
 void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 
+  std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+  ProgressBar p(mcEvents.size());
   for(UInt_t eventInd=0; eventInd < mcEvents.size(); eventInd++){
     McEvent* mcEvent = &mcEvents.at(eventInd);
 
@@ -2258,14 +2263,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 	if(distM < fFitHorizonDistM){
 	  double ll = mcEvent->logLikelihoodFromPoint(cluster.longitude, cluster.latitude, cluster.altitude, true);
 	  for(int z=0; z < mcEvent->nThresholds; z++){
-	    if(ll < llEventCuts.at(z)){
-	      clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
-	      mcEvent->cluster[z] += clusterInd;
+	    if(mcEvent->cluster[z] < 0){
+	      if(ll < llEventCuts.at(z)){
+		clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
+		mcEvent->cluster[z] += clusterInd;
+	      }
 	    }
 	  }
 	}
       }
     }
+    p.inc(eventInd);
   }
 }
 
