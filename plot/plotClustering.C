@@ -43,7 +43,14 @@ void printClusterMultiplicityTable(TFile* f){
 
 void drawClusters(TFile* f){
 
+  TTree* eventTree = (TTree*)f->Get("eventTree");
+  TTree* mcEventTree = (TTree*)f->Get("mcEventTree");  
+  
+  int nEvents = eventTree->GetEntries();
+  
+
   std::vector<TTree*> clusterTrees;
+  std::vector<double> llEventCuts;
   Acclaim::Clustering::Cluster* cluster = NULL;
   {
     int llCutInd = 0;
@@ -53,17 +60,45 @@ void drawClusters(TFile* f){
       t = (TTree*)f->Get(treeName);
       if(t){
 	clusterTrees.push_back(t);
-	t->SetBranchAddress("cluster", &cluster);	
+	t->SetBranchAddress("cluster", &cluster);
+	t->GetEntry(0);
+	llEventCuts.push_back(cluster->llEventCut);
       }
       llCutInd++;
     } while(t!=NULL);
   }
 
+  TGraph* grMcClusterEfficiency = new TGraph(clusterTrees.size());
+  grMcClusterEfficiency->SetName("grMcClusterEfficiency");
+  grMcClusterEfficiency->SetTitle("Weighted MC clustering efficiency; -2 log (L); MC clustering efficiency");
+ 
+  double sumMcWeights = 0;
+  Acclaim::Clustering::McEvent* mcEvent = NULL;
+  mcEventTree->SetBranchAddress("mcEvent", &mcEvent);
+  for(int entry=0; entry < mcEventTree->GetEntries(); entry++){
+    mcEventTree->GetEntry(entry);
+
+
+    for(int z=0; z < mcEvent->nThresholds; z++){      
+      if(mcEvent->cluster[z]==-1){
+	grMcClusterEfficiency->GetY()[z] += mcEvent->weight;
+      }
+    }
+    sumMcWeights += mcEvent->weight;
+  }
+
+  for(int z=0; z < clusterTrees.size(); z++){
+    grMcClusterEfficiency->GetY()[z]/=sumMcWeights;
+    grMcClusterEfficiency->GetX()[z] = llEventCuts.at(z);
+  }
+  auto c0 = new TCanvas();
+  grMcClusterEfficiency->Draw();
+
   // figure out some multiplet sizes
-  
+
   std::vector<TGraph*> grs(numSizeGroups, NULL);
-  std::vector<TGraph*> gr2s(numSizeGroups, NULL);  
-  
+  std::vector<TGraph*> gr2s(numSizeGroups, NULL);
+
   for(auto& gr : grs){
     static int i = -1;
     i++;
@@ -77,8 +112,17 @@ void drawClusters(TFile* f){
   for(int llCutInd=0; llCutInd < clusterTrees.size(); llCutInd++){    
     auto t = clusterTrees.at(llCutInd);
     /// @todo delete the -1 here!
+
+    int numDataEventsInClusterTree = 0;
+    for(int entry=0; entry < t->GetEntries(); entry++){
+      t->GetEntry(entry);
+      // if(cluster->numDataEvents != 1){
+	numDataEventsInClusterTree += cluster->numDataEvents;
+      // }
+    }
+    std::cout << t->GetName() << "\t" <<  numDataEventsInClusterTree << "\t" << nEvents << std::endl;
     
-    for(int i=0; i < numSizeGroups-1; i++){
+    for(int i=0; i < numSizeGroups; i++){
       t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
@@ -94,7 +138,7 @@ void drawClusters(TFile* f){
 	  // cout << entry << "\t" << cluster->numDataEvents << endl;
 	}
       }
-      std::cout << llCutInd << "\t" << i << "\t" << totalEvents << std::endl;
+      // std::cout << llCutInd << "\t" << i << "\t" << totalEvents << std::endl;
       // for(int entry=0; entry < nClusters; entry++){
       // 	t->GetEntry(entry);
       // 	cout << cluster->numDataEvents << endl;
@@ -102,12 +146,12 @@ void drawClusters(TFile* f){
       
       
       t->GetEntry(0);
-      
+
       grs[i]->SetPoint(llCutInd, cluster->llEventCut, nClusters);
-      gr2s[i]->SetPoint(llCutInd, cluster->llEventCut, totalEvents);      
+      gr2s[i]->SetPoint(llCutInd, cluster->llEventCut, totalEvents);
 
       maxN = nClusters >  maxN ? nClusters : maxN;
-      
+
     }
   }
 

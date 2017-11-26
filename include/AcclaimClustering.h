@@ -45,6 +45,8 @@ namespace Acclaim{
     template <class T>
     Bool_t inSandbox(const T& t){
       return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
+      // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
+      // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
     }
 
     /**
@@ -216,22 +218,27 @@ namespace Acclaim{
       void resetClusters();
       Double_t getSumOfMcWeights();
       void initKDTree();
-      Double_t dMin(const Event& event1, const Event& event2);
-      Double_t dSum(const Event& event1, const Event& event2);
-      Double_t dAsym(const Event& event1, const Event& event2);
+
+      Double_t dMin(const Event* event1, const Event* event2);
+      Double_t dSum(const Event* event1, const Event* event2);
+      Double_t dAsym(const Event* event1, const Event* event2);
+      Double_t dFit(const Event* event1, const Event* event2);
+
       void testTriangleInequality();
       void testAngleFindingSpeed();
       Int_t removeLargeBasesNearMcMurdo();
 
-      void doEventEventClustering();      
-      void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
+      void doEventEventClustering();
+      void doMcEventClustering();
+      void doMcBaseClustering();
+      void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, bool mc,  double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
-      Double_t dFit(const Event& event1, const Event& event2);
+
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
       std::vector<Double_t> fFitEastings;  /// Where the fitter found the potential source could come from
@@ -259,6 +266,7 @@ namespace Acclaim{
       std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;	/// Histograms of events clustered to non-base clusters
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       TH2DAntarctica* hEvents;
+      TH2DAntarctica* hMcEvents;
       bool fDebug;
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
