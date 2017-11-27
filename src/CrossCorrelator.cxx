@@ -307,7 +307,7 @@ void Acclaim::CrossCorrelator::fillCombosToUse(){
 
 
 Double_t Acclaim::CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol,
-								   Int_t combo, Double_t deltaT){
+									    Int_t combo, Double_t deltaT) const{
 
   Int_t offsetLow = floor(deltaT/correlationDeltaT);
 
@@ -331,11 +331,20 @@ Double_t Acclaim::CrossCorrelator::getInterpolatedUpsampledCorrelationValue(Anit
 }
 
 
+Double_t Acclaim::CrossCorrelator::getTimeOfMaximumUpsampledCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const{
+  Int_t combo = comboIndices[ant1][ant2];
+  if(combo < 0){
+    return -999;
+  }
+  Int_t maxSamp = TMath::LocMax(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
+  maxSamp = maxSamp > numSamplesUpsampled/2 ? maxSamp - numSamplesUpsampled : maxSamp;
+  return maxSamp*correlationDeltaT;
+}
 
 
 
 TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
-							Int_t ant1, Int_t ant2){
+								 Int_t ant1, Int_t ant2) const {
   // Primarily for debugging, put cross correlations in a TGraph
 
   Int_t combo = comboIndices[ant1][ant2];
@@ -344,7 +353,7 @@ TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps,
   }
 
   Double_t graphDt = correlationDeltaT;
-  Double_t* corrPtr = crossCorrelationsUpsampled[pol][combo];
+  const Double_t* corrPtr = crossCorrelationsUpsampled[pol][combo];
   if(numSamps != numSamplesUpsampled){
     numSamps = numSamples;
     graphDt = nominalSamplingDeltaT;
@@ -381,12 +390,12 @@ TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraphWorker(Int_t numSamps,
   return gr;
 }
 
-TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
+TGraph* Acclaim::CrossCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const {
   // Primarily for debugging, put cross correlations in a TGraph
   return getCrossCorrelationGraphWorker(numSamples, pol, ant1, ant2);
 }
 
-TGraph* Acclaim::CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2){
+TGraph* Acclaim::CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const {
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
 
