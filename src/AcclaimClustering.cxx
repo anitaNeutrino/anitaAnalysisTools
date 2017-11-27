@@ -110,7 +110,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(){
   usefulPat = UsefulAdu5Pat(&pat);
   usefulPat.setInterpSurfaceAboveGeoid(true);
   usefulPat.setSurfaceCloseEnoughInter(1e-3);
-  usefulPat.setMaxLoopIterations(100);
+  usefulPat.setMaxLoopIterations(500); // make this arbitrarily large since it only happens once
   const double maxThetaAdjust = 8*TMath::DegToRad();
   usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
   if(latitude < -90){
@@ -1158,8 +1158,6 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummar
 
 
 
-// void Acclaim::Clustering::LogLikelihoodMethod::doKnownBaseClustering(double nonDefaultLLCut){
-
 void Acclaim::Clustering::LogLikelihoodMethod::forEachEventFindClosestKnownBase(int z){
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
@@ -1167,10 +1165,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::forEachEventFindClosestKnownBase(
     for(UInt_t clusterInd=0; clusterInd < clusters.at(z).size(); clusterInd++){
       Cluster& cluster = clusters.at(z).at(clusterInd);
 
-      Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);      
+      Double_t distM = event.usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
       if(distM < default_horizon_distance){ // are we even close?
 
-	Double_t ll = getAngDistSqEventCluster(event, cluster);
+	Double_t ll = event.logLikelihoodFromPoint(cluster, true);
 
 	if(ll <= event.nearestKnownBaseLogLikelihood){
 	  event.nearestKnownBaseLogLikelihood = ll;
@@ -1183,6 +1181,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::forEachEventFindClosestKnownBase(
 
 
 
+
+/** 
+ * Puts an entry in each of the cluster[z] vectors for each of the known bases
+ */
 void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 
   std::cout << "Info in " << __PRETTY_FUNCTION__ << ": Initializing base list..." << std::endl;
@@ -1195,7 +1197,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
       clusters.at(z).push_back(Cluster(base, clusters.at(z).size()));
       clusters.at(z).back().llEventCutInd = z;
       clusters.at(z).back().llEventCut = llEventCuts.at(z);
-      // std::cout << clusters.at(z).back().numDataEvents << std::endl;
     }
   }
 }
@@ -1380,7 +1381,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
     Int_t numReadIn = 0;
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-    bool useSandbox = true;
+    bool useSandbox = false; //true;
     // bool notUsingSandbox = TString(summaryGlob).Contains("wais");    
 
     ProgressBar p(n);
@@ -2283,7 +2284,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   readInSummaries(dataGlob);
   readInSummaries(mcGlob);  
   initializeBaseList();
-  // forEachEventFindClosestKnownBase(0);
+
+  forEachEventFindClosestKnownBase();
 
   bool fRemoveLargeBasesNearMcMurdo = true;
   if(fRemoveLargeBasesNearMcMurdo){
