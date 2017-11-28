@@ -33,6 +33,7 @@ ClassImp(Acclaim::AnalysisCuts::HigherPeakHilbertAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::HigherImpulsivityMeasureAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::LowerFracPowerWindowGradientAfterDedispersion);
 ClassImp(Acclaim::AnalysisCuts::FisherScoreAboveThreshold);
+ClassImp(Acclaim::AnalysisCuts::NonZeroDenominators);
 ClassImp(Acclaim::AnalysisCuts::DoesNotPointToKnownMovingSource);
 
 
@@ -315,6 +316,8 @@ int Acclaim::AnalysisCuts::NonZeroStokesI::apply(const AnitaEventSummary* sum, A
   handleDefaults(sum, pol, peakInd);  
   return (sum->deconvolved[pol][peakInd].I > 0);
 }
+
+
 
 
 
@@ -644,6 +647,26 @@ int Acclaim::AnalysisCuts::FisherScoreAboveThreshold::apply(const AnitaEventSumm
   fs += -0.224413*sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient();
 
   return (fs > fThreshold);
+}
+
+
+
+
+/**
+ * Ratios which appear in variables used for analysis cuts with a zero denominator will cause the cut optimizer to fail.
+ * This cut checks that the relevent variables are non-zero.
+ * They are only a few events, but I need to remove them...
+ *
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ *
+ * @return 1 if true, 0 if false
+ */
+int Acclaim::AnalysisCuts::NonZeroDenominators::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const
+{
+  handleDefaults(sum, pol, peakInd);
+  return (sum->deconvolved_filtered[pol][peakInd].fracPowerWindowGradient() != 0 && sum->coherent_filtered[pol][peakInd].impulsivityMeasure != 0);
 }
 
 

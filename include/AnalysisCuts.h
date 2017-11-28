@@ -373,6 +373,17 @@ namespace Acclaim
       ClassDef(LowerFracPowerWindowGradientAfterDedispersion, 0);
     };
 
+    /**
+     * @class NonZeroDenominators
+     * @brief Checks that variables which appear in denominators are non-zero
+     */
+    class NonZeroDenominators : public AnalysisCut {
+    public:
+      NonZeroDenominators() : AnalysisCut() {;}
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const;
+      ClassDef(NonZeroDenominators, 0);
+    };
+
 
     // /**
     //  * @class DedispersedFracPowerWindowGradientBelowThreshold
@@ -455,6 +466,7 @@ namespace Acclaim
     const AcceptableHardwareAngle acceptableHardwareAngle;
     const HigherPeakHilbertAfterDedispersion higherPeakHilbertAfterDedispersion;
     const HigherImpulsivityMeasureAfterDedispersion higherImpulsivityMeasureAfterDedispersion;
+    const NonZeroDenominators nonZeroDenominators;
     const LowerFracPowerWindowGradientAfterDedispersion lowerFracPowerWindowGradientAfterDedispersion;
     const FisherScoreAboveThreshold fisherScoreAboveThreshold;
     const DoesNotPointToKnownMovingSource doesNotPointToKnownMovingSource;

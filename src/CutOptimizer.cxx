@@ -519,11 +519,15 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
     ss.Process(&ct);
   }
 
+  TString theRootPwd = gDirectory->GetPath();
   TFile* signalFile = TFile::Open("/tmp/signalCuts.root");
   fSignalTree = (TTree*) signalFile->Get("signalCuts");
+  std::cout << "signalTree has " << fSignalTree->GetEntries() << std::endl;
 
   TFile* backgroundFile = TFile::Open("/tmp/backgroundCuts.root");
   fBackgroundTree = (TTree*) backgroundFile->Get("backgroundCuts");
+  std::cout << "backgroundTree has " << fBackgroundTree->GetEntries() << std::endl;
+  gDirectory->cd(theRootPwd);
 
 }
 
