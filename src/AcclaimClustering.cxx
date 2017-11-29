@@ -66,12 +66,10 @@ void Acclaim::Clustering::getAngularResolution(const AnitaEventSummary* sum, Ani
  * @param sigma_phi the calculated phi resolution (degrees)
  */
 void Acclaim::Clustering::getAngularResolution(double x, double& sigma_theta, double& sigma_phi){
-
   sigma_phi = exp(ResolutionModel::phiParams[0]*x + ResolutionModel::phiParams[1]) + ResolutionModel::phiParams[2];
-
   sigma_theta = exp(ResolutionModel::thetaParams[0]*x + ResolutionModel::thetaParams[1]) + ResolutionModel::thetaParams[2];
-
 }
+
 
 TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
   TCanvas* c1 = new TCanvas();
@@ -2282,9 +2280,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
-  readInSummaries(mcGlob);  
-  initializeBaseList();
+  readInSummaries(mcGlob);
 
+  initializeBaseList();
   forEachEventFindClosestKnownBase();
 
   bool fRemoveLargeBasesNearMcMurdo = true;

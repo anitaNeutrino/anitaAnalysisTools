@@ -1,11 +1,20 @@
 const int numSizeGroups = 7;
 const TCut sizeGroupCuts[numSizeGroups] = {"numDataEvents >= 100",
-				     "numDataEvents >= 10 && numDataEvents < 100",
-				     "numDataEvents >= 5 && numDataEvents < 10",
-				     "numDataEvents == 4",
-				     "numDataEvents == 3",
-				     "numDataEvents == 2",
-				     "numDataEvents == 1"};
+					   "numDataEvents >= 10 && numDataEvents < 100",
+					   "numDataEvents >= 5 && numDataEvents < 10",
+					   "numDataEvents == 4",
+					   "numDataEvents == 3",
+					   "numDataEvents == 2",
+					   "numDataEvents == 1"};
+
+const EColor sizeGroupColors[numSizeGroups]  = {kRed, kOrange, kYellow, kGreen, kCyan, kBlue, kMagenta};
+const EMarkerStyle sizeGroupMarkers[numSizeGroups] = {kFullCircle,kFullSquare,kFullTriangleUp,kFullTriangleDown,
+						      kOpenCircle,kOpenSquare,kOpenTriangleUp};//,kOpenDiamond};
+// kOpenCross,
+// kFullStar,
+// kOpenStar
+const int numK = 2;
+const TCut knownCuts[numK] = {"knownBase", "!knownBase"};
 
 void printClusterMultiplicityTable(TFile* f){
   TTree* t = (TTree*) f->Get("clusterTree");
@@ -42,7 +51,7 @@ void printClusterMultiplicityTable(TFile* f){
 
 
 void drawClusters(TFile* f){
-
+  gStyle->SetPalette(kRainBow);
   TTree* eventTree = (TTree*)f->Get("eventTree");
   TTree* mcEventTree = (TTree*)f->Get("mcEventTree");  
   
@@ -103,9 +112,11 @@ void drawClusters(TFile* f){
     static int i = -1;
     i++;
     gr = new TGraph();
-    gr->SetTitle(sizeGroupCuts[i].GetTitle());
+    TString shortTitle = sizeGroupCuts[i].GetTitle();
+    shortTitle.ReplaceAll("numDataEvents", "n");
+    gr->SetTitle(shortTitle);
     gr2s[i] = new TGraph();
-    gr2s[i]->SetTitle(sizeGroupCuts[i].GetTitle());
+    gr2s[i]->SetTitle(shortTitle);
   }
   
   double maxN = 0;
@@ -123,7 +134,7 @@ void drawClusters(TFile* f){
     std::cout << t->GetName() << "\t" <<  numDataEventsInClusterTree << "\t" << nEvents << std::endl;
     
     for(int i=0; i < numSizeGroups; i++){
-      t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
+      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
 
@@ -157,7 +168,9 @@ void drawClusters(TFile* f){
 
   // TMultiGraph* grMG = new TMultiGraph();
   auto c1 = new TCanvas();
+  double c1Max = 1.1*maxN;
   auto c2 = new TCanvas();
+  
 
   for(auto& gr : grs){
     static int i = -1;
@@ -165,11 +178,12 @@ void drawClusters(TFile* f){
 
     if(gr->GetN()> 0){
       c1->cd();
-      gr->SetLineColor(i+1);
       gr->SetFillColor(0);      
+      gr->SetMaximum(c1Max);
       gr->SetMinimum(0);
-      gr->SetMaximum(2*maxN);
-      TString opt = i == 0 ? "al" : "lsame";
+      TString opt = i == 0 ? "alp plc pmc" : "lp same plc pmc";
+      // gr->SetLineColor(sizeGroupColors[i]);
+      gr->SetMarkerStyle(sizeGroupMarkers[i]);      
       gr->Draw(opt);
 
     
@@ -178,9 +192,10 @@ void drawClusters(TFile* f){
       gr->GetYaxis()->SetTitle("Cluster multiplicity");
 
       c2->cd();
-      gr2s[i]->SetLineColor(i+1);
-      gr2s[i]->SetFillColor(0);      
-      gr2s[i]->SetMinimum(0.1);
+      // gr2s[i]->SetLineColor(i+1);
+      gr2s[i]->SetFillColor(0);
+      gr2s[i]->SetMarkerStyle(sizeGroupMarkers[i]);
+      gr2s[i]->SetMinimum(0.9);
       gr2s[i]->SetMaximum(1e6);
       gr2s[i]->Draw(opt);
       gr2s[i]->GetXaxis()->SetTitle("Log-Likelihood cut value");
@@ -189,12 +204,41 @@ void drawClusters(TFile* f){
     
     // grMG->Add(gr);
   }
-  c1->BuildLegend();
+  auto l1 = c1->BuildLegend();
+
   c1->SetLogx(1);
-  c1->SetLogy(1);  
+  // c1->SetLogy(1);  
   c2->BuildLegend();
   c2->SetLogx(1);
-  c2->SetLogy(1);  
+  c2->SetLogy(1);
+
+  grs[0]->SetTitle("Cluster multiplicity; -2 log (L); Number of clusters");
+  c1->cd();
+  TGraph* grMc1 = (TGraph*) grMcClusterEfficiency->Clone("grMcClusterEfficiencyScaled1");
+  grMc1->Draw("lsame");
+  grMc1->SetLineStyle(2);
+  grMc1->SetLineWidth(2);
+  grMc1->SetLineColor(kRed);
+  for(int i=0; i < grMc1->GetN(); i++){
+    grMc1->GetY()[i]*=c1Max;
+  }
+  c1->SetTicky(0);
+  TGaxis *axis = new TGaxis(grs[0]->GetXaxis()->GetXmax(),0,
+			    grs[0]->GetXaxis()->GetXmax(),c1Max,
+			    0, 1,510,"+L");
+  TLegendEntry* l1e = l1->AddEntry(grMc1, "MC clustering efficiency", "l");
+  l1e->SetTextColor(kRed);
+  axis->SetTitle("MC clustering efficiency");
+  axis->SetTextColor(kRed);
+  axis->SetLineColor(kRed);
+  axis->SetLabelColor(kRed);
+  axis->Draw();
+  
+  
+  
+  
+  
+  gr2s[0]->SetTitle("Cluster multiplicity; -2 log (L); Number of events in clusters");
   
 }
 
