@@ -279,8 +279,8 @@ void Acclaim::CutOptimizer::FisherResult::parseNode(TXMLEngine* xml, XMLNodePoin
  * @param save_trees is a boolian which determines whether or not the intermediate TTrees fed into TMVA.
  */
 Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgroundGlob, bool doAllPeaks, bool save_trees)
-    : fSignalGlob(signalGlob), fBackgroundGlob(backgroundGlob ? backgroundGlob : ""),
-      fSignalTree(NULL), fBackgroundTree(NULL), fRejectedSignalTree(NULL), fRejectedBackgroundTree(NULL), fDoAllPeaks(doAllPeaks), fSaveTrees(save_trees)
+  : fSignalGlob(signalGlob), fBackgroundGlob(backgroundGlob ? backgroundGlob : ""), fOutFile(NULL),
+    fSignalTree(NULL), fBackgroundTree(NULL), fRejectedSignalTree(NULL), fRejectedBackgroundTree(NULL), fDoAllPeaks(doAllPeaks), fSaveTrees(save_trees)
 {
 
 }
@@ -524,9 +524,36 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
   fSignalTree = (TTree*) signalFile->Get("signalCuts");
   std::cout << "signalTree has " << fSignalTree->GetEntries() << std::endl;
 
+  if(fOutFile){
+    fOutFile->cd();
+    TTree* tempTree = (TTree*) fSignalTree->CloneTree();
+    tempTree->Write();
+    delete tempTree;
+    TTree* acTree = (TTree*) signalFile->Get("analysisCutTree");
+    fOutFile->cd();
+    TTree* tempTree2 = (TTree*) acTree->CloneTree();
+    tempTree2->SetName("signalAnalysisCutTree");
+    tempTree2->Write();
+    delete tempTree2;
+  }
+  
   TFile* backgroundFile = TFile::Open("/tmp/backgroundCuts.root");
   fBackgroundTree = (TTree*) backgroundFile->Get("backgroundCuts");
   std::cout << "backgroundTree has " << fBackgroundTree->GetEntries() << std::endl;
+
+  if(fOutFile){
+    fOutFile->cd();
+    TTree* tempTree = (TTree*) fBackgroundTree->CloneTree();
+    tempTree->Write();
+    delete tempTree;
+    TTree* acTree = (TTree*) backgroundFile->Get("analysisCutTree");
+    fOutFile->cd();
+    TTree* tempTree2 = (TTree*) acTree->CloneTree();
+    tempTree2->SetName("backgroundAnalysisCutTree");    
+    tempTree2->Write();
+    delete tempTree2;
+  }
+  
   gDirectory->cd(theRootPwd);
 
 }
@@ -813,7 +840,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
     std::cerr << "This class requires ROOT version at least 6.10, you only have " << ROOT_VERSION_CODE << std::endl;
 #else
   
-    TFile* fOutFile = makeOutputFile(fileName);
+    fOutFile = makeOutputFile(fileName);
 
     // generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);
     generateSignalAndBackgroundTreesProof(signalSelection, backgroundSelection, formulaStrings);
@@ -831,6 +858,10 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCu
                 << "Can't optimize! Aborting!" << std::endl;
       return;
     }
+    
+    // fOutFile->cd();
+    // fSignalTree->Write();
+    // fBackgroundTree->Write();
 
     TString factoryName = "ThermalCut";
     TString option = debug ? "V" : "silent";

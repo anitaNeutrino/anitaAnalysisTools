@@ -84,6 +84,7 @@ namespace Acclaim{
     TString fSignalGlob;
     TString fBackgroundGlob;
     TString fOutFileName;
+    TFile* fOutFile;
     TTree* fSignalTree;
     TTree* fBackgroundTree;
     TTree* fRejectedSignalTree;

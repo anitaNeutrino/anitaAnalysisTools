@@ -44,7 +44,8 @@ namespace Acclaim{
     }
     template <class T>
     Bool_t inSandbox(const T& t){
-      return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
+      return t.longitude >= -0 && t.longitude < 90;
+      // return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
       // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
       // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
     }

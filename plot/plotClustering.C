@@ -134,7 +134,7 @@ void drawClusters(TFile* f){
     std::cout << t->GetName() << "\t" <<  numDataEventsInClusterTree << "\t" << nEvents << std::endl;
     
     for(int i=0; i < numSizeGroups; i++){
-      t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
+      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
 

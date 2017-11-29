@@ -35,20 +35,15 @@ int main(int argc, char* argv[]){
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
 
-  const int nGen = 5;
-  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::smallDeltaRough,
+  const int nGen = 8;
+  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isRfTrigger,
+							   &AnalysisCuts::isGood,
+							   &AnalysisCuts::smallDeltaRough,
   							   &AnalysisCuts::goodGPS,
   							   &AnalysisCuts::realSNR,
-							   &AnalysisCuts::nonZeroDenominators,
-  							   &AnalysisCuts::isRfTrigger};
-  // const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isGood,
-  // 							   &AnalysisCuts::smallDeltaRough,
-  // 							   &AnalysisCuts::goodGPS,
-  // 							   &AnalysisCuts::realSNR,
-  // 							   &AnalysisCuts::isRfTrigger};
-  // 							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
-  // 							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion};
-
+   							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
+   							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
+							   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(preThermalCuts[i]);
     backgroundSelection.push_back(preThermalCuts[i]);
@@ -76,13 +71,16 @@ int main(int argc, char* argv[]){
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().dPhiSun())", true)); // delta phi sun
   treeFormulas.push_back(CutOptimizer::FormulaString("TMath::Abs(sum.trainingPeak().minAbsHwAngle())", true));
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherentFiltered().fracPowerWindowGradient()/sum.trainingDeconvolvedFiltered().fracPowerWindowGradient()", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherentFiltered().fracPowerWindowGradient()/sum.trainingDeconvolvedFiltered().fracPowerWindowGradient()", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().fracPowerWindowGradient()", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherentFiltered().fracPowerWindowGradient()", true));
 
-  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().impulsivityMeasure/sum.trainingCoherentFiltered().impulsivityMeasure()", true));
+  // treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().impulsivityMeasure/sum.trainingCoherentFiltered().impulsivityMeasure()", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().impulsivityMeasure", true));
   treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingCoherentFiltered().impulsivityMeasure", true));
+
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingPeak().value", true));
+  treeFormulas.push_back(CutOptimizer::FormulaString("sum.trainingDeconvolvedFiltered().peakHilbert", true));
 
 // | HigherPeakHilbertAfterDedispersion            | 31381542 | 34802404 |  651135 |
 // | HigherImpulsivityMeasureAfterDedispersion     | 31358120 | 78339170 |  646652 |
@@ -90,14 +88,13 @@ int main(int argc, char* argv[]){
 // | FisherScoreAboveThreshold                     |   646643 |   954698 | 8298605 |
 
   
+  // std::vector<const AnalysisCuts::AnalysisCut*> waisCuts;
+  // waisCuts.push_back(&AnalysisCuts::isTaggedAsWaisPulser);
+  // co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
 
-  std::vector<const AnalysisCuts::AnalysisCut*> waisCuts;
-  waisCuts.push_back(&AnalysisCuts::isTaggedAsWaisPulser);
-  co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
-
-  std::vector<const AnalysisCuts::AnalysisCut*> selectingBlastsCuts;
-  selectingBlastsCuts.push_back(&AnalysisCuts::isTaggedAsPayloadBlast);
-  co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
+  // std::vector<const AnalysisCuts::AnalysisCut*> selectingBlastsCuts;
+  // selectingBlastsCuts.push_back(&AnalysisCuts::isTaggedAsPayloadBlast);
+  // co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
   
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);
 

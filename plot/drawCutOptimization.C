@@ -11,7 +11,8 @@
 #include "RootTools.h"
 #include "TH2D.h"
 
-const int numPreFisherEvents = 78e6; //8298605; //77e6;
+const int numPreFisherEvents = 3e6; //8298605; //77e6;
+// const int numPreFisherEvents = 78e6; //8298605; //77e6;
 const double numDesiredBackground = 0.5; //ish
 const double backgroundAcceptance = numDesiredBackground/numPreFisherEvents;
 double fisherCutVal = 999;
@@ -174,7 +175,7 @@ void drawFisherPlot(TFile* f){
 
   // TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
   // const double nPassPreThermalCut = backgroundTree->GetEntries();
-  std::cerr << "There were " << nPassPreThermalCut << " events passing pre-thermal cuts" << std::endl;
+  // std::cerr << "There were " << nPassPreThermalCut << " events passing pre-thermal cuts" << std::endl;
   std::cerr << fitStart << "\t" << fitEnd << std::endl;
   // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
   TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x - [3]*x*x*x + [4]*x*x*x*x)", xLow, xHigh);

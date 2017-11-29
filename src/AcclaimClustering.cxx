@@ -2279,9 +2279,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
-  readInSummaries(mcGlob);  
+  readInSummaries(mcGlob);
+
   initializeBaseList();
-  // forEachEventFindClosestKnownBase(0);
+  forEachEventFindClosestKnownBase(0);
 
   bool fRemoveLargeBasesNearMcMurdo = true;
   if(fRemoveLargeBasesNearMcMurdo){
