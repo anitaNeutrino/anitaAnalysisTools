@@ -82,6 +82,7 @@ class AnalysisReco : public TObject {
   static void setTriggerInfoFromPeakPhi(const RawAnitaHeader* header, AnitaPol::AnitaPol_t pol,
                                         Int_t peakPhiSector, AnitaEventSummary::PointingHypothesis& peak);
   static void fillChannelInfo(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum);
+  void fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum);
 
   const std::vector<int>& phiSectorToCoherentAnts(int peakPhiSector){return phiSectorToAnts[peakPhiSector];}
   void wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs);
@@ -133,6 +134,8 @@ class AnalysisReco : public TObject {
   ANALYSIS_SETTING(Double_t, CoherentDtNs);
   ANALYSIS_SETTING(Double_t, SlopeFitStartFreqGHz);
   ANALYSIS_SETTING(Double_t, SlopeFitEndFreqGHz);
+  ANALYSIS_SETTING(Double_t, MeanPowerFlagLowFreqGHz);
+  ANALYSIS_SETTING(Double_t, MeanPowerFlagHighFreqGHz);
   ANALYSIS_SETTING(Int_t, FillChannelInfo);
   ANALYSIS_SETTING(Int_t, FillSpectrumInfo);
   ANALYSIS_SETTING(Int_t, FillUnfiltered);

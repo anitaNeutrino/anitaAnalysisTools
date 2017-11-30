@@ -20,7 +20,7 @@
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
       fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0),
-      fUseProof(useProof), fProof(NULL) {
+      fUseProof(useProof), fProof(NULL), fBuiltIndex(false) {
   
   init();
 }
@@ -152,6 +152,24 @@ Double_t Acclaim::SummarySet::getTotalSize() const{
 Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
   return fChain->GetEntry(entry);
 }
+
+
+/** 
+ * Loads eventNumber from the fChain, access with summary()
+ * 
+ * @param eventNumber is the entry to load
+ * 
+ * @return the number of bytes read (same as TChain::GetEntry(entry))
+ */
+Long64_t Acclaim::SummarySet::getEvent(UInt_t eventNumber){
+  if(!fBuiltIndex){
+    fChain->BuildIndex("eventNumber");
+    fBuiltIndex = true;
+  }
+  return fChain->GetEntryWithIndex(eventNumber);
+}
+
+
 
 
 

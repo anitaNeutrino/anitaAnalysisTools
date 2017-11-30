@@ -33,6 +33,7 @@ namespace Acclaim
     AnitaEventSummary * summary() const { return fSum;}
 
     Long64_t getEntry(Long64_t entry);
+    Long64_t getEvent(UInt_t eventNumber);
     Long64_t first(){return getEntry(0);}
     Long64_t last(){return fN > 0 ? getEntry(fN-1) : -1;}
 
@@ -98,7 +99,8 @@ namespace Acclaim
     UInt_t fLastTime;			/// The realTime of the last entry in the summary chain, useful for booking histograms
     UInt_t fLastEventNumber;		/// The eventNumber of the last entry in the summary chain, useful for booking histograms
     Bool_t fUseProof;			/// Switch on the Parallel ROOT Facility, for speedy histogram plotting
-    TProof* fProof;			/// Pointer to the PROOF session  
+    TProof* fProof;			/// Pointer to the PROOF session
+    Bool_t fBuiltIndex;                 /// Built chain index?
   };
 }
 

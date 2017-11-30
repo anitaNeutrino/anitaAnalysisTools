@@ -505,6 +505,42 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 
 
 
+void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum){
+
+  const AnitaEventSummary::PointingHypothesis peak = sum->highestPeak();
+  const AnitaPol::AnitaPol_t pol = sum->highestPol();
+  Double_t phiRough = peak.phi - peak.dphi_rough;
+  Int_t phiSector = InterferometricMap::getPhiSectorFromPhiRough(phiRough);
+  const std::vector<Int_t>& theAnts = phiSectorToCoherentAnts(phiSector);
+
+  for(int ring=0; ring <= AnitaRing::kNotARing; ring++){
+    sum->flags.meanPower[ring] = 0;
+  }
+
+  // std::cout << theAnts.size() << "\t" << phiSector << std::endl;
+
+  for(UInt_t antInd=0; antInd < theAnts.size(); antInd++){
+    Int_t ant = theAnts[antInd];
+    Int_t ring = ant/NUM_PHI;
+
+    const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
+    const TGraphAligned* grPow = wf->power();
+    const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
+
+    for(int i=0; i < grPow->GetN(); i++){
+      const double f_GHz = grPow->GetX()[i];
+      // std::cout << f_GHz << ", " << df_GHz << "\t" << fMeanPowerFlagLowFreqGHz << "\t" << fMeanPowerFlagHighFreqGHz << std::endl;
+      if(f_GHz >= fMeanPowerFlagLowFreqGHz && f_GHz < fMeanPowerFlagHighFreqGHz){
+	sum->flags.meanPower[ring] += grPow->GetY()[i]*df_GHz;
+	// std::cout << grPow->GetY()[i]*df_GHz;
+      }
+      // std::cout << std::endl;
+    }
+  }
+}
+
+
+
 
 /** 
  * Sets the phi depended trigger stuff in the peak
@@ -598,6 +634,8 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fFillChannelInfo = 0;
   fFillSpectrumInfo = 0;
   fFillUnfiltered = 0;
+  fMeanPowerFlagLowFreqGHz = 0;
+  fMeanPowerFlagHighFreqGHz = 0;
   
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
@@ -614,6 +652,8 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fEvMin = NULL;
   fEvMinDeco = NULL;
   fEvDeco = NULL;
+
+  chooseAntennasForCoherentlySumming(fCoherentDeltaPhi);
   
 }
 

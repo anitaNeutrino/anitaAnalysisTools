@@ -1147,3 +1147,10 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getEdgeBoxGraph()
   return grEdgeBox;
   
 }
+
+
+
+Int_t Acclaim::InterferometricMap::getPhiSectorFromPhiRough(double phiRough){
+  Double_t phi0 = getBin0PhiDeg();
+  return static_cast<Int_t>((phiRough - phi0)/PHI_RANGE);
+}

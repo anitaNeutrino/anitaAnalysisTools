@@ -158,6 +158,7 @@ class InterferometricMap : public TH2D, public GuiParent {
   static const std::vector<Double_t>& getFineBinEdgesPhi();
   static Double_t getBin0PhiDeg();
   static Double_t getPhiSectorCenterPhiDeg(int phi);
+  static Int_t getPhiSectorFromPhiRough(double phiRough);
 
  private:
   static const TDecompSVD& getSVD();
