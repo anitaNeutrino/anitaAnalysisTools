@@ -238,7 +238,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
     const TGraphAligned* grPow = coherentWave->power();
 
     if(numGoodFreqBins > grPow->GetN()){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun << ", eventNumber " << fCurrentEventNumber
+		<< ", expected at least " << numGoodFreqBins << " frequency bins, only got " << grPow->GetN()
 		<< ". Did you downsample the coherently summed waveform?" << std::endl;
       numGoodFreqBins = grPow->GetN();
     }
@@ -293,7 +294,9 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
     }
 
     if(gradDenominator <= 0){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run "
+		<< fCurrentRun << ", eventNumber " << fCurrentEventNumber
+		<< ", got gradDenominator = " << gradDenominator << " will get NaN or Inf..." << std::endl;
     }
     info.spectrumSlope = gradNumerator/gradDenominator;
     info.spectrumIntercept = mean_pow_db - info.spectrumSlope*mean_f;
@@ -368,6 +371,8 @@ void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, Anita
 
 void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSummary * sum, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
 
+  fCurrentEventNumber = fEv->getHeader()->eventNumber;
+  fCurrentRun = fEv->getHeader()->run;
 
   // spawn a CrossCorrelator if we need one
   if(!fCrossCorr){
@@ -598,7 +603,8 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fFillChannelInfo = 0;
   fFillSpectrumInfo = 0;
   fFillUnfiltered = 0;
-  
+  fCurrentEventNumber = 0;
+  fCurrentRun = 0;
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
   if(!fMinFilter){
@@ -785,7 +791,9 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
 
   InterferometricMap* h = fineMaps[pol][peakInd];
   if(h==NULL){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unable to find fineMap with pol " << pol 
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run "
+	      << fCurrentRun << ", eventNumber " << fCurrentEventNumber
+	      << ", unable to find fineMap with pol " << pol
               << " for peakInd = " << peakInd << " about to return NULL." << std::endl;
   }
   fineMaps[pol][peakInd] = NULL;
@@ -1036,7 +1044,8 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
       biggest = ant;
     }
     else if(largestPeakToPeak <= 0){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the waveform max/min aren't sensible?" << std::endl;
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run "
+		<< fCurrentRun << ", eventNumber " << fCurrentEventNumber << ", the waveform max/min aren't sensible?" << std::endl;
       std::cerr << vMax << "\t" << vMin << "\t" << tMax << "\t" << tMin << std::endl;
     }
   }
@@ -1086,11 +1095,14 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
 size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
   size_t s = waves.size();
   if(s < 1){    
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", nothing to sum." << std::endl;
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun
+	      << ", eventNumber " << fCurrentEventNumber << ", nothing to sum." << std::endl;
   }  
   else if(s != dts.size()){    
     const char* action = dts.size() < waves.size() ? "padding" : "trimming";
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", unequal vectors (waves.size() = " << waves.size() << ", dts.size() = " << dts.size() << ")\n"
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun
+	      << ", eventNumber " << fCurrentEventNumber << ", unequal vectors (waves.size() = "
+	      << waves.size() << ", dts.size() = " << dts.size() << ")\n"
               << action << " dts..." << std::endl;
     while(s != dts.size()){
       if(dts.size() < s){
@@ -1162,8 +1174,8 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
         double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
         if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
 	  numNan++;
-          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " ignoring sample" << std::endl;
-          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned " << y << " for time " << tPlusDt << " for sample " << samp << " of " << grCoherent->GetN() << std::endl;
+          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun << ", eventNumber " << fCurrentEventNumber << " interpolation returned " << y << " ignoring sample" << std::endl;
+          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun << ", eventNumber " << fCurrentEventNumber << " interpolation returned " << y << " for time " << tPlusDt << " for sample " << samp << " of " << grCoherent->GetN() << std::endl;
         }
         else{
           grCoherent->GetY()[samp] += y;
@@ -1172,7 +1184,8 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     }
 
     if(numNan > 0){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " interpolation returned "
+      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run "
+		<< fCurrentRun << ", eventNumber " << fCurrentEventNumber << " interpolation returned "
 		<< numNan << " NaNs for wave " << i << std::endl;
     }
   }

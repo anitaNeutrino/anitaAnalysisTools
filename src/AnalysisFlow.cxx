@@ -563,18 +563,33 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
 /** 
  * Does the main analysis loop for all specified events
  */
-void Acclaim::AnalysisFlow::doAnalysis(){
+void Acclaim::AnalysisFlow::doAnalysis(Long64_t startAtThisEntry){
 
   fLastEventConsidered = 0;
 
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << ", doing run " << fRun
+	    << " from entry " << fFirstEntry << " to " << fLastEntry << std::endl;
+
+  if(startAtThisEntry >= fFirstEntry && startAtThisEntry < fLastEntry){
+    std::cout << "Info in " << __PRETTY_FUNCTION__ << ", starting at entry " << startAtThisEntry
+	      << " instead of entry " << fFirstEntry << std::endl;
+    fFirstEntry = startAtThisEntry;
+  }
+  else if(startAtThisEntry!=-1){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " got requested start entry "
+	      << startAtThisEntry << ", which lies outside range " << fFirstEntry
+	      << " to " << fLastEntry << ". Ignoring request!" << std::endl;
+  }
+
   const Long64_t numEntries = fLastEntry-fFirstEntry;
   ProgressBar p(numEntries);
-  
-  for(Long64_t entry = fFirstEntry; entry < fLastEntry; entry++){
+  for(Long64_t entryInd = 0; entryInd < numEntries; entryInd++){
+    Long64_t entry = fFirstEntry + entryInd;
     AnitaEventSummary* sum = doEntry(entry);
+
     if(sum){
       delete sum;
     }
-    p.inc(entry, numEntries);
+    p.inc(entryInd, numEntries);
   }
 }

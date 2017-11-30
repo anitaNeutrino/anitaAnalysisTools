@@ -53,7 +53,7 @@ class AnalysisFlow : public TObject{
     // AnalysisFlow(const char* outFileBaseName, int run, selection selection, FilterStrategy* filterStrat=NULL, AnitaDataset::BlindingStrategy blindStrat=AnitaDataset::kDefault, int theDivision=0, int theNumDivisions=1) __attribute__((deprecated));
     ~AnalysisFlow();
 
-    void doAnalysis();
+    void doAnalysis(Long64_t startAtThisEntry=-1);
     AnitaEventSummary* doEntry(Long64_t entry);
     AnitaEventSummary* doEvent(UInt_t eventNumber);
     AnalysisReco* getReco(){return fReco;}

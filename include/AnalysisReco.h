@@ -62,9 +62,9 @@ class AnalysisReco : public TObject {
   void insertPhotogrammetryGeometry();
 
   // Internal copies of the antenna positions from AnitaGeomTool
-  std::vector<Double_t> rArray[AnitaPol::kNotAPol]; //!< Vector of antenna radial positions
-  std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; //!< Vector of antenna azimuth positions
-  std::vector<Double_t> zArray[AnitaPol::kNotAPol]; //!< Vector of antenna heights
+  std::vector<Double_t> rArray[AnitaPol::kNotAPol]; /// Vector of antenna radial positions
+  std::vector<Double_t> phiArrayDeg[AnitaPol::kNotAPol]; /// Vector of antenna azimuth positions
+  std::vector<Double_t> zArray[AnitaPol::kNotAPol]; /// Vector of antenna heights
   
   AnalysisWaveform* getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
   AnalysisWaveform* getCoherent(AnitaPol::AnitaPol_t pol, Int_t peakInd=0, bool xPol=false);
@@ -104,15 +104,15 @@ class AnalysisReco : public TObject {
   AnalysisWaveform* wfCoherent[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
   AnalysisWaveform* wfDeconvolved[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
   AnalysisWaveform* wfDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol][AnitaPol::kNotAPol];
-  std::vector<Int_t> phiSectorToAnts[NUM_PHI]; //!< Vector of antennas to use in coherently summed waveforms
+  std::vector<Int_t> phiSectorToAnts[NUM_PHI]; /// Vector of antennas to use in coherently summed waveforms
   
   AnitaEventSummary summary;
   CrossCorrelator* fCrossCorr;
   bool spawnedCrossCorrelator;
   InterferometryCache dtCache;
   
-  FilterStrategy* fMinFilter; //!< Would be no filters, but for ANITA-3 data we need an ALFA filter
-  FilterStrategy* fMinDecoFilter; //!< Minimum filter + deconvolution filter
+  FilterStrategy* fMinFilter; /// Would be no filters, but for ANITA-3 data we need an ALFA filter
+  FilterStrategy* fMinDecoFilter; /// Minimum filter + deconvolution filter
 
   FilteredAnitaEvent* fEvMin;
   FilteredAnitaEvent* fEvMinDeco;
@@ -120,6 +120,9 @@ class AnalysisReco : public TObject {
 
   void chooseAntennasForCoherentlySumming(int coherentDeltaPhi);
   void nicelyDeleteInternalFilteredEvents();
+
+  UInt_t fCurrentEventNumber; /// Assigned at the start of process(), helpful for printing warning/info messages
+  Int_t fCurrentRun; /// Assigned at the start of process(), helpful for printing warning/info messages
   
   ANALYSIS_SETTING(Int_t, Debug);
   ANALYSIS_SETTING(Int_t, CoherentDeltaPhi);
