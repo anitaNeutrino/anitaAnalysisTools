@@ -108,7 +108,12 @@ namespace Acclaim{
       void resetClusteringNumbers();
       void deleteArrays();
       void setNThresholds(int n);
+
       double logLikelihoodFromPoint(double sourceLon, double sourceLat, double sourceAlt, bool addOverHorizonPenalty=false) const;
+      template<class T>
+      double logLikelihoodFromPoint(const T& point, bool addOverHorizonPenalty=false) const {
+	return logLikelihoodFromPoint(point.longitude, point.latitude, point.altitude, addOverHorizonPenalty);
+      }
 
       virtual ~Event();
       ClassDef(Event, 9)
@@ -211,9 +216,8 @@ namespace Acclaim{
       Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
-      // void doKnownBaseClustering(double forcedLLCut = -1);
       void setInitialBaseClusters();
-      void forEachEventFindClosestKnownBase(int z);
+      void forEachEventFindClosestKnownBase(int z=0);
       void writeAllGraphsAndHists();
       void makeSummaryTrees();
       void resetClusters();
