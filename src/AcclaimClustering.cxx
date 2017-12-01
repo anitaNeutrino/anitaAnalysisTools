@@ -268,8 +268,8 @@ Acclaim::Clustering::Event::Event(const Event& event){
     dThetaCluster[z] = event.dThetaCluster[z];
     dPhiCluster[z] = event.dPhiCluster[z];
   }
-  nearestNeighbourEventNumber = event.nearestNeighbourEventNumber;
-  nearestNeighbourLogLikelihood = event.nearestNeighbourLogLikelihood;
+  // nearestNeighbourEventNumber = event.nearestNeighbourEventNumber;
+  // nearestNeighbourLogLikelihood = event.nearestNeighbourLogLikelihood;
   eventEventClustering = event.eventEventClustering;
   nearestKnownBaseLogLikelihood = event.nearestKnownBaseLogLikelihood;
   nearestKnownBaseCluster = event.nearestKnownBaseCluster;
@@ -343,8 +343,8 @@ void Acclaim::Clustering::Event::resetClusteringNumbers(){
     dThetaCluster[z] = -999;
     dPhiCluster[z] = -999;    
   }
-  nearestNeighbourEventNumber = 0;
-  nearestNeighbourLogLikelihood = DBL_MAX;
+  // nearestNeighbourEventNumber = 0;
+  // nearestNeighbourLogLikelihood = DBL_MAX;
   // nearestKnownBaseLogLikelihood = DBL_MAX;
   // nearestKnownBaseCluster = -1;
   eventEventClustering = true;
@@ -462,8 +462,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   grTestMinimizerValue = NULL;  
   llClusterCut = 100;
 
-  llEventCuts.push_back(10);
-  llEventCuts.push_back(20);
+  // llEventCuts.push_back(10);
+  // llEventCuts.push_back(20);
   llEventCuts.push_back(40);
   llEventCuts.push_back(70);
 
@@ -491,6 +491,10 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   llEventCuts.push_back(2500);
   llEventCuts.push_back(3000);
   llEventCuts.push_back(4000);
+
+  for(UInt_t z=0; z < llEventCuts.size(); z++){
+    clusters.push_back(std::vector<Cluster>());
+  }
 
   // both above horizon; good improvement; actual test
   fTestEvent1 = 55510391; // 61156660; //61033430;
@@ -530,73 +534,15 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
 
 
 
-TH2DAntarctica* Acclaim::Clustering::LogLikelihoodMethod::makeUnevenlyBinnedEventHistogram(){
-
-  if(!hClusters){
-    hClusters = new TH2DAntarctica("hClusters", "hClusters");
-  }
-
-  std::vector<Double_t> x(hClusters->GetNbinsX()+1);
-  for(int i=0; i <= hClusters->GetNbinsX(); i++){
-    x.at(i) = hClusters->GetXaxis()->GetBinUpEdge(i);
-  }
-  std::vector<Double_t> y(hClusters->GetNbinsX()+1);
-  for(int i=0; i <= hClusters->GetNbinsY(); i++){
-    y.at(i) = hClusters->GetYaxis()->GetBinUpEdge(i);
-  }
-
-  // now uneven-ize the bins
-  double easting, northing;
-  RampdemReader::LonLatToEastingNorthing(167, -78, easting, northing);
-  const double fineBinWidthEasting = 5e2;
-  const double fineBinWidthNorthing = 5e2;
-  const double fineRangeEasting = 700e3;
-  const double fineRangeNorthing = 700e3;
-  for(double binEasting = easting-fineRangeEasting; binEasting <= easting + fineRangeEasting; binEasting += fineBinWidthEasting){
-    x.push_back(binEasting);
-  }
-  for(double binNorthing = northing-fineRangeNorthing; binNorthing <= northing+fineRangeNorthing; binNorthing += fineBinWidthNorthing){
-    y.push_back(binNorthing);
-  }
-
-  std::sort(x.begin(), x.end());
-  std::sort(y.begin(), y.end());
-
-  if(hEvents){
-    delete hEvents;
-  }
-  hEvents = new TH2DAntarctica("hEvents", "hEvents", x, y);
-  return hEvents;
-}
 
 Acclaim::Clustering::LogLikelihoodMethod::~LogLikelihoodMethod(){
 
   // delete non-NULL antarctic histograms, tgraphs
 
-  for(UInt_t i=0; i < hBaseClusteredEvents.size(); i++){
-    if(hBaseClusteredEvents.at(i)){
-      delete hBaseClusteredEvents.at(i);
-      hBaseClusteredEvents.at(i) = NULL;
-    }
-  }
-  for(UInt_t i=0; i < grBaseClusterCenters.size(); i++){
-    if(grBaseClusterCenters.at(i)){
-      delete grBaseClusterCenters.at(i);
-      grBaseClusterCenters.at(i) = NULL;
-    }
-  }
-
-  for(UInt_t i=0; i < hNonBaseClusteredEvents.size(); i++){
-    if(hNonBaseClusteredEvents.at(i)){
-      delete hNonBaseClusteredEvents.at(i);
-      hNonBaseClusteredEvents.at(i) = NULL;
-    }
-  }
-
-  for(UInt_t i=0; i < grNonBaseClusterCenters.size(); i++){
-    if(grNonBaseClusterCenters.at(i)){
-      delete grNonBaseClusterCenters.at(i);
-      grNonBaseClusterCenters.at(i)= NULL;
+  for(UInt_t i=0; i < hUnclusteredEvents.size(); i++){
+    if(hUnclusteredEvents.at(i)){
+      delete hUnclusteredEvents.at(i);
+      hUnclusteredEvents.at(i) = NULL;
     }
   }
 
@@ -896,169 +842,82 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getSumOfMcWeights(){
 
 
 
-Int_t Acclaim::Clustering::LogLikelihoodMethod::histogramUnclusteredEvents(Int_t& globalMaxBin){
+/** 
+ * Here we find the next event to cluster.
+ * This is done by histogramming unclustered events 
+ * (unclustered with the smallest log likelihood threshold).
+ * 
+ * @return pointer to the next event to process, NULL when there are no remaining events
+ */
+Acclaim::Clustering::Event* Acclaim::Clustering::LogLikelihoodMethod::nextEvent(){
 
-  TString name = TString::Format("hNonBaseClusteredEvents_%lu", clusters.at(0).size());
+  // to do this, first we histogram all the events which aren't clustered (using the smallest log-likelihood threshold).
+  TString name = TString::Format("hUnclusteredEvents_%lu", hUnclusteredEvents.size());
   TH2DAntarctica* h = new TH2DAntarctica(name, name);
-  hNonBaseClusteredEvents.push_back(h);
+  hUnclusteredEvents.push_back(h);
 
-  // find unclustered events
-  for(int i=0; i < (Int_t) events.size(); i++){
-    Event& event = events.at(i);
+  h->setAcceptStereographic(true); // already have easting/northing, don't do unnecessary work
+
+  // find unclustered events (using the smallest log-likelihood threshold)
+  UInt_t numUnclustered=0;
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    Event& event = events.at(eventInd);
     if(event.cluster[0] < 0){
-      event.antarcticaHistBin = h->Fill(event.longitude, event.latitude);
+      event.antarcticaHistBin = h->Fill(event.easting, event.northing);
+      numUnclustered++;
     }
   }
-  globalMaxBin = hNonBaseClusteredEvents.back()->GetMaximumBin();
+  h->setAcceptStereographic(false);
 
-  Int_t maxEventsInBin = hNonBaseClusteredEvents.back()->GetBinContent(globalMaxBin);
+  Event* nextEvent = NULL;
 
-  return maxEventsInBin;
-
-}
-
-
-
-void Acclaim::Clustering::LogLikelihoodMethod::recursivelyAddClustersFromData(Int_t minBinContent){
-
-  static int lastIntegral = 0;
-
-  // in case this hasn't been done already
-  if(doneBaseClusterAssignment==false){
-    // doKnownBaseClustering();
+  // then we're done...
+  if(numUnclustered==0){
+    delete h;
+    hUnclusteredEvents.pop_back();
   }
+  else{
 
-  if(numCallsToRecursive==0){
-    std::cout << "Beginning " << __PRETTY_FUNCTION__ << std::endl;
-  }
+    // here we pick the next event...
+    // which is the one closest to the mean position
+    // of all the unclustered events in this bin...
+    // hopefully this will be close to the centre of
+    // all unclustered events.
+    
+    Int_t globalMaxBin = h->GetMaximumBin();
+    Int_t numUnclusteredInBin = h->GetBinContent(globalMaxBin);
 
-  numCallsToRecursive++; // for debugging
+    Double_t meanEasting=0;
+    Double_t meanNorthing=0;
 
-  Int_t globalMaxBin;
-  Int_t maxBinVal = histogramUnclusteredEvents(globalMaxBin);
-
-  if(fDebug){
-    std::cout << "maxBinVal = " << maxBinVal << std::endl;
-  }
-
-  Int_t counter=0;
-  Cluster tempCluster;
-  for(UInt_t i=0; i < events.size(); i++){
-    const Event& event = events.at(i);
-    if(event.cluster[0] < 0 && event.antarcticaHistBin==globalMaxBin){
-      for(int dim=0; dim < nDim; dim++){
-	tempCluster.centre[dim] += event.centre[dim];
-      }
-      if(fDebug){
-	std::cout << "The " << counter << "th event is at "
-		  << "lon = " << event.longitude
-		  << ", lat = " << event.latitude
-		  << ", alt = " << event.altitude
-		  << std::endl;
-      }
-      counter++;
-    }
-  }
-  if(fDebug){
-    std::cout << "There are " << counter << " events in the max bin " << std::endl;
-  }
-
-  if(counter!=maxBinVal){
-    std::cerr << "Now what?" << std::endl;
-  }
-
-  if(counter > minBinContent){ // then we create a new cluster and do the whole thing again
-
-    for(int dim=0; dim < nDim; dim++){
-      tempCluster.centre[dim] /= counter;
-    }
-
-    AnitaGeomTool* geom = AnitaGeomTool::Instance();
-    geom->getLatLonAltFromCartesian(tempCluster.centre,
-				    tempCluster.latitude,
-				    tempCluster.longitude,
-				    tempCluster.altitude);
-
-    // now loop over events and pick point closest to mean position of events
-    Int_t eventIndClosestToBinMean = -1;
-    Double_t minDSq = DBL_MAX;
     for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
       const Event& event = events.at(eventInd);
-      if(event.cluster[0] < 0 && event.antarcticaHistBin==globalMaxBin){
-	Double_t dSq = getDistSqEventCluster(event, tempCluster);
-	if(dSq < minDSq){
-	  minDSq = dSq;
-	  eventIndClosestToBinMean = eventInd;
+      if(event.antarcticaHistBin==globalMaxBin && event.cluster[0] < 0){
+	meanEasting += event.easting;
+	meanNorthing += event.northing;
+      }
+    }
+    meanNorthing/=numUnclusteredInBin;
+    meanEasting/=numUnclusteredInBin;
+
+    Double_t bestSurfaceSeparationSquared = DBL_MAX;
+    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+      Event& event = events.at(eventInd);
+      if(event.antarcticaHistBin==globalMaxBin && event.cluster[0] < 0){
+	Double_t dE = event.easting - meanEasting;
+	Double_t dN = event.northing - meanNorthing;
+	Double_t surfaceSeparationSquared = dE*dE + dN*dN;
+
+	if(surfaceSeparationSquared < bestSurfaceSeparationSquared){
+	  bestSurfaceSeparationSquared = surfaceSeparationSquared;
+	  nextEvent = &event;
 	}
       }
     }
-
-    Cluster seedCluster(clusters.at(0).size());
-    const Event& seedEvent = events.at(eventIndClosestToBinMean);
-    seedCluster.latitude = seedEvent.latitude;
-    seedCluster.longitude = seedEvent.longitude;
-    seedCluster.altitude = seedEvent.altitude;
-    seedCluster.seedEvent = eventIndClosestToBinMean;
-
-    seedCluster.antarcticaHistBin = hClusters->Fill(seedCluster.longitude, seedCluster.latitude);
-
-    clusters.at(0).push_back(seedCluster);
-
-    if(fDebug){
-      std::cout << "The average cluster location is "
-		<< "lon = " << tempCluster.longitude
-		<< ", lat = " << tempCluster.latitude
-		<< ", alt = " << tempCluster.altitude
-		<< std::endl;
-      std::cout << "The seed cluster location is "
-		<< "lon = " << seedCluster.longitude
-		<< ", lat = " << seedCluster.latitude
-		<< ", alt = " << seedCluster.altitude
-		<< std::endl;
-
-    }
-
-    const int isMC = 0;
-    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-      assignSingleEventToCloserCluster(eventInd, isMC, clusters.at(0).back(), 0);
-    }
-
-    const int numDataEventsUnclustered = hNonBaseClusteredEvents.back()->Integral();
-    std::cout << "After " << numCallsToRecursive << ", " << numDataEventsUnclustered << " events are unclustered" << std::endl;
-    if(numDataEventsUnclustered > 0 && lastIntegral != numDataEventsUnclustered){
-      lastIntegral = hNonBaseClusteredEvents.back()->Integral();
-
-      TGraphAntarctica* gr = new TGraphAntarctica(1, &seedCluster.longitude, &seedCluster.latitude);
-      TString name = TString::Format("grClusterCenters%lu", clusters.at(0).size()-1);
-      TString title = TString::Format("Cluster %lu", clusters.at(0).size()-1);
-      gr->SetNameTitle(name, title);
-      grNonBaseClusterCenters.push_back(gr);
-
-      recursivelyAddClustersFromData(minBinContent); // recursion
-    }
-    else{
-      delete hNonBaseClusteredEvents.back();
-      hNonBaseClusteredEvents.pop_back();
-
-      if(numDataEventsUnclustered > minBinContent && !fDebug){ // one last time through with debug on..
-	fDebug = true;
-	recursivelyAddClustersFromData(minBinContent); // recursion
-	delete hNonBaseClusteredEvents.back();
-	hNonBaseClusteredEvents.pop_back();
-	clusters.at(0).pop_back();
-      }
-
-      if(fDebug){
-	fDebug = false;
-      }
-
-      if(numDataEventsUnclustered > 0){
-	std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", the clustering algorithm didn't manage to cluster "
-		  << numDataEventsUnclustered << " events" << std::endl;
-      }
-    }
   }
+  return nextEvent;
 }
+
 
 
 
@@ -1189,7 +1048,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::initializeBaseList(){
 
   // make a copy for each llCut, just to ease the book keeping later
   for(UInt_t z=0; z < llEventCuts.size(); z++){
-    clusters.push_back(std::vector<Cluster>(0));
     for(UInt_t clusterInd=0; clusterInd < BaseList::getNumBases(); clusterInd++){
       const BaseList::base& base = BaseList::getBase(clusterInd);
       clusters.at(z).push_back(Cluster(base, clusters.at(z).size()));
@@ -1379,7 +1237,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
     Int_t numReadIn = 0;
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-    bool useSandbox = false; //true;
+    bool useSandbox = false;
     // bool notUsingSandbox = TString(summaryGlob).Contains("wais");    
 
     ProgressBar p(n);
@@ -1435,24 +1293,9 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
 
 void Acclaim::Clustering::LogLikelihoodMethod::writeAllGraphsAndHists(){
-  for(UInt_t eventInd=0; eventInd < hBaseClusteredEvents.size(); eventInd++){
-    if(hBaseClusteredEvents.at(eventInd)){
-      hBaseClusteredEvents.at(eventInd)->Write();
-    }
-  }
-  for(UInt_t eventInd=0; eventInd < grBaseClusterCenters.size(); eventInd++){
-    if(grBaseClusterCenters.at(eventInd)){
-      grBaseClusterCenters.at(eventInd)->Write();
-    }
-  }
-  for(UInt_t eventInd=0; eventInd < hNonBaseClusteredEvents.size(); eventInd++){
-    if(hNonBaseClusteredEvents.at(eventInd)){
-      hNonBaseClusteredEvents.at(eventInd)->Write();
-    }
-  }
-  for(UInt_t eventInd=0; eventInd < grNonBaseClusterCenters.size(); eventInd++){
-    if(grNonBaseClusterCenters.at(eventInd)){
-      grNonBaseClusterCenters.at(eventInd)->Write();
+  for(UInt_t eventInd=0; eventInd < hUnclusteredEvents.size(); eventInd++){
+    if(hUnclusteredEvents.at(eventInd)){
+      hUnclusteredEvents.at(eventInd)->Write();
     }
   }
 }
@@ -1740,8 +1583,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   int mt = OpenMP::getMaxThreads();
   std::vector<std::vector<Int_t> > nearbyEventsParallel(mt);
   std::vector<std::vector<Double_t> > nearbyEventLLsParallel(mt);
-  std::vector<Double_t > event1MinLL(mt, DBL_MAX);
-  std::vector<UInt_t> event1MinLLEvent2EventNumber(mt, 0);
+  // std::vector<Double_t > event1MinLL(mt, DBL_MAX);
+  // std::vector<UInt_t> event1MinLLEvent2EventNumber(mt, 0);
 #pragma omp parallel for
   // for(UInt_t i=0; i < nearbyEventIndsEastingNorthingTrimmed.size(); i++){
   //   int eventInd2 = nearbyEventIndsEastingNorthingTrimmed[i];
@@ -1756,50 +1599,54 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
     if(event->eventNumber != event2.eventNumber){
       if(event2.eventEventClustering){
 
-	double ll = dMin(event, &event2);
+	// are we in the same cluster for even the smallest threshold?
+	if(event->cluster[0] != event2.cluster[0] && event2.cluster[0] >= 0){
 
-	if(fDebug){
-	  std::cout << "pair " << eventInd << ", " << eventInd2 << ", initial ll = " << ll;
-	}
-	if(ll > llFitThreshold){
-	  ll = dFit(event, &event2);
+	  double ll = dMin(event, &event2);
+
 	  if(fDebug){
-	    std::cout << ", fitted ll = " << ll;
+	    std::cout << "pair " << eventInd << ", " << eventInd2 << ", initial ll = " << ll;
 	  }
-	}
+	  if(ll > llFitThreshold){
+	    ll = dFit(event, &event2);
+	    if(fDebug){
+	      std::cout << ", fitted ll = " << ll;
+	    }
+	  }
 
-	// if(event->eventNumber==914599568){
-	//   std::cout << t << "\t" << event2.eventNumber << "\t" << ll << std::endl;
-	// }
+	  // if(event->eventNumber==914599568){
+	  //   std::cout << t << "\t" << event2.eventNumber << "\t" << ll << std::endl;
+	  // }
 	
 
-	// is this event's nearest neighbour?
-	if(ll < event1MinLL.at(t)){
-	  event1MinLL.at(t) = ll;
-	  event1MinLLEvent2EventNumber.at(t) = event2.eventNumber;
-	  // std::cout << "new min in thread " << t << ",  ll = " << ll << std::endl;
-	}
+	  // // is this event's nearest neighbour?
+	  // if(ll < event1MinLL.at(t)){
+	  //   event1MinLL.at(t) = ll;
+	  //   event1MinLLEvent2EventNumber.at(t) = event2.eventNumber;
+	  //   // std::cout << "new min in thread " << t << ",  ll = " << ll << std::endl;
+	  // }
 
-	// is this event2's nearest neighbour?
-	if(!mc && ll < event2.nearestNeighbourLogLikelihood){
-	  event2.nearestNeighbourLogLikelihood = ll;
-	  event2.nearestNeighbourEventNumber = event->eventNumber;
-	}
+	  // is this event2's nearest neighbour?
+	  // if(!mc && ll < event2.nearestNeighbourLogLikelihood){
+	  //   event2.nearestNeighbourLogLikelihood = ll;
+	  //   event2.nearestNeighbourEventNumber = event->eventNumber;
+	  // }
 
-	if(ll <= llRange){
-	  // nearbyEvents.push_back(eventInd2);
-	  // nearbyEventLLs.push_back(ll);
-	  nearbyEventsLoop.push_back(eventInd2);
-	  nearbyEventLLsLoop.push_back(ll);
+	  if(ll <= llRange){
+	    // nearbyEvents.push_back(eventInd2);
+	    // nearbyEventLLs.push_back(ll);
+	    nearbyEventsLoop.push_back(eventInd2);
+	    nearbyEventLLsLoop.push_back(ll);
 
-	  // std::cout << t << "\t" << eventInd2 << "\t" << ll << nearbyEventsLoop.size() << std::endl;
+	    // std::cout << t << "\t" << eventInd2 << "\t" << ll << nearbyEventsLoop.size() << std::endl;
 	  
-	  if(fDebug){
-	    std::cerr  << ", added eventInd2 = " << eventInd2 << " with LL " << ll << " to nearbyEvents"  << std::endl;
+	    if(fDebug){
+	      std::cerr  << ", added eventInd2 = " << eventInd2 << " with LL " << ll << " to nearbyEvents"  << std::endl;
+	    }
 	  }
-	}
-	if(fDebug){
-	  std::cout << "\n";
+	  if(fDebug){
+	    std::cout << "\n";
+	  }
 	}
       }
     }
@@ -1820,10 +1667,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
     }
   }
 
-  int minI = OpenMP::isEnabled ? TMath::LocMin(event1MinLL.size(), &event1MinLL[0]) : 0;
+  // int minI = OpenMP::isEnabled ? TMath::LocMin(event1MinLL.size(), &event1MinLL[0]) : 0;
   // std::cout << "OpenMP::isEnabled = "  << OpenMP::isEnabled << ", minI = " <<  minI << std::endl;
-  event->nearestNeighbourLogLikelihood = event1MinLL.at(minI);
-  event->nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
+  // event->nearestNeighbourLogLikelihood = event1MinLL.at(minI);
+  // event->nearestNeighbourEventNumber = event1MinLLEvent2EventNumber.at(minI);
 
   // std::cout << "nearestNeighbourLogLikelihood = "  << event->nearestNeighbourLogLikelihood << ", nearestNeighbourEventNumber = " << event->nearestNeighbourEventNumber << std::endl;
   // std::cout << "after loop, eventInd = " << eventInd << ", nearbyEvents.size() = " << nearbyEvents.size() << ", nnEN ="
@@ -2058,78 +1905,189 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
   std::cout << __PRETTY_FUNCTION__ << std::endl;
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
 
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    std::cout << eventInd << "\t" << events.at(eventInd).cluster[0] << std::endl;
+  }
+  
   ProgressBar p(events.size());
-  for(UInt_t event1Ind=0; event1Ind < events.size(); event1Ind++){
-    Event& event1 = events.at(event1Ind);
-    if(event1.eventEventClustering){
 
-      // look up nearby events
+  UInt_t numEventsProcessed = 0;
+  Event* event1 = nextEvent();
+  while(event1 && numEventsProcessed < events.size()){
+
+    std::cout << event1->eventNumber << "\t" << event1->cluster[0] << std::endl;
+    
+    if(event1->eventEventClustering){
+
+      // first look up events close by in Easting/Northing
+      std::vector<Int_t> nearbyEventIndsEastingNorthing;
+      double lookup[2] = {event1->easting, event1->northing};
+      fKDTree->FindInRange(lookup, default_range_easting_northing, nearbyEventIndsEastingNorthing);	
+
+
+
+      // move swapping global error level stuff out of parallelized loop
+      // this used to be around the minimizer->minimize() 
+      fROOTgErrorIgnoreLevel = gErrorIgnoreLevel;
+      gErrorIgnoreLevel = 1001;
+
+
+
+      // For storing the indices/and log likelihoods of the second events
       std::vector<Int_t> event2Inds;
       std::vector<Double_t> eventEventLLs;
-      nearbyEvents(event1Ind, event2Inds, eventEventLLs, false, llNearbyThreshold, llFitThreshold);
 
-// #pragma omp parallel for
+
+      std::cerr << event2Inds.size() << "t" << eventEventLLs.size() << "\t" << nearbyEventIndsEastingNorthing.size() << std::endl;
+      
+      // For parallization
+      int mt = OpenMP::getMaxThreads();
+      std::vector<std::vector<Int_t> > event2IndsParallel(mt);
+      std::vector<std::vector<Double_t> > eventEventLLsParallel(mt);
+#pragma omp parallel for
+
+
+
+      // Loop over nearby events in easting/northing
+      for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
+	int event2Ind = nearbyEventIndsEastingNorthing[i];
+
+
+	int t = OpenMP::thread();
+
+	// If not threaded, then put directly into event2Inds, otherwise parallel store.
+	std::vector<Int_t>& nearbyEventsLoop = OpenMP::isEnabled ? event2IndsParallel.at(t) : event2Inds;
+	std::vector<Double_t>& eventEventLLsLoop = OpenMP::isEnabled ? eventEventLLsParallel.at(t) : eventEventLLs;
+	Event& event2 = events.at(event2Ind);
+
+
+	// Here we try and save time..
+	// 
+	if(event1->eventNumber != event2.eventNumber && event2.eventEventClustering){
+	  // are we in the same cluster for even the smallest threshold?
+	  if(event1->cluster[0] != event2.cluster[0] || event2.cluster[0] >= 0){
+	    double ll = dMin(event1, &event2);
+	    if(ll > llFitThreshold){
+	      ll = dFit(event1, &event2);
+	    }
+	    if(ll <= llNearbyThreshold){
+	      nearbyEventsLoop.push_back(event2Ind);
+	      eventEventLLsLoop.push_back(ll);
+	    }
+	  }
+	}
+      }
+
+      // This block just combines the results of the threads...
+      // blahBlahParallel -> blahBlah
+      if(OpenMP::isEnabled){
+	UInt_t numEvents = event2Inds.size();
+	for(UInt_t t=0; t < event2IndsParallel.size(); t++){
+	  numEvents += event2IndsParallel.at(t).size();
+	}
+	event2Inds.reserve(numEvents);
+	eventEventLLs.reserve(numEvents);
+
+	for(UInt_t t=0; t < event2IndsParallel.size(); t++){
+	  event2Inds.insert(event2Inds.end(), event2IndsParallel.at(t).begin(), event2IndsParallel.at(t).end());
+	  eventEventLLs.insert(eventEventLLs.end(), eventEventLLsParallel.at(t).begin(), eventEventLLsParallel.at(t).end());
+	}
+      }
+
+
+      // Set fitter error level back to default
+      gErrorIgnoreLevel = fROOTgErrorIgnoreLevel;
+
+
+
+      // Now look at the clusters of the matched events (for each threshold)
       for(UInt_t z=0; z < llEventCuts.size(); z++){
 
 	std::vector<Int_t> matchedClusters;
+	if(event1->cluster[z] >= 0){
+	  if(z==0){	    
+	    std::cerr << "I think this is false for all events and this statement should never get printed..." << std::endl;
+	    std::cerr << event1->eventNumber << "\t" << event1->cluster[0] << std::endl;
+	  }
+	  matchedClusters.push_back(event1->cluster[z]);
+	}
 
-	// Get clusters of matched events
 	for(UInt_t i=0; i < event2Inds.size(); i++){
 	  UInt_t event2Ind = event2Inds.at(i);
 	  Event& event2 = events.at(event2Ind);
+
+	  // within the cut value? and is the other event already associated with a cluster?
 	  if(eventEventLLs.at(i) <= llEventCuts.at(z) && event2.cluster[z] >= 0){
+	    // and if that other cluster isn't already in the list, then add it
 	    if(std::find(matchedClusters.begin(), matchedClusters.end(), event2.cluster[z])==matchedClusters.end()){
 	      matchedClusters.push_back(event2.cluster[z]);
-	      // std::cout << event1Ind << "\t" << event2Ind << "\t" << z << "\t" << event2.cluster[z]  << std::endl;
 	    }
 	  }
 	}
 
-	// If none of the events are in a cluster, then add a new culster at event1
+	// If none of the events are in a cluster, then add a new cluster!
 	if(matchedClusters.size()==0){
 
-	  // make a new cluster
-	  Cluster nc(event1, clusters.at(z).size());
+	  // make a new cluster, it's intial position is this event location
+	  // although that will be changed...
+	  Cluster nc(*event1, clusters.at(z).size());
 	  nc.llEventCutInd = z;
 	  nc.llEventCut = llEventCuts.at(z);
 	  clusters.at(z).push_back(nc);
 	  matchedClusters.push_back(nc.index);
 	}
 
+	// If the list of matched clusters is greater than one
+	// then we're going to merge clusters!
+	// But what to call the new cluster?
+	// We'll label it with the smallest index...
 	Int_t thisCluster = TMath::MinElement(matchedClusters.size(), &matchedClusters[0]);
 
-	// if(z==0){
-	//   std::cout << clusters[z][80].numDataEvents << std::endl;
-	// }
 
-	// mark event1 as in the minCluster
-	Int_t oldCluster1Ind = event1.cluster[z];
+	// Mark event1 as in the minCluster
+	Int_t oldCluster1Ind = event1->cluster[z];
 	if(oldCluster1Ind >= 0){
+	  if(z==0){
+	    std::cerr << "Do we ever get here?" << std::endl;
+	  }
 	  clusters.at(z).at(oldCluster1Ind).numDataEvents--;
 	}
-	event1.cluster[z] = thisCluster;
+	event1->cluster[z] = thisCluster;
 	clusters.at(z).at(thisCluster).numDataEvents++;
 
-	// loop through all matched events, and put them in the appropriate cluster
+	std::cerr << event2Inds.size() << std::endl;
+	
+	// Now reassign all events in the matched clusters to thisCluster
 	for(UInt_t i=0; i < event2Inds.size(); i++){
+
+	  // The only condition is that you're within the cut, close to this event
 	  if(eventEventLLs.at(i) <= llEventCuts.at(z)){
+
 	    Int_t event2Ind = event2Inds.at(i);
 	    Event& event2 = events.at(event2Ind);
 	    Int_t oldCluster2Ind = event2.cluster[z];
-	    if(oldCluster2Ind >= 0){
-	      clusters.at(z).at(oldCluster2Ind).numDataEvents--;
+	    if(oldCluster2Ind!=thisCluster){
+	      if(oldCluster2Ind >= 0){
+		clusters.at(z).at(oldCluster2Ind).numDataEvents--;
+	      }
+	      event2.cluster[z] = thisCluster;
+	      clusters.at(z).at(thisCluster).numDataEvents++;
 	    }
-	    event2.cluster[z] = thisCluster;
-	    clusters.at(z).at(thisCluster).numDataEvents++;
-
-	    // if(z==0 && thisCluster==19){
-	    //   std::cout << event1Ind << "\t" << event2Ind << "\t" << clusters.at(z).at(thisCluster).numDataEvents << std::endl;
-	    // }
 	  }
 	}
       }
     }
-    p.inc(event1Ind);
+
+    numEventsProcessed = 0;
+    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+      if(events.at(eventInd).cluster[0] > -1){
+	numEventsProcessed++;
+      }
+    }
+    
+    p.inc(numEventsProcessed);
+    numEventsProcessed++;
+    event1 = nextEvent();
   }
 }
 
@@ -2160,18 +2118,18 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       nearbyEvents(event1Ind, event2Inds, eventEventLLs, true, llNearbyThreshold, llFitThreshold);
 
 // #pragma omp parallel for
-      for(UInt_t z=0; z < llEventCuts.size(); z++){
-	event1.cluster[z] = -1;
-	for(UInt_t i=0; i < event2Inds.size(); i++){
-	  if(eventEventLLs.at(i) <= event1.nearestNeighbourLogLikelihood &&
-	     eventEventLLs.at(i) <= llEventCuts.at(z)){
-	    Int_t event2Ind = event2Inds.at(i);
-	    const Event& event2 = events.at(event2Ind);
-	    event1.cluster[z] = event2.cluster[z]; // put in same cluster
-	    clusters.at(z).at(event1.cluster[z]).sumMcWeights += event1.weight;
-	  }
-	}
-      }
+    //   for(UInt_t z=0; z < llEventCuts.size(); z++){
+    // 	event1.cluster[z] = -1;
+    // 	for(UInt_t i=0; i < event2Inds.size(); i++){
+    // 	  if(eventEventLLs.at(i) <= event1.nearestNeighbourLogLikelihood &&
+    // 	     eventEventLLs.at(i) <= llEventCuts.at(z)){
+    // 	    Int_t event2Ind = event2Inds.at(i);
+    // 	    const Event& event2 = events.at(event2Ind);
+    // 	    event1.cluster[z] = event2.cluster[z]; // put in same cluster
+    // 	    clusters.at(z).at(event1.cluster[z]).sumMcWeights += event1.weight;
+    // 	  }
+    // 	}
+    //   }
     }
     p.inc(event1Ind);
   }
@@ -2282,31 +2240,31 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   readInSummaries(dataGlob);
   readInSummaries(mcGlob);
 
-  initializeBaseList();
-  forEachEventFindClosestKnownBase();
+  // initializeBaseList();
+  // forEachEventFindClosestKnownBase();
 
-  bool fRemoveLargeBasesNearMcMurdo = true;
-  if(fRemoveLargeBasesNearMcMurdo){
-    int numRemoved = removeLargeBasesNearMcMurdo();
-    std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
-    std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
-  }
+  // bool fRemoveLargeBasesNearMcMurdo = true;
+  // if(fRemoveLargeBasesNearMcMurdo){
+  //   int numRemoved = removeLargeBasesNearMcMurdo();
+  //   std::cout << "Removed " << numRemoved << " events from near McMurdo!" << std::endl;
+  //   std::cout << (int)events.size() - numRemoved << " events remain for pairwise clustering!" << std::endl;
+  // }
 
-  setInitialBaseClusters();
+  // setInitialBaseClusters();
   initKDTree();
   doEventEventClustering();
-  doMcBaseClustering();  
-  doMcEventClustering();
+  // doMcBaseClustering();
+  // doMcEventClustering();
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
   TFile* fOut = oc.makeFile();
 
-  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-    Event& event = events.at(eventInd);
-    event.antarcticaHistBin = hEvents->Fill(event.longitude, event.latitude);
-  }
-  hEvents->Write();
+  // for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+  //   Event& event = events.at(eventInd);
+  //   event.antarcticaHistBin = hEvents->Fill(event.longitude, event.latitude);
+  // }
+  // hEvents->Write();
 
   for(UInt_t eventInd=0; eventInd < mcEvents.size(); eventInd++){
     McEvent& mcEvent = mcEvents.at(eventInd);

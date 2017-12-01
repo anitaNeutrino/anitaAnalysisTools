@@ -44,7 +44,8 @@ namespace Acclaim{
     }
     template <class T>
     Bool_t inSandbox(const T& t){
-      return t.longitude >= -0 && t.longitude < 90;
+      // return t.longitude >= -0 && t.longitude < 90;
+      return t.longitude >= -90 && t.longitude < 90;
       // return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
       // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
       // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
@@ -88,8 +89,6 @@ namespace Acclaim{
       Double_t* dThetaCluster;//[nThresholds]	/// theta distance to cluster
       Double_t* dPhiCluster;//[nThresholds]     /// phi distance to cluster
 
-      UInt_t nearestNeighbourEventNumber;       /// What is the eventNumber of the event am I closest to?
-      Double_t nearestNeighbourLogLikelihood;   /// And what is the log likelihood?
       Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
       Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
       Int_t nearestKnownBaseCluster;            /// How far to the nearest known base?      
@@ -116,7 +115,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 9)
+      ClassDef(Event, 10)
     };
 
 
@@ -221,8 +220,9 @@ namespace Acclaim{
       void writeAllGraphsAndHists();
       void makeSummaryTrees();
       void resetClusters();
-      Double_t getSumOfMcWeights();
+      Double_t getSumOfMcWeights();      
       void initKDTree();
+      Acclaim::Clustering::Event* nextEvent();      
 
       Double_t dMin(const Event* event1, const Event* event2);
       Double_t dSum(const Event* event1, const Event* event2);
@@ -248,7 +248,7 @@ namespace Acclaim{
       UInt_t fTestEvent2; /// For debugging
       std::vector<Double_t> fFitEastings;  /// Where the fitter found the potential source could come from
       std::vector<Double_t> fFitNorthings; /// Where the fitter found the potential source could come from
-      TH2DAntarctica* makeUnevenlyBinnedEventHistogram();
+
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
       // Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
@@ -265,10 +265,9 @@ namespace Acclaim{
       std::vector<Double_t> fEventEastings;
       std::vector<Double_t> fEventNorthings;
 
-      std::vector<TGraphAntarctica*> grBaseClusterCenters;	/// The locations of the bases
-      std::vector<TH2DAntarctica*> hBaseClusteredEvents;	/// Histograms of events clustered to bases
-      std::vector<TGraphAntarctica*> grNonBaseClusterCenters;	/// The locations of the non-base clusters
-      std::vector<TH2DAntarctica*> hNonBaseClusteredEvents;	/// Histograms of events clustered to non-base clusters
+      std::vector<TH2DAntarctica*> hUnclusteredEvents;	/// Histograms of events clustered to non-base clusters
+
+      
       TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
       TH2DAntarctica* hEvents;
       TH2DAntarctica* hMcEvents;
