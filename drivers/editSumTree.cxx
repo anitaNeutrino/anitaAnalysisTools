@@ -27,14 +27,15 @@ int main(int argc, char* argv[]){
   TString inFileBaseName = argv[2];
   int run = atoi(argv[3]);
 
-  TString inGlob = inDir + "/" + inFileBaseName;// + TString::Format("_%d_*.root", run);
-  // TString inGlob = inDir + "/" + inFileBaseName + TString::Format("_%d_*.root", run);  
+  // TString inGlob = inDir + "/" + inFileBaseName;// + TString::Format("_%d_*.root", run);
+  TString inGlob = inDir + "/" + inFileBaseName + TString::Format("_%d_*.root", run);
   SummarySet ss(inGlob);
 
   const Long64_t N = ss.N();
   if(N > 0){    
     // TString outFileName = inFileBaseName + TString::Format("_%d.root", run);
-    TString outFileName = TString::Format("editSumTree_%d.root", run);
+    // TString outFileName = TString::Format("editSumTree_%d.root", run);
+    TString outFileName = TString::Format("%s_%d.root", inFileBaseName.Data(), run);
     TFile* fOut = new TFile(outFileName, "recreate");
     TTree* sumTree = new TTree("sumTree", "sumTree");
     AnitaEventSummary* sum = NULL;
@@ -58,7 +59,8 @@ int main(int argc, char* argv[]){
       AnitaEventSummary* inSum = ss.summary();
       
       // if(std::find(eventNumbers.begin(), eventNumbers.end(), inSum->eventNumber)!=eventNumbers.end()){
-      if(inSum->flags.isPayloadBlast || inSum->flags.pulser > 0){
+      if(true){
+      // if(inSum->flags.isPayloadBlast || inSum->flags.pulser > 0){
 
 
 	if(d && d->getCurrRun() != inSum->run){

@@ -517,15 +517,25 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
     sum->flags.meanPower[ring] = 0;
   }
 
-  // std::cout << theAnts.size() << "\t" << phiSector << std::endl;
+  const int anitaVersion = AnitaVersion::get();
+  std::vector<Int_t>count(AnitaRing::kNotARing, 0);
 
   for(UInt_t antInd=0; antInd < theAnts.size(); antInd++){
     Int_t ant = theAnts[antInd];
     Int_t ring = ant/NUM_PHI;
 
+    // skip ALFA channels/ALFA cross talk
+    if(anitaVersion==3 && pol==AnitaPol::kVertical && ant==7){
+      continue;
+    }
+    if(anitaVersion==3 && pol==AnitaPol::kHorizontal && ant==4){
+      continue;
+    }
+
     const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
     const TGraphAligned* grPow = wf->power();
     const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
+    count[ring]++;
 
     for(int i=0; i < grPow->GetN(); i++){
       const double f_GHz = grPow->GetX()[i];
@@ -537,6 +547,11 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
       // std::cout << std::endl;
     }
   }
+
+  for(int ring=0; ring <= AnitaRing::kNotARing; ring++){
+    sum->flags.meanPower[ring]/=count[ring];
+  }
+
 }
 
 
