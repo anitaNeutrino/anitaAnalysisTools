@@ -210,9 +210,8 @@ namespace Acclaim{
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
+      void readInBaseList();
 
-      void initializeBaseList();
-      Int_t histogramUnclusteredEvents(Int_t& globalMaxBin);
       void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
@@ -233,7 +232,9 @@ namespace Acclaim{
       void testAngleFindingSpeed();
       Int_t removeLargeBasesNearMcMurdo();
 
+      void doBaseEventClustering(Bool_t mc=false);
       void doEventEventClustering();
+
       void doMcEventClustering();
       void doMcBaseClustering();
       void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, bool mc,  double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
