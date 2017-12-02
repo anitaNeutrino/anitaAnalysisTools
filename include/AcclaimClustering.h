@@ -94,7 +94,7 @@ namespace Acclaim{
       Int_t nearestKnownBaseCluster;            /// How far to the nearest known base?      
       Double_t selfLogLikelihood;               /// If the event is above the continent surface, this may be non-zero
 
-      Int_t antarcticaHistBin; //!		/// Which global bin in the TH2DAntarctica?
+      Int_t antarcticaHistBin;  		/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!              /// Only construct this once
       mutable Bool_t fDebug; //!
 
@@ -115,7 +115,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 10)
+      ClassDef(Event, 11)
     };
 
 
