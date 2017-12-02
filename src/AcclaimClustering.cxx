@@ -1601,8 +1601,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents(Int_t eventInd, std:
   // std::vector<Double_t > event1MinLL(mt, DBL_MAX);
   // std::vector<UInt_t> event1MinLLEvent2EventNumber(mt, 0);
 #pragma omp parallel for
-  // for(UInt_t i=0; i < nearbyEventIndsEastingNorthingTrimmed.size(); i++){
-  //   int eventInd2 = nearbyEventIndsEastingNorthingTrimmed[i];
   for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
     int eventInd2 = nearbyEventIndsEastingNorthing[i];
 
@@ -1939,23 +1937,37 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
     if(event1->eventEventClustering){
 
       // first look up events close by in Easting/Northing
-      std::vector<Int_t> nearbyEventIndsEastingNorthing;
+      std::vector<Int_t> nearbyEventsInds;
       double lookup[2] = {event1->easting, event1->northing};
-      fKDTree->FindInRange(lookup, default_range_easting_northing, nearbyEventIndsEastingNorthing);	
+      fKDTree->FindInRange(lookup, default_range_easting_northing, nearbyEventsInds);
 
-
+      // could try and speed things up by sorting based on easting/northing separation?
+      // the output of FindInRange is not sorted by distance, so let's do that here...
+      // std::vector<std::pair<Double_t, Int_t> > nearbyEventsIndsSorted;
+      // nearbyEventsIndsSorted.reserve(nearbyEventsInds.size());
+      // for(UInt_t i=0; i < nearbyEventsInds.size(); i++){
+      // 	int event2Ind = nearbyEventsInds[i];
+      // 	const Event& event2 = events.at(event2Ind);
+      // 	Double_t dE = event2.easting - event1->easting;
+      // 	Double_t dN = event2.northing - event1->northing;
+      // 	nearbyEventsIndsSorted.push_back(std::make_pair(dE*dE + dN*dN, event2Ind));
+      // }
+      // std::sort(nearbyEventsIndsSorted.begin(), nearbyEventsIndsSorted.end());
 
       // move swapping global error level stuff out of parallelized loop
       // this used to be around the minimizer->minimize() 
       fROOTgErrorIgnoreLevel = gErrorIgnoreLevel;
       gErrorIgnoreLevel = 1001;
 
-
-
       // For storing the indices/and log likelihoods of the second events
-      std::vector<std::vector<Int_t> > event2Inds(event1->nThresholds, std::vector<Int_t>());
-      std::vector<std::vector<Double_t> > eventEventLLs(event1->nThresholds, std::vector<Double_t>());
-      std::vector<std::vector<Int_t> > matchedClusters(event1->nThresholds, std::vector<Int_t>());
+
+      const int mt = OpenMP::getMaxThreads();
+      std::vector<std::vector<Int_t> > event2Inds[mt];
+      std::vector<std::vector<Int_t> > matchedClusters[mt];
+      for(int t=0; t < mt; t++){
+	matchedClusters[t] = std::vector<std::vector<Int_t> >(event1->nThresholds, std::vector<Int_t>());
+	event2Inds[t] = std::vector<std::vector<Int_t> >(event1->nThresholds, std::vector<Int_t>());
+      }
 
       for(int z=0; z < event1->nThresholds; z++){
 	if(event1->cluster[z] > -1){
@@ -1963,17 +1975,26 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	    std::cerr << "I think this is false for all events and this statement should never get printed..." << std::endl;
 	    std::cerr << event1->eventNumber << "\t" << event1->cluster[0] << std::endl;
 	  }
-	  matchedClusters[z].push_back(event1->cluster[z]);
+	  for(int t=0; t < mt; t++){
+	    matchedClusters[t][z].push_back(event1->cluster[z]);
+	  }
 	}
       }
 
-      // std::cerr << event2Inds.size() << "t" << eventEventLLs.size() << "\t" << nearbyEventIndsEastingNorthing.size() << std::endl;
-
       // Loop over nearby events in easting/northing
-      ProgressBar p2(nearbyEventIndsEastingNorthing.size());
-      for(UInt_t i=0; i < nearbyEventIndsEastingNorthing.size(); i++){
-	int event2Ind = nearbyEventIndsEastingNorthing[i];
+      // ProgressBar p2(nearbyEventsIndsSorted.size());
+      // for(UInt_t i=0; i < nearbyEventsIndsSorted.size(); i++){
+      // 	int event2Ind = nearbyEventsIndsSorted[i].second;
+
+
+      ProgressBar p2(nearbyEventsInds.size());
+
+#pragma omp parallel for
+      for(UInt_t i=0; i < nearbyEventsInds.size(); i++){
+	int event2Ind = nearbyEventsInds[i];
 	Event& event2 = events.at(event2Ind);
+
+	int t = OpenMP::thread();
 	
 	if(event1->eventNumber != event2.eventNumber && event2.eventEventClustering){
 
@@ -1982,7 +2003,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
 	  // i.e. ONLY don't do an event if you've already matched against
 	  // another event from the same cluster at the lowest threshold
-	  if(event2.cluster[0] < 0 || std::find(matchedClusters[0].begin(), matchedClusters[0].end(), event2.cluster[0])==matchedClusters[0].end()){
+	  if(event2.cluster[0] < 0 || std::find(matchedClusters[t][0].begin(), matchedClusters[t][0].end(), event2.cluster[0])==matchedClusters[t][0].end()){
 
 	    // std::cout << event1->eventNumber << "\t" << event2.eventNumber << std::endl;
 	    
@@ -1993,15 +2014,35 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
 	    for(int z=0; z < event1->nThresholds; z++){
 	      if(ll <= llEventCuts.at(z)){
-		event2Inds[z].push_back(event2Ind); // the events to merge
+		event2Inds[t][z].push_back(event2Ind); // the events to merge
 		if(event2.cluster[z] > -1){ // the clusters to merge
-		  matchedClusters[z].push_back(event2.cluster[z]);
+		  matchedClusters[t][z].push_back(event2.cluster[z]);
 		}
 	      }
 	    }
 	  }
 	}
-	p2.inc(i);
+	if(t==mt-1){
+	  p2.inc(i);
+	}
+      } // omp loop
+
+      if(OpenMP::isEnabled){
+	for(int t=1; t < mt; t++){
+	  for(int z=0; z < event1->nThresholds; z++){
+	    for(UInt_t i=0; i < matchedClusters[t][z].size(); i++){
+	      if(std::find(matchedClusters[0][z].begin(),matchedClusters[0][z].end(),
+			   matchedClusters[t][z][i])==matchedClusters[0][z].end()){
+		matchedClusters[0][z].push_back(matchedClusters[t][z][i]);
+	      }
+	    }
+	    for(UInt_t i=0; i < event2Inds[t][z].size(); i++){
+	      event2Inds[0][z].push_back(event2Inds[t][z].at(i));
+	    }
+	    matchedClusters[t][z].clear();
+	    event2Inds[t][z].clear();
+	  }
+	}
       }
       
       // Set fitter error level back to default
@@ -2017,7 +2058,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	// }
 
 	// If none of the events are in a cluster, then add a new cluster!
-	if(matchedClusters[z].size()==0){
+	if(matchedClusters[0][z].size()==0){
 
 	  // make a new cluster, it's intial position is this event location
 	  // although that will be changed...
@@ -2025,14 +2066,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	  nc.llEventCutInd = z;
 	  nc.llEventCut = llEventCuts.at(z);
 	  clusters.at(z).push_back(nc);
-	  matchedClusters[z].push_back(nc.index);
+	  matchedClusters[0][z].push_back(nc.index);
 	}
 
 	// If the list of matched clusters is greater than one
 	// then we're going to merge clusters!
 	// But what to call the new cluster?
 	// We'll label it with the smallest index...
-	Int_t thisCluster = TMath::MinElement(matchedClusters[z].size(), &matchedClusters[z][0]);
+	Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), &matchedClusters[0][z][0]);
 
 	// Mark event1 as in the minCluster
 	Int_t oldCluster1Ind = event1->cluster[z];
@@ -2048,8 +2089,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	// std::cerr << event2Inds.size() << std::endl;
 	
 	// Now reassign all events in the matched clusters to thisCluster
-	for(UInt_t i=0; i < event2Inds[z].size(); i++){
-	  Int_t event2Ind = event2Inds[z].at(i);
+	for(UInt_t i=0; i < event2Inds[0][z].size(); i++){
+	  Int_t event2Ind = event2Inds[0][z].at(i);
 	  Event& event2 = events.at(event2Ind);
 	  Int_t oldCluster2Ind = event2.cluster[z];
 	  if(oldCluster2Ind > -1){
