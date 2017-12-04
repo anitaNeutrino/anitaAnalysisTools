@@ -120,14 +120,18 @@ void Acclaim::Clustering::Event::setupUsefulPat(){
   usefulPat.setMaxLoopIterations(500); // make this arbitrarily large since it only happens once
   const double maxThetaAdjust = 8*TMath::DegToRad();
   usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
-  RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
+  RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);  
   if(latitude < -90){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", for eventNumber " << eventNumber << "\n";
-    std::cerr << "Doing traceBackToContinenet again in debug mode!\n";
-    usefulPat.setDebug(true);
-    usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
-    usefulPat.setDebug(false);
-    RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
+    // std::cerr << "Doing traceBackToContinenet again in debug mode!\n";
+    // usefulPat.setDebug(true);
+    // usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
+    // usefulPat.setDebug(false);
+    // RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
+    std::cerr << "Removing event " << eventNumber << " from event-event clustering!" << std::endl;
+    eventEventClustering = false;
+    easting = -99e20;
+    northing = -99e20;
   }
 
   // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
@@ -474,8 +478,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   grTestMinimizerValue = NULL;  
   llClusterCut = 100;
 
-  llEventCuts.push_back(10);
-  llEventCuts.push_back(20);
+  // llEventCuts.push_back(10);
+  // llEventCuts.push_back(20);
   llEventCuts.push_back(40);
   llEventCuts.push_back(70);
 
@@ -1277,10 +1281,9 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       // std::cout << sum->eventNumber << "\t" << pol << "\t" << peakIndex << std::endl;
       Double_t snrHack = sum->deconvolved_filtered[pol][peakIndex].snr;
 
-      /// @todo remove the snr > 160 hack???
+      /// @todo remove the run > 160 hack???
       /// @todo remove the run hack!!!
-      if(sum->run > 160
-	 && (!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
+      if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
 	 && sum->peak[pol][peakIndex].theta < 0
 	 && snrHack < 100){
 	
@@ -1986,8 +1989,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       // for(UInt_t i=0; i < nearbyEventsIndsSorted.size(); i++){
       // 	int event2Ind = nearbyEventsIndsSorted[i].second;
 
-
-      ProgressBar p2(nearbyEventsInds.size());
+      UInt_t n2 = OpenMP::isEnabled ? ceil(double(nearbyEventsInds.size())/mt) : nearbyEventsInds.size();
+      Int_t innerLoopCounter = 0;
+      std::cerr <<  "There are " << nearbyEventsInds.size() << " nearby events to process." << std::endl;
+      ProgressBar p2(n2);
 
 #pragma omp parallel for
       for(UInt_t i=0; i < nearbyEventsInds.size(); i++){
@@ -2022,11 +2027,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	    }
 	  }
 	}
-	if(t==mt-1){
-	  p2.inc(i);
+	if(t==0){
+	  p2.inc(innerLoopCounter);
+	  innerLoopCounter++;
 	}
       } // omp loop
 
+      p2.inc(n2, n2); // finish the inner loop progress bar by hand, just in case I got the guestimate of the number of threads wrong
+      
       if(OpenMP::isEnabled){
 	for(int t=1; t < mt; t++){
 	  for(int z=0; z < event1->nThresholds; z++){
