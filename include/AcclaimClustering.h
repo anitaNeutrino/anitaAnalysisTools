@@ -103,7 +103,7 @@ namespace Acclaim{
       Event(const Event& event);
 
       TArrowAntarctica* makeArrowFromAnitaToEvent();
-      void setupUsefulPat();
+      void setupUsefulPat(bool calculateNow = true);
       void resetClusteringNumbers();
       void deleteArrays();
       void setNThresholds(int n);
@@ -249,20 +249,19 @@ namespace Acclaim{
       UInt_t fTestEvent2; /// For debugging
       std::vector<Double_t> fFitEastings;  /// Where the fitter found the potential source could come from
       std::vector<Double_t> fFitNorthings; /// Where the fitter found the potential source could come from
+      const Int_t numMcDivisions; /// How much of the mC should I read in?
+      Int_t mcDivision; // Which of the MC divisions should I read in? (runs from 0 to numMcDivisions-1)
 
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
       // Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
-      Bool_t doneBaseClusterAssignment;				/// Set to true once all read in data events were clustered to bases
-
-      // Int_t numClusters;
-      Int_t numCallsToRecursive;
+      Bool_t fEventsAlreadyClustered;
 
       std::vector<std::vector<Acclaim::Clustering::Cluster> >clusters;	/// Vector of clusters,
       // std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,      
       std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
-      TKDTreeID* fKDTree;                                       /// ROOT's implementation of a KDTree, typedef'd for int/double
+      TKDTreeID* fKDTree;                     /// ROOT's implementation of a KDTree, typedef'd for int/double
       std::vector<Double_t> fEventEastings;
       std::vector<Double_t> fEventNorthings;
 
