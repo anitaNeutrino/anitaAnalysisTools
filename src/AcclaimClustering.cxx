@@ -1412,7 +1412,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       Int_t numReadIn = 0;
       std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-      bool useSandbox = true;
+      bool useSandbox = false;
       // bool notUsingSandbox = TString(summaryGlob).Contains("wais");
 
       ProgressBar p(n);
@@ -1837,7 +1837,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       std::cerr <<  "There are " << nearbyEventsInds.size() << " nearby events to process." << std::endl;
       ProgressBar p2(n2);
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic, 1)
       for(UInt_t i=0; i < nearbyEventsInds.size(); i++){
 	int event2Ind = nearbyEventsInds[i];
 	Event& event2 = events.at(event2Ind);
