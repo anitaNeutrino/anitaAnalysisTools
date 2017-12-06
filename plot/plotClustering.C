@@ -53,10 +53,14 @@ void printClusterMultiplicityTable(TFile* f){
 void drawClusters(TFile* f){
   gStyle->SetPalette(kRainBow);
   TTree* eventTree = (TTree*)f->Get("eventTree");
-  TTree* mcEventTree = (TTree*)f->Get("mcEventTree");  
+  TTree* mcEventTree = (TTree*)f->Get("mcEventTree");
+  
   
   int nEvents = eventTree->GetEntries();
-  
+  Acclaim::Clustering::Event* event = NULL;
+  if(eventTree){
+    eventTree->SetBranchAddress("event", &event);
+  }
 
   std::vector<TTree*> clusterTrees;
   std::vector<double> llEventCuts;
@@ -172,7 +176,6 @@ void drawClusters(TFile* f){
       // gr->SetLineColor(sizeGroupColors[i]);
       gr->SetMarkerStyle(sizeGroupMarkers[i]);      
       gr->Draw(opt);
-
     
 
       gr->GetXaxis()->SetTitle("Log-Likelihood cut value");
@@ -194,7 +197,7 @@ void drawClusters(TFile* f){
   auto l1 = c1->BuildLegend();
 
   c1->SetLogx(1);
-  // c1->SetLogy(1);  
+  // c1->SetLogy(1);
   c2->BuildLegend();
   c2->SetLogx(1);
   c2->SetLogy(1);
@@ -223,11 +226,85 @@ void drawClusters(TFile* f){
     axis->Draw();
   }  
   
-  
-  
-  
   gr2s[0]->SetTitle("Cluster multiplicity; -2 log (L); Number of events in clusters");
+
+// const TCut sizeGroupCuts[numSizeGroups] = {"numDataEvents >= 100",
+// 					   "numDataEvents >= 10 && numDataEvents < 100",
+// 					   "numDataEvents >= 5 && numDataEvents < 10",
+// 					   "numDataEvents == 4",
+// 					   "numDataEvents == 3",
+// 					   "numDataEvents == 2",
+// 					   "numDataEvents == 1"};
+
+
   
+  // for(UInt_t llInd=0; llInd < clusterTrees.size(); llInd++){
+  const int sizes[numSizeGroups] = {100, 10, 5, 4, 3, 2, 1};
+  int nb=0;  
+  
+  // for(UInt_t z=21; z < 22; z++){
+  for(UInt_t z=0; z < clusterTrees.size(); z++){
+    std::vector<TGraphAntarctica*> grCs(numSizeGroups,  NULL);
+    auto l1 = new TLegend(0.8, 0.8,  1, 1);
+    for(int i=0; i < numSizeGroups; i++){
+      grCs[i] = new TGraphAntarctica();
+      TString shortTitle = sizeGroupCuts[i].GetTitle();
+      shortTitle.ReplaceAll("numDataEvents", "n");
+      grCs[i]->SetTitle(shortTitle);
+      // grCs[i]->SetMarkerStyle(sizeGroupMarkers[i]);
+      
+      
+      l1->AddEntry(grCs[i], shortTitle, "p pmc");
+      grCs[i]->SetName(TString::Format("grC_%d_%d", z, sizes[i]));
+      
+      // // grCs[i]->SetMarkerColor(i+1);
+      // grCs[i]->SetMarkerColor(grs.at(i)->GetMarkerColor());      
+    }
+    
+    for(UInt_t entry=0; entry < eventTree->GetEntries(); entry++){
+      eventTree->GetEntry(entry);
+
+      Int_t clusterInd = event->cluster[z];
+      clusterTrees.at(z)->GetEntry(clusterInd);
+
+      int numEvents = cluster->numDataEvents;
+
+      if(!(numEvents==1 && cluster->knownBase==0)){
+	for(int i=0; i < numSizeGroups; i++){
+	  if(numEvents >= sizes[i]){
+	    grCs.at(i)->SetPoint(grCs.at(i)->GetN(), event->longitude, event->latitude);
+	    break;
+	  }
+	}
+      }
+    }
+
+    auto c = new TCanvas();
+
+    int nd = 0;
+    for(int i=0; i < numSizeGroups; i++){
+      std::cout << sizes[i] << "\t" << grCs[i]->GetN() << std::endl;
+
+      // if(grCs[i]->GetN() > 0){
+      const char* opt = i == 0 ? "ap pmc" : "psame pmc";
+      grCs[i]->Draw(opt);
+      // nd++;
+      // }
+    }
+    l1->Draw();
+    auto prims = c->GetListOfPrimitives();
+    TString bName = TString::Format("fAntarctica%d", nb);
+    auto b = (AntarcticaBackground*) prims->FindObject(bName);
+    b->SetGrayScale(true);
+    b->SetIcemask(true);
+    b->SetShowColorAxis(false);    
+    // b->
+    nb++;
+
+    TString canFileName = TString::Format("~/blind_clusters_llEventCut%d_not_vaguely_near_mcm_runs_above_160.png", TMath::Nint(llEventCuts.at(z)));
+    c->SaveAs(canFileName);
+    
+  }
 }
 
 
