@@ -176,6 +176,11 @@ namespace Acclaim
 
     void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const char* separator);
     void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const std::vector<const char*>& separators);
+
+    template <class T>
+    inline bool vectorContainsValue(const std::vector<T>& vec, const T& value){
+      return std::find(vec.begin(), vec.end(), value)!=vec.end();
+    }
   }
 }
 #endif

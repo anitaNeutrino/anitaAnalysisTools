@@ -77,40 +77,44 @@ void drawClusters(TFile* f){
     } while(t!=NULL);
   }
 
-  TGraph* grMcClusterEfficiency = new TGraph(clusterTrees.size());
-  grMcClusterEfficiency->SetName("grMcClusterEfficiency");
-  grMcClusterEfficiency->SetTitle("Weighted MC clustering efficiency; -2 log (L); MC clustering efficiency");
- 
-  double sumMcWeights = 0;
-  Acclaim::Clustering::McEvent* mcEvent = NULL;
-  mcEventTree->SetBranchAddress("mcEvent", &mcEvent);
-  for(int entry=0; entry < mcEventTree->GetEntries(); entry++){
-    mcEventTree->GetEntry(entry);
+
+  TGraph* grMcClusterEfficiency = NULL;
+
+  if(mcEventTree){
+
+    grMcClusterEfficiency = new TGraph(clusterTrees.size());
+    grMcClusterEfficiency->SetName("grMcClusterEfficiency");
+    grMcClusterEfficiency->SetTitle("Weighted MC clustering efficiency; -2 log (L); MC clustering efficiency");
+
+    double sumMcWeights = 0;
+    Acclaim::Clustering::McEvent* mcEvent = NULL;
+    mcEventTree->SetBranchAddress("mcEvent", &mcEvent);
+    for(int entry=0; entry < mcEventTree->GetEntries(); entry++){
+      mcEventTree->GetEntry(entry);
 
 
-    for(int z=0; z < mcEvent->nThresholds; z++){      
-      if(mcEvent->cluster[z]==-1){
-	grMcClusterEfficiency->GetY()[z] += mcEvent->weight;
+      for(int z=0; z < mcEvent->nThresholds; z++){
+	if(mcEvent->cluster[z]==-1){
+	  grMcClusterEfficiency->GetY()[z] += mcEvent->weight;
+	}
       }
+      sumMcWeights += mcEvent->weight;
     }
-    sumMcWeights += mcEvent->weight;
-  }
 
-  for(int z=0; z < clusterTrees.size(); z++){
-    grMcClusterEfficiency->GetY()[z]/=sumMcWeights;
-    grMcClusterEfficiency->GetX()[z] = llEventCuts.at(z);
+    for(int z=0; z < clusterTrees.size(); z++){
+      grMcClusterEfficiency->GetY()[z]/=sumMcWeights;
+      grMcClusterEfficiency->GetX()[z] = llEventCuts.at(z);
+    }
+    auto c0 = new TCanvas();
+    grMcClusterEfficiency->Draw();
   }
-  auto c0 = new TCanvas();
-  grMcClusterEfficiency->Draw();
-
   // figure out some multiplet sizes
-
   std::vector<TGraph*> grs(numSizeGroups, NULL);
   std::vector<TGraph*> gr2s(numSizeGroups, NULL);
 
   for(auto& gr : grs){
     static int i = -1;
-    i++;
+    i++;    
     gr = new TGraph();
     TString shortTitle = sizeGroupCuts[i].GetTitle();
     shortTitle.ReplaceAll("numDataEvents", "n");
@@ -122,47 +126,30 @@ void drawClusters(TFile* f){
   double maxN = 0;
   for(int llCutInd=0; llCutInd < clusterTrees.size(); llCutInd++){    
     auto t = clusterTrees.at(llCutInd);
-    /// @todo delete the -1 here!
-
     int numDataEventsInClusterTree = 0;
     for(int entry=0; entry < t->GetEntries(); entry++){
       t->GetEntry(entry);
-      // if(cluster->numDataEvents != 1){
-	numDataEventsInClusterTree += cluster->numDataEvents;
-      // }
+      numDataEventsInClusterTree += cluster->numDataEvents;
     }
-    std::cout << t->GetName() << "\t" <<  numDataEventsInClusterTree << "\t" << nEvents << std::endl;
     
     for(int i=0; i < numSizeGroups; i++){
-      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");
+      t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
 
       int entry=0;
-      // std::cout << "i = " << i << "\t" << sizeGroupCuts[i].GetTitle() << std::endl;
       UInt_t totalEvents = 0;
       while(entry > -1){
 	entry = elist->Next();
 	if(entry > -1){
 	  t->GetEntry(entry);
 	  totalEvents += cluster->numDataEvents;
-	  // cout << entry << "\t" << cluster->numDataEvents << endl;
 	}
       }
-      // std::cout << llCutInd << "\t" << i << "\t" << totalEvents << std::endl;
-      // for(int entry=0; entry < nClusters; entry++){
-      // 	t->GetEntry(entry);
-      // 	cout << cluster->numDataEvents << endl;
-      // }
-      
-      
-      t->GetEntry(0);
-
+      t->GetEntry(0); 
       grs[i]->SetPoint(llCutInd, cluster->llEventCut, nClusters);
       gr2s[i]->SetPoint(llCutInd, cluster->llEventCut, totalEvents);
-
       maxN = nClusters >  maxN ? nClusters : maxN;
-
     }
   }
 
@@ -201,7 +188,7 @@ void drawClusters(TFile* f){
       gr2s[i]->GetXaxis()->SetTitle("Log-Likelihood cut value");
       gr2s[i]->GetYaxis()->SetTitle("Number of events");
     }
-    
+    // std::cout << i << std::endl;
     // grMG->Add(gr);
   }
   auto l1 = c1->BuildLegend();
@@ -214,26 +201,27 @@ void drawClusters(TFile* f){
 
   grs[0]->SetTitle("Cluster multiplicity; -2 log (L); Number of clusters");
   c1->cd();
-  TGraph* grMc1 = (TGraph*) grMcClusterEfficiency->Clone("grMcClusterEfficiencyScaled1");
-  grMc1->Draw("lsame");
-  grMc1->SetLineStyle(2);
-  grMc1->SetLineWidth(2);
-  grMc1->SetLineColor(kRed);
-  for(int i=0; i < grMc1->GetN(); i++){
-    grMc1->GetY()[i]*=c1Max;
-  }
-  c1->SetTicky(0);
-  TGaxis *axis = new TGaxis(grs[0]->GetXaxis()->GetXmax(),0,
-			    grs[0]->GetXaxis()->GetXmax(),c1Max,
-			    0, 1,510,"+L");
-  TLegendEntry* l1e = l1->AddEntry(grMc1, "MC clustering efficiency", "l");
-  l1e->SetTextColor(kRed);
-  axis->SetTitle("MC clustering efficiency");
-  axis->SetTextColor(kRed);
-  axis->SetLineColor(kRed);
-  axis->SetLabelColor(kRed);
-  axis->Draw();
-  
+  if(grMcClusterEfficiency){
+    TGraph* grMc1 = (TGraph*) grMcClusterEfficiency->Clone("grMcClusterEfficiencyScaled1");
+    grMc1->Draw("lsame");
+    grMc1->SetLineStyle(2);
+    grMc1->SetLineWidth(2);
+    grMc1->SetLineColor(kRed);
+    for(int i=0; i < grMc1->GetN(); i++){
+      grMc1->GetY()[i]*=c1Max;
+    }
+    c1->SetTicky(0);
+    TGaxis *axis = new TGaxis(grs[0]->GetXaxis()->GetXmax(),0,
+			      grs[0]->GetXaxis()->GetXmax(),c1Max,
+			      0, 1,510,"+L");
+    TLegendEntry* l1e = l1->AddEntry(grMc1, "MC clustering efficiency", "l");
+    l1e->SetTextColor(kRed);
+    axis->SetTitle("MC clustering efficiency");
+    axis->SetTextColor(kRed);
+    axis->SetLineColor(kRed);
+    axis->SetLabelColor(kRed);
+    axis->Draw();
+  }  
   
   
   
@@ -241,6 +229,16 @@ void drawClusters(TFile* f){
   gr2s[0]->SetTitle("Cluster multiplicity; -2 log (L); Number of events in clusters");
   
 }
+
+
+
+
+
+
+
+
+
+
 
 void plotDebug(TFile* f){
 
@@ -286,7 +284,7 @@ void plotDebug(TFile* f){
 
 
 
-void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.root"){
+void plotClustering(const char* fileName = ""){
 
   TFile* f = TFile::Open(fileName);
   if(!f) return;
@@ -304,6 +302,6 @@ void plotClustering(const char* fileName = "doClustering_2017-11-09_12-29-34.roo
   // drawResolutionDistributions(f);
 
   return;
-  printClusterMultiplicityTable(f);
+  // printClusterMultiplicityTable(f);
 
 }

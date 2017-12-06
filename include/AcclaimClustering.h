@@ -212,11 +212,9 @@ namespace Acclaim{
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
 
-      void recursivelyAddClustersFromData(Int_t minBinContent);
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
       void forEachEventFindClosestKnownBase(int z=0);
-      void writeAllGraphsAndHists();
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();      
@@ -229,7 +227,6 @@ namespace Acclaim{
       Double_t dFit(const Event* event1, const Event* event2);
 
       void testTriangleInequality();
-      void testAngleFindingSpeed();
       Int_t removeLargeBasesNearMcMurdo();
 
       void doBaseEventClustering(Bool_t mc=false);
@@ -267,10 +264,6 @@ namespace Acclaim{
 
       std::vector<TH2DAntarctica*> hUnclusteredEvents;	/// Histograms of events clustered to non-base clusters
 
-      
-      TH2DAntarctica* hClusters;                                /// Filled with clusters (allows access to the bin of the cluster)
-      TH2DAntarctica* hEvents;
-      TH2DAntarctica* hMcEvents;
       bool fDebug;
       bool fUseBaseList;
       TGraph* grTestMinimizerWalk;
