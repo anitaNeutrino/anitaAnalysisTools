@@ -1903,7 +1903,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       for(UInt_t z=0; z < llEventCuts.size(); z++){
 
 	// for speed, sort the matched event numbers
-	// std::sort(event2Inds[0][z].begin(), event2Inds[0][z].end());
+	std::sort(event2Inds[0][z].begin(), event2Inds[0][z].end());
 
 
 
@@ -1950,20 +1950,21 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	
 	// Now reassign all matched events or events in matched clusters to the new cluster
 
-	// UInt_t matchedEventIndex=0;
+	UInt_t matchedEventIndex=0;
 	for(UInt_t event2Ind=0; event2Ind < events.size(); event2Ind++){
 	  Event& event2 = events.at(event2Ind);
 
-	  // // check if this event is contained in the matched events or the matched clusters
-	  // bool eventMatch = event2.eventNumber==event2Inds[0][z][matchedEventIndex];
-	  // if(eventMatch && matchedEventIndex < event2Inds[0][z].size()-1){
-	  //   matchedEventIndex++;
-	  // }
+	  // check if this event is contained in the matched events or the matched clusters
+	  bool eventMatch = matchedEventIndex < event2Inds[0][z].size() && event2Ind==event2Inds[0][z][matchedEventIndex];
+	  if(eventMatch){
+	    // std::cout << matchedEventIndex << "\t" << event2Ind << "\t" << event2Inds[0][z][matchedEventIndex] << "\t" << event2Inds[0][z].size() << std::endl;	  	    
+	    matchedEventIndex++;
+	  }
 
-	  // if(eventMatch || RootTools::vectorContainsValue(matchedClusters[0][z], event2.cluster[z])){
+	  if(eventMatch || RootTools::vectorContainsValue(matchedClusters[0][z], event2.cluster[z])){
 
-	  if(RootTools::vectorContainsValue(matchedClusters[0][z], event2.cluster[z]) ||
-	     RootTools::vectorContainsValue(event2Inds[0][z], event2Ind)){
+	  // if(RootTools::vectorContainsValue(matchedClusters[0][z], event2.cluster[z]) ||
+	  //    RootTools::vectorContainsValue(event2Inds[0][z], event2Ind)){
 	       
 	    // if(RootTools::vectorContainsValue(event2Inds[0][z], event2Ind) ||
 	    //    RootTools::vectorContainsValue(matchedClusters[0][z], event2.cluster[z])){
@@ -2141,7 +2142,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   readInSummaries(dataGlob);
   std::cout << "Sorting events..." << std::endl;
-  std::sort(events.begin(), events.end());  
+  std::sort(events.begin(), events.end());
   initKDTree();
   readInSummaries(mcGlob);
 
