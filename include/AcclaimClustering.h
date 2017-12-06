@@ -25,6 +25,7 @@ class TH2DAntarctica;
 class TCanvas;
 class TArrowAntarctica;
 
+
 namespace Acclaim{
 
   namespace Clustering {
@@ -84,7 +85,7 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
-      Int_t nThresholds;
+      Int_t nThresholds;                        
       Int_t* cluster;//[nThresholds]		/// which cluster am I associated with?
       Double_t* dThetaCluster;//[nThresholds]	/// theta distance to cluster
       Double_t* dPhiCluster;//[nThresholds]     /// phi distance to cluster
@@ -101,6 +102,7 @@ namespace Acclaim{
       Event(Int_t nT=0);
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
       Event(const Event& event);
+      Event& operator=(const Event& event);      
 
       TArrowAntarctica* makeArrowFromAnitaToEvent();
       void setupUsefulPat(bool calculateNow = true);
@@ -112,6 +114,16 @@ namespace Acclaim{
       template<class T>
       double logLikelihoodFromPoint(const T& point, bool addOverHorizonPenalty=false) const {
 	return logLikelihoodFromPoint(point.longitude, point.latitude, point.altitude, addOverHorizonPenalty);
+      }
+
+      /** 
+       * For sorting based on event number
+       * @param other is another event
+       * 
+       * @return true if this event has a lower eventNumber
+       */
+      inline bool operator < (const Event& other) const {
+        return (eventNumber < other.eventNumber);
       }
 
       virtual ~Event();
@@ -277,5 +289,17 @@ namespace Acclaim{
 
   }
 }
+
+
+// // kaboom?
+// namespace std {
+//   template <>
+//   void swap(Acclaim::Clustering::Event& e1, Acclaim::Clustering::Event& e2){
+//     Acclaim::Clustering::Event inefficientCopy = e1;
+//     e1 = e2;
+//     e2 = inefficientCopy;
+//   }
+// }
+
 
 #endif
