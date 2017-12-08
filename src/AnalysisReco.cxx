@@ -510,53 +510,69 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 
 
 
-void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum){
+void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaEventSummary::EventFlags& flags){
 
-  const AnitaEventSummary::PointingHypothesis peak = sum->highestPeak();
-  const AnitaPol::AnitaPol_t pol = sum->highestPol();
-  Double_t phiRough = peak.phi - peak.dphi_rough;
-  Int_t phiSector = InterferometricMap::getPhiSectorFromPhiRough(phiRough);
-  const std::vector<Int_t>& theAnts = phiSectorToCoherentAnts(phiSector);
+  const double bandsLowGHz[AnitaEventSummary::numBlastPowerBands] = {0.15-1e-10, 0};
+  const double bandsHighGHz[AnitaEventSummary::numBlastPowerBands] = {0.25+1e-10, 999};
 
-  for(int ring=0; ring <= AnitaRing::kNotARing; ring++){
-    sum->flags.meanPower[ring] = 0;
+  // reset the values
+  for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
+    flags.middleOrBottomPower[band] = 0;
+    flags.middleOrBottomAnt[band] = -1;
+    flags.middleOrBottomPol[band] = 2;
+    flags.topPower[band] = 0;
+  }
+  
+  for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    for(UInt_t phi=0; phi < NUM_PHI; phi++){
+      for(UInt_t ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
+  	Int_t ant = ring*NUM_PHI + phi;
+
+	
+	const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
+	const TGraphAligned* grPow = wf->power();
+	const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
+
+	Double_t powThisAnt[AnitaEventSummary::numBlastPowerBands] = {0};
+
+	for(int i=0; i < grPow->GetN(); i++){
+	  const double f_GHz = grPow->GetX()[i];
+	  for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
+	    if(f_GHz >= bandsLowGHz[band] && f_GHz < bandsHighGHz[band]){
+	      powThisAnt[band] +=grPow->GetY()[i]*df_GHz;
+	    }
+	  }
+	}
+
+	for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){	
+	  if(powThisAnt[band] > flags.middleOrBottomPower[band]){
+	    flags.middleOrBottomPower[band] = powThisAnt[band];
+	    flags.middleOrBottomAnt[band] = ant;
+	    flags.middleOrBottomPol[band] = polInd;
+	  }
+	}
+      }
+    }
   }
 
-  const int anitaVersion = AnitaVersion::get();
-  std::vector<Int_t>count(AnitaRing::kNotARing, 0);
-
-  for(UInt_t antInd=0; antInd < theAnts.size(); antInd++){
-    Int_t ant = theAnts[antInd];
-    Int_t ring = ant/NUM_PHI;
-
-    // skip ALFA channels/ALFA cross talk
-    if(anitaVersion==3 && pol==AnitaPol::kVertical && ant==7){
-      continue;
-    }
-    if(anitaVersion==3 && pol==AnitaPol::kHorizontal && ant==4){
-      continue;
-    }
-
+  
+  for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
+    int ant = flags.middleOrBottomAnt[band] % NUM_PHI;
+    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) flags.middleOrBottomPol[band];
     const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
     const TGraphAligned* grPow = wf->power();
     const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
-    count[ring]++;
-
+    
     for(int i=0; i < grPow->GetN(); i++){
       const double f_GHz = grPow->GetX()[i];
-      // std::cout << f_GHz << ", " << df_GHz << "\t" << fMeanPowerFlagLowFreqGHz << "\t" << fMeanPowerFlagHighFreqGHz << std::endl;
-      if(f_GHz >= fMeanPowerFlagLowFreqGHz && f_GHz < fMeanPowerFlagHighFreqGHz){
-	sum->flags.meanPower[ring] += grPow->GetY()[i]*df_GHz;
-	// std::cout << grPow->GetY()[i]*df_GHz;
+      for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
+	if(f_GHz >= bandsLowGHz[band] && f_GHz < bandsHighGHz[band]){
+	  flags.topPower[band] +=grPow->GetY()[i]*df_GHz;
+	}
       }
-      // std::cout << std::endl;
     }
-  }
-
-  for(int ring=0; ring <= AnitaRing::kNotARing; ring++){
-    sum->flags.meanPower[ring]/=count[ring];
-  }
-
+  }  
 }
 
 

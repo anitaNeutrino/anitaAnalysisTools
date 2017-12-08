@@ -20,7 +20,7 @@ void printClusterMultiplicityTable(TFile* f){
   TTree* t = (TTree*) f->Get("clusterTree");
 
   const int numK = 2;
-  TCut knownCuts[numK] = {"knownBase", "!knownBase"};
+  TCut knownCuts[numK] = {"knownBase>0", "knownBase < 1"};
   //  100, 10-100, 5-10, 4,3,2,1
 
   std::cout << " | Cluster Multiplicity | " << knownCuts[0] << " | " << knownCuts[1] << " | " << std::endl;
@@ -137,7 +137,9 @@ void drawClusters(TFile* f){
     }
     
     for(int i=0; i < numSizeGroups; i++){
-      t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
+      // t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
+      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");
+      // t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");      
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
 
@@ -237,7 +239,7 @@ void drawClusters(TFile* f){
 // 					   "numDataEvents == 1"};
 
 
-  
+  return;
   // for(UInt_t llInd=0; llInd < clusterTrees.size(); llInd++){
   const int sizes[numSizeGroups] = {100, 10, 5, 4, 3, 2, 1};
   int nb=0;  

@@ -110,7 +110,7 @@ int main(int argc, char* argv[]){
 	  sum->flags.isPayloadBlast = 0;
 	}
 
-	reco.fillPowerFlags(&fEv, sum);
+	reco.fillPowerFlags(&fEv, sum->flags);
 	// std::cout << sum->flags.meanPower[0] << "\t" << sum->flags.meanPower[1] << "\t" << sum->flags.meanPower[2]  << std::endl;
 
 

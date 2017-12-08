@@ -1304,7 +1304,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
   if(!fEventsAlreadyClustered){
     TH2DAntarctica* hEvents = new TH2DAntarctica("hEvents", "hEvents");
-    for(UInt_t eventInd=0; eventInd < mcEvents.size(); eventInd++){
+    for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
       const Event& event = events.at(eventInd);
       hEvents->Fill(event.longitude, event.latitude);
     }
@@ -1435,7 +1435,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	  // if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))      
 	// if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
 	//    && sum->peak[pol][peakIndex].theta < 0
-	//    && snrHack < 100){
+	//    && snrHack < 100
+	//    && sum->run > 160){
 
 	  if(sum->mc.weight > 0){
 	    if(entry==0){
@@ -2152,10 +2153,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   }
   doMcBaseClustering();
 
-  if(!fEventsAlreadyClustered){
-    doEventEventClustering();
-  }
-  doMcEventClustering();
+  // if(!fEventsAlreadyClustered){
+  //   doEventEventClustering();
+  // }
+  // doMcEventClustering();
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
