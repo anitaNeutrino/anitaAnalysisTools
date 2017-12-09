@@ -91,7 +91,7 @@ int main(int argc, char* argv[]){
 
       AnitaEventSummary* inSum = ss.summary();
       
-      if(type==0 || (type==1 && inSum->flags.pulser > 0) || (type==2 && inSum->flags.isPayloadBlast > 0)){
+      if(type==0 || (type==1 && inSum->flags.pulser > 0) || (type==2 && inSum->flags.isPayloadBlast > 0) || type >= 4){
 
 	if(d && d->getCurrRun() != inSum->run){
 	  delete d;
