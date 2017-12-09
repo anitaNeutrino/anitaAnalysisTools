@@ -317,7 +317,8 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
 
 
 Acclaim::Clustering::Event::Event(const Event& event)
-  : Event()
+  : nThresholds(0), cluster(NULL),
+    dThetaCluster(NULL), dPhiCluster(NULL)
 {
   *this = event;
 }
