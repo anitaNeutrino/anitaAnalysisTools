@@ -503,7 +503,7 @@ void Acclaim::Clustering::Cluster::resetClusteringNumbers(){
 
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
-  : numMcDivisions(100), fEventsAlreadyClustered(false), fROOTgErrorIgnoreLevel(gErrorIgnoreLevel)
+  : numMcDivisions(100), fEventsAlreadyClustered(false), fMyBackground(), fROOTgErrorIgnoreLevel(gErrorIgnoreLevel)
 {
   const char* sgeTaskId = getenv("SGE_TASK_ID");
   if(!sgeTaskId){
@@ -514,6 +514,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ", found SGE_TASK_ID=" << sgeTaskId
 	      << ", setting mcDivision = " << mcDivision << std::endl;
   }
+  fMyBackground.SetCoarseness(60);
 
   grTestMinimizerWalk = NULL;
   grTestMinimizerValue = NULL;
@@ -847,6 +848,103 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::dSum(const Event* event1, con
  */
 Double_t Acclaim::Clustering::LogLikelihoodMethod::dAsym(const Event* event1, const Event* event2){
   return event1->logLikelihoodFromPoint(event2->longitude, event2->latitude,event2->altitude, true);
+}
+
+
+
+
+
+
+
+void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEventInds){
+
+  int nx = fMyBackground.GetNbinsX();
+  int ny = fMyBackground.GetNbinsY();
+  nearbyEventInds.clear();
+  for(Int_t by=0; by < ny; by++){
+    for(Int_t bx=0; bx < nx; bx++){
+      const std::vector<UInt_t>& eventsThisBin = fLookupEN[by][bx];
+      if(RootTools::vectorContainsValue(eventsThisBin, eventInd)){
+	for(UInt_t i=0; i < eventsThisBin.size(); i++){
+	  if(eventsThisBin[i]!=eventInd){
+	    if(RootTools::vectorContainsValue(nearbyEventInds, eventsThisBin[i])){
+	      nearbyEventInds.push_back(eventsThisBin[i]);
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+
+void Acclaim::Clustering::LogLikelihoodMethod::fillBinsToConsider(UInt_t eventInd, Double_t maxLL){
+
+  const Event& event = events.at(eventInd);
+
+  int nx = fMyBackground.GetNbinsX();
+  int ny = fMyBackground.GetNbinsY();
+
+  if(fLookupEN.size()==0){
+    fLookupEN.reserve(ny);
+    for(int by=1; by <= ny; by++){
+      fLookupEN.push_back(std::vector<std::vector<UInt_t> >(nx,  std::vector<UInt_t>()));
+    }
+  }
+
+  std::cout << "The event is at " << event.easting << "\t" << event.northing << std::endl;
+
+  const double maxRangeSq = default_horizon_distance*default_horizon_distance;
+
+  const double deltaY = fMyBackground.GetYaxis()->GetBinLowEdge(2) - fMyBackground.GetYaxis()->GetBinLowEdge(1);
+  const double deltaX = fMyBackground.GetXaxis()->GetBinLowEdge(2) - fMyBackground.GetXaxis()->GetBinLowEdge(1);
+  int numBins=0;
+  int numOldBins=0;
+
+  for(int by=1; by <= ny; by++){
+    const double northing = fMyBackground.GetXaxis()->GetBinCenter(by);
+    double dNorthing = northing - event.northing;
+
+    // I want to be as inclusive as possible with the bins
+    // if the closest corner is within the easting/northing range, include it.
+    // if the log likelihood from the furthest corner is within the llRange, include it.
+
+    // so if the bin centre is north of the best position, subtract half a bin width of northing for the surface distance
+    const double surfaceExtraNorthing = dNorthing > 0 ? -0.5*deltaY : 0.5*deltaY;
+    dNorthing += surfaceExtraNorthing;
+
+    const double dNorthingSq = dNorthing*dNorthing;
+
+    for(int bx=1; bx <= nx; bx++){
+      const double easting = fMyBackground.GetXaxis()->GetBinCenter(bx);
+      double dEasting = easting - event.easting;
+
+      // and if the bin centre is east of the best position, subtract half a bin width of easting for the surface distance
+      const double surfaceExtraEasting = dEasting > 0 ? -0.5*deltaX : 0.5*deltaX;
+      dEasting += surfaceExtraEasting;
+
+      const double distSq = dNorthingSq + dEasting*dEasting;
+
+      if(distSq < maxRangeSq){
+	Double_t lon,lat;
+
+	// ... and evaluate the ll for the closest edge of the bin
+	RampdemReader::EastingNorthingToLonLat(easting-surfaceExtraEasting, northing-surfaceExtraNorthing, lon, lat);
+	Double_t alt = fMyBackground.GetBinContent(bx, by);
+	Double_t ll = event.logLikelihoodFromPoint(lon, lat, alt, true);
+
+	if(ll < maxLL){
+	  // std::cout << "close = " << bx << "\t" << by << "\t"  <<  easting << "\t" << northing << std::endl;
+	  numBins++;
+	  fLookupEN[by-1][bx-1].push_back(eventInd);
+	}
+	numOldBins++;
+      }
+    }
+  }
+
+  // std::cout << "Done " << __PRETTY_FUNCTION__ << " for event " << event.eventNumber << ", numBins = " << numBins << ", numOldBins = " << numOldBins << std::endl;
 }
 
 
@@ -2124,7 +2222,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
       Cluster& cluster = clusters.at(0).at(clusterInd);
       if(cluster.knownBase){
 	double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
-	if(distM < fFitHorizonDistM){
+	if(distM < default_horizon_distance){
 	  double ll = mcEvent->logLikelihoodFromPoint(cluster.longitude, cluster.latitude, cluster.altitude, true);
 	  for(int z=0; z < mcEvent->nThresholds; z++){
 	    if(mcEvent->cluster[z] < 0 && ll < llEventCuts.at(z)){
@@ -2140,11 +2238,20 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 }
 
 
+
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName){
 
   readInSummaries(dataGlob);
   std::cout << "Sorting events..." << std::endl;
   std::sort(events.begin(), events.end());
+
+  ProgressBar p(events.size());
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    fillBinsToConsider(eventInd, 4000);
+    p.inc(eventInd);
+  }
+  return;
+
   initKDTree();
   readInSummaries(mcGlob);
 

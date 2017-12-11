@@ -207,6 +207,7 @@ namespace Acclaim{
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
+      void fillBinsToConsider(UInt_t eventInd,  Double_t maxLogLikelihood);
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -229,9 +230,9 @@ namespace Acclaim{
       void forEachEventFindClosestKnownBase(int z=0);
       void makeSummaryTrees();
       void resetClusters();
-      Double_t getSumOfMcWeights();      
+      Double_t getSumOfMcWeights();
       void initKDTree();
-      Acclaim::Clustering::Event* nextEvent();      
+      Acclaim::Clustering::Event* nextEvent();
 
       Double_t dMin(const Event* event1, const Event* event2);
       Double_t dSum(const Event* event1, const Event* event2);
@@ -247,12 +248,14 @@ namespace Acclaim{
       void doMcEventClustering();
       void doMcBaseClustering();
       void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, bool mc,  double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
+
+      void nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEvents);
+
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
-      Double_t fFitHorizonDistM; ///700e3 metres, distance at which a penalty is added to source location fitting
 
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
@@ -270,6 +273,8 @@ namespace Acclaim{
       // std::vector<Acclaim::Clustering::Cluster> clusters;	/// Vector of clusters,      
       std::vector<Acclaim::Clustering::Event> events;		/// Vector of data events
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
+      std::vector<std::vector<std::vector<UInt_t> > > fLookupEN;/// Event index lookup
+      AntarcticaBackground fMyBackground;
       TKDTreeID* fKDTree;                     /// ROOT's implementation of a KDTree, typedef'd for int/double
       std::vector<Double_t> fEventEastings;
       std::vector<Double_t> fEventNorthings;
@@ -285,21 +290,7 @@ namespace Acclaim{
       std::vector<ROOT::Math::Functor> fFunctors;
       Int_t fROOTgErrorIgnoreLevel;
     };
-
-
   }
 }
-
-
-// // kaboom?
-// namespace std {
-//   template <>
-//   void swap(Acclaim::Clustering::Event& e1, Acclaim::Clustering::Event& e2){
-//     Acclaim::Clustering::Event inefficientCopy = e1;
-//     e1 = e2;
-//     e2 = inefficientCopy;
-//   }
-// }
-
 
 #endif
