@@ -1794,7 +1794,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	numEventsProcessed++;
       }
     }
-    std::cerr << "Have found a cluster for " << numEventsProcessed << " of " << events.size() << " events.\n";
+    std::cerr << "Have found a cluster for " << numEventsProcessed << " of " << events.size()
+	      << " events, " <<  (events.size() - numEventsProcessed) << "remaining.\n";
     std::cout << "Starting loop = " << loopCount << std::endl;
     
     if(event1->eventEventClustering){
@@ -2154,10 +2155,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   }
   doMcBaseClustering();
 
-  // if(!fEventsAlreadyClustered){
-  //   doEventEventClustering();
-  // }
-  // doMcEventClustering();
+  if(!fEventsAlreadyClustered){
+    doEventEventClustering();
+  }
+  doMcEventClustering();
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
