@@ -45,11 +45,7 @@ namespace Acclaim{
     }
     template <class T>
     Bool_t inSandbox(const T& t){
-      // return t.longitude >= -0 && t.longitude < 90;
       return t.longitude >= -90 && t.longitude < 90;
-      // return t.longitude >= 60 && t.longitude < 90 && t.latitude >= -75 && t.latitude < -65;
-      // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
-      // return t.longitude >= -120 && t.longitude < -90 && t.latitude >= -75 && t.latitude < -65;
     }
 
     /**
@@ -207,7 +203,7 @@ namespace Acclaim{
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
-      void fillBinsToConsider(UInt_t eventInd,  Double_t maxLogLikelihood);
+      void fillLookup(UInt_t eventInd,  Double_t maxLogLikelihood);
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -216,7 +212,6 @@ namespace Acclaim{
       Double_t getDistSqEventCluster(const Event& event, const Cluster& cluster);
       Double_t getAngDistSqEventCluster(const Event& event, const Cluster& cluster);
       void getDeltaThetaDegDeltaPhiDegEventCluster(const Event& event, const Cluster& cluster, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
-
 
 
       Long64_t readInSummaries(const char* summaryGlob);
@@ -247,8 +242,7 @@ namespace Acclaim{
 
       void doMcEventClustering();
       void doMcBaseClustering();
-      void nearbyEvents(Int_t eventInd, std::vector<Int_t>& nearbyEvents, std::vector<double>& nearbyEventLLs, bool mc,  double llRange, double llFitThreshold=-1, double rangeEastingNorthing=default_range_easting_northing);
-
+      bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
       void nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEvents);
 
       void makeAndWriteNSquaredEventEventHistograms();
@@ -265,7 +259,6 @@ namespace Acclaim{
       Int_t mcDivision; // Which of the MC divisions should I read in? (runs from 0 to numMcDivisions-1)
 
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
-      // Double_t llEventCut;					/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Bool_t fEventsAlreadyClustered;
 
@@ -275,6 +268,8 @@ namespace Acclaim{
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
       std::vector<std::vector<std::vector<UInt_t> > > fLookupEN;/// Event index lookup
       AntarcticaBackground fMyBackground;
+
+
       TKDTreeID* fKDTree;                     /// ROOT's implementation of a KDTree, typedef'd for int/double
       std::vector<Double_t> fEventEastings;
       std::vector<Double_t> fEventNorthings;
@@ -289,6 +284,8 @@ namespace Acclaim{
       std::vector<ROOT::Math::Minimizer*> fMinimizers;
       std::vector<ROOT::Math::Functor> fFunctors;
       Int_t fROOTgErrorIgnoreLevel;
+      bool fDrawNewNearbyEventsHistograms;
+      bool fReadInBaseList;
     };
   }
 }
