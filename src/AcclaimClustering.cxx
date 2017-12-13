@@ -520,8 +520,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   // trivial change
   llClusterCut = 100;
 
-  // llEventCuts.push_back(10);
-  // llEventCuts.push_back(20);
+  llEventCuts.push_back(10);
+  llEventCuts.push_back(20);
   llEventCuts.push_back(40);
   llEventCuts.push_back(70);
 
@@ -1428,16 +1428,10 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	Double_t snrHack = sum->deconvolved_filtered[pol][peakIndex].snr;
 
 	/// @todo remove the run > 160 hack???
-	if(!isVaguelyNearMcMurdo(sum->peak[pol][peakIndex])
-	   && (!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
+	if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
 	   && sum->peak[pol][peakIndex].theta < 0
 	   && snrHack < 100
 	   && sum->run > 160){
-	  // if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))      
-	// if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
-	//    && sum->peak[pol][peakIndex].theta < 0
-	//    && snrHack < 100
-	//    && sum->run > 160){
 
 	  if(sum->mc.weight > 0){
 	    if(entry==0){
@@ -1767,6 +1761,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
   std::cout << "llNearbyThreshold = " << llNearbyThreshold << ", llFitThreshold = " << llFitThreshold << std::endl;
+
+  // move swapping global error level stuff out of parallelized loop
+  // this used to be around the minimizer->minimize()
   fROOTgErrorIgnoreLevel = gErrorIgnoreLevel;
   gErrorIgnoreLevel = 1001;
   
@@ -1795,7 +1792,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       }
     }
     std::cerr << "Have found a cluster for " << numEventsProcessed << " of " << events.size()
-	      << " events, " <<  (events.size() - numEventsProcessed) << "remaining.\n";
+	      << " events, " <<  (events.size() - numEventsProcessed) << " remaining.\n";
     std::cout << "Starting loop = " << loopCount << std::endl;
     
     if(event1->eventEventClustering){
@@ -1805,11 +1802,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       double lookup[2] = {event1->easting, event1->northing};
       fKDTree->FindInRange(lookup, default_range_easting_northing, nearbyEventsInds);
 
-      // move swapping global error level stuff out of parallelized loop
-      // this used to be around the minimizer->minimize() 
 
-      // For storing the indices/and log likelihoods of the second events
 
+
+
+      // prepare parallelized storage things
       const int mt = OpenMP::getMaxThreads();
       std::vector<std::vector<UInt_t> > event2Inds[mt]; // [t][z].size()==numMatchedClusters
       std::vector<std::vector<Int_t> > matchedClusters[mt]; // [t][z].size()==numMatchedClusters
@@ -1818,6 +1815,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	event2Inds[t] = std::vector<std::vector<UInt_t> >(event1->nThresholds, std::vector<UInt_t>());
       }
 
+
+
+      // Add event1 event to the list of "matched clusters"
       for(int z=0; z < event1->nThresholds; z++){
 	if(event1->cluster[z] > -1){
 	  if(z==0){
@@ -1830,11 +1830,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	}
       }
 
-      // Loop over nearby events in easting/northing
-      // ProgressBar p2(nearbyEventsIndsSorted.size());
-      // for(UInt_t i=0; i < nearbyEventsIndsSorted.size(); i++){
-      // 	int event2Ind = nearbyEventsIndsSorted[i].second;
 
+
+      std::vector<Double_t> lls(nearbyEventsInds.size(), -1);
+
+      // Loop over nearby events in easting/northing
       UInt_t n2 = OpenMP::isEnabled ? ceil(double(nearbyEventsInds.size())/mt) : nearbyEventsInds.size();
       Int_t innerLoopCounter = 0;
       std::cerr <<  "There are " << nearbyEventsInds.size() << " nearby events to process." << std::endl;
@@ -1862,13 +1862,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
 	    // std::cout << event1->eventNumber << "\t" << event2.eventNumber << std::endl;
 	    
-	    double ll = dMin(event1, &event2);
-	    if(ll > llFitThreshold){
-	      ll = dFit(event1, &event2);
+	    lls.at(i) = dMin(event1, &event2);
+	    if(lls.at(i) > llFitThreshold){
+	      lls.at(i) = dFit(event1, &event2);
 	    }
 
 	    for(int z=0; z < event1->nThresholds; z++){
-	      if(ll <= llEventCuts.at(z)){
+	      if(lls.at(i) <= llEventCuts.at(z)){
 		event2Inds[t][z].push_back(event2Ind); // the events to merge
 		if(event2.cluster[z] > -1){ // the clusters to merge
 		  matchedClusters[t][z].push_back(event2.cluster[z]);
