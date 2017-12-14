@@ -3,6 +3,7 @@
 #include "TChain.h"
 #include "AnitaConventions.h"
 #include "TGraphAntarctica.h"
+#include "AnitaEventSummary.h"
 
 // This is a guess at the version number, if this doesn't work for you
 // feel free to try harder to track down the change
@@ -12,7 +13,7 @@
 #define TCHAIN_NENTRIES_DEFAULT TChain::kMaxEntries
 #endif   
 
-class AnitaEventSummary;
+
 class TH2D;
 class TH2DAntarctica;
 class TProfile2DAntarctica;
@@ -77,8 +78,7 @@ namespace Acclaim
     }
     void SetUseProof(bool useProof=true) {fUseProof = useProof;}
     Bool_t GetUseProof() {return fUseProof;}
-
-
+    void addFlagChain(const char* flagFileGlob, const char* flagTreeName = "flagTree");
 
   protected:
 
@@ -86,21 +86,25 @@ namespace Acclaim
     void initProof();
     void renameProofCanvas(const char* varexp);
 
-    TString fPathToSummaryFiles;	/// The glob passed to the TChain
-    TString fTreeName;			/// The name of the TTrees, default is "sumTree"
-    TString fSummaryBranchName;		/// Branch name of the AnitaEventSummary, default is "sum"
+    TString fPathToSummaryFiles;		/// The glob passed to the TChain
+    TString fTreeName;				/// The name of the TTrees, default is "sumTree"
+    TString fSummaryBranchName;			/// Branch name of the AnitaEventSummary, default is "sum"
 
-    TChain* fChain;			/// The chain of TTrees containing the AnitaEventSummary
-    Long64_t fN;			/// The number of entries in the AnitaEventSummary chain, access with SummarySet::N()
-    AnitaEventSummary* fSum;		/// Pointer to the current entry in the chain, access with SummarySet::summary()
+    TChain* fChain;				/// The chain of TTrees containing the AnitaEventSummary
+    Long64_t fN;				/// The number of entries in the AnitaEventSummary chain, access with SummarySet::N()
+    AnitaEventSummary* fSum;			/// Pointer to the current entry in the chain, access with SummarySet::summary()
 
-    UInt_t fFirstTime;			/// The realTime of the first entry in the summary chain, useful for booking histograms
-    UInt_t fFirstEventNumber;		/// The eventNumber of the first entry in the summary chain, useful for booking histograms
-    UInt_t fLastTime;			/// The realTime of the last entry in the summary chain, useful for booking histograms
-    UInt_t fLastEventNumber;		/// The eventNumber of the last entry in the summary chain, useful for booking histograms
-    Bool_t fUseProof;			/// Switch on the Parallel ROOT Facility, for speedy histogram plotting
-    TProof* fProof;			/// Pointer to the PROOF session
-    Bool_t fBuiltIndex;                 /// Built chain index?
+    UInt_t fFirstTime;				/// The realTime of the first entry in the summary chain, useful for booking histograms
+    UInt_t fFirstEventNumber;			/// The eventNumber of the first entry in the summary chain, useful for booking histograms
+    UInt_t fLastTime;				/// The realTime of the last entry in the summary chain, useful for booking histograms
+    UInt_t fLastEventNumber;			/// The eventNumber of the last entry in the summary chain, useful for booking histograms
+    Bool_t fUseProof;				/// Switch on the Parallel ROOT Facility, for speedy histogram plotting
+    TProof* fProof;				/// Pointer to the PROOF session
+    Bool_t fBuiltIndex;				/// Built chain index?
+
+    TChain* fFlagChain;				/// An optional chain of TTrees containing just AnitaEventSummary::EventFlags
+    AnitaEventSummary::EventFlags* fFlags;	/// Pointer to tree entry of optional flags
+    UInt_t fFlagEventNumber;			/// Event number stored with flags to double check event matching
   };
 }
 

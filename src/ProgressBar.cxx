@@ -38,7 +38,7 @@ Acclaim::ProgressBar::ProgressBar(){
  * @param maxEntryInit is the number of events you want to loop over
 */
 Acclaim::ProgressBar::ProgressBar(Long64_t maxEntryInit){
-  fMaxEntry = maxEntryInit - 1;
+  fMaxEntry = maxEntryInit > 1 ? maxEntryInit - 1 : 1;
   fCounter = 0;
   fPercentage = 0;
   fWatch.Start(kTRUE);

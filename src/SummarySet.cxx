@@ -20,7 +20,7 @@
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
       fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0),
-      fUseProof(useProof), fProof(NULL), fBuiltIndex(false) {
+      fUseProof(useProof), fProof(NULL), fBuiltIndex(false), fFlagChain(NULL), fFlags(NULL), fFlagEventNumber(0) {
   
   init();
 }
@@ -88,6 +88,22 @@ Long64_t Acclaim::SummarySet::Process(TSelector* selector, Option_t* option, Lon
 }
 
 
+void Acclaim::SummarySet::addFlagChain(const char* flagFileGlob, const char* flagTreeName){
+
+  if(flagFileGlob){
+    if(fFlagChain){
+      delete fFlagChain;
+      fFlagChain = NULL;
+    }
+
+    fFlagChain = new TChain(flagTreeName);
+    fFlagChain->Add(flagFileGlob);
+
+    fFlagChain->SetBranchAddress("eventNumber", &fFlagEventNumber);
+    fFlagChain->SetBranchAddress("flags", &fFlags);
+  }
+}
+
 
 void Acclaim::SummarySet::init(){
 
@@ -150,8 +166,25 @@ Double_t Acclaim::SummarySet::getTotalSize() const{
  * @return the number of bytes read (same as TChain::GetEntry(entry))
  */
 Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
-  return fChain->GetEntry(entry);
+  Long64_t nb = fChain->GetEntry(entry);
+
+  if(fFlagChain){
+    fFlagChain->GetEntry(entry);
+
+    if(fFlagEventNumber!=fSum->eventNumber){
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", fSum->eventNumber = " << fSum->eventNumber
+		<< ", but fFlagEventNumber = " << fFlagEventNumber << "!" << std::endl;
+    }
+
+    // std::cout << fFlags->topPower[0] << "\t" << fSum->flags.topPower[0] << "\t" << std::endl;
+
+    fSum->flags = *fFlags;
+  }
+
+
+  return nb;
 }
+
 
 
 /** 
@@ -166,7 +199,9 @@ Long64_t Acclaim::SummarySet::getEvent(UInt_t eventNumber){
     fChain->BuildIndex("eventNumber");
     fBuiltIndex = true;
   }
-  return fChain->GetEntryWithIndex(eventNumber);
+
+  Long64_t entry = fChain->GetEntryNumberWithIndex(eventNumber);
+  return getEntry(entry);
 }
 
 
