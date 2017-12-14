@@ -20,7 +20,7 @@ void printClusterMultiplicityTable(TFile* f){
   TTree* t = (TTree*) f->Get("clusterTree");
 
   const int numK = 2;
-  TCut knownCuts[numK] = {"knownBase>0", "knownBase < 1"};
+  TCut knownCuts[numK] = {"knownBase>0", "knownBase <= 0"};
   //  100, 10-100, 5-10, 4,3,2,1
 
   std::cout << " | Cluster Multiplicity | " << knownCuts[0] << " | " << knownCuts[1] << " | " << std::endl;
@@ -96,7 +96,6 @@ void drawClusters(TFile* f){
     for(int entry=0; entry < mcEventTree->GetEntries(); entry++){
       mcEventTree->GetEntry(entry);
 
-
       for(int z=0; z < mcEvent->nThresholds; z++){
 	if(mcEvent->cluster[z]==-1){
 	  grMcClusterEfficiency->GetY()[z] += mcEvent->weight;
@@ -138,8 +137,8 @@ void drawClusters(TFile* f){
     
     for(int i=0; i < numSizeGroups; i++){
       // t->Draw(">>elist", sizeGroupCuts[i], "entrylist");
-      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");
-      // t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");      
+      // t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[0], "entrylist");
+      t->Draw(">>elist", sizeGroupCuts[i] + knownCuts[1], "entrylist");      
       TEntryList *elist = (TEntryList*)gDirectory->Get("elist");
       int nClusters = elist->GetN();
 
@@ -163,8 +162,13 @@ void drawClusters(TFile* f){
   auto c1 = new TCanvas();
   double c1Max = 1.1*maxN;
   auto c2 = new TCanvas();
-  
 
+  for(int p=0; p < grs.size(); p++){
+    for(int q=0; q < grs[p]->GetN(); q++){
+      std::cout << p << "\t" << q << "\t" << grs[p]->GetY()[q] << std::endl;
+    }
+  }
+  
   for(auto& gr : grs){
     static int i = -1;
     i++;
