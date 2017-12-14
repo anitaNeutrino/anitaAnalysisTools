@@ -338,14 +338,20 @@ Acclaim::NumPointsCut::NumPointsCut(){
  */
 void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
   eventPassesCut = true;
-  for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
-    const int numPoints = useful->fNumPoints[chanIndex];
-    if(numPoints < numPointsCutLow){
-      eventPassesCut = false;
-      break;
+
+  // yet another hacky fix for MC here, as 2017Aug MC runs < 100, fail the numPoints cut, as it's not set properly
+  // @todo remove this in the future when this is fixed in the MC...
+  if(sum->mc.weight==0){
+
+    for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
+      const int numPoints = useful->fNumPoints[chanIndex];
+      if(numPoints < numPointsCutLow){
+	eventPassesCut = false;
+	break;
+      }
     }
   }
-
+    
   if(sum){
     if(!eventPassesCut){
       // silly old flag name      

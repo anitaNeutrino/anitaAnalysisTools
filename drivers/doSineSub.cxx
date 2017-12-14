@@ -9,8 +9,11 @@ using namespace Acclaim;
 int main(int argc, char* argv[]){
 
   Acclaim::CmdLineArgs args(argc, argv);
-  UCorrelator::SineSubtractFilter::setUseCache(true);
 
+  bool useCache = args.tag_output_as_mc > 0 ? false : true;
+  UCorrelator::SineSubtractFilter::setUseCache(useCache);
+
+  
   FilterStrategy* strat = new FilterStrategy();
   ALFAFilter* alfaFilter = new ALFAFilter(Filters::Bands::alfaLowPassGHz);
   strat->addOperation(alfaFilter);
