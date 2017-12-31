@@ -48,6 +48,7 @@
 #pragma link C++ class Acclaim::AnalysisCuts::IsOnContinent+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsTaggedAsPayloadBlast+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsWithin20DegreesOfSunInPhi+;
+#pragma link C++ class Acclaim::AnalysisCuts::PassesBetterPayloadBlastCut+;
 #pragma link C++ class Acclaim::AnalysisCuts::IsGood+;
 #pragma link C++ class Acclaim::AnalysisCuts::GoodGPS+;
 #pragma link C++ class Acclaim::AnalysisCuts::NonZeroStokesI+;

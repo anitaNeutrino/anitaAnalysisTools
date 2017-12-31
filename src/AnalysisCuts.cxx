@@ -17,6 +17,7 @@ ClassImp(Acclaim::AnalysisCuts::IsOnContinent);
 ClassImp(Acclaim::AnalysisCuts::IsTaggedAsPayloadBlast);
 ClassImp(Acclaim::AnalysisCuts::IsWithin20DegreesOfSunInPhi);
 ClassImp(Acclaim::AnalysisCuts::IsGood);
+ClassImp(Acclaim::AnalysisCuts::PassesBetterPayloadBlastCut);
 ClassImp(Acclaim::AnalysisCuts::GoodGPS);
 ClassImp(Acclaim::AnalysisCuts::NonZeroStokesI);
 ClassImp(Acclaim::AnalysisCuts::RealSNR);
@@ -714,4 +715,21 @@ int Acclaim::AnalysisCuts::DoesNotPointToKnownMovingSource::apply(const AnitaEve
     }
   }
   return true;
+}
+
+
+
+
+
+/** 
+ * Does not point to a known moving source?
+ * 
+ * @param sum is the AnitaEventSummary
+ * @param pol is the polarisation (default = AnitaPol::kNotAPol, see handleDefaults to see how this is handled)
+ * @param peakInd is the peak index (default = -1, see handleDefaults to see how this is handled)
+ * 
+ * @return 1 (true) if does not point to known moving source, 0 (false) points to known moving source
+ */
+int Acclaim::AnalysisCuts::PassesBetterPayloadBlastCut::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+  return 0;
 }

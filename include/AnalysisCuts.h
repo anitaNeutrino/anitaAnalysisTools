@@ -184,6 +184,17 @@ namespace Acclaim
     };
 
     /**
+     * @class PassesBetterPayloadBlastCut
+     * @brief Is the is good flag set for this event?
+     */
+    class PassesBetterPayloadBlastCut : public AnalysisCut{
+    public:
+      PassesBetterPayloadBlastCut() : AnalysisCut() {;}
+      virtual int apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, Int_t peakInd = -1) const; /// Returns false(0) or true(1)
+      ClassDef(PassesBetterPayloadBlastCut, 0);
+    };
+
+    /**
      * @class IsGood
      * @brief Is the is good flag set for this event?
      */
@@ -450,7 +461,8 @@ namespace Acclaim
     const IsOnContinent isOnContinent;
     const IsTaggedAsPayloadBlast isTaggedAsPayloadBlast;
     const IsWithin20DegreesOfSunInPhi isWithin20DegreesOfSunInPhi;
-    const IsGood isGood;
+    const PassesBetterPayloadBlastCut passesBetterPayloadBlastCut;
+    const IsGood isGood;    
     const GoodGPS goodGPS;
     const NonZeroStokesI nonZeroStokesI;
     const RealSNR realSNR;
