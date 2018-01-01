@@ -20,9 +20,6 @@ class TEfficiency;
 
 namespace Acclaim{
 
-  namespace AnalysisCuts{
-    class AnalysisCut;
-  }
   class SummarySet;
 
   /** 
@@ -42,8 +39,8 @@ namespace Acclaim{
   
     CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool doAllPeaks = false, bool save_trees = false);
     virtual ~CutOptimizer();
-    void optimize(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-		  const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
+    void optimize(const std::vector<const TCut*>& signalSelection,
+		  const std::vector<const TCut*>& backgroundSelection,
 		  const std::vector<FormulaString>& formulaStrings,
 		  const char* outFileName = "");
 
@@ -53,11 +50,11 @@ namespace Acclaim{
      * 
      * @param treeName is the name of the tree to create
      * @param glob is the wildcard filenames for the ROOT files containing AnitaEventSummary trees (named sunTree)
-     * @param spectatorSelection is a vector of AnalysisCut variables used to choose the spectators 
+     * @param spectatorSelection is a vector of TCut variables used to choose the spectators 
      * 
      * @return the number of spectator trees to be prepared
      */
-    size_t addSpectatorTree(const char* treeName, const char* glob, const std::vector<const AnalysisCuts::AnalysisCut*>& spectatorSelection){
+    size_t addSpectatorTree(const char* treeName, const char* glob, const std::vector<const TCut*>& spectatorSelection){
       fSpecTreeNames.push_back(treeName);
       fSpecGlobs.push_back(glob);
       fSpecSelections.push_back(spectatorSelection);
@@ -73,11 +70,8 @@ namespace Acclaim{
     };
 
     TFile* makeOutputFile(const char* outFileName);
-    void generateSignalAndBackgroundTrees(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-					  const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
-					  const std::vector<FormulaString>& treeVars);
-    void generateSignalAndBackgroundTreesProof(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-					       const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
+    void generateSignalAndBackgroundTreesProof(const std::vector<const TCut*>& signalSelection,
+					       const std::vector<const TCut*>& backgroundSelection,
 					       const std::vector<FormulaString>& treeVars);
     BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
 
@@ -98,7 +92,7 @@ namespace Acclaim{
 
     std::vector<TString> fSpecTreeNames;
     std::vector<TString> fSpecGlobs;
-    std::vector<std::vector<const AnalysisCuts::AnalysisCut*> > fSpecSelections;
+    std::vector<std::vector<const TCut*> > fSpecSelections;
     std::vector<TTree*> fSpecTrees;
 
     static const int numEffVars = 2;

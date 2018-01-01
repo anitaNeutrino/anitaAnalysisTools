@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
   OutputConvention oc(1, argv);  
   const char* glob = argv[1];
 
-  AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);
+  // AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);
 
   SummarySet ss(glob);
   ss.SetUseProof(true);
@@ -29,10 +29,11 @@ int main(int argc, char* argv[]){
   reduce.addEventSelectionCut(&AnalysisCuts::goodGPS);
   reduce.addEventSelectionCut(&AnalysisCuts::realSNR);
   reduce.addEventSelectionCut(&AnalysisCuts::isRfTrigger);
-  reduce.addEventSelectionCut(&AnalysisCuts::higherPeakHilbertAfterDedispersion);
+  reduce.addEventSelectionCut(&AnalysisCuts::higherHilbertPeakAfterDedispersion);
   reduce.addEventSelectionCut(&AnalysisCuts::higherImpulsivityMeasureAfterDedispersion);
   reduce.addEventSelectionCut(&AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion);
-  reduce.addEventSelectionCut(&AnalysisCuts::fisherScoreAboveThreshold);
+  // reduce.addEventSelectionCut(&AnalysisCuts::fisherScoreAboveThreshold); ///@todo fix this
+
   // reduce.addEventSelectionCut(&AnalysisCuts::dedispersedFracPowerWindowGradientBelowThreshold);
 
   ss.Process(&reduce);

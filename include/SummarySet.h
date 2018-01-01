@@ -22,8 +22,8 @@ class TProof;
 namespace Acclaim
 {
 
-  class AnalysisPlot;
-  class AnalysisProf;
+  // class AnalysisPlot;
+  // class AnalysisProf;
 
   class SummarySet {
   public:
@@ -43,11 +43,11 @@ namespace Acclaim
     UInt_t getFirstEventNumber(){return fFirstEventNumber;}
     UInt_t getLastEventNumber(){return fLastEventNumber;}
 
-    AnalysisProf* bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
-    AnalysisProf* bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisProf* bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisProf* bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
-    AnalysisPlot* bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
-    AnalysisPlot* bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisPlot* bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisPlot* bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
     TH2D* bookTimeHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
     TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);

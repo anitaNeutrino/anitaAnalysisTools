@@ -48,9 +48,9 @@ Acclaim::SummarySelector::~SummarySelector()
  * 
  * @param analysisCut 
  */
-void  Acclaim::SummarySelector::addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut)
+void  Acclaim::SummarySelector::addEventSelectionCut(const TCut* analysisCut)
 {
-  fEventSelection->Add(const_cast<AnalysisCuts::AnalysisCut*>(analysisCut));
+  fEventSelection->Add(const_cast<TCut*>(analysisCut));
 }
 
 
@@ -121,7 +121,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     TIter next(fEventSelection);
     int i=0;
     while (TObject* obj = next()){
-      const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
+      const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
       TString name = eventSelection->GetName();
       name.ReplaceAll("Acclaim::AnalysisCuts::", "");
       fAnalysisCutTree->Branch(name, &fAnalysisCutReturns.at(i));
@@ -167,8 +167,8 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
   TIter next(fEventSelection);
   int i=0;
   while (TObject* obj = next()){
-    const AnalysisCuts::AnalysisCut* eventSelection = dynamic_cast<const AnalysisCuts::AnalysisCut*>(obj);
-    Int_t retVal = eventSelection->apply(fSum);
+    // const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
+    Int_t retVal = 1;//eventSelection->apply(fSum); ///@todo unbreak this!
     fAnalysisCutReturns.at(i) = retVal;
     i++;
 

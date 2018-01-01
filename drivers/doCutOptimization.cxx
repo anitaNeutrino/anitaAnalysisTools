@@ -16,12 +16,12 @@ int main(int argc, char* argv[]){
   const char* signalGlob = argv[1];
   const char* backgroundGlob = argc >= 2 ? argv[2] : NULL;
 
-  AnalysisCuts::setMode(AnalysisCuts::kTraining);
+  // AnalysisCuts::setMode(AnalysisCuts::kTraining);
   // AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);  
 
   CutOptimizer co(signalGlob, backgroundGlob, true, true);
 
-  std::vector<const AnalysisCuts::AnalysisCut *> signalSelection;
+  std::vector<const TCut *> signalSelection;
   TString sg = signalGlob;
   if(sg.Contains("Wais")){
     // extra data quality cuts
@@ -31,19 +31,19 @@ int main(int argc, char* argv[]){
     signalSelection.push_back(&AnalysisCuts::closeToMC); // Is this the right peak?
   }
 
-  std::vector<const AnalysisCuts::AnalysisCut *> backgroundSelection;
+  std::vector<const TCut *> backgroundSelection;
   backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
 
   const int nGen = 8;
-  const AnalysisCuts::AnalysisCut* preThermalCuts[nGen] = {&AnalysisCuts::isRfTrigger,
-							   &AnalysisCuts::isGood,
-							   &AnalysisCuts::smallDeltaRough,
-  							   &AnalysisCuts::goodGPS,
-  							   &AnalysisCuts::realSNR,
-   							   &AnalysisCuts::higherPeakHilbertAfterDedispersion,
-   							   &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
-							   &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
+  const TCut* preThermalCuts[nGen] = {&AnalysisCuts::isRfTrigger,
+				      &AnalysisCuts::isGood,
+				      &AnalysisCuts::smallDeltaRough,
+				      &AnalysisCuts::goodGPS,
+				      &AnalysisCuts::realSNR,
+				      &AnalysisCuts::higherHilbertPeakAfterDedispersion,
+				      &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
+				      &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(preThermalCuts[i]);
     backgroundSelection.push_back(preThermalCuts[i]);
@@ -88,11 +88,11 @@ int main(int argc, char* argv[]){
 // | FisherScoreAboveThreshold                     |   646643 |   954698 | 8298605 |
 
   
-  // std::vector<const AnalysisCuts::AnalysisCut*> waisCuts;
+  // std::vector<const TCut*> waisCuts;
   // waisCuts.push_back(&AnalysisCuts::isTaggedAsWaisPulser);
   // co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
 
-  // std::vector<const AnalysisCuts::AnalysisCut*> selectingBlastsCuts;
+  // std::vector<const TCut*> selectingBlastsCuts;
   // selectingBlastsCuts.push_back(&AnalysisCuts::isTaggedAsPayloadBlast);
   // co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
   

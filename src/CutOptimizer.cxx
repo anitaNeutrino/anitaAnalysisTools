@@ -9,7 +9,6 @@
 #include "TXMLEngine.h"
 #include "TMath.h"
 #include "TBranch.h"
-#include "AnalysisPlot.h"
 #include "RootTools.h"
 #include "TH2D.h"
 #include "TSystem.h"
@@ -475,7 +474,7 @@ Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TT
 
 
 
-void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
+void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vector<const TCut*>& signalSelection, const std::vector<const TCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
 
 
   std::vector<const char*> fs;
@@ -496,7 +495,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
     globs.push_back(fSignalGlob); // again...
   }
 
-  const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>* selections[2] = {&signalSelection,
+  const std::vector<const TCut*>* selections[2] = {&signalSelection,
 										 &backgroundSelection};
   const char* proofFileNames[2] = {"/tmp/signalCuts.root", "/tmp/backgroundCuts.root"};
   const char* proofTreeNames[2] = {"signalCuts", "backgroundCuts"};
@@ -558,280 +557,11 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
 
 }
 
-/** 
- * This function does the hard work of generating a signal tree and a background tree for the TMVA to work on
- * It creates two new TTrees (signal+background) and generates a branch for each of the formula strings passed.
- * Then it loops through the AnitaEventSummaries, applying the selection cuts.
- * For each event passing the signal/background cuts it adds an entry in the tree by evaluating each of the formulae.
- * 
- * @param signalSelection is a set of my custom cut class defining the signal selection for TMVA training.
- * @param backgroundSelection is a set of my custom cut class defining the background selection for TMVA training.
- * @param formulaStrings are a set of formulae like one would pass to TTree::Drawm which get evaluated for signal/background events
- */
-void Acclaim::CutOptimizer::generateSignalAndBackgroundTrees(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection, const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
-
-  // First generate the new signal and background trees
-  if(fSignalTree){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing signal tree. Deleting and regenerating." << std::endl;
-    delete fSignalTree;
-    fSignalTree = NULL;
-  }
-  fSignalTree = new TTree("signalTree",  "signalTree");
-  if(!fSaveTrees){
-    fSignalTree->SetDirectory(0);
-  }
-
-  
-  if(fRejectedSignalTree){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing rejectedSignal tree. Deleting and regenerating." << std::endl;
-    delete fRejectedSignalTree;
-    fRejectedSignalTree = NULL;
-  }
-  fRejectedSignalTree = new TTree("rejectedSignalTree",  "rejectedSignalTree");
-  if(!fSaveTrees){
-    fRejectedSignalTree->SetDirectory(0);
-  }
-
-  
-  
-  if(fBackgroundTree){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing background tree. Deleting and regenerating." << std::endl;
-    delete fBackgroundTree;
-    fBackgroundTree = NULL;
-  }
-  fBackgroundTree = new TTree("backgroundTree",  "backgroundTree");
-  if(!fSaveTrees){
-    fBackgroundTree->SetDirectory(0);
-  }
-
-  if(fRejectedBackgroundTree){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing rejectedBackground tree. Deleting and regenerating." << std::endl;
-    delete fRejectedBackgroundTree;
-    fRejectedBackgroundTree = NULL;
-  }
-  fRejectedBackgroundTree = new TTree("rejectedBackgroundTree",  "rejectedBackgroundTree");
-  if(!fSaveTrees){
-    fRejectedBackgroundTree->SetDirectory(0);
-  }
-
-  
-  // now we need to figure out if we have separate globs for signal and background
-  // or just one for both...
-  std::vector<TString> globs;
-  globs.push_back(fSignalGlob);
-  if(fBackgroundGlob != ""){
-    globs.push_back(fBackgroundGlob);
-  }
-  else{
-    globs.push_back(fSignalGlob); // again...
-  }
-  for(UInt_t g=0; g < fSpecGlobs.size(); g++){
-    globs.push_back(fSpecGlobs[g]);
-  }
-  
-
-  // Branches could either be integers or floats, depending on the formula return type
-  // We will try to figure it out later from the TTreeFormula, but for now assign
-  // arrays of both ints and floats
-  const int nFormStr = formulaStrings.size(); // The actual number of formula could be less in the case of a bad expression
-  fSignalFloatVals.resize(nFormStr, 0);
-  fBackgroundFloatVals.resize(nFormStr, 0);
-  fSignalIntVals.resize(nFormStr, 0);
-  fBackgroundIntVals.resize(nFormStr, 0);
-
-  // and store the types we do figure out here...
-  std::vector<BranchType> assignedSignalBranches(nFormStr, kUnassigned);
-  std::vector<BranchType> assignedBackgroundBranches(nFormStr, kUnassigned);
 
 
-  // some acrobatics to assign an arbitrary number of spectator trees...
-  while(fSpecTrees.size() > 0){
-    if(fSpecTrees.back()){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", pre-existing spectator tree. Deleting and regenerating." << std::endl;      
-      delete fSpecTrees.back();
-      fSpecTrees.back() = NULL;
-    }
-    fSpecTrees.pop_back();
-  }
 
-  const int nSpec = fSpecTreeNames.size();
-  for(int s=0; s < nSpec;  s++){
-    fSpecTrees.push_back(new TTree(fSpecTreeNames[s], fSpecTreeNames[s]));
-  }
-  std::vector<std::vector<BranchType> > assignedSpecBranches(nSpec, std::vector<BranchType>(nFormStr, kUnassigned));
-  std::vector<std::vector<Int_t> > fSpecIntVals(nSpec, std::vector<int>(nFormStr, 0));
-  std::vector<std::vector<Float_t> > fSpecFloatVals(nSpec, std::vector<float>(nFormStr, 0));
-
-
-  // book efficiencies
-  bool defSumw2 = TH1::GetDefaultSumw2();
-  TH1::SetDefaultSumw2(true); // force tefficiency to have sumw2?
-  for(unsigned i=0; i < signalSelection.size(); i++){
-
-    const int numSnrBins = 30;
-    const double snrBins[numSnrBins] = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5,
-                                              5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5,
-                                              10 , 12 , 14 , 16 , 18 , 20 , 40 , 60 , 80 , 100};
-
-    for(int orderInd=0; orderInd < numCutOrders; orderInd++){
-      TString cutName = signalSelection[i]->GetName();
-      
-      TString orderName;
-      switch(orderInd){
-        case kInSequence: orderName = "inSequence"; break;
-        case kIfFirst:    orderName = "ifFirst";    break;
-        // case kIfLast:     orderName = "ifLast";     break;
-        default:
-          std::cerr << "Warning in " << __PRETTY_FUNCTION__ << "Unknown order!" << std::endl;
-      }
-      
-      TString snrName = "eff_" + cutName + "_" + orderName + "_vs_SNR";
-      fSignalEffs[kSNR][orderInd].push_back(new TEfficiency(snrName, snrName, numSnrBins-1, snrBins));
-      
-    
-      TString energyName = "eff_" + cutName + "_" + orderName + "_vs_Energy";
-      fSignalEffs[kEnergy][orderInd].push_back(new TEfficiency(energyName, energyName, 100, 15, 25));
-    }
-  }
-
-  TH1::SetDefaultSumw2(defSumw2);
-
-  for(UInt_t g=0; g < globs.size(); g++){
-
-    Bool_t doSignal = g == 0 ? true : false;
-    Bool_t doBackground = g == 1 ? true : false;
-
-    // Then load the master AnitaEventSummary chain using my SummarySet class    
-    SummarySet ss(globs[g]);
-    Long64_t nEntries = ss.N(); // > 10000 ? 10000 : ss.N();
-
-    // Use my custom FolderHolder to handle notification subtleties
-    FormulaHolder forms(ss.getChain());
-    for(int i=0; i < nFormStr; i++){
-      forms.add(formulaStrings.at(i).first);
-    }
-
-    // Now we loop over the AnitaEventSummaries
-    ProgressBar p(nEntries); // For prettiness
-    for(Long64_t entry=0; entry < nEntries; entry++){
-      ss.getEntry(entry);
-
-      AnitaEventSummary* sum = ss.summary();
-
-      // Is this a background event?
-      // (Do this first since we probably have more background)
-      if(doBackground){
-        Bool_t matchBackgroundSelection = true;
-        for(UInt_t i=0; i < backgroundSelection.size(); i++){
-          int thisCutVal = backgroundSelection.at(i)->apply(sum);
-          matchBackgroundSelection = matchBackgroundSelection && thisCutVal!=0;
-          if(!matchBackgroundSelection){
-            break;
-          }
-        }
-
-        for(UInt_t i=0; i < forms.N(); i++){
-
-          if(assignedBackgroundBranches.at(i)==kUnassigned){
-            assignedBackgroundBranches.at(i) = setBranchFromFormula(fBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));
-            assignedBackgroundBranches.at(i) = setBranchFromFormula(fRejectedBackgroundTree, forms.at(i), forms.str(i), &fBackgroundIntVals.at(i), &fBackgroundFloatVals.at(i));              
-          }
-          if(assignedBackgroundBranches.at(i)==kInt){
-            fBackgroundIntVals.at(i) = forms.at(i)->EvalInstance();
-          }
-          else{
-            fBackgroundFloatVals.at(i) = forms.at(i)->EvalInstance();
-          }
-        }
-        if(matchBackgroundSelection){        
-          fBackgroundTree->Fill();
-        }
-        else{
-          fRejectedBackgroundTree->Fill();
-        }
-      }
-      else if(doSignal){
-        // If it's not background, it might be signal...
-        Bool_t matchSignalSelection = true;
-        for(UInt_t i=0; i < signalSelection.size(); i++){
-          int thisCutVal = signalSelection.at(i)->apply(sum);
-          double log10E = TMath::Log10(sum->mc.energy);
-
-          // if first...
-          fSignalEffs[kSNR][kIfFirst][i]->Fill(thisCutVal, sum->trainingDeconvolved().snr, sum->weight());
-          fSignalEffs[kEnergy][kIfFirst][i]->Fill(thisCutVal, log10E, sum->weight());
-
-          matchSignalSelection = matchSignalSelection && (thisCutVal != 0);
-          // in sequence...
-          fSignalEffs[kSNR][kInSequence][i]->Fill(matchSignalSelection, sum->trainingDeconvolved().snr, sum->weight());
-          fSignalEffs[kEnergy][kInSequence][i]->Fill(matchSignalSelection, log10E, sum->weight());
-        }
-        // std::cerr << std::endl;
-
-
-        for(UInt_t i=0; i < forms.N(); i++){
-          if(assignedSignalBranches.at(i)==kUnassigned){
-            assignedSignalBranches.at(i) = setBranchFromFormula(fSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
-            assignedSignalBranches.at(i) = setBranchFromFormula(fRejectedSignalTree, forms.at(i), forms.str(i), &fSignalIntVals.at(i), &fSignalFloatVals.at(i));
-          }
-          if(assignedSignalBranches.at(i)==kInt){
-            fSignalIntVals.at(i) = forms.at(i)->EvalInstance();
-          }
-          else{
-            fSignalFloatVals.at(i) = forms.at(i)->EvalInstance();
-          }
-        }
-        if(matchSignalSelection){        
-          fSignalTree->Fill();
-        }
-        else{
-          fRejectedSignalTree->Fill();
-        }
-      }
-      else{ // then it's a spectator...
-        // std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", not doing signal or background?" << std::endl;
-        Bool_t matchSpecSelection = true;
-        
-        for(UInt_t i=0; i < fSpecSelections[g-2].size(); i++){
-          int thisCutVal = fSpecSelections[g-2].at(i)->apply(sum);
-          matchSpecSelection = matchSpecSelection && (thisCutVal != 0);
-        }
-
-        if(matchSpecSelection){
-          for(UInt_t i=0; i < forms.N(); i++){
-            if(assignedSpecBranches.at(g-2).at(i)==kUnassigned){
-              assignedSpecBranches.at(g-2).at(i) = setBranchFromFormula(fSpecTrees[g-2], forms.at(i), forms.str(i), &fSpecIntVals.at(g-2).at(i), &fSpecFloatVals.at(g-2).at(i));
-            }
-            if(assignedSpecBranches.at(g-2).at(i)==kInt){
-              fSpecIntVals.at(g-2).at(i) = forms.at(i)->EvalInstance();
-            }
-            else{
-              fSpecFloatVals.at(g-2).at(i) = forms.at(i)->EvalInstance();
-            }
-          }
-          fSpecTrees[g-2]->Fill();
-        }
-      }
-      p.inc(entry, nEntries);
-    }
-    if(doSignal){
-      std::cout << "Created " << fSignalTree->GetName() << " with " << fSignalTree->GetEntries() << " events" << std::endl;
-      if(debug){fSignalTree->Print();}
-    }
-    else if(doBackground){
-      std::cout << "Created " << fBackgroundTree->GetName() << " with " << fBackgroundTree->GetEntries() << " events" << std::endl;
-      if(debug){fBackgroundTree->Print();}
-    }
-    else{
-      std::cout << "Created " << fSpecTrees[g-2]->GetName() << " with " << fSpecTrees[g-2]->GetEntries() << " events" << std::endl;
-    }
-    
-  }
-}
-
-
-void Acclaim::CutOptimizer::optimize(const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& signalSelection,
-				     const std::vector<const Acclaim::AnalysisCuts::AnalysisCut*>& backgroundSelection,
+void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelection,
+				     const std::vector<const TCut*>& backgroundSelection,
 				     const std::vector<FormulaString>& formulaStrings, const char* fileName){
 
   // Someone with a bit more time can do the backwards compatibility

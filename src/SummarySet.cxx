@@ -3,7 +3,6 @@
 #include "AnitaEventSummary.h"
 #include <iostream>
 #include "TH2D.h"
-#include "AnalysisPlot.h"
 #include "TFile.h"
 #include "TProof.h"
 #include <stdlib.h>
@@ -344,29 +343,6 @@ Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Op
   return retVal;
 }
 
-Acclaim::AnalysisProf* Acclaim::SummarySet::bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
-  return h;
-}
-
-
-Acclaim::AnalysisProf* Acclaim::SummarySet::bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
-  return h;
-}
-
-
-
-Acclaim::AnalysisPlot* Acclaim::SummarySet::bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
-  return h;
-}
-
-
-Acclaim::AnalysisPlot* Acclaim::SummarySet::bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
-  return h;
-}
 
 
 

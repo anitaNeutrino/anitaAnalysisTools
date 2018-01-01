@@ -6,7 +6,6 @@
 #include <TChain.h>
 #include <TFile.h>
 #include "AnitaEventSummary.h"
-#include "AnalysisCuts.h"
 
 // Use the TTree reader?
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
@@ -18,6 +17,7 @@
 
 class TH1D;
 class TBranch;
+class TCut;
 
 namespace Acclaim {
 
@@ -72,7 +72,8 @@ namespace Acclaim {
     SummarySelector(const char* sumBranchName = "sum");
     virtual ~SummarySelector();
 
-    void addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut);
+    // void addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut);
+    void addEventSelectionCut(const TCut* analysisCut);    
     
     virtual void   Begin(TTree *tree);
     virtual void   SlaveBegin(TTree *tree);
