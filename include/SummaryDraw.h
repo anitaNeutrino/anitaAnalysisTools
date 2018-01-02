@@ -3,7 +3,7 @@
  Email: strutt@physics.ucla.edu
 
  Description:
-             A global set of TCuts
+             A global set of TStrings/TCuts for drawing on the command line
 ***********************************************************************************************************/
 
 #ifndef ANALYSIS_CUTS_H
@@ -18,19 +18,19 @@ namespace Acclaim
 {
 
   /**
-   * @namespace AnalysisVars
+   * @namespace Draw
    * @brief Commonly used analysis variables in SummarySet::Draw() or TTree::Draw().
    *
-   * You'll need to include AnalysisCuts on the command line.
+   * You'll need to include Cuts on the command line.
    */
-  namespace AnalysisVars {
+  namespace Draw {
     const TString dPhiWais = "FFTtools::wrap(peak.phi - wais.phi, 360, 0)";
     const TString dThetaWais = "(peak.theta - wais.theta)";
   }
 
 
   /**
-   * @namespace AnalysisCuts
+   * @namespace Cuts
    * @brief Contains a set of TCuts which implement cuts on AnitaEventSummary objects
    * 
    * For arrays like the peak[][] or coherent_filtered[][] things, doing TTree::Draw("peak.value") 
@@ -38,7 +38,7 @@ namespace Acclaim
    * which selects one element by requiring it have the highest peak value.
    * 
    */
-  namespace AnalysisCuts
+  namespace Cuts
   {
 
     // Replacement for the member functions in AnitaEventSummary...
@@ -52,7 +52,7 @@ namespace Acclaim
     const TCut higherHilbertPeakAfterDedispersion("higherHilbertPeakAfterDedispersion", "deconvolved_filtered.peakHilbert > coherent_filtered.peakHilbert");
     const TCut higherImpulsivityMeasureAfterDedispersion("higherImpulsivityMeasureAfterDedispersion", "deconvolved_filtered.impulsivityMeasure > coherent_filtered.impulsivityMeasure");
     const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion", "deconvolved_filtered.fracPowerWindowGradient() < coherent_filtered.fracPowerWindowGradient()");
-    const TCut closeToWais("closeToWais", TString::Format("mc.weight == 0 && %s < 5.5 && %s < 3.5", AnalysisVars::dPhiWais.Data(), AnalysisVars::dThetaWais.Data())); /// always false for MC
+    const TCut closeToWais("closeToWais", TString::Format("mc.weight == 0 && %s < 5.5 && %s < 3.5", Draw::dPhiWais.Data(), Draw::dThetaWais.Data())); /// always false for MC
     const TCut closeToMC("closeToMC", "mc.weight > 0 && peak.dPhiMC() < 5.5 && peak.dThetaMC() < 3.5"); /// always false for MC
     const TCut anita3QuietTime("anita3QuietTime", "realTime >= 1419320000 && sum->realTime < 1420250000");
     const TCut realSNR("realSNR", "(!TMath::IsNaN(deconvolved.snr) && TMath::Finite(deconvolved.snr))");

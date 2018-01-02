@@ -3,7 +3,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include "TCanvas.h"
-#include "AnalysisCuts.h"
+#include "SummaryDraw.h"
 
 ClassImp(Acclaim::SummarySelector);
 
@@ -123,7 +123,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     while (TObject* obj = next()){
       const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
       TString name = eventSelection->GetName();
-      name.ReplaceAll("Acclaim::AnalysisCuts::", "");
+      name.ReplaceAll("Acclaim::Cuts::", "");
       fAnalysisCutTree->Branch(name, &fAnalysisCutReturns.at(i));
       i++;
     }

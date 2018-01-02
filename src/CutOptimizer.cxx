@@ -1,6 +1,6 @@
 #include "CutOptimizer.h"
 #include "OutputConvention.h"
-#include "AnalysisCuts.h"
+#include "SummaryDraw.h"
 #include "SummarySet.h"
 #include "ProgressBar.h"
 #include "AnitaEventSummary.h"

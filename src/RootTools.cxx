@@ -18,6 +18,9 @@
 #include "Math/Interpolator.h"
 #include "Math/InterpolationTypes.h"
 
+#include "TGClient.h"
+#include "TGWindow.h"
+#include "TROOT.h"
 
 #include "RawAnitaHeader.h"
 #include "UsefulAnitaEvent.h"
@@ -813,6 +816,59 @@ TGraph* Acclaim::RootTools::interpolateWithStartTime(TGraph* grIn, Double_t star
 
 
 
+TString Acclaim::RootTools::nextCanvasName(){
+  const char* defName = gROOT->GetDefCanvasName();
+  TSeqCollection* cans = gROOT->GetListOfCanvases();
+
+  TString name = defName;
+  TObject* c = cans->FindObject(name);
+  Int_t testN = 1;
+  while(c){
+    testN++;
+    name = TString::Format("%s_n%d", defName, testN);
+    c = cans->FindObject(name); 
+  }
+  return name;
+}
+
+
+
+
+TCanvas* Acclaim::RootTools::canvas(double fracLength){
+
+  if(fracLength < 0.1) fracLength = 0.1;
+  else if(fracLength > 1) fracLength = 1;
+ 
+  Int_t  x, y;
+  UInt_t w, h;
+  gVirtualX->GetWindowSize(gClient->GetRoot()->GetId(),x,y,w,h);
+
+  const UInt_t cw = ceil(w*fracLength);
+  const UInt_t ch = ceil(h*fracLength);
+  
+  Int_t nc = gROOT->GetListOfCanvases()->GetEntries();
+  TString name = nextCanvasName();
+
+  const UInt_t dx = w/11;
+  const UInt_t dy = h/11;
+
+  Int_t x1 = nc*dx;
+  Int_t y1 = nc*dy;
+
+  while(x1 < 0 || y1 < 0 || x1+cw >= w || y1+ch >= h){
+    x1 += dx;
+    y1 += dy;
+
+    x1 = x1 % w;
+    y1 = y1 % h;
+  }
+    
+  return new TCanvas(name, name, x1, y1, cw, ch);
+
+}
+
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Draws an array of histograms with a rainbow on a single TCanvas
@@ -827,7 +883,7 @@ TGraph* Acclaim::RootTools::interpolateWithStartTime(TGraph* grIn, Double_t star
 TCanvas* Acclaim::RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanvas* can, Double_t* colWeights){
 
   if(can==NULL){
-    can = new TCanvas();
+    can = canvas();
   }
   can->cd();
 
@@ -930,7 +986,7 @@ TCanvas* Acclaim::RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t num
 					       TString drawOpt, TCanvas* can, Double_t* colWeights){
 
   if(can==NULL){
-    can = new TCanvas();
+    can = canvas();
   }
   can->cd();
 
@@ -1508,7 +1564,7 @@ Int_t Acclaim::RootTools::getColorFracThroughPalette(Int_t index, Int_t maxVal){
 TCanvas* Acclaim::RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption){
 
   gStyle->SetOptStat(statsOption);
-  TCanvas* theCan = new TCanvas();
+  TCanvas* theCan = canvas();
 
   Double_t boxSize = 0.2; // In normalized coordinates
   const Int_t maxNumBoxes = 1./boxSize;

@@ -58,7 +58,7 @@ namespace Acclaim {
     TBranch* fSumBranch; //!
 #endif
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
-    TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
+    TList*				 fEventSelection;		/// A list of TCut objects, for event selection (none means selecting all)
 
     TString                              fAnalysisCutTreeName;          /// Name of optional tree
     TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on
@@ -72,7 +72,6 @@ namespace Acclaim {
     SummarySelector(const char* sumBranchName = "sum");
     virtual ~SummarySelector();
 
-    // void addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut);
     void addEventSelectionCut(const TCut* analysisCut);    
     
     virtual void   Begin(TTree *tree);

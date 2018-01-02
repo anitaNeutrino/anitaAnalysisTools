@@ -1,7 +1,7 @@
 #include "CutTreeSelector.h"
 #include "TProofOutputFile.h"
 #include "TTreeFormula.h"
-#include "AnalysisCuts.h"
+#include "SummaryDraw.h"
 #include "CutOptimizer.h"
 #include "TList.h"
 

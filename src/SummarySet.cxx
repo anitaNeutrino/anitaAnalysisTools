@@ -352,18 +352,10 @@ void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
   // for some reason, proof does this...
   // and if I want the histogram on the command line, I need to rename the canvas
   if(canName==histName){
-    TString defCanName = gROOT->GetDefCanvasName();
-    TSeqCollection* cans = gROOT->GetListOfCanvases();
-    bool alreadyHaveThisCanName = true;
-    int i=1;
-    TString newCanName;
-    while(alreadyHaveThisCanName){
-      newCanName = i == 1 ? defCanName : defCanName + TString::Format("_n%d", i);
-      alreadyHaveThisCanName = cans->Contains(newCanName);
-    }
+    TString newCanName = RootTools::nextCanvasName();
     c->SetName(newCanName);
     c->SetTitle(newCanName);
-  }      
+  }
 }
 
 

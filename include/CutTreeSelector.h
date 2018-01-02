@@ -9,7 +9,7 @@ class TTreeFormula;
 
 namespace Acclaim {
 
-  namespace AnalysisCuts{
+  namespace Cuts{
     class AnalysisCut;
   }
 

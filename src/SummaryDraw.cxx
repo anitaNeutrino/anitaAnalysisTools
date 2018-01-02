@@ -13,7 +13,7 @@
 //  * 
 //  * @return 1 (true) if does not point to known moving source, 0 (false) points to known moving source
 //  */
-// int Acclaim::AnalysisCuts::DoesNotPointToKnownMovingSource::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
+// int Acclaim::Cuts::DoesNotPointToKnownMovingSource::apply(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd) const {
 //   handleDefaults(sum, pol, peakInd);
 
 //   Adu5Pat pat = sum->anitaLocation.pat();

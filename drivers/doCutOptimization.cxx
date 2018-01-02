@@ -1,5 +1,5 @@
 #include "CutOptimizer.h"
-#include "AnalysisCuts.h"
+#include "SummaryDraw.h"
 #include <iostream>
 #include "TSystem.h" // require gSystem->Exit(0) to avoid segfault with PROOF
 
@@ -16,8 +16,8 @@ int main(int argc, char* argv[]){
   const char* signalGlob = argv[1];
   const char* backgroundGlob = argc >= 2 ? argv[2] : NULL;
 
-  // AnalysisCuts::setMode(AnalysisCuts::kTraining);
-  // AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);  
+  // Cuts::setMode(Cuts::kTraining);
+  // Cuts::setMode(Cuts::kAcclaimAnalysis);  
 
   CutOptimizer co(signalGlob, backgroundGlob, true, true);
 
@@ -25,25 +25,25 @@ int main(int argc, char* argv[]){
   TString sg = signalGlob;
   if(sg.Contains("Wais")){
     // extra data quality cuts
-    signalSelection.push_back(&AnalysisCuts::closeToWais); // Is this the right peak?
+    signalSelection.push_back(&Cuts::closeToWais); // Is this the right peak?
   }
   else{
-    signalSelection.push_back(&AnalysisCuts::closeToMC); // Is this the right peak?
+    signalSelection.push_back(&Cuts::closeToMC); // Is this the right peak?
   }
 
   std::vector<const TCut *> backgroundSelection;
-  backgroundSelection.push_back(&AnalysisCuts::isAboveHorizontal); // Upward pointing
-  backgroundSelection.push_back(&AnalysisCuts::anita3QuietTime); // quiet
+  backgroundSelection.push_back(&Cuts::isAboveHorizontal); // Upward pointing
+  backgroundSelection.push_back(&Cuts::anita3QuietTime); // quiet
 
   const int nGen = 8;
-  const TCut* preThermalCuts[nGen] = {&AnalysisCuts::isRfTrigger,
-				      &AnalysisCuts::isGood,
-				      &AnalysisCuts::smallDeltaRough,
-				      &AnalysisCuts::goodGPS,
-				      &AnalysisCuts::realSNR,
-				      &AnalysisCuts::higherHilbertPeakAfterDedispersion,
-				      &AnalysisCuts::higherImpulsivityMeasureAfterDedispersion,
-				      &AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion};
+  const TCut* preThermalCuts[nGen] = {&Cuts::isRfTrigger,
+				      &Cuts::isGood,
+				      &Cuts::smallDeltaRough,
+				      &Cuts::goodGPS,
+				      &Cuts::realSNR,
+				      &Cuts::higherHilbertPeakAfterDedispersion,
+				      &Cuts::higherImpulsivityMeasureAfterDedispersion,
+				      &Cuts::lowerFracPowerWindowGradientAfterDedispersion};
   for(unsigned i=0; i < nGen; i++){
     signalSelection.push_back(preThermalCuts[i]);
     backgroundSelection.push_back(preThermalCuts[i]);
@@ -89,11 +89,11 @@ int main(int argc, char* argv[]){
 
   
   // std::vector<const TCut*> waisCuts;
-  // waisCuts.push_back(&AnalysisCuts::isTaggedAsWaisPulser);
+  // waisCuts.push_back(&Cuts::isTaggedAsWaisPulser);
   // co.addSpectatorTree("waisTree", backgroundGlob, waisCuts);
 
   // std::vector<const TCut*> selectingBlastsCuts;
-  // selectingBlastsCuts.push_back(&AnalysisCuts::isTaggedAsPayloadBlast);
+  // selectingBlastsCuts.push_back(&Cuts::isTaggedAsPayloadBlast);
   // co.addSpectatorTree("blastTree", backgroundGlob, selectingBlastsCuts);
   
   co.optimize(signalSelection, backgroundSelection, treeFormulas, outFileName);

@@ -158,6 +158,8 @@ namespace Acclaim
     TString getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd);
 
     TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix);
+    TString nextCanvasName();
+    TCanvas* canvas(double fracLength = 0.5);
 
     UsefulAnitaEvent* makeGaussianEvent(UInt_t eventNumber);
 

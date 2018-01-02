@@ -1,4 +1,4 @@
-#include "AnalysisCuts.h"
+#include "SummaryDraw.h"
 #include "SumTreeReductionSelector.h"
 #include "SummarySet.h"
 #include "OutputConvention.h"
@@ -16,25 +16,25 @@ int main(int argc, char* argv[]){
   OutputConvention oc(1, argv);  
   const char* glob = argv[1];
 
-  // AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis);
+  // Cuts::setMode(Cuts::kAcclaimAnalysis);
 
   SummarySet ss(glob);
   ss.SetUseProof(true);
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
   
-  reduce.addEventSelectionCut(&AnalysisCuts::isNotTaggedAsPulser);
-  reduce.addEventSelectionCut(&AnalysisCuts::isGood);
-  reduce.addEventSelectionCut(&AnalysisCuts::smallDeltaRough);
-  reduce.addEventSelectionCut(&AnalysisCuts::goodGPS);
-  reduce.addEventSelectionCut(&AnalysisCuts::realSNR);
-  reduce.addEventSelectionCut(&AnalysisCuts::isRfTrigger);
-  reduce.addEventSelectionCut(&AnalysisCuts::higherHilbertPeakAfterDedispersion);
-  reduce.addEventSelectionCut(&AnalysisCuts::higherImpulsivityMeasureAfterDedispersion);
-  reduce.addEventSelectionCut(&AnalysisCuts::lowerFracPowerWindowGradientAfterDedispersion);
-  // reduce.addEventSelectionCut(&AnalysisCuts::fisherScoreAboveThreshold); ///@todo fix this
+  reduce.addEventSelectionCut(&Cuts::isNotTaggedAsPulser);
+  reduce.addEventSelectionCut(&Cuts::isGood);
+  reduce.addEventSelectionCut(&Cuts::smallDeltaRough);
+  reduce.addEventSelectionCut(&Cuts::goodGPS);
+  reduce.addEventSelectionCut(&Cuts::realSNR);
+  reduce.addEventSelectionCut(&Cuts::isRfTrigger);
+  reduce.addEventSelectionCut(&Cuts::higherHilbertPeakAfterDedispersion);
+  reduce.addEventSelectionCut(&Cuts::higherImpulsivityMeasureAfterDedispersion);
+  reduce.addEventSelectionCut(&Cuts::lowerFracPowerWindowGradientAfterDedispersion);
+  // reduce.addEventSelectionCut(&Cuts::fisherScoreAboveThreshold); ///@todo fix this
 
-  // reduce.addEventSelectionCut(&AnalysisCuts::dedispersedFracPowerWindowGradientBelowThreshold);
+  // reduce.addEventSelectionCut(&Cuts::dedispersedFracPowerWindowGradientBelowThreshold);
 
   ss.Process(&reduce);
   
