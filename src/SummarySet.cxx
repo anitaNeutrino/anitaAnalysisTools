@@ -1,25 +1,33 @@
 #include "SummarySet.h"
-#include "TChain.h"
-#include "AnitaEventSummary.h"
+
+#include <stdlib.h>
 #include <iostream>
+
+#include "TChain.h"
 #include "TH2D.h"
 #include "TFile.h"
 #include "TProof.h"
-#include <stdlib.h>
-#include "SummarySelector.h"
 #include "TCanvas.h"
 #include "TSeqCollection.h"
 #include "TChainElement.h"
 #include "TROOT.h"
 
+#include "AnitaEventSummary.h"
+
+#include "SummarySelector.h"
 #include "ProgressBar.h"
 #include "TH2DAntarctica.h"
 #include "TGraphAntarctica.h"
+#include "RootTools.h"
+
+
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
       fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0),
-      fUseProof(useProof), fProof(NULL), fBuiltIndex(false), fFlagChain(NULL), fFlags(NULL), fFlagEventNumber(0) {
+      fUseProof(useProof), fProof(NULL), fBuiltIndex(false), fFlagChain(NULL), fFlags(NULL), fFlagEventNumber(0),
+      fDrawOutput(NULL)
+{
   
   init();
 }
@@ -284,6 +292,42 @@ TH2DAntarctica* Acclaim::SummarySet::makeAntarcticaHist(AnitaPol::AnitaPol_t pol
 
 
 
+
+
+/** 
+ * Parses the varexp to get the created hist name and stores the result in fDrawOutput
+ * 
+ * @param varexp 
+ */
+void Acclaim::SummarySet::findHist(const char* varexp){
+
+  std::vector<TString> tokens;
+  RootTools::tokenize(tokens, varexp, ">>");
+
+
+  TString histName = "htemp";
+
+  if(tokens.size() > 1){
+    std::vector<TString> moreTokens;
+    RootTools::tokenize(moreTokens, tokens[1].Data(), "(");
+
+    histName = moreTokens.at(0);
+    // std::cout << histName << std::endl;
+  }
+
+  TObject* obj = gROOT->FindObject(histName);
+  if(obj){
+    if(fDrawOutput){
+      delete fDrawOutput;
+      fDrawOutput = NULL;
+    }
+    fDrawOutput = obj->Clone();
+  }
+}
+
+
+
+
 /** 
  * Little hack to make PROOF give me a histogram and canvas with different names
  * 
@@ -330,6 +374,7 @@ Long64_t Acclaim::SummarySet::Draw(const char* varexp, const TCut &selection, Op
   if(fUseProof){
     renameProofCanvas(varexp);
   }
+  findHist(varexp);
   return retVal;
   
 }
@@ -340,6 +385,7 @@ Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Op
   if(fUseProof){
     renameProofCanvas(varexp);
   }
+  findHist(varexp);  
   return retVal;
 }
 

@@ -348,8 +348,22 @@ void Acclaim::RootTools::subtractOffset(TGraph* gr, Double_t offset){
  * If it looks like there's an insane angle being passed in will return -9999.
 */
 Double_t Acclaim::RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
-
   Double_t deltaAngle = angle1 - angle2;
+  return getDeltaAngleDeg(deltaAngle);
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Do angle1-angle2 (in degrees) and +- 360 such that the result lies in -180 < deltaAngle < 180.
+ *
+ * @param deltaAngle is the difference between two angles in degrees
+ * @returns deltaAngle is the difference in the range -180 < deltaAngle < 180
+ *
+ * If it looks like there's an insane angle being passed in will return -9999.
+*/
+Double_t Acclaim::RootTools::getDeltaAngleDeg(Double_t deltaAngle){
+
   Int_t loopCount = 0;
   const Int_t maxLoopCount = 5;
   if(deltaAngle > 180){

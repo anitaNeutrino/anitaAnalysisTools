@@ -80,11 +80,14 @@ namespace Acclaim
     Bool_t GetUseProof() {return fUseProof;}
     void addFlagChain(const char* flagFileGlob, const char* flagTreeName = "flagTree");
 
+    TObject* getDrawOutput() {TObject* o = fDrawOutput; fDrawOutput = NULL; return o;} /// You take it, you own it, you delete it.
+
   protected:
 
     void init();
     void initProof();
     void renameProofCanvas(const char* varexp);
+    void findHist(const char* varexp);
 
     TString fPathToSummaryFiles;		/// The glob passed to the TChain
     TString fTreeName;				/// The name of the TTrees, default is "sumTree"
@@ -105,6 +108,7 @@ namespace Acclaim
     TChain* fFlagChain;				/// An optional chain of TTrees containing just AnitaEventSummary::EventFlags
     AnitaEventSummary::EventFlags* fFlags;	/// Pointer to tree entry of optional flags
     UInt_t fFlagEventNumber;			/// Event number stored with flags to double check event matching
+    TObject* fDrawOutput;                       /// Maybe points to the lasts histogram created by Draw()...
   };
 }
 

@@ -112,6 +112,7 @@ namespace Acclaim
 
     /* Do geometric things */
     Double_t getDeltaAngleDeg(Double_t angle1, Double_t angle2);
+    Double_t getDeltaAngleDeg(Double_t deltaAngleDeg); 
 
 
     /* Modify input */
