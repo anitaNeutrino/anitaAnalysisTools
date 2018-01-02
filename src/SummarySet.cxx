@@ -361,24 +361,23 @@ void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
 
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const TCut &selection, Option_t *option, Long64_t nentries, Long64_t firstentry){
   initProof();
+
+  ProgressBar p(1);
   Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
 
   if(fUseProof){
     renameProofCanvas(varexp);
   }
   findHist(varexp);
+
+  p++;
   return retVal;
   
 }
 
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry){
-  initProof();
-  Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
-  if(fUseProof){
-    renameProofCanvas(varexp);
-  }
-  findHist(varexp);  
-  return retVal;
+  TCut cut = selection;
+  return Draw(varexp, cut, option, nentries, firstentry);
 }
 
 

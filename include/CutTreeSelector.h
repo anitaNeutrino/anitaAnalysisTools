@@ -9,10 +9,6 @@ class TTreeFormula;
 
 namespace Acclaim {
 
-  namespace Cuts{
-    class AnalysisCut;
-  }
-
 
   /**
    * @class CutTreeSelector

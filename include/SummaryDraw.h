@@ -26,6 +26,8 @@ namespace Acclaim
   namespace Draw {
     const TString dPhiWais = "FFTtools::wrap(peak.phi - wais.phi, 360, 0)";
     const TString dThetaWais = "(peak.theta - wais.theta)";
+    const TString dPhiMC = "FFTtools::wrap(peak.phi - mc.phi, 360, 0)";
+    const TString dThetaMC = "(peak.theta - mc.theta)";
   }
 
 
@@ -41,9 +43,11 @@ namespace Acclaim
   namespace Cuts
   {
 
+    const double maxDeltaPhi = 5.5;
+    const double maxDeltaTheta = 3.5;
+
     // Replacement for the member functions in AnitaEventSummary...
-    const TCut highestPeak = "Max$(peak.value)==peak.value";
-    
+    const TCut highestPeak = "Max$(peak.value)==peak.value";    
     const TCut isRfTrigger("isRfTrigger", "flags.isRF > 0");
     const TCut smallDeltaRough("smallDeltaRough", "TMath::Abs(peak.dphi_rough) < 4 && TMath::Abs(peak.dtheta_rough) < 4");
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags.pulser == 0");
@@ -52,8 +56,8 @@ namespace Acclaim
     const TCut higherHilbertPeakAfterDedispersion("higherHilbertPeakAfterDedispersion", "deconvolved_filtered.peakHilbert > coherent_filtered.peakHilbert");
     const TCut higherImpulsivityMeasureAfterDedispersion("higherImpulsivityMeasureAfterDedispersion", "deconvolved_filtered.impulsivityMeasure > coherent_filtered.impulsivityMeasure");
     const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion", "deconvolved_filtered.fracPowerWindowGradient() < coherent_filtered.fracPowerWindowGradient()");
-    const TCut closeToWais("closeToWais", TString::Format("mc.weight == 0 && %s < 5.5 && %s < 3.5", Draw::dPhiWais.Data(), Draw::dThetaWais.Data())); /// always false for MC
-    const TCut closeToMC("closeToMC", "mc.weight > 0 && peak.dPhiMC() < 5.5 && peak.dThetaMC() < 3.5"); /// always false for MC
+    const TCut closeToWais("closeToWais", TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)", Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi, Draw::dThetaWais.Data(), maxDeltaTheta)); /// false for MC
+    const TCut closeToMC("closeToMC",     TString::Format("(mc.weight >  0 && %s < %lf && %s > %lf && %s < %lf)", Draw::dPhiMC.Data(),   maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi, Draw::dThetaMC.Data(),   maxDeltaTheta)); /// false for non-MC
     const TCut anita3QuietTime("anita3QuietTime", "realTime >= 1419320000 && sum->realTime < 1420250000");
     const TCut realSNR("realSNR", "(!TMath::IsNaN(deconvolved.snr) && TMath::Finite(deconvolved.snr))");
     const TCut goodGPS("goodGPS", "(!TMath::IsNaN(anitaLocation.heading) && TMath::Finite(anitaLocation.heading))");
@@ -67,7 +71,9 @@ namespace Acclaim
     const TCut isTaggedAsPulser("isTaggedAsPulser", TString::Format("(%s) || (%s)", isTaggedAsLDBPulser.GetTitle(), isTaggedAsWaisPulser.GetTitle()));
     const TCut isAboveHorizontal("isAboveHorizontal", "peak.theta > 0");
 
-    const TCut npbc1A("npbc1A", "1");
+    const TCut npbc0A("npbc0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06));
+    const TCut npbc0B("npbc0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06));
+    const TCut npbc1("npbc1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28));
   }
 
 
