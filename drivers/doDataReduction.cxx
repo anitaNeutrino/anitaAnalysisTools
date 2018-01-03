@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
   reduce.addEventSelectionCut(&Cuts::isGood);
   reduce.addEventSelectionCut(&Cuts::smallDeltaRough);
   reduce.addEventSelectionCut(&Cuts::goodGPS);
-  reduce.addEventSelectionCut(&Cuts::realSNR);
+  // reduce.addEventSelectionCut(&Cuts::realSNR);
   reduce.addEventSelectionCut(&Cuts::isRfTrigger);
   reduce.addEventSelectionCut(&Cuts::higherHilbertPeakAfterDedispersion);
   reduce.addEventSelectionCut(&Cuts::higherImpulsivityMeasureAfterDedispersion);

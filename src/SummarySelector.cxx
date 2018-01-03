@@ -5,6 +5,7 @@
 #include "TCanvas.h"
 #include "SummaryDraw.h"
 #include "TTreeFormula.h"
+#include "TMath.h"
 
 ClassImp(Acclaim::SummarySelector);
 
@@ -77,16 +78,23 @@ void Acclaim::SummarySelector::Init(TTree *tree)
 #endif
 
 
+  fEventSelectionFormulas->SetOwner();
   fEventSelectionFormulas->Clear();
+  fDirectionFormulaIndex = -1;
 
   const int nForm = fEventSelection->GetEntries();
   for(UInt_t i=0; i < nForm; i++){
     const TCut* eventSelection = dynamic_cast<const TCut*>(fEventSelection->At(i));
 
-    TString formName = TString::Format("cut%u", i);
+    TString formName = TString::Format("form_%s", eventSelection->GetName());
     TTreeFormula* f = new TTreeFormula(formName, eventSelection->GetTitle(), tree);
     fEventSelectionFormulas->Add(f);
-  }  
+
+    if(TString(eventSelection->GetName())=="highestPeak"){
+      fDirectionFormulaIndex = i;
+    }
+  }
+
 }
   
 
@@ -112,8 +120,6 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
 {
   // TString option = GetOption();
   fInput->Add(fEventSelection);
-
-
   
 }
 
@@ -133,6 +139,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
   }
 
   fAnalysisCutReturns.resize(fEventSelection->GetEntries(), 0);
+
   if(fDoAnalysisCutTree){
     fAnalysisCutTree = new TTree(fAnalysisCutTreeName, fAnalysisCutTreeName);
     fAnalysisCutTree->Branch("eventNumber", &fEventNumber);
@@ -183,16 +190,29 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 #endif  
 
 
+  Int_t peakIteration = 0;
+  TTreeFormula* peakDirectionFormula = dynamic_cast<TTreeFormula*>(fEventSelectionFormulas->At(fDirectionFormulaIndex));//FindObject("form_highestPeak"));
+  for(int dirInstance=0; dirInstance < peakDirectionFormula->GetNdata(); dirInstance++){
+    float val = peakDirectionFormula->EvalInstance(dirInstance);
+    if(val > 0){
+      peakIteration = dirInstance;
+      // break;
+    }
+  }
+
   Bool_t matchesSelection = true;
   TIter next(fEventSelectionFormulas);
   int i=0;
   while (TObject* obj = next()){
     TTreeFormula* cutFormula = dynamic_cast<TTreeFormula*>(obj);
-    Bool_t cutVal = cutFormula->EvalInstance();
+
+    Float_t cutVal = cutFormula->GetNdata() > 1 ? cutFormula->EvalInstance(peakIteration) : cutFormula->EvalInstance();
+    // fAnalysisCutReturns.at(i) = fDirectionFormulaIndex; //cutVal;
+    // fAnalysisCutReturns.at(i) = TMath::Nint(cutVal);//peakIteration + 1000*fDirectionFormulaIndex;
     fAnalysisCutReturns.at(i) = cutVal;
     i++;
 
-    matchesSelection = matchesSelection && cutVal;
+    matchesSelection = matchesSelection && cutVal > 0;
 
     // we can break out of the loop early if we're not storing the results
     // of all the cuts, and the selection doesn't match all the cuts

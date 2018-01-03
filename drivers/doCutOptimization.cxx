@@ -34,12 +34,12 @@ int main(int argc, char* argv[]){
   }
 
   std::vector<const TCut *> backgroundSelection;
+  backgroundSelection.push_back(&Cuts::highestPeak); // Best peak?
   backgroundSelection.push_back(&Cuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&Cuts::anita3QuietTime); // quiet
 
-  const int nGen = 9+4;
-  const TCut* preThermalCuts[nGen] = {
-				      &Cuts::isRfTrigger,
+  const int nGen = 8+4;
+  const TCut* preThermalCuts[nGen] = {&Cuts::isRfTrigger,
 				      // &Cuts::isGood2,
 				      &Cuts::npbc0A,
 				      &Cuts::npbc0B,
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]){
 				      &Cuts::npbc3,
 				      &Cuts::smallDeltaRough,
 				      &Cuts::goodGPS,
-				      &Cuts::realSNR,
+				      // &Cuts::realSNR,
 				      &Cuts::higherHilbertPeakAfterDedispersion,
 				      &Cuts::higherImpulsivityMeasureAfterDedispersion,
 				      &Cuts::lowerFracPowerWindowGradientAfterDedispersion};
