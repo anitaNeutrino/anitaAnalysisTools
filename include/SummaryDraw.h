@@ -28,6 +28,18 @@ namespace Acclaim
     const TString dThetaWais = "(peak.theta - wais.theta)";
     const TString dPhiMC = "FFTtools::wrap(peak.phi - mc.phi, 360, 0)";
     const TString dThetaMC = "(peak.theta - mc.theta)";
+
+    const TString deconvolved_filtered_fracPowerWindowGradient = TString::Format("10.0*(%s %s %s %s)",
+										 "-0.2*(deconvolved_filtered[][].fracPowerWindowEnds[0] - deconvolved_filtered[][].fracPowerWindowBegins[0])",
+										 "-0.1*(deconvolved_filtered[][].fracPowerWindowEnds[1] - deconvolved_filtered[][].fracPowerWindowBegins[1])",
+										 "+0.1*(deconvolved_filtered[][].fracPowerWindowEnds[3] - deconvolved_filtered[][].fracPowerWindowBegins[3])",
+										 "+0.2*(deconvolved_filtered[][].fracPowerWindowEnds[4] - deconvolved_filtered[][].fracPowerWindowBegins[4])");
+
+    const TString coherent_filtered_fracPowerWindowGradient = TString::Format("10.0*(%s %s %s %s)",
+									      "-0.2*(coherent_filtered[][].fracPowerWindowEnds[0] - coherent_filtered[][].fracPowerWindowBegins[0])",
+									      "-0.1*(coherent_filtered[][].fracPowerWindowEnds[1] - coherent_filtered[][].fracPowerWindowBegins[1])",
+									      "+0.1*(coherent_filtered[][].fracPowerWindowEnds[3] - coherent_filtered[][].fracPowerWindowBegins[3])",
+									      "+0.2*(coherent_filtered[][].fracPowerWindowEnds[4] - coherent_filtered[][].fracPowerWindowBegins[4])");
   }
 
 
@@ -47,7 +59,8 @@ namespace Acclaim
     const double maxDeltaTheta = 3.5;
 
     // Replacement for the member functions in AnitaEventSummary...
-    const TCut highestPeak = "Max$(peak.value)==peak.value";    
+    const TCut highestPeak("highestPeak", "Max$(peak.value)==peak.value"); /// Basically, you should almost always use something like this to just pick the peak direction.
+
     const TCut isRfTrigger("isRfTrigger", "flags.isRF > 0");
     const TCut smallDeltaRough("smallDeltaRough", "TMath::Abs(peak.dphi_rough) < 4 && TMath::Abs(peak.dtheta_rough) < 4");
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags.pulser == 0");
@@ -55,9 +68,19 @@ namespace Acclaim
     const TCut acceptableHardwareAngle("acceptableHardwareAngle", "TMath::Abs(sum.minAbsHwAngle()) < 65.0");
     const TCut higherHilbertPeakAfterDedispersion("higherHilbertPeakAfterDedispersion", "deconvolved_filtered.peakHilbert > coherent_filtered.peakHilbert");
     const TCut higherImpulsivityMeasureAfterDedispersion("higherImpulsivityMeasureAfterDedispersion", "deconvolved_filtered.impulsivityMeasure > coherent_filtered.impulsivityMeasure");
-    const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion", "deconvolved_filtered.fracPowerWindowGradient() < coherent_filtered.fracPowerWindowGradient()");
-    const TCut closeToWais("closeToWais", TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)", Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi, Draw::dThetaWais.Data(), maxDeltaTheta)); /// false for MC
-    const TCut closeToMC("closeToMC",     TString::Format("(mc.weight >  0 && %s < %lf && %s > %lf && %s < %lf)", Draw::dPhiMC.Data(),   maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi, Draw::dThetaMC.Data(),   maxDeltaTheta)); /// false for non-MC
+
+    const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion",
+							     TString::Format("(%s) < (%s)",
+									     Draw::deconvolved_filtered_fracPowerWindowGradient.Data(),
+									     Draw::coherent_filtered_fracPowerWindowGradient.Data()));
+    const TCut closeToWais("closeToWais",
+			   TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)",
+					   Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi,
+					   Draw::dThetaWais.Data(), maxDeltaTheta)); /// false for MC
+    const TCut closeToMC("closeToMC",
+			 TString::Format("(mc.weight > 0 && %s < %lf && %s > %lf && fabs(%s) < %lf)",
+					 Draw::dPhiMC.Data(),   maxDeltaPhi, Draw::dPhiMC.Data(),   -maxDeltaPhi,
+					 Draw::dThetaMC.Data(),   maxDeltaTheta)); /// false for non-MC
     const TCut anita3QuietTime("anita3QuietTime", "realTime >= 1419320000 && sum->realTime < 1420250000");
     const TCut realSNR("realSNR", "(!TMath::IsNaN(deconvolved.snr) && TMath::Finite(deconvolved.snr))");
     const TCut goodGPS("goodGPS", "(!TMath::IsNaN(anitaLocation.heading) && TMath::Finite(anitaLocation.heading))");

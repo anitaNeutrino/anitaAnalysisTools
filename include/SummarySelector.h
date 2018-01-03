@@ -59,6 +59,7 @@ namespace Acclaim {
 #endif
     AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
     TList*				 fEventSelection;		/// A list of TCut objects, for event selection (none means selecting all)
+    TList*				 fEventSelectionFormulas;	/// A list of TTreeFormula objects, derived from the TCut objects.
 
     TString                              fAnalysisCutTreeName;          /// Name of optional tree
     TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on

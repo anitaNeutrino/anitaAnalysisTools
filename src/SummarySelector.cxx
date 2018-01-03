@@ -4,6 +4,7 @@
 #include <TStyle.h>
 #include "TCanvas.h"
 #include "SummaryDraw.h"
+#include "TTreeFormula.h"
 
 ClassImp(Acclaim::SummarySelector);
 
@@ -22,7 +23,7 @@ Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
   fSumBranchName(sumBranchName),
   fSumBranch(NULL),
 #endif
-  fSum(NULL), fEventSelection(new TList),
+  fSum(NULL), fEventSelection(new TList), fEventSelectionFormulas(new TList),
   fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
   fAnalysisCutReturns(), fDoAnalysisCutTree(true),
   fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false),
@@ -74,7 +75,24 @@ void Acclaim::SummarySelector::Init(TTree *tree)
   fChain = tree;
   fChain->SetBranchAddress(fSumBranchName, &fSum, &fSumBranch);
 #endif
+
+
+  fEventSelectionFormulas->Clear();
+
+  const int nForm = fEventSelection->GetEntries();
+  for(UInt_t i=0; i < nForm; i++){
+    const TCut* eventSelection = dynamic_cast<const TCut*>(fEventSelection->At(i));
+
+    TString formName = TString::Format("cut%u", i);
+    TTreeFormula* f = new TTreeFormula(formName, eventSelection->GetTitle(), tree);
+    fEventSelectionFormulas->Add(f);
+  }  
 }
+  
+
+
+
+
 
 
 
@@ -94,6 +112,9 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
 {
   // TString option = GetOption();
   fInput->Add(fEventSelection);
+
+
+  
 }
 
 
@@ -123,7 +144,6 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
     while (TObject* obj = next()){
       const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
       TString name = eventSelection->GetName();
-      name.ReplaceAll("Acclaim::Cuts::", "");
       fAnalysisCutTree->Branch(name, &fAnalysisCutReturns.at(i));
       i++;
     }
@@ -133,7 +153,7 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 
 /** 
  * @brief Reads the AnitaEventSummary TTree entry and sets the fSum pointer.
- * Cycles through the fEventSelection, applying each AnalysisCut in turn.
+ * Cycles through the fEventSelection, applying each TCut in turn.
  * 
  * The Process() function is called for each entry in the tree (or possibly
  * keyed object in the case of PROOF) to be processed. The entry argument
@@ -164,15 +184,15 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 
 
   Bool_t matchesSelection = true;
-  TIter next(fEventSelection);
+  TIter next(fEventSelectionFormulas);
   int i=0;
   while (TObject* obj = next()){
-    // const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
-    Int_t retVal = 1;//eventSelection->apply(fSum); ///@todo unbreak this!
-    fAnalysisCutReturns.at(i) = retVal;
+    TTreeFormula* cutFormula = dynamic_cast<TTreeFormula*>(obj);
+    Bool_t cutVal = cutFormula->EvalInstance();
+    fAnalysisCutReturns.at(i) = cutVal;
     i++;
 
-    matchesSelection = matchesSelection && retVal > 0;
+    matchesSelection = matchesSelection && cutVal;
 
     // we can break out of the loop early if we're not storing the results
     // of all the cuts, and the selection doesn't match all the cuts

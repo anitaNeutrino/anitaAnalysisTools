@@ -5,7 +5,6 @@
 
 class TList;
 class TProofOutputFile;
-class TTreeFormula;
 
 namespace Acclaim {
 

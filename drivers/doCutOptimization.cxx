@@ -25,19 +25,27 @@ int main(int argc, char* argv[]){
   TString sg = signalGlob;
   if(sg.Contains("Wais")){
     // extra data quality cuts
-    signalSelection.push_back(&Cuts::closeToWais); // Is this the right peak?
+    signalSelection.push_back(&Cuts::highestPeak); // Best peak?
+    signalSelection.push_back(&Cuts::closeToWais); // Points to WAIS?
   }
   else{
-    signalSelection.push_back(&Cuts::closeToMC); // Is this the right peak?
+    signalSelection.push_back(&Cuts::highestPeak); // Best peak?
+    signalSelection.push_back(&Cuts::closeToMC); // Points to the MC?
   }
 
   std::vector<const TCut *> backgroundSelection;
   backgroundSelection.push_back(&Cuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&Cuts::anita3QuietTime); // quiet
 
-  const int nGen = 8;
-  const TCut* preThermalCuts[nGen] = {&Cuts::isRfTrigger,
-				      &Cuts::isGood,
+  const int nGen = 9+4;
+  const TCut* preThermalCuts[nGen] = {
+				      &Cuts::isRfTrigger,
+				      // &Cuts::isGood2,
+				      &Cuts::npbc0A,
+				      &Cuts::npbc0B,
+				      &Cuts::npbc1,
+				      &Cuts::npbc2,
+				      &Cuts::npbc3,
 				      &Cuts::smallDeltaRough,
 				      &Cuts::goodGPS,
 				      &Cuts::realSNR,
