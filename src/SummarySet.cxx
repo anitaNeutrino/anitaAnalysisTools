@@ -307,11 +307,12 @@ void Acclaim::SummarySet::findHist(const char* varexp){
 
   TString histName = "htemp";
 
-  if(tokens.size() > 1){
-    std::vector<TString> moreTokens;
-    RootTools::tokenize(moreTokens, tokens[1].Data(), "(");
-
-    histName = moreTokens.at(0);
+  if(tokens.size()>0){
+    UInt_t i = tokens.size() > 1 ? 1 : 0;
+    std::vector<TString> tokens2;
+    RootTools::tokenize(tokens2, tokens[i], "(");
+  
+    histName = tokens2.at(0);
     // std::cout << histName << std::endl;
   }
 
@@ -334,27 +335,34 @@ void Acclaim::SummarySet::findHist(const char* varexp){
  * @param varexp the Draw expression
  */
 void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
-  TCanvas* c = gPad->GetCanvas();
-  TString canName = c->GetName();
-  TString command = varexp;
-  TString histName = "htemp";
-  if(command.Contains(">>")){ // then we have a histogram name, let's go get it
-    TObjArray* tkns = command.Tokenize(">>");
-    TObjString* s1 = (TObjString*) tkns->At(1);
-    TString s1Str = s1->String();
-    TObjArray* tkns2 = s1Str.Tokenize("(");
-    TObjString* s2 = (TObjString*) tkns2->At(0);
-    histName = s2->String();
-    delete tkns;
-    delete tkns2;
-  }
 
-  // for some reason, proof does this...
-  // and if I want the histogram on the command line, I need to rename the canvas
-  if(canName==histName){
-    TString newCanName = RootTools::nextCanvasName();
-    c->SetName(newCanName);
-    c->SetTitle(newCanName);
+  if(gPad){
+    TCanvas* c = gPad->GetCanvas();
+    TString canName = c->GetName();
+    TString command = varexp;
+    TString histName = "htemp";
+    if(command.Contains(">>")){ // then we have a histogram name, let's go get it
+      std::vector<TString> tokens;
+      RootTools::tokenize(tokens, varexp, ">>");
+      
+      if(tokens.size()>0){
+	UInt_t i = tokens.size() > 1 ? 1 : 0;
+	std::vector<TString> tokens2;
+	RootTools::tokenize(tokens2, tokens[i], "(");
+
+	if(tokens2.size() > 0){
+	  histName = tokens2[0];
+	}
+      }
+    }
+  
+    // for some reason, proof does this...
+    // and if I want the histogram on the command line, I need to rename the canvas
+    if(canName==histName){
+      TString newCanName = RootTools::nextCanvasName();
+      c->SetName(newCanName);
+      c->SetTitle(newCanName);
+    }
   }
 }
 

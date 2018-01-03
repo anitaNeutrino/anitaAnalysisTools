@@ -66,7 +66,7 @@ namespace Acclaim
     const TCut isTaggedAsPayloadBlast("isTaggedAsPayloadBlast", "flags.isPayloadBlast > 0");
     const TCut isOnContinent("isOnContinent", "RampdemReader::isOnContinent(peak.longitude, peak.latitude)");
     const TCut hasSourceLocation("hasSourceLocation", "(peak.latitude < -900 || TMath::Abs(peak.theta_adjustment_needed) > 0");
-    const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", AnitaEventSummary::EventFlags::LDB).Data()); /// @todo AnitaVersion::get()==3 ?
+    const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", AnitaEventSummary::EventFlags::LDB).Data());
     const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags.pulser==%d", AnitaEventSummary::EventFlags::WAIS).Data());
     const TCut isTaggedAsPulser("isTaggedAsPulser", TString::Format("(%s) || (%s)", isTaggedAsLDBPulser.GetTitle(), isTaggedAsWaisPulser.GetTitle()));
     const TCut isAboveHorizontal("isAboveHorizontal", "peak.theta > 0");
@@ -74,10 +74,10 @@ namespace Acclaim
     const TCut npbc0A("npbc0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06));
     const TCut npbc0B("npbc0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06));
     const TCut npbc1("npbc1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28));
+    const TCut npbc2("npbc2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 4.0));
+    const TCut npbc3("npbc3", TString::Format("Max$(flags.maxBottomToTopRatio) == flags.maxBottomToTopRatio && ((1+flags.maxBottomToTopRatio)*flags.minBottomToTopRatio - %lf) < %lf*deconvolved_filtered.peakHilbert", 1000.0, (15000.0-1000.0)/1000.0));
+    const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle()));
   }
-
-
-
 }
 
 #endif
