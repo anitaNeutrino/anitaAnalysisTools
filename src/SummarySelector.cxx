@@ -196,7 +196,7 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
     float val = peakDirectionFormula->EvalInstance(dirInstance);
     if(val > 0){
       peakIteration = dirInstance;
-      // break;
+      break;
     }
   }
 

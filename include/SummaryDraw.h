@@ -115,7 +115,7 @@ namespace Acclaim
     const TCut hasSourceLocation("hasSourceLocation", "(peak[][].latitude < -900 || TMath::Abs(peak[][].theta_adjustment_needed) > 0"); /// (N=10)
     const TCut isAboveHorizontal("isAboveHorizontal", "peak[][].theta > 0"); /// (N=10)
 
-    const TCut npbc3("npbc3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf", 1000.0, (15000.0-1000.0)/1000.0)); /// (N=10)
+    const TCut npbc3("npbc3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf", 14.0, 1000.0)); /// (N=10)
     const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle())); /// N(10)
     
   }
