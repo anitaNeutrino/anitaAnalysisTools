@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
   backgroundSelection.push_back(&Cuts::isAboveHorizontal); // Upward pointing
   backgroundSelection.push_back(&Cuts::anita3QuietTime); // quiet
 
-  const int nGen = 8+4;
+  const int nGen = 9+4;
   const TCut* preThermalCuts[nGen] = {&Cuts::isRfTrigger,
 				      // &Cuts::isGood2,
 				      &Cuts::npbc0A,
@@ -49,6 +49,7 @@ int main(int argc, char* argv[]){
 				      &Cuts::smallDeltaRough,
 				      &Cuts::goodGPS,
 				      // &Cuts::realSNR,
+				      &Cuts::reasonableHilbertPeakTimeShiftAfterDedispersion,
 				      &Cuts::higherHilbertPeakAfterDedispersion,
 				      &Cuts::higherImpulsivityMeasureAfterDedispersion,
 				      &Cuts::lowerFracPowerWindowGradientAfterDedispersion};
