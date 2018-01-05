@@ -6,6 +6,7 @@
 #include "SummaryDraw.h"
 #include "TTreeFormula.h"
 #include "TMath.h"
+#include "TTreeFormulaManager.h"
 
 ClassImp(Acclaim::SummarySelector);
 
@@ -17,20 +18,23 @@ ClassImp(Acclaim::SummarySelector);
  * @param sumBranchName the name of the branch of AnitaEventSummaries, default is "sum"
  */
 Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
-: fChain(NULL),
-#ifdef USE_TTREE_READER
-  fReader(), fSumReaderValue(fReader, sumBranchName),
-#else
-  fSumBranchName(sumBranchName),
-  fSumBranch(NULL),
-#endif
-  fSum(NULL), fEventSelection(new TList), fEventSelectionFormulas(new TList),
-  fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
-  fAnalysisCutReturns(), fDoAnalysisCutTree(true),
-  fSummarySelectorDemoHist(NULL), fDoSummarySelectorDemoHist(false),
-  fEventNumber(0), fRun(0), fWeight(0)
+  : TSelector(), fChain(NULL),
+// #ifdef USE_TTREE_READER
+//     fReader(), fSumReaderValue(fReader, sumBranchName),
+// #else
+//     fSumBranchName(sumBranchName),
+//     fSumBranch(NULL),
+// #endif
+    // fSum(NULL),
+    fCuts(new TList), fCutFormulas(NULL),
+    fDemoForm(NULL),
+    // fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
+    // fAnalysisCutReturns(), fDoAnalysisCutTree(true),
+    fDemoHist(NULL), fDoDemoHist(false)
+    // fEventNumber(0), fRun(0), fWeight(0)
 {
-  fEventSelection->SetName("fEventSelection");
+  fInput = new TList;
+  fCuts->SetName("fCuts");
 }
 
 
@@ -46,13 +50,13 @@ Acclaim::SummarySelector::~SummarySelector()
 
 
 /** 
- * Add an analysis cut to fEventSelection, takes care of const casting
+ * Add an analysis cut to fCuts, takes care of const casting
  * 
  * @param analysisCut 
  */
-void  Acclaim::SummarySelector::addEventSelectionCut(const TCut* analysisCut)
+void  Acclaim::SummarySelector::addCut(const TCut* analysisCut)
 {
-  fEventSelection->Add(const_cast<TCut*>(analysisCut));
+  fCuts->Add(const_cast<TCut*>(analysisCut));
 }
 
 
@@ -70,31 +74,45 @@ void  Acclaim::SummarySelector::addEventSelectionCut(const TCut* analysisCut)
  */
 void Acclaim::SummarySelector::Init(TTree *tree)
 {
-#ifdef USE_TTREE_READER  
-  fReader.SetTree(tree);
-#else
-  fChain = tree;
-  fChain->SetBranchAddress(fSumBranchName, &fSum, &fSumBranch);
-#endif
+
+  fTree = tree;
+
+  if(!fCutFormulas){
+    fCutFormulas = new TList;
+  }
+  if(fCutFormulas->GetEntries()==0){
+    const int nForm = fCuts->GetEntries();
+    fCutReturns.resize(nForm, std::vector<Int_t>());
+    
+    for(UInt_t i=0; i < nForm; i++){
+      const TCut* eventSelection = dynamic_cast<const TCut*>(fCuts->At(i));
+
+      TString formName = TString::Format("form_%s", eventSelection->GetName());
+      TTreeFormula* f = new TTreeFormula(formName, eventSelection->GetTitle(), fTree);
+      fCutFormulas->Add(f);
+      // fManager->Add(f);
+      fCutReturns.at(i).resize(f->GetNdata(), -1);
+    }
 
 
-  fEventSelectionFormulas->SetOwner();
-  fEventSelectionFormulas->Clear();
-  fDirectionFormulaIndex = -1;
+    if(fDoDemoHist){
+      // fDemoForm = new TTreeFormula("demo_form", "peak[1][0].value", fTree);
+      fDemoForm = new TTreeFormula("demo_form", "run", fTree);      
+    }
+    
+  }
+  else{
+    TIter next(fCutFormulas);
+    while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+      form->SetTree(tree);
+      form->UpdateFormulaLeaves();
+    }
 
-  const int nForm = fEventSelection->GetEntries();
-  for(UInt_t i=0; i < nForm; i++){
-    const TCut* eventSelection = dynamic_cast<const TCut*>(fEventSelection->At(i));
-
-    TString formName = TString::Format("form_%s", eventSelection->GetName());
-    TTreeFormula* f = new TTreeFormula(formName, eventSelection->GetTitle(), tree);
-    fEventSelectionFormulas->Add(f);
-
-    if(TString(eventSelection->GetName())=="highestPeak"){
-      fDirectionFormulaIndex = i;
+    if(fDemoForm){
+      fDemoForm->SetTree(tree);
+      fDemoForm->UpdateFormulaLeaves();
     }
   }
-
 }
   
 
@@ -106,6 +124,10 @@ void Acclaim::SummarySelector::Init(TTree *tree)
 
 Bool_t Acclaim::SummarySelector::Notify()
 {
+  TIter next(fCutFormulas);
+  while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+    form->UpdateFormulaLeaves();
+  }
   
   return kTRUE;
 }
@@ -119,7 +141,13 @@ Bool_t Acclaim::SummarySelector::Notify()
 void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
 {
   // TString option = GetOption();
-  fInput->Add(fEventSelection);
+  
+  fInput->Add(fCuts);
+  
+  if(fDoDemoHist){
+    fInput->Add(new TNamed("fDoDemo", "hDemo"));
+  }
+  
   
 }
 
@@ -131,36 +159,22 @@ void Acclaim::SummarySelector::Begin(TTree * /*tree*/)
  */
 void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 {
-  fEventSelection = dynamic_cast<TList*>(fInput->FindObject("fEventSelection"));
+  fCuts = dynamic_cast<TList*>(fInput->FindObject("fCuts"));
 
-  if(fDoSummarySelectorDemoHist){
-    fSummarySelectorDemoHist = new TH1D("hDemo", "SummarySelector demo histogram (peak[1][0].value)", 1024, 0, 1);
-    fOutput->Add(fSummarySelectorDemoHist);
+  TNamed* n = dynamic_cast<TNamed*>(fInput->FindObject("fDoDemo"));
+  fDoDemoHist = n ? true : false;
+  if(fDoDemoHist){
+    fDemoHist = new TH1D("hDemo", "Demo histogram - run; run; number of events", 310, 130, 440);
+    fOutput->Add(fDemoHist);
   }
 
-  fAnalysisCutReturns.resize(fEventSelection->GetEntries(), 0);
-
-  if(fDoAnalysisCutTree){
-    fAnalysisCutTree = new TTree(fAnalysisCutTreeName, fAnalysisCutTreeName);
-    fAnalysisCutTree->Branch("eventNumber", &fEventNumber);
-    fAnalysisCutTree->Branch("run", &fRun);
-    fAnalysisCutTree->Branch("weight", &fWeight);
-
-    TIter next(fEventSelection);
-    int i=0;
-    while (TObject* obj = next()){
-      const TCut* eventSelection = dynamic_cast<const TCut*>(obj);
-      TString name = eventSelection->GetName();
-      fAnalysisCutTree->Branch(name, &fAnalysisCutReturns.at(i));
-      i++;
-    }
-  }
+  
 }
 
 
 /** 
  * @brief Reads the AnitaEventSummary TTree entry and sets the fSum pointer.
- * Cycles through the fEventSelection, applying each TCut in turn.
+ * Cycles through the fCuts, applying each TCut in turn.
  * 
  * The Process() function is called for each entry in the tree (or possibly
  * keyed object in the case of PROOF) to be processed. The entry argument
@@ -178,61 +192,62 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
  * 
  * @param entry in the currently loaded tree
  * 
- * @return true if the entry passes all the fEventSelection values
+ * @return true if the entry passes all the fCuts values
  */
 Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 {
-#ifdef USE_TTREE_READER
-  fReader.SetLocalEntry(entry);
-  fSum = fSumReaderValue.Get();
-#else
-  fChain->GetEntry(entry);
-#endif  
 
+  fTree->LoadTree(entry);
+  
+  // #ifdef USE_TTREE_READER
+//   fReader.SetLocalEntry(entry);
+//   fSum = fSumReaderValue.Get();
+// #else
+//   fChain->GetEntry(entry);
+// #endif  
 
-  Int_t peakIteration = 0;
-  TTreeFormula* peakDirectionFormula = dynamic_cast<TTreeFormula*>(fEventSelectionFormulas->At(fDirectionFormulaIndex));//FindObject("form_highestPeak"));
-  for(int dirInstance=0; dirInstance < peakDirectionFormula->GetNdata(); dirInstance++){
-    float val = peakDirectionFormula->EvalInstance(dirInstance);
-    if(val > 0){
-      peakIteration = dirInstance;
-      break;
-    }
-  }
+  // Int_t peakIteration = 0;
+  // TTreeFormula* peakDirectionFormula = dynamic_cast<TTreeFormula*>(fCutFormulas->At(fDirectionFormulaIndex));//FindObject("form_highestPeak"));
+  // for(int dirInstance=0; dirInstance < peakDirectionFormula->GetNdata(); dirInstance++){
+  //   float val = peakDirectionFormula->EvalInstance(dirInstance);
+  //   if(val > 0){
+  //     peakIteration = dirInstance;
+  //     break;
+  //   }
+  // }
 
   Bool_t matchesSelection = true;
-  TIter next(fEventSelectionFormulas);
+  TIter next(fCutFormulas);
   int i=0;
   while (TObject* obj = next()){
-    TTreeFormula* cutFormula = dynamic_cast<TTreeFormula*>(obj);
-
-    Float_t cutVal = cutFormula->GetNdata() > 1 ? cutFormula->EvalInstance(peakIteration) : cutFormula->EvalInstance();
-    // fAnalysisCutReturns.at(i) = fDirectionFormulaIndex; //cutVal;
-    // fAnalysisCutReturns.at(i) = TMath::Nint(cutVal);//peakIteration + 1000*fDirectionFormulaIndex;
-    fAnalysisCutReturns.at(i) = cutVal;
+    TTreeFormula* form = dynamic_cast<TTreeFormula*>(obj);
+    const int peakIteration = 0;
+    Float_t cutVal = form->GetNdata() > 1 ? form->EvalInstance(peakIteration) : form->EvalInstance();
+    fCutReturns.at(i).at(peakIteration) = cutVal;
     i++;
 
     matchesSelection = matchesSelection && cutVal > 0;
 
     // we can break out of the loop early if we're not storing the results
     // of all the cuts, and the selection doesn't match all the cuts
-    if(!fDoAnalysisCutTree && !matchesSelection){
+    // if(!fDoAnalysisCutTree && !matchesSelection){
+    if(!matchesSelection){
       break;
     }
   }
 
   // if doing the demo hist, then fill event passes the cut
-  if(matchesSelection && fSummarySelectorDemoHist){
-    fSummarySelectorDemoHist->Fill(fSum->peak[AnitaPol::kVertical][0].value);
+  if(matchesSelection && fDemoHist){
+    fDemoHist->Fill(fDemoForm->EvalInstance());
   }
 
-  // If storing the analysis cut result, then update
-  if(fDoAnalysisCutTree && fAnalysisCutTree){
-    fEventNumber = fSum->eventNumber;
-    fRun = fSum->run;
-    fWeight = fSum->weight();
-    fAnalysisCutTree->Fill();
-  }
+  // // If storing the analysis cut result, then update
+  // if(fDoAnalysisCutTree && fAnalysisCutTree){
+  //   fEventNumber = fSum->eventNumber;
+  //   fRun = fSum->run;
+  //   fWeight = fSum->weight();
+  //   fAnalysisCutTree->Fill();
+  // }
 
   return matchesSelection;
 }
@@ -245,11 +260,11 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
  */
 void Acclaim::SummarySelector::SlaveTerminate()
 {
-  // fInput->Remove(fEventSelection);
+  // fInput->Remove(fCuts);
 
-  // fEventSelection->Clear(); // don't delete globals
-  // delete fEventSelection;
-  // fEventSelection = NULL;
+  // fCuts->Clear(); // don't delete globals
+  // delete fCuts;
+  // fCuts = NULL;
 }
 
 
@@ -262,11 +277,11 @@ void Acclaim::SummarySelector::SlaveTerminate()
 void Acclaim::SummarySelector::Terminate()
 {
 
-  if(fDoSummarySelectorDemoHist){
-    fSummarySelectorDemoHist = dynamic_cast<TH1D *>(fOutput->FindObject("fSummarySelectorDemoHist"));  
-    if (fSummarySelectorDemoHist) {
+  if(fDoDemoHist){
+    fDemoHist = dynamic_cast<TH1D *>(fOutput->FindObject("hDemo"));  
+    if (fDemoHist) {
       TCanvas *c1 = new TCanvas();
-      fSummarySelectorDemoHist->Draw("h");
+      fDemoHist->Draw("hist");
 
       // Final update
       c1->cd();

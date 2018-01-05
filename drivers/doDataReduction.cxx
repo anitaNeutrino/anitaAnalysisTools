@@ -22,19 +22,42 @@ int main(int argc, char* argv[]){
   ss.SetUseProof(true);
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
-  
-  reduce.addEventSelectionCut(&Cuts::isNotTaggedAsPulser);
-  reduce.addEventSelectionCut(&Cuts::isGood);
-  reduce.addEventSelectionCut(&Cuts::smallDeltaRough);
-  reduce.addEventSelectionCut(&Cuts::goodGPS);
-  // reduce.addEventSelectionCut(&Cuts::realSNR);
-  reduce.addEventSelectionCut(&Cuts::isRfTrigger);
-  reduce.addEventSelectionCut(&Cuts::higherHilbertPeakAfterDedispersion);
-  reduce.addEventSelectionCut(&Cuts::higherImpulsivityMeasureAfterDedispersion);
-  reduce.addEventSelectionCut(&Cuts::lowerFracPowerWindowGradientAfterDedispersion);
-  // reduce.addEventSelectionCut(&Cuts::fisherScoreAboveThreshold); ///@todo fix this
 
-  // reduce.addEventSelectionCut(&Cuts::dedispersedFracPowerWindowGradientBelowThreshold);
+  const int n = 16;
+  const TCut* selection[n] = {&Cuts::highestPeak,
+			      &Cuts::isRfTrigger,
+			      &Cuts::isNotTaggedAsPulser,
+			      &Cuts::npbc0A,
+			      &Cuts::npbc0B,
+			      &Cuts::npbc1,
+			      &Cuts::npbc2,
+			      &Cuts::npbc3,
+			      &Cuts::smallDeltaRough,
+			      &Cuts::goodGPS,
+			      &Cuts::isBelowHorizontal,
+			      &Cuts::reasonableHilbertPeakTimeShiftAfterDedispersion,
+			      &Cuts::higherHilbertPeakAfterDedispersion,
+			      &Cuts::higherImpulsivityMeasureAfterDedispersion,
+			      &Cuts::lowerFracPowerWindowGradientAfterDedispersion,
+			      &Cuts::fisherDiscriminantAboveThreshold};
+  for(int i=0; i < n; i++){
+    reduce.addCut(selection[i]);
+  }
+
+  // reduce.fDoAnalysisCutTree = false;
+
+  // reduce.addCut(&Cuts::isNotTaggedAsPulser);
+  // reduce.addCut(&Cuts::isGood);
+  // reduce.addCut(&Cuts::smallDeltaRough);
+  // reduce.addCut(&Cuts::goodGPS);
+  // // reduce.addCut(&Cuts::realSNR);
+  // reduce.addCut(&Cuts::isRfTrigger);
+  // reduce.addCut(&Cuts::higherHilbertPeakAfterDedispersion);
+  // reduce.addCut(&Cuts::higherImpulsivityMeasureAfterDedispersion);
+  // reduce.addCut(&Cuts::lowerFracPowerWindowGradientAfterDedispersion);
+  // reduce.addCut(&Cuts::fisherScoreAboveThreshold); ///@todo fix this
+
+  // reduce.addCut(&Cuts::dedispersedFracPowerWindowGradientBelowThreshold);
 
   ss.Process(&reduce);
   

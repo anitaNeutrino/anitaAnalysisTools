@@ -44,7 +44,7 @@ Bool_t Acclaim::SumTreeReductionSelector::Process(Long64_t entry){
 
   Bool_t matchSelection = SummarySelector::Process(entry);
   if(matchSelection){
-    *fOutSum = *fSum;
+    // *fOutSum = *fSum;
     fOutTree->Fill();
   }
   return matchSelection;

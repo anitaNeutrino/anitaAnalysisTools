@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
   fs.push_back("sum.trainingPeak().value");
   cts.setFormulaStrings(fs);
 
-  cts.addEventSelectionCut(&Cuts::isAboveHorizontal);
+  cts.addCut(&Cuts::isAboveHorizontal);
   
   ss.Process(&cts);
 

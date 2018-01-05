@@ -23,8 +23,8 @@ int main(int argc, char* argv[]){
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
   
-  reduce.addEventSelectionCut(&Cuts::isTaggedAsWaisPulser);
-  reduce.addEventSelectionCut(&Cuts::closeToWais);
+  reduce.addCut(&Cuts::isTaggedAsWaisPulser);
+  reduce.addCut(&Cuts::closeToWais);
 
   ss.Process(&reduce);
   

@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
 
-  reduce.addEventSelectionCut(&Cuts::isTaggedAsPayloadBlast);
+  reduce.addCut(&Cuts::isTaggedAsPayloadBlast);
 
   ss.Process(&reduce);
   
