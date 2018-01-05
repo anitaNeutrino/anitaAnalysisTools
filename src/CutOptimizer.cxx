@@ -421,6 +421,9 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   bName.ReplaceAll("()", ""); // remove function call bracket
   bName.ReplaceAll("(", "_"); // remove standalone open paren...
   bName.ReplaceAll(")", "_"); // ... and close paren
+  bName.ReplaceAll("[]", ""); // remove implicit loop iteration thingy
+  bName.ReplaceAll("[", "_"); // or explicit array entry...
+  bName.ReplaceAll("]", "_"); // ...
   bName.ReplaceAll(".", "_");  // remove remaining dots
   bName.ReplaceAll("TMath::", "");  // Remove TMath function namespace  
   //  bName.ReplaceAll("AnitaPol::", "");  // Remove AnitaPol function namespace
@@ -510,7 +513,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
 
     CutTreeSelector ct(proofFileNames[g], proofTreeNames[g]);
     for(UInt_t i=0; i < selections[g]->size(); i++){
-      ct.addEventSelectionCut(selections[g]->at(i));
+      ct.addCut(selections[g]->at(i));
     }
 
     ct.setFormulaStrings(fs);

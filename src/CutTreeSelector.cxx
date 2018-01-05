@@ -18,7 +18,7 @@ Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* t
 {
 
   fFormulaStrings->SetName("fFormulaStrings");
-
+  fDoDemoHist = false;
 }
 
 
@@ -103,32 +103,41 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
 
   SummarySelector::Init(tree);
 
-  fFormulas->Delete();
-  fFormulas->SetOwner(true);
 
-  const size_t nForm = fFormulaStrings->GetEntries();
-  TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
+  if(fFormulas->GetEntries()==0){
+    fFormulas->Delete();
+    fFormulas->SetOwner(true);
 
-  for(UInt_t i=0; i < nForm; i++){
-    const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(i))->String();
+    const size_t nForm = fFormulaStrings->GetEntries();
+    TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
 
-    TString formName = TString::Format("form%u", i);
-    TTreeFormula* f = new TTreeFormula(formName, formula, tree);
-    fFormulas->Add(f);
+    for(UInt_t i=0; i < nForm; i++){
+      const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(i))->String();
 
+      TString formName = TString::Format("form%u", i);
+      TTreeFormula* f = new TTreeFormula(formName, formula, tree);
+      fFormulas->Add(f);
 
-    if(fOutBranchList->GetEntries() < (Int_t)nForm){
-      TString bName = CutOptimizer::branchifyName(formula);
+      if(fOutBranchList->GetEntries() < (Int_t)nForm){
+	TString bName = CutOptimizer::branchifyName(formula);
 
-      fFormulaReturnTypes.at(i) = f->IsInteger();
-      if(fFormulaReturnTypes.at(i) > 0){
-	fOutTree->Branch(bName, &fIntVals.at(i));
-      }
-      else{
-	fOutTree->Branch(bName, &fFloatVals.at(i));
+	fFormulaReturnTypes.at(i) = f->IsInteger();
+	if(fFormulaReturnTypes.at(i) > 0){
+	  fOutTree->Branch(bName, &fIntVals.at(i));
+	}
+	else{
+	  fOutTree->Branch(bName, &fFloatVals.at(i));
+	}
       }
     }
+  }
+  else{
 
+    TIter next(fFormulas);
+    while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+      form->SetTree(tree);
+      form->UpdateFormulaLeaves();
+    }
   }
 }
 
