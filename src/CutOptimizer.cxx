@@ -499,7 +499,7 @@ void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vec
   }
 
   const std::vector<const TCut*>* selections[2] = {&signalSelection,
-										 &backgroundSelection};
+						   &backgroundSelection};
   const char* proofFileNames[2] = {"/tmp/signalCuts.root", "/tmp/backgroundCuts.root"};
   const char* proofTreeNames[2] = {"signalCuts", "backgroundCuts"};
   // for(UInt_t g=0; g < fSpecGlobs.size(); g++){

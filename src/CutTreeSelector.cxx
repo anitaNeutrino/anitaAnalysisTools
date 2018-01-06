@@ -26,8 +26,15 @@ Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* t
  * Not sure if this is necessary...
  * @return true
  */
-Bool_t Acclaim::CutTreeSelector::Notify()
+Bool_t Acclaim::CutTreeSelector::Notify()  
 {
+
+  // SummarySelector::Notify();
+  // TIter next(fFormulas);
+  // while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+  //   form->UpdateFormulaLeaves();
+  // }
+  
   // fFormulas->Notify();
   return kTRUE;
 }
@@ -101,44 +108,45 @@ void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
  */
 void Acclaim::CutTreeSelector::Init(TTree* tree){
 
-  SummarySelector::Init(tree);
+  SummarySelector::Init(tree);  
 
-
+  fFormulas->SetOwner(true);
+  fFormulas->Delete();
+  
   if(fFormulas->GetEntries()==0){
-    fFormulas->Delete();
-    fFormulas->SetOwner(true);
 
     const size_t nForm = fFormulaStrings->GetEntries();
     TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
 
-    for(UInt_t i=0; i < nForm; i++){
-      const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(i))->String();
+    for(UInt_t fInd=0; fInd < nForm; fInd++){
+      const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(fInd))->String();
 
-      TString formName = TString::Format("form%u", i);
+      TString formName = TString::Format("form%u", fInd);
       TTreeFormula* f = new TTreeFormula(formName, formula, tree);
       fFormulas->Add(f);
 
       if(fOutBranchList->GetEntries() < (Int_t)nForm){
 	TString bName = CutOptimizer::branchifyName(formula);
 
-	fFormulaReturnTypes.at(i) = f->IsInteger();
-	if(fFormulaReturnTypes.at(i) > 0){
-	  fOutTree->Branch(bName, &fIntVals.at(i));
+	fFormulaReturnTypes.at(fInd) = f->IsInteger();
+	if(fFormulaReturnTypes.at(fInd) > 0){
+	  fOutTree->Branch(bName, &fIntVals.at(fInd));
 	}
 	else{
-	  fOutTree->Branch(bName, &fFloatVals.at(i));
+	  fOutTree->Branch(bName, &fFloatVals.at(fInd));
 	}
       }
     }
   }
-  else{
-
-    TIter next(fFormulas);
-    while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
-      form->SetTree(tree);
-      form->UpdateFormulaLeaves();
-    }
-  }
+  // else{
+  //   std::cout << tree->GetName() << std::endl;
+  //   tree->Show(0);
+  //   TIter next(fFormulas);
+  //   while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+  //     form->SetTree(tree);
+  //     // form->UpdateFormulaLeaves();
+  //   }
+  // }
 }
 
 
@@ -155,17 +163,27 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
 
   Bool_t matchesSelection = SummarySelector::Process(entry);
   if(matchesSelection){
-    int i=0;
+    int fInd=0;
     TIter next(fFormulas);
     while(TObject* obj = next()){
       TTreeFormula* f = dynamic_cast<TTreeFormula*>(obj);
-      if(fFormulaReturnTypes.at(i) > 0){
-	fIntVals.at(i) = f->EvalInstance();
+
+      fIntVals.at(fInd) = -9999;
+      fFloatVals.at(fInd) = -9999;
+      
+      for(int i=0; i < fMaxNdata; i++){
+	if(fCumulativeCutReturns.at(i) > 0){
+
+	  if(fFormulaReturnTypes.at(fInd) > 0){
+	    fIntVals.at(fInd) = f->GetNdata() > 1 && i < f->GetNdata() ? f->EvalInstance(i) : f->EvalInstance();
+	  }
+	  else{
+	    fFloatVals.at(fInd) = f->GetNdata() > 1 && i < f->GetNdata() ? f->EvalInstance(i) : f->EvalInstance();
+	  }
+	  break;
+	}
       }
-      else{
-	fFloatVals.at(i) = f->EvalInstance();
-      }
-      i++;
+      fInd++;
     }
     fOutTree->Fill();
   }
@@ -213,13 +231,13 @@ void Acclaim::CutTreeSelector::Terminate(){
   // fFormulaStrings = NULL;  
 
   fProofOutFile = dynamic_cast<TProofOutputFile*>(fOutput->FindObject(fOutFileName.GetTitle()));
-  std::cout << fProofOutFile << std::endl;
+  // std::cout << fProofOutFile << std::endl;
   if(fProofOutFile){
     TFile* f = fProofOutFile->OpenFile("read");
-    std::cout << f << std::endl;    
+    // std::cout << f << std::endl;    
     if(f){
       TTree* t = dynamic_cast<TTree*>(f->Get(fTreeName.GetTitle()));
-      std::cout << t << std::endl;          
+      // std::cout << t << std::endl;          
       if(t){
 	std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
 		  << t->GetEntries() << " entries..." << std::endl;

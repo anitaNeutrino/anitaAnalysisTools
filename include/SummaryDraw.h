@@ -46,7 +46,41 @@ namespace Acclaim
 									      "+0.2*(coherent_filtered[][].fracPowerWindowEnds[4] - coherent_filtered[][].fracPowerWindowBegins[4])");
 
     const TString hilbertPeakTimeShift = "coherent_filtered[][].peakTime - deconvolved_filtered[][].peakTime";
+    const TString minAbsHwAngle = "(TMath::Abs(peak[][].hwAngle) < TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngle) + (TMath::Abs(peak[][].hwAngle) >= TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngleXPol)";
+
+    //4.869880+(0.004748*Abs_highestPeak_dPhiSun)+(-0.009809*Abs_highestPeak_minAbsHwAngle)+(-0.337216*highestDeconvolvedFiltered_fracPowerWindowGradient)+(0.155879*highestCoherentFiltered_fracPowerWindowGradient)+(-2.428568*highestDeconvolvedFiltered_impulsivityMeasure)+(7.163682*highestCoherentFiltered_impulsivityMeasure)+(1.322790*highestPeak_value)+(-0.000308*highestDeconvolvedFiltered_peakHilbert)
+
+    // Aug MC, all upward pointing events >= run 140
+    // 4.433484+(0.006059*Abs_highestPeak_dPhiSun)+(-0.008420*Abs_highestPeak_minAbsHwAngle)+(-0.319881*highestDeconvolvedFiltered_fracPowerWindowGradient)+(0.146542*highestCoherentFiltered_fracPowerWindowGradient)+(-2.267123*highestDeconvolvedFiltered_impulsivityMeasure)+(6.910730*highestCoherentFiltered_impulsivityMeasure)+(1.152596*highestPeak_value)+(-0.000235*highestDeconvolvedFiltered_peakHilbert)
+
+
+    // wais pulses, all upwards pointing a3 quiet time...
+    // 9.995486+(0.008404*Abs_highestPeak_dPhiSun)+(-0.010410*Abs_highestPeak_minAbsHwAngle)+(-0.208352*highestDeconvolvedFiltered_fracPowerWindowGradient)+(-0.027315*highestCoherentFiltered_fracPowerWindowGradient)+(-7.633246*highestDeconvolvedFiltered_impulsivityMeasure)+(5.103013*highestCoherentFiltered_impulsivityMeasure)+(-3.864929*highestPeak_value)+(0.066202*highestDeconvolvedFiltered_peakHilbert)
+
+    //   9.995486
+    // +(0.008404 *Abs_highestPeak_dPhiSun)
+    // +(-0.010410*Abs_highestPeak_minAbsHwAngle)
+    // +(-0.208352*highestDeconvolvedFiltered_fracPowerWindowGradient)
+    // +(-0.027315*highestCoherentFiltered_fracPowerWindowGradient)
+    // +(-7.633246*highestDeconvolvedFiltered_impulsivityMeasure)
+    // +(5.103013 *highestCoherentFiltered_impulsivityMeasure)
+    // +(-3.864929*highestPeak_value)
+    // +(0.066202 *highestDeconvolvedFiltered_peakHilbert)
+
+
+    const double fisherDiscriminatThreshold = 7.1875;
+    const TString fisherDiscriminant = TString::Format("%lf + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s))",
+						       9.995486,
+						       0.008404,  TString::Format("TMath::Abs(%s)", dPhiSun.Data()).Data(),
+						       -0.010410, minAbsHwAngle.Data(),
+						       -0.208352, deconvolved_filtered_fracPowerWindowGradient.Data(),
+						       -0.027315, coherent_filtered_fracPowerWindowGradient.Data(),
+						       -7.633246, "deconvolved_filtered[][].impulsivityMeasure",
+						       5.103013 , "coherent_filtered[][].impulsivityMeasure",
+						       -3.864929, "peak[][].value",
+						       0.066202 , "deconvolved_filtered[][].peakHilbert");
   }
+
 
 
   /**
@@ -92,6 +126,8 @@ namespace Acclaim
      * These cuts are per-direction (i.e. Iteration$ runs from 0-9 traversing the 2D array [2][5])
      */    
     const TCut highestPeak("highestPeak", "Max$(peak[][].value)==peak[][].value"); /// (N=10) Basically, you should almost always use something like this to just pick the peak direction.
+    const TCut mostImpulsivePeak("mostImpulsivePeak", "Max$(deconvolved_filtered[][].impulsivityMeasure)==deconvolved_filtered[][].impulsivityMeasure"); /// (N=10) Basically, you should almost always use something like this to just pick the peak direction.
+
     const TCut smallDeltaRough("smallDeltaRough", "TMath::Abs(peak[][].dphi_rough) < 4 && TMath::Abs(peak[][].dtheta_rough) < 4"); /// (N=10)
     // const TCut isNotNorth("isNotNorth", "TMath::Abs(peak.dPhiNorth()) > 90");
     // const TCut acceptableHardwareAngle("acceptableHardwareAngle", "TMath::Abs(sum.minAbsHwAngle()) < 65.0");
@@ -121,10 +157,14 @@ namespace Acclaim
     
     const TCut hasSourceLocation("hasSourceLocation", "(peak[][].latitude < -900 || TMath::Abs(peak[][].theta_adjustment_needed) > 0"); /// (N=10)
     const TCut isAboveHorizontal("isAboveHorizontal", "peak[][].theta > 0"); /// (N=10)
+    const TCut isBelowHorizontal("isBelowHorizontal", "peak[][].theta < 0"); /// (N=10)
 
     const TCut npbc3("npbc3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf", 14.0, 1000.0)); /// (N=10)
     
     const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle())); /// N(10)
+
+    const TCut fisherDiscriminantAboveThreshold = TCut("fisherDiscriminantAboveThreshold", TString::Format("%s > %lf", Draw::fisherDiscriminant.Data(), Draw::fisherDiscriminatThreshold));
+
     
   }
 }

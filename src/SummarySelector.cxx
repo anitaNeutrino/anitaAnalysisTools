@@ -19,17 +19,10 @@ ClassImp(Acclaim::SummarySelector);
  */
 Acclaim::SummarySelector::SummarySelector(const char* sumBranchName)
   : TSelector(), fChain(NULL),
-// #ifdef USE_TTREE_READER
-//     fReader(), fSumReaderValue(fReader, sumBranchName),
-// #else
-//     fSumBranchName(sumBranchName),
-//     fSumBranch(NULL),
-// #endif
-    // fSum(NULL),
     fCuts(new TList), fCutFormulas(NULL),
+    // fCutTreeName("cutResultTree"), fAnalysisCutTree(NULL),
+    // fCutReturns(), fDoAnalysisCutTree(true),
     fDemoForm(NULL),
-    // fAnalysisCutTreeName("analysisCutTree"), fAnalysisCutTree(NULL),
-    // fAnalysisCutReturns(), fDoAnalysisCutTree(true),
     fDemoHist(NULL), fDoDemoHist(false)
     // fEventNumber(0), fRun(0), fWeight(0)
 {
@@ -80,39 +73,53 @@ void Acclaim::SummarySelector::Init(TTree *tree)
   if(!fCutFormulas){
     fCutFormulas = new TList;
   }
+  fCutFormulas->SetOwner(true);
+  fCutFormulas->Delete();
+    
   if(fCutFormulas->GetEntries()==0){
     const int nForm = fCuts->GetEntries();
     fCutReturns.resize(nForm, std::vector<Int_t>());
-    
-    for(UInt_t i=0; i < nForm; i++){
-      const TCut* eventSelection = dynamic_cast<const TCut*>(fCuts->At(i));
 
-      TString formName = TString::Format("form_%s", eventSelection->GetName());
+    fMaxNdata = 1;
+    
+    for(UInt_t fInd=0; fInd < nForm; fInd++){
+      const TCut* eventSelection = dynamic_cast<const TCut*>(fCuts->At(fInd));
+
+      TString formName = TString::Format("cutForm_%s", eventSelection->GetName());
       TTreeFormula* f = new TTreeFormula(formName, eventSelection->GetTitle(), fTree);
       fCutFormulas->Add(f);
+
+      if(f->GetNdata() > fMaxNdata){
+	fMaxNdata = f->GetNdata();
+      }
       // fManager->Add(f);
-      fCutReturns.at(i).resize(f->GetNdata(), -1);
     }
 
+    for(UInt_t fInd=0; fInd < fCutReturns.size(); fInd++){
+      fCutReturns.at(fInd).resize(fMaxNdata, false);
+    }
+    fCumulativeCutReturns.resize(fMaxNdata, false);
+    
 
     if(fDoDemoHist){
-      // fDemoForm = new TTreeFormula("demo_form", "peak[1][0].value", fTree);
-      fDemoForm = new TTreeFormula("demo_form", "run", fTree);      
-    }
+      fDemoForm = new TTreeFormula("demo_form", "run", fTree); // only has 1 data...
+    }    
+  }
+  // else{
+  //   // std::cout << tree->GetName() << std::endl;
+  //   // tree->Show(0);
     
-  }
-  else{
-    TIter next(fCutFormulas);
-    while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
-      form->SetTree(tree);
-      form->UpdateFormulaLeaves();
-    }
+  //   TIter next(fCutFormulas);
+  //   while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+  //     form->SetTree(tree);      
+  //     // form->UpdateFormulaLeaves();
+  //   }
 
-    if(fDemoForm){
-      fDemoForm->SetTree(tree);
-      fDemoForm->UpdateFormulaLeaves();
-    }
-  }
+  //   if(fDemoForm){
+  //     fDemoForm->SetTree(tree);
+  //     // fDemoForm->UpdateFormulaLeaves();
+  //   }
+  // }
 }
   
 
@@ -198,35 +205,33 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 {
 
   fTree->LoadTree(entry);
-  
-  // #ifdef USE_TTREE_READER
-//   fReader.SetLocalEntry(entry);
-//   fSum = fSumReaderValue.Get();
-// #else
-//   fChain->GetEntry(entry);
-// #endif  
-
-  // Int_t peakIteration = 0;
-  // TTreeFormula* peakDirectionFormula = dynamic_cast<TTreeFormula*>(fCutFormulas->At(fDirectionFormulaIndex));//FindObject("form_highestPeak"));
-  // for(int dirInstance=0; dirInstance < peakDirectionFormula->GetNdata(); dirInstance++){
-  //   float val = peakDirectionFormula->EvalInstance(dirInstance);
-  //   if(val > 0){
-  //     peakIteration = dirInstance;
-  //     break;
-  //   }
-  // }
 
   Bool_t matchesSelection = true;
+  for(int i=0; i < fMaxNdata; i++){
+    fCumulativeCutReturns[i] = true;
+  }
+  
+
   TIter next(fCutFormulas);
-  int i=0;
+  int fInd=0;
   while (TObject* obj = next()){
     TTreeFormula* form = dynamic_cast<TTreeFormula*>(obj);
-    const int peakIteration = 0;
-    Float_t cutVal = form->GetNdata() > 1 ? form->EvalInstance(peakIteration) : form->EvalInstance();
-    fCutReturns.at(i).at(peakIteration) = cutVal;
-    i++;
 
-    matchesSelection = matchesSelection && cutVal > 0;
+    bool anyIterationsPass = false;
+    for(int i=0; i < fMaxNdata; i++){
+      // std::cout << form->GetTitle() << "t" << i << std::endl;
+      Float_t cutVal = form->GetNdata() > 1 && i < form->GetNdata() ? form->EvalInstance(i) : form->EvalInstance();      
+      fCutReturns.at(fInd).at(i) = cutVal;
+
+      bool thisPass = cutVal > 0;
+
+      fCumulativeCutReturns.at(i) = bool(fCumulativeCutReturns.at(i)) && thisPass;
+
+      anyIterationsPass = anyIterationsPass || fCumulativeCutReturns.at(i);
+    }
+    fInd++;
+
+    matchesSelection = matchesSelection && anyIterationsPass;
 
     // we can break out of the loop early if we're not storing the results
     // of all the cuts, and the selection doesn't match all the cuts

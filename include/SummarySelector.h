@@ -53,11 +53,12 @@ namespace Acclaim {
     TList*				 fCuts;		/// A list of TCut objects, for event selection (none means selecting all)
     TList*	                 	 fCutFormulas;	/// A list of TTreeFormula objects, derived from the TCut objects.
 
-    // TTreeFormulaManager*                 fManager;
     // TString                              fAnalysisCutTreeName;       /// Name of optional tree
     // TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on
+    Int_t                                fMaxNdata; /// Maximum size of the cut
     std::vector<std::vector<Int_t> >     fCutReturns;	/// Stores the results as the cuts are processed in sequence
-    // bool fDoAnalysisCutTree;						/// Switches on/off the analysis cut result tree
+    std::vector<Int_t> fCumulativeCutReturns;	/// Stores the AND of cut results per iteration processed in sequence
+    // bool fDoAnalysisCutTree;						/// Switches on/sult tree
 
 
 
