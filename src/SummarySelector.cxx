@@ -219,8 +219,7 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 
     bool anyIterationsPass = false;
     for(int i=0; i < fMaxNdata; i++){
-      // std::cout << form->GetTitle() << "t" << i << std::endl;
-      Float_t cutVal = form->GetNdata() > 1 && i < form->GetNdata() ? form->EvalInstance(i) : form->EvalInstance();      
+      Float_t cutVal = form->GetNdata() > 1 && i < form->GetNdata() ? form->EvalInstance(i) : form->EvalInstance();
       fCutReturns.at(fInd).at(i) = cutVal;
 
       bool thisPass = cutVal > 0;
@@ -229,13 +228,28 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 
       anyIterationsPass = anyIterationsPass || fCumulativeCutReturns.at(i);
     }
-    fInd++;
+
+    // std::cout << fInd << "\t" << form->GetTitle() << std::endl;
+    // for(int i=0; i < fMaxNdata; i++){
+      // std::cout << fInd << "\t" << i << std::endl;
+      // std::cout << fCutReturns.at(fInd).at(i) << "\t";
+    // }
+    // std::cout << "\n";
+    // for(int i=0; i < fMaxNdata; i++){
+      // std::cout << i << std::endl;
+      // std::cout << fCumulativeCutReturns.at(i) << "\t";
+    // }
+
+    // std::cout << "\n" <<  std::endl;
+    // std::cout << anyIterationsPass << "\t" << matchesSelection << std::endl;
 
     matchesSelection = matchesSelection && anyIterationsPass;
 
     // we can break out of the loop early if we're not storing the results
     // of all the cuts, and the selection doesn't match all the cuts
     // if(!fDoAnalysisCutTree && !matchesSelection){
+
+    fInd++;    
     if(!matchesSelection){
       break;
     }

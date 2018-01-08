@@ -33,6 +33,11 @@ namespace Acclaim
     const TString dPhiMC = "FFTtools::wrap(peak[][].phi - mc.phi, 360, 0)";
     const TString dThetaMC = "(peak[][].theta + mc.theta)";
 
+    const TString weight = "((mc.weight > 0)*mc.weight + 1*(mc.weight==0))"; ///This should set the data weight to be 1
+
+    const TString pol = TString::Format("floor(Iteration$/%d)", AnitaEventSummary::maxDirectionsPerPol); /// Converts the implied Draw loop iteration to polarisation
+    const TString peakInd = TString::Format("(Iteration$ %% %d)", AnitaEventSummary::maxDirectionsPerPol); /// Converts the implied Draw loop iteration to peak index
+
     const TString deconvolved_filtered_fracPowerWindowGradient = TString::Format("10.0*(%s %s %s %s)",
 										 "-0.2*(deconvolved_filtered[][].fracPowerWindowEnds[0] - deconvolved_filtered[][].fracPowerWindowBegins[0])",
 										 "-0.1*(deconvolved_filtered[][].fracPowerWindowEnds[1] - deconvolved_filtered[][].fracPowerWindowBegins[1])",
@@ -45,6 +50,8 @@ namespace Acclaim
 									      "+0.1*(coherent_filtered[][].fracPowerWindowEnds[3] - coherent_filtered[][].fracPowerWindowBegins[3])",
 									      "+0.2*(coherent_filtered[][].fracPowerWindowEnds[4] - coherent_filtered[][].fracPowerWindowBegins[4])");
 
+
+    
     const TString hilbertPeakTimeShift = "coherent_filtered[][].peakTime - deconvolved_filtered[][].peakTime";
     const TString minAbsHwAngle = "(TMath::Abs(peak[][].hwAngle) < TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngle) + (TMath::Abs(peak[][].hwAngle) >= TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngleXPol)";
 
@@ -100,10 +107,10 @@ namespace Acclaim
      */    
     const TCut isRfTrigger("isRfTrigger", "flags.isRF > 0"); /// (N=1)
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags.pulser == 0"); /// (N=1)
-    const TCut anita3QuietTime("anita3QuietTime", "realTime >= 1419320000 && sum->realTime < 1420250000"); /// (N=1)
+    const TCut anita3QuietTime("anita3QuietTime", "realTime >= 1419320000 && realTime < 1420250000"); /// (N=1)
     // const TCut realSNR("realSNR", "(!TMath::IsNaN(deconvolved.snr) && TMath::Finite(deconvolved.snr))");
     const TCut goodGPS("goodGPS", "(!TMath::IsNaN(anitaLocation.heading) && TMath::Finite(anitaLocation.heading))"); /// (N=1)
-    const TCut isGood("isGood", "((mc.weight > 0 && sum->flags.isVarner == 0 && sum->flags.isPayloadBlast == 0) || (mc.weight==0 && flags.isGood == 1))"); /// (N=1)
+    const TCut isGood("isGood", "((mc.weight > 0 && flags.isVarner == 0 && flags.isPayloadBlast == 0) || (mc.weight==0 && flags.isGood == 1))"); /// (N=1)
     const TCut isTaggedAsPayloadBlast("isTaggedAsPayloadBlast", "flags.isPayloadBlast > 0"); /// (N=1)
     const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", AnitaEventSummary::EventFlags::LDB).Data()); /// (N=1)
     const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags.pulser==%d", AnitaEventSummary::EventFlags::WAIS).Data()); /// (N=1)
@@ -113,7 +120,6 @@ namespace Acclaim
     const TCut npbc1("npbc1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28)); /// (N=1)
     const TCut npbc2("npbc2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 3.0)); /// (N=1)
     
-
 
 
     // some constants
@@ -142,7 +148,7 @@ namespace Acclaim
 							       TString::Format("%s > %lf && %s < %lf",
 									       Draw::hilbertPeakTimeShift.Data(), 0.0,
 									       Draw::hilbertPeakTimeShift.Data(), 20.0)); /// (N=10)
-    
+
     const TCut closeToWais("closeToWais", /// (N=10)
 			   TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)",
 					   Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi,

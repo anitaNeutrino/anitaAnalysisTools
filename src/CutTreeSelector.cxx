@@ -14,7 +14,7 @@
  */
 Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* treeName)
   : fOutTree(NULL), fProofOutFile(NULL), fOutFileName("fOutFileName", outFileName), fTreeName("fTreeName", treeName),
-    fFormulaStrings(new TList), fFormulas(NULL)
+    fFormulaStrings(new TList), fFormulas(NULL), fIterationFormula()
 {
 
   fFormulaStrings->SetName("fFormulaStrings");
@@ -117,6 +117,7 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
 
     const size_t nForm = fFormulaStrings->GetEntries();
     TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
+    fIterationFormula.resize(nForm, false);
 
     for(UInt_t fInd=0; fInd < nForm; fInd++){
       const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(fInd))->String();
@@ -124,6 +125,13 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
       TString formName = TString::Format("form%u", fInd);
       TTreeFormula* f = new TTreeFormula(formName, formula, tree);
       fFormulas->Add(f);
+
+      // std::cout << fInd << "\t" << formula << "\t" << fFormulas->GetEntries() << std::endl;
+
+      if(formula.Contains("Iteration$")){
+	fIterationFormula[fInd] = true;
+	// std::cout << "the iteration formula index is " << fIterationFormula << std::endl;
+      }
 
       if(fOutBranchList->GetEntries() < (Int_t)nForm){
 	TString bName = CutOptimizer::branchifyName(formula);
@@ -137,6 +145,10 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
 	}
       }
     }
+
+    // if(fIterationFormula==-1){
+    //   std::cout << "the iteration formula index is " << fIterationFormula << std::endl;
+    // }
   }
   // else{
   //   std::cout << tree->GetName() << std::endl;
@@ -170,19 +182,23 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
 
       fIntVals.at(fInd) = -9999;
       fFloatVals.at(fInd) = -9999;
-      
+
       for(int i=0; i < fMaxNdata; i++){
 	if(fCumulativeCutReturns.at(i) > 0){
 
+	  bool requireIteration = fIterationFormula[fInd] || (f->GetNdata() > 1 && i < f->GetNdata());
+	  // std::cout << i << "\t" << fInd << "\t" << fCumulativeCutReturns.at(i) << "\t" << f->GetTitle() << "\t" << fIterationFormula << std::endl;
+
 	  if(fFormulaReturnTypes.at(fInd) > 0){
-	    fIntVals.at(fInd) = f->GetNdata() > 1 && i < f->GetNdata() ? f->EvalInstance(i) : f->EvalInstance();
+	    fIntVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
 	  }
 	  else{
-	    fFloatVals.at(fInd) = f->GetNdata() > 1 && i < f->GetNdata() ? f->EvalInstance(i) : f->EvalInstance();
+	    fFloatVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
 	  }
 	  break;
 	}
       }
+      // std::cout << fInd << "\t" << f->GetTitle() << "\t" << "the return vals are..." << std::endl;
       fInd++;
     }
     fOutTree->Fill();

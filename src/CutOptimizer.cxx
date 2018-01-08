@@ -417,6 +417,10 @@ size_t Acclaim::CutOptimizer::FormulaHolder::add(const char* formulaStr){
  */
 TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   TString bName = formStr;
+
+
+  
+  
   bName.ReplaceAll("sum.", ""); // remove the sum.
   bName.ReplaceAll("()", ""); // remove function call bracket
   bName.ReplaceAll("(", "_"); // remove standalone open paren...
@@ -425,19 +429,61 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   bName.ReplaceAll("[", "_"); // or explicit array entry...
   bName.ReplaceAll("]", "_"); // ...
   bName.ReplaceAll(".", "_");  // remove remaining dots
-  bName.ReplaceAll("TMath::", "");  // Remove TMath function namespace  
+  bName.ReplaceAll("TMath::", "");  // Remove TMath function namespace
+  bName.ReplaceAll("FFTtools::", "");  // Remove TMath function namespace
+  bName.ReplaceAll(",", "_");  // Remove TMath function namespace    
+  bName.ReplaceAll("$", "");  // Remove special identifier
+  
   //  bName.ReplaceAll("AnitaPol::", "");  // Remove AnitaPol function namespace
 
   bName.ReplaceAll("/", "_over_");  // wordify arithmetic/logical operators
   bName.ReplaceAll("+", "_plus_");  // wordify arithmetic/logical operators
   bName.ReplaceAll("-", "_minus_"); // wordify arithmetic/logical operators
   bName.ReplaceAll("*", "_times_"); // wordify arithmetic/logical operators
-  bName.ReplaceAll(">=", "_ge_"); // wordify arithmetic/logical operators 
-  bName.ReplaceAll("<=", "_le_"); // wordify arithmetic/logical operators 
-  bName.ReplaceAll(">", "_gt_"); // wordify arithmetic/logical operators 
-  bName.ReplaceAll("<", "_lt_"); // wordify arithmetic/logical operators 
+  bName.ReplaceAll(">=", "_ge_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll("<=", "_le_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll(">", "_gt_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll("<", "_lt_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll("%", "_modulo_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll(" ", "");  // Remove any remaining spaces  
   bName.ReplaceAll("__", "_");  // Remove double underscore if there is one
+  
+  bName.Remove(TString::kLeading, '_'); // Remove leading underscore if there is one
   bName.Remove(TString::kTrailing, '_'); // Remove trailing underscore if there is one
+
+
+
+
+  // some special cases...
+  
+  if(bName=="10_0_times__minus_0_2_times_coherent_filtered_fracPowerWindowEnds_0_minus_coherent_filtered_fracPowerWindowBegins_0__minus_0_1_times_coherent_filtered_fracPowerWindowEnds_1_minus_coherent_filtered_fracPowerWindowBegins_1__plus_0_1_times_coherent_filtered_fracPowerWindowEnds_3_minus_coherent_filtered_fracPowerWindowBegins_3__plus_0_2_times_coherent_filtered_fracPowerWindowEnds_4_minus_coherent_filtered_fracPowerWindowBegins_4"){
+    bName = "coherent_filtered_fracPowerWindowGradient";
+  }
+  else if(bName=="10_0_times__minus_0_2_times_deconvolved_filtered_fracPowerWindowEnds_0_minus_deconvolved_filtered_fracPowerWindowBegins_0__minus_0_1_times_deconvolved_filtered_fracPowerWindowEnds_1_minus_deconvolved_filtered_fracPowerWindowBegins_1__plus_0_1_times_deconvolved_filtered_fracPowerWindowEnds_3_minus_deconvolved_filtered_fracPowerWindowBegins_3__plus_0_2_times_deconvolved_filtered_fracPowerWindowEnds_4_minus_deconvolved_filtered_fracPowerWindowBegins_4"){
+    bName = "deconvolved_filtered_fracPowerWindowGradient";
+  }
+  else if(bName=="_Abs_peak_hwAngle_lt_Abs_peak_hwAngleXPol__times_Abs_peak_hwAngle_plus_Abs_peak_hwAngle_ge_Abs_peak_hwAngleXPol__times_Abs_peak_hwAngleXPol"){
+    bName = "minAbsHwAngle";
+  }
+  else if(bName=="wrap_peak_phi_minus_mc_phi_360_0"){
+    bName = "dPhi_mc";
+  }
+  else if(bName=="_peak_theta_plus_mc_theta"){
+    bName = "dTheta_mc";
+  }  
+  else if(bName=="wrap_peak_phi_minus_wais_phi_360_0"){
+    bName = "dPhi_wais";
+  }
+  else if(bName=="wrap_peak_phi_minus_sun_phi_360_0"){
+    bName = "dPhi_sun";
+  }
+  else if(bName=="floor_Iteration_over_5"){
+    bName = "pol";
+x  }
+  else if(bName=="Iteration_modulo_5"){
+    bName = "peakInd";
+  }
+  
   return bName;
 }
 
