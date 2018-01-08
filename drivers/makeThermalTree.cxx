@@ -22,7 +22,7 @@ int main(int argc, char* argv[]){
   }
   const char* outFileName = argv[0];
   const char* glob = argv[1];
-  TString runStr = argc == 3 ? argv[2] : "0";
+  TString runStr = argc == 3 ? argv[2] : "-1";
   Int_t run = atoi(runStr.Data());
 
   std::vector<const char*> formulas;
@@ -33,9 +33,12 @@ int main(int argc, char* argv[]){
   // formulas.push_back("sum.weight()");
   formulas.push_back(Draw::weight);
 
-  if(TString(glob).Contains("_mc_")){
-    formulas.push_back(Draw::dPhiMC);
-    formulas.push_back(Draw::dThetaMC);
+  bool mcInput = TString(glob).Contains("_mc_");
+  if(mcInput){
+    formulas.push_back("mc.phi");
+    formulas.push_back("mc.theta");
+    // formulas.push_back(Draw::dPhiMC);
+    // formulas.push_back(Draw::dThetaMC);
     // formulas.push_back("sum.highestPeak().dPhiMC()");
     // formulas.push_back("sum.highestPeak().dThetaMC()");
     formulas.push_back("mc.energy");
@@ -85,7 +88,7 @@ int main(int argc, char* argv[]){
 
   std::vector<const TCut *> cuts;
   TCut runCut(TString::Format("run == %d", run).Data());  
-  if(run > 0){
+  if(run >= 0){
     cuts.push_back(&runCut);
   }
   
@@ -126,8 +129,16 @@ int main(int argc, char* argv[]){
   TTree* thermalTree = (TTree*) thermalFile->Get(treeName);
   std::cout << treeName << " has " << thermalTree->GetEntries() << std::endl;
 
-  const char* fakeArgv[2] = {outFileName, runStr.Data()};
-  OutputConvention oc(2, (char**)fakeArgv);
+  std::vector<const char*> fakeArgv;
+  fakeArgv.push_back(outFileName);
+  
+  if(mcInput){
+    fakeArgv.push_back("mc");    
+  }
+  if(run >= 0){
+    fakeArgv.push_back(runStr.Data());  
+  }
+  OutputConvention oc(fakeArgv.size(), (char**)&fakeArgv[0]);
   TFile* fOut = oc.makeFile();
 
   fOut->cd();

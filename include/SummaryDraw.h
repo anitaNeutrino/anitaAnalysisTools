@@ -24,14 +24,6 @@ namespace Acclaim
    * You'll need to include Cuts on the command line.
    */
   namespace Draw {
-    const TString dPhiWais = "FFTtools::wrap(peak[][].phi - wais.phi, 360, 0)";
-    const TString dThetaWais = "(peak[][].theta - wais.theta)";
-
-    const TString dPhiSun = "FFTtools::wrap(peak[][].phi - sun.phi, 360, 0)";
-    const TString dThetaSun = "(peak[][].theta - sun.theta)";
-    
-    const TString dPhiMC = "FFTtools::wrap(peak[][].phi - mc.phi, 360, 0)";
-    const TString dThetaMC = "(peak[][].theta + mc.theta)";
 
     const TString weight = "((mc.weight > 0)*mc.weight + 1*(mc.weight==0))"; ///This should set the data weight to be 1
 
@@ -75,17 +67,19 @@ namespace Acclaim
     // +(0.066202 *highestDeconvolvedFiltered_peakHilbert)
 
 
-    const double fisherDiscriminatThreshold = 7.1875;
-    const TString fisherDiscriminant = TString::Format("%lf + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s))",
-						       9.995486,
-						       0.008404,  TString::Format("TMath::Abs(%s)", dPhiSun.Data()).Data(),
-						       -0.010410, minAbsHwAngle.Data(),
-						       -0.208352, deconvolved_filtered_fracPowerWindowGradient.Data(),
-						       -0.027315, coherent_filtered_fracPowerWindowGradient.Data(),
-						       -7.633246, "deconvolved_filtered[][].impulsivityMeasure",
-						       5.103013 , "coherent_filtered[][].impulsivityMeasure",
-						       -3.864929, "peak[][].value",
-						       0.066202 , "deconvolved_filtered[][].peakHilbert");
+    // const double fisherDiscriminatThreshold = 7.1875;
+    // const TString fisherDiscriminant = TString::Format("%lf + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s))",
+    // 						       9.995486,
+    // 						       0.008404,  TString::Format("TMath::Abs(%s)", dPhiSun.Data()).Data(),
+    // 						       -0.010410, minAbsHwAngle.Data(),
+    // 						       -0.208352, deconvolved_filtered_fracPowerWindowGradient.Data(),
+    // 						       -0.027315, coherent_filtered_fracPowerWindowGradient.Data(),
+    // 						       -7.633246, "deconvolved_filtered[][].impulsivityMeasure",
+    // 						       5.103013 , "coherent_filtered[][].impulsivityMeasure",
+    // 						       -3.864929, "peak[][].value",
+    // 						       0.066202 , "deconvolved_filtered[][].peakHilbert");
+
+    
   }
 
 
@@ -149,16 +143,16 @@ namespace Acclaim
 									       Draw::hilbertPeakTimeShift.Data(), 0.0,
 									       Draw::hilbertPeakTimeShift.Data(), 20.0)); /// (N=10)
 
-    const TCut closeToWais("closeToWais", /// (N=10)
-			   TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)",
-					   Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi,
-					   Draw::dThetaWais.Data(), maxDeltaTheta));
-    const TCut closeToMC("closeToMC", /// (N=10)
-			 TString::Format("(mc.weight > 0 && %s < %lf && %s > %lf && %s < %lf && %s > %lf)",
-					 Draw::dPhiMC.Data(),   maxDeltaPhi,   Draw::dPhiMC.Data(),   -maxDeltaPhi,
-					 Draw::dThetaMC.Data(), maxDeltaTheta, Draw::dThetaMC.Data(), -maxDeltaTheta));
+    // const TCut closeToWais("closeToWais", /// (N=10)
+    // 			   TString::Format("(mc.weight == 0 && %s < %lf && %s > %lf && %s < %lf)",
+    // 					   Draw::dPhiWais.Data(), maxDeltaPhi, Draw::dPhiWais.Data(), -maxDeltaPhi,
+    // 					   Draw::dThetaWais.Data(), maxDeltaTheta));
+    // const TCut closeToMC("closeToMC", /// (N=10)
+    // 			 TString::Format("(mc.weight > 0 && %s < %lf && %s > %lf && %s < %lf && %s > %lf)",
+    // 					 Draw::dPhiMC.Data(),   maxDeltaPhi,   Draw::dPhiMC.Data(),   -maxDeltaPhi,
+    // 					 Draw::dThetaMC.Data(), maxDeltaTheta, Draw::dThetaMC.Data(), -maxDeltaTheta));
 
-    // const TCut isWithin20DegreesOfSunInPhi("isWithin20DegreesOfSunInPhi", "sum->peak.dPhiSun()) < 20");
+    // const TCut isWithin20DegreesOfSunInPhi("isWithin20DegreesOfSunInPhi", "peak.dPhiSun()) < 20");
     const TCut isOnContinent("isOnContinent", "RampdemReader::isOnContinent(peak[][].longitude, peak[][].latitude)"); /// (N=10)
     
     const TCut hasSourceLocation("hasSourceLocation", "(peak[][].latitude < -900 || TMath::Abs(peak[][].theta_adjustment_needed) > 0"); /// (N=10)
@@ -169,7 +163,7 @@ namespace Acclaim
     
     const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle())); /// N(10)
 
-    const TCut fisherDiscriminantAboveThreshold = TCut("fisherDiscriminantAboveThreshold", TString::Format("%s > %lf", Draw::fisherDiscriminant.Data(), Draw::fisherDiscriminatThreshold));
+    // const TCut fisherDiscriminantAboveThreshold = TCut("fisherDiscriminantAboveThreshold", TString::Format("%s > %lf", Draw::fisherDiscriminant.Data(), Draw::fisherDiscriminatThreshold));
 
     
   }

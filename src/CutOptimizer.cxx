@@ -440,6 +440,7 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   bName.ReplaceAll("+", "_plus_");  // wordify arithmetic/logical operators
   bName.ReplaceAll("-", "_minus_"); // wordify arithmetic/logical operators
   bName.ReplaceAll("*", "_times_"); // wordify arithmetic/logical operators
+  bName.ReplaceAll("==", "_eq_"); // wordify arithmetic/logical operators  
   bName.ReplaceAll(">=", "_ge_"); // wordify arithmetic/logical operators
   bName.ReplaceAll("<=", "_le_"); // wordify arithmetic/logical operators
   bName.ReplaceAll(">", "_gt_"); // wordify arithmetic/logical operators
@@ -479,9 +480,12 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
   }
   else if(bName=="floor_Iteration_over_5"){
     bName = "pol";
-x  }
+  }
   else if(bName=="Iteration_modulo_5"){
     bName = "peakInd";
+  }
+  else if(bName=="mc_weight_gt_0_times_mc_weight_plus_1_times_mc_weight_eq_0"){
+    bName = "weight";
   }
   
   return bName;

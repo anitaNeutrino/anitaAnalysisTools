@@ -23,7 +23,7 @@ int main(int argc, char* argv[]){
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
 
-  const int n = 16;
+  const int n = 15; //16;
   const TCut* selection[n] = {&Cuts::highestPeak,
 			      &Cuts::isRfTrigger,
 			      &Cuts::isNotTaggedAsPulser,
@@ -38,8 +38,9 @@ int main(int argc, char* argv[]){
 			      &Cuts::reasonableHilbertPeakTimeShiftAfterDedispersion,
 			      &Cuts::higherHilbertPeakAfterDedispersion,
 			      &Cuts::higherImpulsivityMeasureAfterDedispersion,
-			      &Cuts::lowerFracPowerWindowGradientAfterDedispersion,
-			      &Cuts::fisherDiscriminantAboveThreshold};
+			      &Cuts::lowerFracPowerWindowGradientAfterDedispersion
+  };
+			      // &Cuts::fisherDiscriminantAboveThreshold};
   for(int i=0; i < n; i++){
     reduce.addCut(selection[i]);
   }

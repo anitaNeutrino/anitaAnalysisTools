@@ -24,7 +24,7 @@ int main(int argc, char* argv[]){
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
   
   reduce.addCut(&Cuts::isTaggedAsWaisPulser);
-  reduce.addCut(&Cuts::closeToWais);
+  // reduce.addCut(&Cuts::closeToWais);
 
   ss.Process(&reduce);
   

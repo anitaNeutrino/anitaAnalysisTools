@@ -126,7 +126,7 @@ void Acclaim::CutTreeSelector::Init(TTree* tree){
       TTreeFormula* f = new TTreeFormula(formName, formula, tree);
       fFormulas->Add(f);
 
-      // std::cout << fInd << "\t" << formula << "\t" << fFormulas->GetEntries() << std::endl;
+      // std::cout << fInd << "\t" << formula << "\t" << f->GetNdata() << std::endl;
 
       if(formula.Contains("Iteration$")){
 	fIterationFormula[fInd] = true;
