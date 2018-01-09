@@ -3,7 +3,8 @@
  Email: strutt@physics.ucla.edu
 
  Description:
-             A global set of TStrings/TCuts for drawing on the command line
+             A global set of TStrings/TCuts for drawing in root.
+             You'll need to #include this file on the root prompt.
 ***********************************************************************************************************/
 
 #ifndef ANALYSIS_CUTS_H
@@ -19,9 +20,8 @@ namespace Acclaim
 
   /**
    * @namespace Draw
-   * @brief Commonly used analysis variables in SummarySet::Draw() or TTree::Draw().
+   * @brief Should work on trees with AnitaEventSummaries.
    *
-   * You'll need to include Cuts on the command line.
    */
   namespace Draw {
 
@@ -47,39 +47,6 @@ namespace Acclaim
     const TString hilbertPeakTimeShift = "coherent_filtered[][].peakTime - deconvolved_filtered[][].peakTime";
     const TString minAbsHwAngle = "(TMath::Abs(peak[][].hwAngle) < TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngle) + (TMath::Abs(peak[][].hwAngle) >= TMath::Abs(peak[][].hwAngleXPol))*TMath::Abs(peak[][].hwAngleXPol)";
 
-    //4.869880+(0.004748*Abs_highestPeak_dPhiSun)+(-0.009809*Abs_highestPeak_minAbsHwAngle)+(-0.337216*highestDeconvolvedFiltered_fracPowerWindowGradient)+(0.155879*highestCoherentFiltered_fracPowerWindowGradient)+(-2.428568*highestDeconvolvedFiltered_impulsivityMeasure)+(7.163682*highestCoherentFiltered_impulsivityMeasure)+(1.322790*highestPeak_value)+(-0.000308*highestDeconvolvedFiltered_peakHilbert)
-
-    // Aug MC, all upward pointing events >= run 140
-    // 4.433484+(0.006059*Abs_highestPeak_dPhiSun)+(-0.008420*Abs_highestPeak_minAbsHwAngle)+(-0.319881*highestDeconvolvedFiltered_fracPowerWindowGradient)+(0.146542*highestCoherentFiltered_fracPowerWindowGradient)+(-2.267123*highestDeconvolvedFiltered_impulsivityMeasure)+(6.910730*highestCoherentFiltered_impulsivityMeasure)+(1.152596*highestPeak_value)+(-0.000235*highestDeconvolvedFiltered_peakHilbert)
-
-
-    // wais pulses, all upwards pointing a3 quiet time...
-    // 9.995486+(0.008404*Abs_highestPeak_dPhiSun)+(-0.010410*Abs_highestPeak_minAbsHwAngle)+(-0.208352*highestDeconvolvedFiltered_fracPowerWindowGradient)+(-0.027315*highestCoherentFiltered_fracPowerWindowGradient)+(-7.633246*highestDeconvolvedFiltered_impulsivityMeasure)+(5.103013*highestCoherentFiltered_impulsivityMeasure)+(-3.864929*highestPeak_value)+(0.066202*highestDeconvolvedFiltered_peakHilbert)
-
-    //   9.995486
-    // +(0.008404 *Abs_highestPeak_dPhiSun)
-    // +(-0.010410*Abs_highestPeak_minAbsHwAngle)
-    // +(-0.208352*highestDeconvolvedFiltered_fracPowerWindowGradient)
-    // +(-0.027315*highestCoherentFiltered_fracPowerWindowGradient)
-    // +(-7.633246*highestDeconvolvedFiltered_impulsivityMeasure)
-    // +(5.103013 *highestCoherentFiltered_impulsivityMeasure)
-    // +(-3.864929*highestPeak_value)
-    // +(0.066202 *highestDeconvolvedFiltered_peakHilbert)
-
-
-    // const double fisherDiscriminatThreshold = 7.1875;
-    // const TString fisherDiscriminant = TString::Format("%lf + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s)) + (%lf * (%s))",
-    // 						       9.995486,
-    // 						       0.008404,  TString::Format("TMath::Abs(%s)", dPhiSun.Data()).Data(),
-    // 						       -0.010410, minAbsHwAngle.Data(),
-    // 						       -0.208352, deconvolved_filtered_fracPowerWindowGradient.Data(),
-    // 						       -0.027315, coherent_filtered_fracPowerWindowGradient.Data(),
-    // 						       -7.633246, "deconvolved_filtered[][].impulsivityMeasure",
-    // 						       5.103013 , "coherent_filtered[][].impulsivityMeasure",
-    // 						       -3.864929, "peak[][].value",
-    // 						       0.066202 , "deconvolved_filtered[][].peakHilbert");
-
-    
   }
 
 
