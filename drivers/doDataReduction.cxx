@@ -1,4 +1,4 @@
-#include "SummaryDraw.h"
+#include "DrawStrings.h"
 #include "SumTreeReductionSelector.h"
 #include "SummarySet.h"
 #include "OutputConvention.h"
@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
   OutputConvention oc(1, argv);  
   const char* glob = argv[1];
 
-  // Cuts::setMode(Cuts::kAcclaimAnalysis);
+  // SumTree::setMode(SumTree::kAcclaimAnalysis);
 
   SummarySet ss(glob);
   ss.SetUseProof(true);
@@ -24,41 +24,41 @@ int main(int argc, char* argv[]){
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
 
   const int n = 15; //16;
-  const TCut* selection[n] = {&Cuts::highestPeak,
-			      &Cuts::isRfTrigger,
-			      &Cuts::isNotTaggedAsPulser,
-			      &Cuts::npbc0A,
-			      &Cuts::npbc0B,
-			      &Cuts::npbc1,
-			      &Cuts::npbc2,
-			      &Cuts::npbc3,
-			      &Cuts::smallDeltaRough,
-			      &Cuts::goodGPS,
-			      &Cuts::isBelowHorizontal,
-			      &Cuts::reasonableHilbertPeakTimeShiftAfterDedispersion,
-			      &Cuts::higherHilbertPeakAfterDedispersion,
-			      &Cuts::higherImpulsivityMeasureAfterDedispersion,
-			      &Cuts::lowerFracPowerWindowGradientAfterDedispersion
+  const TCut* selection[n] = {&SumTree::highestPeak,
+			      &SumTree::isRfTrigger,
+			      &SumTree::isNotTaggedAsPulser,
+			      &SumTree::npbc0A,
+			      &SumTree::npbc0B,
+			      &SumTree::npbc1,
+			      &SumTree::npbc2,
+			      &SumTree::npbc3,
+			      &SumTree::smallDeltaRough,
+			      &SumTree::goodGPS,
+			      &SumTree::isBelowHorizontal,
+			      &SumTree::reasonableHilbertPeakTimeShiftAfterDedispersion,
+			      &SumTree::higherHilbertPeakAfterDedispersion,
+			      &SumTree::higherImpulsivityMeasureAfterDedispersion,
+			      &SumTree::lowerFracPowerWindowGradientAfterDedispersion
   };
-			      // &Cuts::fisherDiscriminantAboveThreshold};
+			      // &SumTree::fisherDiscriminantAboveThreshold};
   for(int i=0; i < n; i++){
     reduce.addCut(selection[i]);
   }
 
   // reduce.fDoAnalysisCutTree = false;
 
-  // reduce.addCut(&Cuts::isNotTaggedAsPulser);
-  // reduce.addCut(&Cuts::isGood);
-  // reduce.addCut(&Cuts::smallDeltaRough);
-  // reduce.addCut(&Cuts::goodGPS);
-  // // reduce.addCut(&Cuts::realSNR);
-  // reduce.addCut(&Cuts::isRfTrigger);
-  // reduce.addCut(&Cuts::higherHilbertPeakAfterDedispersion);
-  // reduce.addCut(&Cuts::higherImpulsivityMeasureAfterDedispersion);
-  // reduce.addCut(&Cuts::lowerFracPowerWindowGradientAfterDedispersion);
-  // reduce.addCut(&Cuts::fisherScoreAboveThreshold); ///@todo fix this
+  // reduce.addCut(&SumTree::isNotTaggedAsPulser);
+  // reduce.addCut(&SumTree::isGood);
+  // reduce.addCut(&SumTree::smallDeltaRough);
+  // reduce.addCut(&SumTree::goodGPS);
+  // // reduce.addCut(&SumTree::realSNR);
+  // reduce.addCut(&SumTree::isRfTrigger);
+  // reduce.addCut(&SumTree::higherHilbertPeakAfterDedispersion);
+  // reduce.addCut(&SumTree::higherImpulsivityMeasureAfterDedispersion);
+  // reduce.addCut(&SumTree::lowerFracPowerWindowGradientAfterDedispersion);
+  // reduce.addCut(&SumTree::fisherScoreAboveThreshold); ///@todo fix this
 
-  // reduce.addCut(&Cuts::dedispersedFracPowerWindowGradientBelowThreshold);
+  // reduce.addCut(&SumTree::dedispersedFracPowerWindowGradientBelowThreshold);
 
   ss.Process(&reduce);
   

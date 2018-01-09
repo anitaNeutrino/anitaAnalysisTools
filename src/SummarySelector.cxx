@@ -3,7 +3,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include "TCanvas.h"
-#include "SummaryDraw.h"
+#include "DrawStrings.h"
 #include "TTreeFormula.h"
 #include "TMath.h"
 #include "TTreeFormulaManager.h"
@@ -133,7 +133,7 @@ Bool_t Acclaim::SummarySelector::Notify()
 {
   TIter next(fCutFormulas);
   while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
-    form->UpdateFormulaLeaves();
+    form->Notify();
   }
   
   return kTRUE;

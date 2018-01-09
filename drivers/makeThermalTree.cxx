@@ -1,14 +1,9 @@
-#include "ThermalTreeMaker.h"
-#include "SummaryDraw.h"
 #include <iostream>
 #include "SummarySet.h"
-#include "SummaryDraw.h"
+#include "DrawStrings.h"
 #include "ProgressBar.h"
 #include "CutTreeSelector.h"
 #include "OutputConvention.h"
-
-
-#include "TSystem.h" // require gSystem->Exit(0) to avoid segfault with PROOF
 
 
 using namespace Acclaim;
@@ -31,25 +26,19 @@ int main(int argc, char* argv[]){
   formulas.push_back("realTime");
 
   // formulas.push_back("sum.weight()");
-  formulas.push_back(Draw::weight);
+  formulas.push_back(SumTree::weight);
 
   bool mcInput = TString(glob).Contains("_mc_");
-  if(mcInput){
-    formulas.push_back("mc.phi");
-    formulas.push_back("mc.theta");
-    // formulas.push_back(Draw::dPhiMC);
-    // formulas.push_back(Draw::dThetaMC);
-    // formulas.push_back("sum.highestPeak().dPhiMC()");
-    // formulas.push_back("sum.highestPeak().dThetaMC()");
-    formulas.push_back("mc.energy");
-  }
+  formulas.push_back("mc.phi");
+  formulas.push_back("mc.theta");
+  formulas.push_back("mc.energy");
 
   formulas.push_back("peak[][].value");
   formulas.push_back("peak[][].phi");
   formulas.push_back("peak[][].theta");
   formulas.push_back("Iteration$");
-  formulas.push_back(Draw::pol);
-  formulas.push_back(Draw::peakInd);
+  formulas.push_back(SumTree::pol);
+  formulas.push_back(SumTree::peakInd);
   // formulas.push_back("sum.highestPeak().value");
   // formulas.push_back("sum.highestPeak().phi");
   // formulas.push_back("sum.highestPeak().theta");
@@ -59,8 +48,8 @@ int main(int argc, char* argv[]){
   // formulas.push_back("sum.highestPeakInd()");
   // formulas.push_back("sum.highestPeakInd()");
   
-  formulas.push_back(Draw::coherent_filtered_fracPowerWindowGradient);
-  formulas.push_back(Draw::deconvolved_filtered_fracPowerWindowGradient);
+  formulas.push_back(SumTree::coherent_filtered_fracPowerWindowGradient);
+  formulas.push_back(SumTree::deconvolved_filtered_fracPowerWindowGradient);
   // formulas.push_back("sum.highestDeconvolvedFiltered().fracPowerWindowGradient()");
   // formulas.push_back("sum.highestCoherentFiltered().fracPowerWindowGradient()");
 
@@ -85,6 +74,9 @@ int main(int argc, char* argv[]){
   formulas.push_back("flags.maxBottomToTopRatio[1]");
   formulas.push_back("flags.pulser");
   formulas.push_back("flags.isRF");
+  formulas.push_back("flags.isPayloadBlast");
+  formulas.push_back("flags.isVarner");
+  formulas.push_back("flags.isVarner2");
 
   std::vector<const TCut *> cuts;
   TCut runCut(TString::Format("run == %d", run).Data());  
@@ -92,7 +84,7 @@ int main(int argc, char* argv[]){
     cuts.push_back(&runCut);
   }
   
-  cuts.push_back(&Cuts::highestPeak); // Best peak?
+  cuts.push_back(&SumTree::highestPeak); // Best peak?
   
   TString hashString = "";
   for(UInt_t i=0; i < formulas.size(); i++){
@@ -145,22 +137,12 @@ int main(int argc, char* argv[]){
   TTree* tempTree = (TTree*) thermalTree->CloneTree();
   tempTree->Write();
   delete tempTree;
-
-  // TTree* acTree = (TTree*) thermalFile->Get("analysisCutTree");
-  // fOut->cd();
-  // TTree* tempTree2 = (TTree*) acTree->CloneTree();
-  // tempTree2->SetName("cutTree");
-  // tempTree2->Write();
-  // delete tempTree2;
   
   gDirectory->cd(theRootPwd);
 
   fOut->Write();
   fOut->Close();
-
-
   p++;
   
-  gSystem->Exit(0);
   return 0;
 }

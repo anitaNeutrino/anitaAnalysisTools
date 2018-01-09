@@ -166,7 +166,7 @@ namespace Acclaim{
 	getResultFromXML(fileName);
       }
       TString getFisherFormula() const;
-      TH2D* makeTimeHist(int nBinsX, int nBinsY, TChain* t, EColor col, int varInd=0, const char* extraName = "") const;
+      TH2D* makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd=0, const char* extraName = "") const;
       virtual void Print(Option_t* opt = "") const;
       void getExpressions(std::vector<TString>& expressions) const;
       double getWeight(const char* expression);

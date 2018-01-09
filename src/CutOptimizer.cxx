@@ -1,6 +1,6 @@
 #include "CutOptimizer.h"
 #include "OutputConvention.h"
-#include "SummaryDraw.h"
+#include "DrawStrings.h"
 #include "SummarySet.h"
 #include "ProgressBar.h"
 #include "AnitaEventSummary.h"
@@ -102,15 +102,15 @@ void Acclaim::CutOptimizer::FisherResult::Print(Option_t* opt) const{
 
 
 
-TH2D* Acclaim::CutOptimizer::FisherResult::makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd) const{  
+TH2D* Acclaim::CutOptimizer::FisherResult::makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd, const char* extraName) const{  
 
   TString histName;
   TString histTitle;
   TString command;
 
   if(varInd==0){
-    histName = TString::Format("h%sFisher", t->GetName());
-    histTitle = TString::Format("%s: Fisher Discriminant", t->GetName());
+    histName = TString::Format("h%sFisher", extraName);
+    histTitle = TString::Format("%s: Fisher Discriminant", extraName);
     command = getFisherFormula();
   }
   else {
@@ -277,11 +277,21 @@ void Acclaim::CutOptimizer::FisherResult::parseNode(TXMLEngine* xml, XMLNodePoin
  * @param summaryFileGlob, a glob expression for getting files containing trees of AnitaEventSummary
  * @param save_trees is a boolian which determines whether or not the intermediate TTrees fed into TMVA.
  */
-Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgroundGlob, bool doAllPeaks, bool save_trees)
+Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgroundGlob)
+// Acclaim::CutOptimizer::CutOptimizer(const char* signalGlob, const char* backgroundGlob, bool doAllPeaks, bool save_trees)  
   : fSignalGlob(signalGlob), fBackgroundGlob(backgroundGlob ? backgroundGlob : ""), fOutFile(NULL),
-    fSignalTree(NULL), fBackgroundTree(NULL), fRejectedSignalTree(NULL), fRejectedBackgroundTree(NULL), fDoAllPeaks(doAllPeaks), fSaveTrees(save_trees)
+    fSignalTree(NULL), fBackgroundTree(NULL)
 {
+  
+  fSignalTree = new TChain("thermalTree");
+  fBackgroundTree = new TChain("thermalTree");
 
+  fSignalTree->Add(signalGlob);
+  fBackgroundTree->Add(backgroundGlob);  
+
+  std::cout << "found signal with " << fSignalTree->GetEntries() << " entries." << std::endl;
+  std::cout << "found background with " << fBackgroundTree->GetEntries() << " entries." << std::endl;
+  
 }
 
 
@@ -331,77 +341,77 @@ TFile* Acclaim::CutOptimizer::makeOutputFile(const char* outFileName){
 
 
 
-/** 
- * Constructor for the FormulaHolder
- * 
- * @param c pointer to the TChain on which the formulae will be evaluated
- */
-Acclaim::CutOptimizer::FormulaHolder::FormulaHolder(TChain* c)
-    : fChain(c)
-{
-  if(fChain){
-    fChain->SetNotify(this);
-  }
-}
+/// ** 
+//  * Constructor for the FormulaHolder
+//  * 
+//  * @param c pointer to the TChain on which the formulae will be evaluated
+//  */
+// Acclaim::CutOptimizer::FormulaHolder::FormulaHolder(TChain* c)
+//     : fChain(c)
+// {
+//   if(fChain){
+//     fChain->SetNotify(this);
+//   }
+// }
 
-/** 
- * TChain can only notify one object when the underlying tree changes.
- * The point of this class is to inherit from TObject and overload Notify(),
- * then pass that on to all the TFormulas I'm interested in.
- * 
- * @return always returns true.
- */
-Bool_t Acclaim::CutOptimizer::FormulaHolder::Notify(){
-  for(UInt_t i=0; i < fForms.size(); i++){
-    fForms.at(i)->Notify();
-  }
-  return true;
-}
+// /** 
+//  * TChain can only notify one object when the underlying tree changes.
+//  * The point of this class is to inherit from TObject and overload Notify(),
+//  * then pass that on to all the TFormulas I'm interested in.
+//  * 
+//  * @return always returns true.
+//  */
+// Bool_t Acclaim::CutOptimizer::FormulaHolder::Notify(){
+//   for(UInt_t i=0; i < fForms.size(); i++){
+//     fForms.at(i)->Notify();
+//   }
+//   return true;
+// }
 
 
-/** 
- * Destructor: Delete all the contained TFormula and unset the TChain Notification
- */
-Acclaim::CutOptimizer::FormulaHolder::~FormulaHolder(){
-  for(UInt_t i=0; i < fForms.size(); i++){
-    delete fForms.at(i);
-  }
-  if(fChain){
-    fChain->SetNotify(NULL);
-  }
+// /** 
+//  * Destructor: Delete all the contained TFormula and unset the TChain Notification
+//  */
+// Acclaim::CutOptimizer::FormulaHolder::~FormulaHolder(){
+//   for(UInt_t i=0; i < fForms.size(); i++){
+//     delete fForms.at(i);
+//   }
+//   if(fChain){
+//     fChain->SetNotify(NULL);
+//   }
   
-}
+// }
 
 
 
 
 
-/** 
- * Creates a TFormula object, and put it in the vector
- * 
- * @param formulaStr is the string from which to generate the formula
- * 
- * @return the number of contained TFormula 
- */
-size_t Acclaim::CutOptimizer::FormulaHolder::add(const char* formulaStr){
-  const int nForms = fForms.size();
-  TString formName = TString::Format("form%d", nForms);
-  TTreeFormula* form = new TTreeFormula(formName, formulaStr, fChain);
+// /** 
+//  * Creates a TFormula object, and put it in the vector
+//  * 
+//  * @param formulaStr is the string from which to generate the formula
+//  * 
+//  * @return the number of contained TFormula 
+//  */
+// size_t Acclaim::CutOptimizer::FormulaHolder::add(const char* formulaStr){
+//   const int nForms = fForms.size();
+//   TString formName = TString::Format("form%d", nForms);
+//   TTreeFormula* form = new TTreeFormula(formName, formulaStr, fChain);
 
-  // apprently this is the signature of an error
-  // https://root-forum.cern.ch/t/check-the-status-of-a-ttreeformula/12596/2
-  if(form->GetNdim()==0){
-    std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", not using bad expression "
-              << formulaStr << ", will not included in the output tree" << std::endl;
-    delete form;                                                                       
-  }
-  else{
-    fForms.push_back(form);
-    fFormStrs.push_back(formulaStr);
-  }
+//   // apprently this is the signature of an error
+//   // https://root-forum.cern.ch/t/check-the-status-of-a-ttreeformula/12596/2
+//   if(form->GetNdim()==0){
+//     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << ", not using bad expression "
+//               << formulaStr << ", will not included in the output tree" << std::endl;
+//     delete form;                                                                       
+//   }
+//   else{
+//     fForms.push_back(form);
+//     fFormStrs.push_back(formulaStr);
+//   }
   
-  return fForms.size();
-}
+//   return fForms.size();
+// }
 
 
 
@@ -495,127 +505,10 @@ TString Acclaim::CutOptimizer::branchifyName(const char* formStr){
 
 
 
-/** 
- * Correctly assign the correct type to the branch from the TTreeFormula
- * 
- * @param t is the tree on which to assign the branch
- * @param f is the formula 
- * @param formulaString is the formula string, used to name the branch
- * @param intPtr is the address of the float we will right to if it's an integer
- * @param floatPtr is the address of the float we will right to if it's not an integer
- * 
- * @return 1 if an integer, 0 if a float
- */
-
-Acclaim::CutOptimizer::BranchType Acclaim::CutOptimizer::setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr){
-  TString bName = branchifyName(formulaString);
-
-  BranchType b = f->IsInteger() ? kInt : kFloat;  
-  if(b == kInt){
-    t->Branch(bName, intPtr);
-    // t->Branch(bName, intPtr, bName + "/I");
-  }
-  else{
-    t->Branch(bName, floatPtr);
-    // t->Branch(bName, floatPtr, bName + "/F");
-  }
-  if(debug){
-    std::cerr << "Set branch " << bName << " in tree " << t->GetName() << " with status " << t->GetBranchStatus(bName) << std::endl;
-  }
-  return b;
-}
-
-
-
-void Acclaim::CutOptimizer::generateSignalAndBackgroundTreesProof(const std::vector<const TCut*>& signalSelection, const std::vector<const TCut*>& backgroundSelection, const std::vector<FormulaString>& formulaStrings){
-
-
-  std::vector<const char*> fs;
-  fs.reserve(formulaStrings.size());
-  for(UInt_t i=0; i < formulaStrings.size(); i++){
-    fs.push_back(formulaStrings[i].first);
-  }
-
-
-  // now we need to figure out if we have separate globs for signal and background
-  // or just one for both...
-  std::vector<TString> globs;
-  globs.push_back(fSignalGlob);
-  if(fBackgroundGlob != ""){
-    globs.push_back(fBackgroundGlob);
-  }
-  else{
-    globs.push_back(fSignalGlob); // again...
-  }
-
-  const std::vector<const TCut*>* selections[2] = {&signalSelection,
-						   &backgroundSelection};
-  const char* proofFileNames[2] = {"/tmp/signalCuts.root", "/tmp/backgroundCuts.root"};
-  const char* proofTreeNames[2] = {"signalCuts", "backgroundCuts"};
-  // for(UInt_t g=0; g < fSpecGlobs.size(); g++){
-  //   globs.push_back(fSpecGlobs[g]);
-  // }
-  // // Then load the master AnitaEventSummary chain using my SummarySet class
-  const int nG = globs.size();
-  for(int g=0; g < nG; g++){
-    SummarySet ss(globs[g]);
-    ss.SetUseProof(true);
-
-    CutTreeSelector ct(proofFileNames[g], proofTreeNames[g]);
-    for(UInt_t i=0; i < selections[g]->size(); i++){
-      ct.addCut(selections[g]->at(i));
-    }
-
-    ct.setFormulaStrings(fs);
-
-    ss.Process(&ct);
-  }
-
-  TString theRootPwd = gDirectory->GetPath();
-  TFile* signalFile = TFile::Open("/tmp/signalCuts.root");
-  fSignalTree = (TTree*) signalFile->Get("signalCuts");
-  std::cout << "signalTree has " << fSignalTree->GetEntries() << std::endl;
-
-  if(fOutFile){
-    fOutFile->cd();
-    TTree* tempTree = (TTree*) fSignalTree->CloneTree();
-    tempTree->Write();
-    delete tempTree;
-    TTree* acTree = (TTree*) signalFile->Get("analysisCutTree");
-    fOutFile->cd();
-    TTree* tempTree2 = (TTree*) acTree->CloneTree();
-    tempTree2->SetName("signalAnalysisCutTree");
-    tempTree2->Write();
-    delete tempTree2;
-  }
-  
-  TFile* backgroundFile = TFile::Open("/tmp/backgroundCuts.root");
-  fBackgroundTree = (TTree*) backgroundFile->Get("backgroundCuts");
-  std::cout << "backgroundTree has " << fBackgroundTree->GetEntries() << std::endl;
-
-  if(fOutFile){
-    fOutFile->cd();
-    TTree* tempTree = (TTree*) fBackgroundTree->CloneTree();
-    tempTree->Write();
-    delete tempTree;
-    TTree* acTree = (TTree*) backgroundFile->Get("analysisCutTree");
-    fOutFile->cd();
-    TTree* tempTree2 = (TTree*) acTree->CloneTree();
-    tempTree2->SetName("backgroundAnalysisCutTree");    
-    tempTree2->Write();
-    delete tempTree2;
-  }
-  
-  gDirectory->cd(theRootPwd);
-
-}
-
-
-
 
 void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelection,
 				     const std::vector<const TCut*>& backgroundSelection,
-				     const std::vector<FormulaString>& formulaStrings, const char* fileName){
+				     const std::vector<TString>& formulaStrings, const char* fileName){
 
   // Someone with a bit more time can do the backwards compatibility
 #if ROOT_VERSION_CODE < ROOT_VERSION(6,10,0)
@@ -624,10 +517,6 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
 #else
   
     fOutFile = makeOutputFile(fileName);
-
-    // generateSignalAndBackgroundTrees(signalSelection, backgroundSelection, formulaStrings);
-    generateSignalAndBackgroundTreesProof(signalSelection, backgroundSelection, formulaStrings);
-    // return;
 
     if(!fSignalTree || !fBackgroundTree){
       std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", Non-existent signal or background tree. "
@@ -642,9 +531,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
       return;
     }
     
-    // fOutFile->cd();
-    // fSignalTree->Write();
-    // fBackgroundTree->Write();
+    gROOT->ProcessLine("#include \"FFTtools.h\"");
 
     TString factoryName = "ThermalCut";
     TString option = debug ? "V" : "silent";
@@ -653,28 +540,83 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
     dlName.ReplaceAll(".root", "");
     TMVA::DataLoader dl(dlName);
 
-    dl.AddSignalTree(fSignalTree);
-    dl.AddBackgroundTree(fBackgroundTree);
 
-    // should have identical for signal/background
-    TObjArray* backBranches = fBackgroundTree->GetListOfBranches();
-    for(int i=0; i < backBranches->GetEntries(); i++){
-      TBranch* b = (TBranch*) backBranches->At(i);
-      TString bName = b->GetName();
+    // fSignalTree->SetBranchStatus("*", 0);
+    // fBackgroundTree->SetBranchStatus("*", 0);
 
-      if(bName == "weight"){
-        dl.SetWeightExpression("weight");
-      }
-      else{
-        for(std::vector<FormulaString>::const_iterator it = formulaStrings.begin(); it != formulaStrings.end(); ++it){
-          // if the name matches and the FormulaString has true, then add
-          if(bName == branchifyName(it->first) && it->second){
-            dl.AddVariable(bName);
-          }
-        }
-      }    
+    // for(UInt_t i=0; i < formulaStrings.size(); i++){
+    //   fSignalTree->SetBranchStatus(formulaStrings[i], 1);
+    //   fBackgroundTree->SetBranchStatus(formulaStrings[i], 1);      
+    // }
+    
+
+    
+    std::cout << "creating reduced signal tree..." << std::endl;
+    ProgressBar pSig(1);
+    TCut signalCuts = "";
+    for(UInt_t sc=0; sc < signalSelection.size(); sc++){
+      signalCuts += *signalSelection[sc];
     }
+    // fSignalTree->Draw(">>sigEntries", signalCuts, "entrylist");
+    // TEntryList* sigEntries = (TEntryList*) gROOT->FindObject("sigEntries");
+    // fSignalTree->SetEntryList(sigEntries);
+    TTree* signalTree2 = fSignalTree->CopyTree(signalCuts.GetTitle());
+    signalTree2->SetName("signalTree");    
+    pSig++;
 
+    
+    std::cout << "creating reduced background tree..." << std::endl;
+    ProgressBar pBack(1);
+    TCut backgroundCuts = "";
+    for(UInt_t bc=0; bc < backgroundSelection.size(); bc++){
+      backgroundCuts += *backgroundSelection[bc];
+    }
+    // fBackgroundTree->Draw(">>backEntries", backgroundCuts, "entrylist");
+    // TEntryList* backEntries = (TEntryList*) gROOT->FindObject("backEntries");
+    // fBackgroundTree->SetEntryList(backEntries);
+    TTree* backgroundTree2 = fBackgroundTree->CopyTree(backgroundCuts.GetTitle());
+    backgroundTree2->SetName("backgroundTree");
+    pBack++;
+
+    delete fSignalTree;
+    fSignalTree = NULL;
+    delete fBackgroundTree;
+    fBackgroundTree = NULL;
+
+    signalTree2->SetBranchStatus("*", 0);
+    backgroundTree2->SetBranchStatus("*", 0);
+
+    for(UInt_t i=0; i < formulaStrings.size(); i++){
+      signalTree2->SetBranchStatus(formulaStrings[i], 1);
+      backgroundTree2->SetBranchStatus(formulaStrings[i], 1); 
+    }
+    signalTree2->SetBranchStatus("weight", 1);
+    backgroundTree2->SetBranchStatus("weight", 1);
+    signalTree2->SetBranchStatus("realTime", 1);
+    backgroundTree2->SetBranchStatus("realTime", 1);
+
+    
+    // dl.AddSignalTree(fSignalTree);
+    // dl.AddBackgroundTree(fBackgroundTree);
+
+    signalTree2->Show(0);
+    backgroundTree2->Show(0); 
+    
+    dl.AddTree(signalTree2, "Signal");//, 1.0, signalCuts);
+    dl.AddTree(backgroundTree2, "Background");//, 1.0, backgroundCuts);
+    // dl.AddTree(fSignalTree, "Signal", 1.0, signalCuts);
+    // dl.AddTree(fBackgroundTree, "Background", 1.0, backgroundCuts);
+
+    // std::cout << dl.GetDataSetInfo().GetClassInfo("Signal")->GetName() << std::endl;
+    // std::cout << dl.GetDataSetInfo().GetClassInfo("Background")->GetName() << std::endl;
+
+    
+
+    for(UInt_t vInd=0; vInd < formulaStrings.size(); vInd++){
+      dl.AddVariable(formulaStrings.at(vInd));
+    }
+    dl.SetWeightExpression("weight");
+    
     TString methodTitle = "tc";
 
     factory.BookMethod(&dl, TMVA::Types::EMVA::kFisher, methodTitle, "");
@@ -682,7 +624,8 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
     // If an inf/nan ends up in the training sample TMVA will throw an exception.
     // We want to still write the signal/background trees to find out what went wrong,
     // so let's wrap the attempt in a try/catch block
-    try{
+    try
+    {
       factory.TrainAllMethods();
       factory.TestAllMethods();
       factory.EvaluateAllMethods();
@@ -692,34 +635,29 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
       FisherResult result(weightFileName.Data());
       fOutFile->cd();
 
+      // re-activate branches
+      signalTree2->SetBranchStatus("*", 1);
+      backgroundTree2->SetBranchStatus("*", 1);      
+
       const int nBinsX = 1024;
       const int nBinsY = 1024;
+
       const int nT = 2;
-      TTree* ts[nT] = {fSignalTree, fBackgroundTree};
-    
+      TTree* ts[nT] = {signalTree2, backgroundTree2};
+      const char* extraNames[nT] = {"Signal", "Background"};
       for(int t=0; t < nT; t++){
         EColor col = t == 0 ? kRed : kBlue;
-        TObjArray* bs = ts[t]->GetListOfBranches();
-        int nActive = 0;
-        for(int b=0; b < bs->GetEntries(); b++){
-          TBranch* br = (TBranch*) bs->At(b);
-
-          int bs = ts[t]->GetBranchStatus(br->GetName());
-          if(bs > 0){
-            nActive++;
-            TH2D* h = result.makeTimeHist(nBinsX, nBinsY, ts[t], col, nActive);
-            if(h){
-              h->Write();
-              delete h;
-            }
-          }
-
-          ts[t]->SetBranchStatus(br->GetName(), 1);                  
-        }
+	for(UInt_t i=0; i < formulaStrings.size(); i++){
+	  TH2D* h = result.makeTimeHist(nBinsX, nBinsY, ts[t], col, i, extraNames[t]);
+	  if(h){
+	    h->Write();
+	    delete h;
+	  }
+	}
       }
 
-      TH2D* hSignal2 = result.makeTimeHist(nBinsX, nBinsY, fSignalTree, kRed);
-      TH2D* hBackground2 = result.makeTimeHist(nBinsX, nBinsY, fBackgroundTree, kBlue);
+      TH2D* hSignal2 = result.makeTimeHist(nBinsX, nBinsY, signalTree2, kRed, 0, extraNames[0]);
+      TH2D* hBackground2 = result.makeTimeHist(nBinsX, nBinsY, backgroundTree2, kBlue, 0, extraNames[1]);
 
       TH1D* hSignal = hSignal2->ProjectionY();
       TH1D* hBackground = hBackground2->ProjectionY();
@@ -768,31 +706,22 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
       result.Write();
   
       delete hSignal;
+      hSignal = NULL;
+      
       delete hSigInt;
+      hSigInt = NULL;
+
       delete hBackground;
+      hBackground = NULL;
+      
       delete hBackInt;
+      hBackInt = NULL;
   
     
     }
     catch(...){
       std::cerr << "Exception in " << __PRETTY_FUNCTION__ << " can't optimize for some reason!" << std::endl;
     }
-    // Activate all the branches!
-    // Branches unused by TMVA like run/eventNumber
-    // are switched off by the TMVA classes, which is slightly
-    // annoying when looking through the output trees.
-
-    const int nT = 2;
-    TTree* ts[nT] = {fSignalTree, fBackgroundTree};
-    for(int t=0; t < nT; t++){
-      TObjArray* bs = ts[t]->GetListOfBranches();
-      for(int b=0; b < bs->GetEntries(); b++){
-        TBranch* br = (TBranch*) bs->At(b);
-        ts[t]->SetBranchStatus(br->GetName(), 1);
-      }
-    }
-
-
   
     fOutFile->Write();
     fOutFile->Close();

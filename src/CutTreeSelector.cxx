@@ -1,7 +1,7 @@
 #include "CutTreeSelector.h"
 #include "TProofOutputFile.h"
 #include "TTreeFormula.h"
-#include "SummaryDraw.h"
+#include "DrawStrings.h"
 #include "CutOptimizer.h"
 #include "TList.h"
 
@@ -29,13 +29,12 @@ Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* t
 Bool_t Acclaim::CutTreeSelector::Notify()  
 {
 
-  // SummarySelector::Notify();
-  // TIter next(fFormulas);
-  // while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
-  //   form->UpdateFormulaLeaves();
-  // }
+  SummarySelector::Notify();
+  TIter next(fFormulas);
+  while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+    form->Notify();
+  }
   
-  // fFormulas->Notify();
   return kTRUE;
 }
 
