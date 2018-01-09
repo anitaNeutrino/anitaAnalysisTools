@@ -7,11 +7,12 @@
              You'll need to #include this file on the root prompt to use them.
 ***********************************************************************************************************/
 
-#ifndef ANALYSIS_CUTS_H
-#define ANALYSIS_CUTS_H
+#ifndef ACCLAIM_DRAW_STRINGS_H
+#define ACCLAIM_DRAW_STRINGS_H
 
 #include "AnitaConventions.h"
 #include "AnitaEventSummary.h"
+#include "FFTtools.h"
 #include "TString.h"
 #include "TCut.h"
 
@@ -56,7 +57,6 @@ namespace Acclaim
     const TCut npbc1("npbc1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28)); /// (N=1)
     const TCut npbc2("npbc2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 3.0)); /// (N=1)
 
-
     const TCut highestPeak("highestPeak", "Max$(peak[][].value)==peak[][].value");
     const TCut mostImpulsivePeak("mostImpulsivePeak", "Max$(deconvolved_filtered[][].impulsivityMeasure)==deconvolved_filtered[][].impulsivityMeasure");
 
@@ -83,14 +83,46 @@ namespace Acclaim
     const TCut hasSourceLocation("hasSourceLocation",
 				 "(peak[][].latitude < -900 || TMath::Abs(peak[][].theta_adjustment_needed) > 0"); 
     const TCut isAboveHorizontal("isAboveHorizontal",
-				 "peak[][].theta > 0"); 
+				 "peak[][].theta > 0");
     const TCut isBelowHorizontal("isBelowHorizontal",
-				 "peak[][].theta < 0"); 
+				 "peak[][].theta < 0");
     const TCut npbc3("npbc3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf"
 					      ,14.0, 1000.0));
     const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle()));
 
   }
+
+  /**
+   * @namespace ThermalTree
+   * @brief Strings/cuts for use in the thermal trees (a reduction of the summary trees with variables slightly renamed)
+   */
+  namespace ThermalTree {
+
+    const TString dPhiMC = "FFTtools::wrap(peak_phi - mc_phi, 360, 0)";
+    const TString dThetaMC = "peak_theta + mc_theta";/// MC theta has down is +ve, Acclaim reco has down is -ve.
+
+    const TCut weight(const TCut cut = "");
+    
+    const double dPhiClose = 5.5;
+    const double dThetaClose = 3.5;
+    const TCut closeToMC("closeToMC", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
+						      dPhiMC.Data(),   dPhiClose,
+						      dThetaMC.Data(), dThetaClose));    
+    const TCut isAboveHorizontal("isAboveHorizontal", "peak_theta > 0");
+    const TCut anita3QuietTime = SumTree::anita3QuietTime; // should work for both
+    const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags_pulser==0");
+    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags_pulser==%d",
+									    AnitaEventSummary::EventFlags::WAIS).Data());
+    const TCut realSnr("realSnr", TString::Format("%s && %s && %s && %s",
+						  "!TMath::IsNaN(coherent_filtered_snr)",
+						  "!TMath::IsNaN(deconvolved_filtered_snr)",
+						  "TMath::Finite(coherent_filtered_snr)",
+						  "TMath::Finite(deconvolved_filtered_snr)"));
+    const TCut isRF("isRF", "flags_isRF==0");
+    const TCut notShortWaveform("notShortWaveform", "flags_isVarner2==0");
+  }
+
+  
 }
 
 #endif

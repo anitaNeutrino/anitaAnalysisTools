@@ -5,6 +5,9 @@
 #include "TGraphAntarctica.h"
 #include "AnitaEventSummary.h"
 
+#ifndef ACCLAIM_SUMMARY_SET_H
+#define ACCLAIM_SUMMARY_SET_H
+
 // This is a guess at the version number, if this doesn't work for you
 // feel free to try harder to track down the change
 #if ROOT_VERSION_CODE < ROOT_VERSION(6,0,8)
@@ -82,6 +85,8 @@ namespace Acclaim
 
     TObject* getDrawOutput() {TObject* o = fDrawOutput; fDrawOutput = NULL; return o;} /// You take it, you own it, you delete it.
 
+    static TProof* startProof();
+
   protected:
 
     void init();
@@ -113,3 +118,4 @@ namespace Acclaim
 }
 
 
+#endif //ACCLAIM_SUMMARY_SET_H

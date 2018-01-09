@@ -17,7 +17,6 @@ int main(int argc, char* argv[]){
 
   CutOptimizer co(signalGlob, backgroundGlob);
 
-  const TCut realSnr = "!TMath::IsNaN(coherent_filtered_snr) && !TMath::IsNaN(deconvolved_filtered_snr) && TMath::Finite(coherent_filtered_snr) && TMath::Finite(deconvolved_filtered_snr)";  
 
   std::vector<const TCut *> signalSelection;
   
@@ -25,16 +24,12 @@ int main(int argc, char* argv[]){
   signalSelection.push_back(&closeToMC);
   
   std::vector<const TCut *> backgroundSelection;
-  const TCut isAboveHorizontal = "peak_theta > 0";
-  const TCut notPulser = "flags_pulser == 0";
-  const TCut isRF = "flags_isRF == 0";
-  const TCut notShortWaveform = "flags_isVarner2 == 0";
   
-  backgroundSelection.push_back(&isAboveHorizontal);
-  backgroundSelection.push_back(&SumTree::anita3QuietTime);
-  backgroundSelection.push_back(&notPulser);
-  backgroundSelection.push_back(&realSnr);
-  backgroundSelection.push_back(&notShortWaveform);
+  backgroundSelection.push_back(&ThermalTree::isAboveHorizontal);
+  backgroundSelection.push_back(&ThermalTree::anita3QuietTime);
+  backgroundSelection.push_back(&ThermalTree::isNotTaggedAsPulser);
+  backgroundSelection.push_back(&ThermalTree::realSnr);
+  backgroundSelection.push_back(&ThermalTree::notShortWaveform);
   
   std::vector<TString> variables;
 

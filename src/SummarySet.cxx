@@ -58,6 +58,22 @@ Acclaim::SummarySet::~SummarySet(){
 }
 
 
+TProof* Acclaim::SummarySet::startProof(){
+  if(gProof){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__
+	      << " won't start new PROOF session if one is already running!"
+	      << std::endl;
+    return gProof;
+  }
+
+  gProof = TProof::Open("");
+  const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+  TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
+  gProof->Load(loadAnita);
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
+  return gProof;
+}
+
 
 /** 
  * Enable (disable) PROOF, if fUseProof is true (false)
@@ -65,20 +81,8 @@ Acclaim::SummarySet::~SummarySet(){
 void Acclaim::SummarySet::initProof(){
 
   if(fUseProof && !fProof){
-    if(gProof){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__
-		<< " won't start new PROOF session if one is already running!"
-		<< std::endl;
-      return;
-    }
-
-    fProof = TProof::Open("");
-    const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
-    TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
-    fProof->Load(loadAnita);
-    std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
-  }
-  
+    fProof = startProof();
+  }  
   if(fChain){
     fChain->SetProof(fUseProof);
   }

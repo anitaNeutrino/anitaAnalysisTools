@@ -59,7 +59,11 @@ int main(int argc, char* argv[]){
   // formulas.push_back("sum.highestCoherentFiltered().impulsivityMeasure");
   
   formulas.push_back("coherent_filtered[][].peakHilbert");
-  formulas.push_back("deconvolved_filtered[][].peakHilbert");  
+  formulas.push_back("deconvolved_filtered[][].peakHilbert");
+
+  formulas.push_back("coherent_filtered[][].peakTime");
+  formulas.push_back("deconvolved_filtered[][].peakTime");
+
   // formulas.push_back("sum.highestDeconvolvedFiltered().peakHilbert");
   // formulas.push_back("sum.highestCoherentFiltered().peakHilbert");
 
