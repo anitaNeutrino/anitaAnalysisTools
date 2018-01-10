@@ -126,6 +126,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
   if(calculateSource){
     usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
     RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
+    // std::cerr << eventNumber << "\t" << easting << "\t" << northing << std::endl;
     if(latitude < -90){
       std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", for eventNumber " << eventNumber << "\n";
       // std::cerr << "Doing traceBackToContinenet again in debug mode!\n";
@@ -137,6 +138,9 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
       eventEventClustering = false;
       easting = -99e20;
       northing = -99e20;
+    }
+    else{
+      eventEventClustering = true;
     }
 
     // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
@@ -1587,8 +1591,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
 	ss.getEntry(entry);
 	AnitaEventSummary* sum = ss.summary();
-	AnitaPol::AnitaPol_t pol = sum->trainingPol();
-	Int_t peakIndex = sum->trainingPeakInd();
+	AnitaPol::AnitaPol_t pol = sum->highestPol();
+	Int_t peakIndex = sum->highestPeakInd();
 	Double_t snrHack = sum->deconvolved_filtered[pol][peakIndex].snr;
 
 	// if(!isVaguelyNearMcMurdo(sum->peak[pol][peakIndex])
@@ -1602,13 +1606,13 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 	      const int numReserve = mcDivision > -1 ? 1 + (n/numMcDivisions) : n;
 	      mcEvents.reserve(mcEvents.size() + numReserve);
 	    }
-	    else{
-	      if(entry==0){
-		events.reserve(events.size() + n);
-	      }
-	      addEvent(sum, pol, peakIndex);
-	      numReadIn++;
+	  }
+	  else{
+	    if(entry==0){
+	      events.reserve(events.size() + n);
 	    }
+	    addEvent(sum, pol, peakIndex);
+	    numReadIn++;
 	  }
 	}
 	p.inc(entry, n);
@@ -2359,7 +2363,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   std::cout << "Final tally, the old = " << numOld << ", the new = " << numNew << std::endl;
   
   
-  return;
+  // return;
+
 
   readInSummaries(mcGlob);
 

@@ -47,17 +47,17 @@ int main(int argc, char* argv[]){
   // formulas.push_back("sum.highestPeakInd()");
   // formulas.push_back("sum.highestPeakInd()");
   // formulas.push_back("sum.highestPeakInd()");
-  
+
   formulas.push_back(SumTree::coherent_filtered_fracPowerWindowGradient);
   formulas.push_back(SumTree::deconvolved_filtered_fracPowerWindowGradient);
   // formulas.push_back("sum.highestDeconvolvedFiltered().fracPowerWindowGradient()");
   // formulas.push_back("sum.highestCoherentFiltered().fracPowerWindowGradient()");
-
+  
   formulas.push_back("coherent_filtered[][].impulsivityMeasure");
   formulas.push_back("deconvolved_filtered[][].impulsivityMeasure");  
   // formulas.push_back("sum.highestDeconvolvedFiltered().impulsivityMeasure");
   // formulas.push_back("sum.highestCoherentFiltered().impulsivityMeasure");
-  
+
   formulas.push_back("coherent_filtered[][].peakHilbert");
   formulas.push_back("deconvolved_filtered[][].peakHilbert");
 
@@ -76,6 +76,8 @@ int main(int argc, char* argv[]){
   formulas.push_back("flags.topPower[1]");
   formulas.push_back("flags.maxBottomToTopRatio[0]");
   formulas.push_back("flags.maxBottomToTopRatio[1]");
+  formulas.push_back("flags.minBottomToTopRatio[0]");
+  formulas.push_back("flags.minBottomToTopRatio[1]");
   formulas.push_back("flags.pulser");
   formulas.push_back("flags.isRF");
   formulas.push_back("flags.isPayloadBlast");
@@ -87,7 +89,8 @@ int main(int argc, char* argv[]){
   if(run >= 0){
     cuts.push_back(&runCut);
   }
-  
+  // TCut hack("eventNumber >= 72735249 && eventNumber <= 72735252");
+  // cuts.push_back(&hack); // Best peak?  
   cuts.push_back(&SumTree::highestPeak); // Best peak?
   
   TString hashString = "";

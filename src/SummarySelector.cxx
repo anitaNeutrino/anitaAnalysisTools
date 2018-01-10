@@ -204,12 +204,16 @@ void Acclaim::SummarySelector::SlaveBegin(TTree * /*tree*/)
 Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 {
 
-  fTree->LoadTree(entry);
+  // Long64_t readEntry = fTree->LoadTree(entry);
+  // std::cout << "On entry " << entry << ", got readEntry " << readEntry << std::endl;
+  
+  fTree->LoadTree(entry);  
 
   Bool_t matchesSelection = true;
   for(int i=0; i < fMaxNdata; i++){
     fCumulativeCutReturns[i] = true;
   }
+
   
 
   TIter next(fCutFormulas);
@@ -231,10 +235,10 @@ Bool_t Acclaim::SummarySelector::Process(Long64_t entry)
 
     // std::cout << fInd << "\t" << form->GetTitle() << std::endl;
     // for(int i=0; i < fMaxNdata; i++){
-      // std::cout << fInd << "\t" << i << std::endl;
-      // std::cout << fCutReturns.at(fInd).at(i) << "\t";
+    //   // std::cout << fInd << "\t" << i << std::endl;
+    //   std::cout << "(" << i << " : " << fCutReturns.at(fInd).at(i) << "), ";
     // }
-    // std::cout << "\n";
+    // std::cout << std::endl;
     // for(int i=0; i < fMaxNdata; i++){
       // std::cout << i << std::endl;
       // std::cout << fCumulativeCutReturns.at(i) << "\t";

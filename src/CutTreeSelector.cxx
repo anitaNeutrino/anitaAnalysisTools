@@ -9,7 +9,7 @@
 /**
  * Default constructor
  *
- * @param outFileName is the name to give the file containing the combined trees
+
  * @param treeName is the name to give the output ttree
  */
 Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* treeName)
@@ -182,24 +182,36 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
       fIntVals.at(fInd) = -9999;
       fFloatVals.at(fInd) = -9999;
 
+      bool doneAnIteration = false;
+
+      //***************************************************************
+      // this necessary to force the TTree formula to load the data!!!!
+      f->EvalInstance(); 
+      //***************************************************************
+
       for(int i=0; i < fMaxNdata; i++){
-	if(fCumulativeCutReturns.at(i) > 0){
+	if(!doneAnIteration && fCumulativeCutReturns.at(i) > 0){
 
 	  bool requireIteration = fIterationFormula[fInd] || (f->GetNdata() > 1 && i < f->GetNdata());
-	  // std::cout << i << "\t" << fInd << "\t" << fCumulativeCutReturns.at(i) << "\t" << f->GetTitle() << "\t" << fIterationFormula << std::endl;
+	  // std::cout << i << "\t" << fInd << "\t" << fCumulativeCutReturns.at(i) << "\t" << f->GetTitle() << "\t";
 
 	  if(fFormulaReturnTypes.at(fInd) > 0){
 	    fIntVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
+	    // std::cout << "(int) = " << fIntVals.at(fInd) << "\t" << requireIteration << std::endl;
 	  }
 	  else{
 	    fFloatVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
+	    // std::cout << "(flt) = " << fFloatVals.at(fInd) << "\t" << requireIteration << std::endl;
 	  }
-	  break;
+	  doneAnIteration = true;
 	}
       }
       // std::cout << fInd << "\t" << f->GetTitle() << "\t" << "the return vals are..." << std::endl;
       fInd++;
     }
+    // std::cout << "will fill those values... " << std::endl;
+    // std::cout << std::endl;
+    
     fOutTree->Fill();
   }
 

@@ -52,10 +52,10 @@ namespace Acclaim
     const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", AnitaEventSummary::EventFlags::LDB).Data()); /// (N=1)
     const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags.pulser==%d", AnitaEventSummary::EventFlags::WAIS).Data()); /// (N=1)
     const TCut isTaggedAsPulser("isTaggedAsPulser", TString::Format("(%s) || (%s)", isTaggedAsLDBPulser.GetTitle(), isTaggedAsWaisPulser.GetTitle())); /// (N=1)
-    const TCut npbc0A("npbc0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06)); /// (N=1)
-    const TCut npbc0B("npbc0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06)); /// (N=1)
-    const TCut npbc1("npbc1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28)); /// (N=1)
-    const TCut npbc2("npbc2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 3.0)); /// (N=1)
+    const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06)); /// (N=1)
+    const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06)); /// (N=1)
+    const TCut newPayloadBlastCutPart1("newPayloadBlastCutPart1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28)); /// (N=1)
+    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 3.0)); /// (N=1)
 
     const TCut highestPeak("highestPeak", "Max$(peak[][].value)==peak[][].value");
     const TCut mostImpulsivePeak("mostImpulsivePeak", "Max$(deconvolved_filtered[][].impulsivityMeasure)==deconvolved_filtered[][].impulsivityMeasure");
@@ -86,9 +86,9 @@ namespace Acclaim
 				 "peak[][].theta > 0");
     const TCut isBelowHorizontal("isBelowHorizontal",
 				 "peak[][].theta < 0");
-    const TCut npbc3("npbc3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf"
+    const TCut newPayloadBlastCutPart3("newPayloadBlastCutPart3", TString::Format("%lf*deconvolved_filtered[][].peakHilbert > (1+flags.maxBottomToTopRatio[Iteration$/5])*flags.minBottomToTopRatio[Iteration$/5] - %lf"
 					      ,14.0, 1000.0));
-    const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", npbc0A.GetTitle(), npbc0B.GetTitle(), npbc1.GetTitle(), npbc2.GetTitle(), npbc3.GetTitle()));
+    const TCut isGood2("isGood2", TString::Format("(%s && %s && %s && %s && %s)", newPayloadBlastCutPart0A.GetTitle(), newPayloadBlastCutPart0B.GetTitle(), newPayloadBlastCutPart1.GetTitle(), newPayloadBlastCutPart2.GetTitle(), newPayloadBlastCutPart3.GetTitle()));
 
   }
 
@@ -120,9 +120,42 @@ namespace Acclaim
 						  "TMath::Finite(deconvolved_filtered_snr)"));
     const TCut isRF("isRF", "flags_isRF==0");
     const TCut notShortWaveform("notShortWaveform", "flags_isVarner2==0");
+
+
+    const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags_middleOrBottomPower_0 < %lf * flags_topPower_0 + %lf", 30./7, 0.06));
+    const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags_middleOrBottomPower_0 > %lf * (flags_topPower_0 - %lf)", 7./30, 0.06));
+    const TCut newPayloadBlastCutPart1("newPayloadBlastCutPart1", TString::Format("flags_middleOrBottomPower_1 < %lf * flags_topPower_1", 1./0.28)); /// (N=1)
+    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("TMath::Max(flags_maxBottomToTopRatio_0, flags_maxBottomToTopRatio_1) < %lf", 3.0)); /// (N=1)
+    const TCut newPayloadBlastCutPart3("newPayloadBlastCutPart3", TString::Format("%lf*deconvolved_filtered_peakHilbert > (pol==0)*((1+flags_maxBottomToTopRatio_0)*flags_minBottomToTopRatio_0 - %lf) + (pol==1)*((1+flags_maxBottomToTopRatio_1)*flags_minBottomToTopRatio_1 - %lf)"
+					      ,14.0, 1000.0, 1000.0));
+    const TCut notInBlastRotatedCrossCorrelationRegion("notInBlastRotatedCrossCorrelationRegion",
+						       "!((coherent_filtered_peakHilbert > 100) && (peak_value < 0.15))");
+
+    const TCut notPayloadBlast("notPayloadBlast", TString::Format("(%s) && (%s) && (%s) && (%s) && (%s) && (%s)",
+								  newPayloadBlastCutPart0A.GetTitle(),
+								  newPayloadBlastCutPart0B.GetTitle(),
+								  newPayloadBlastCutPart1.GetTitle(),
+								  newPayloadBlastCutPart2.GetTitle(),
+								  newPayloadBlastCutPart3.GetTitle(),
+								  notInBlastRotatedCrossCorrelationRegion.GetTitle()));
+
+    const TCut passAllQualityCuts("passAllQualityCuts", TString::Format("(%s) && (%s) && (%s)",
+									notPayloadBlast.GetTitle(),
+									notShortWaveform.GetTitle(),
+									realSnr.GetTitle()));
+
+    const TCut higherHilbertPeakAfterDedispersion("higherHilbertPeakAfterDedispersion",
+						  "deconvolved_filtered_peakHilbert > coherent_filtered_peakHilbert");
+    const TCut higherImpulsivityMeasureAfterDedispersion("higherImpulsivityMeasureAfterDedispersion",
+							 "deconvolved_filtered_impulsivityMeasure > coherent_filtered_impulsivityMeasure");
+    const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion",
+							     "deconvolved_filtered_fracPowerWindowGradient < coherent_filtered_fracPowerWindowGradient");
+
+    const TString fisherDiscriminant = "3.770731+(0.062475*coherent_filtered_fracPowerWindowGradient)+(-0.253348*deconvolved_filtered_fracPowerWindowGradient)+(7.658938*coherent_filtered_impulsivityMeasure)+(2.184438*deconvolved_filtered_impulsivityMeasure)+(-0.027630*coherent_filtered_peakHilbert)+(0.013931*deconvolved_filtered_peakHilbert)+(0.407579*peak_value)";   
+
+    
   }
 
-  
 }
 
 #endif

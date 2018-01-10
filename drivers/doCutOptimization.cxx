@@ -20,25 +20,31 @@ int main(int argc, char* argv[]){
 
   std::vector<const TCut *> signalSelection;
   
-  const TCut closeToMC = "fabs(FFTtools::wrap(peak_phi - mc_phi)) < 5 && fabs(peak_theta + mc_theta) < 3.5";
-  signalSelection.push_back(&closeToMC);
+
+  signalSelection.push_back(&ThermalTree::closeToMC);
   
   std::vector<const TCut *> backgroundSelection;
-  
+
   backgroundSelection.push_back(&ThermalTree::isAboveHorizontal);
   backgroundSelection.push_back(&ThermalTree::anita3QuietTime);
   backgroundSelection.push_back(&ThermalTree::isNotTaggedAsPulser);
-  backgroundSelection.push_back(&ThermalTree::realSnr);
-  backgroundSelection.push_back(&ThermalTree::notShortWaveform);
-  
+  backgroundSelection.push_back(&ThermalTree::passAllQualityCuts);
+
+
   std::vector<TString> variables;
 
-  variables.push_back("coherent_filtered_fracPowerWindowGradient");
+  variables.push_back("coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient");
   variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
-  variables.push_back("coherent_filtered_impulsivityMeasure");
-  variables.push_back("deconvolved_filtered_impulsivityMeasure");    
+  // variables.push_back("coherent_filtered_fracPowerWindowGradient");
+  // variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
+
+  variables.push_back("deconvolved_filtered_impulsivityMeasure/coherent_filtered_impulsivityMeasure");
+  variables.push_back("deconvolved_filtered_impulsivityMeasure");
+  // variables.push_back("coherent_filtered_impulsivityMeasure");
+  // variables.push_back("deconvolved_filtered_impulsivityMeasure");
   variables.push_back("coherent_filtered_peakHilbert");
   variables.push_back("deconvolved_filtered_peakHilbert");
+  variables.push_back("peak_value");
   
   // co.setDebug(true);
   co.optimize(signalSelection, backgroundSelection, variables, outFileName);

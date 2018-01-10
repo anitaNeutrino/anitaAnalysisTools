@@ -11,7 +11,7 @@
 #include "RootTools.h"
 #include "TH2D.h"
 
-const int numPreFisherEvents = 2527162.0; //8298605; //77e6;
+const int numPreFisherEvents = 20760360; //2527162.0; //8298605; //77e6;
 // const int numPreFisherEvents = 78e6; //8298605; //77e6;
 const double numDesiredBackground = 0.5; //ish
 const double backgroundAcceptance = numDesiredBackground/numPreFisherEvents;
@@ -166,12 +166,12 @@ void drawFisherPlot(TFile* f){
   TH1D* hSigInt = (TH1D*) f->Get("hSigInt");
   TH1D* hBackInt = (TH1D*) f->Get("hBackInt");
 
-  int fitStartBin = hBackInt->FindLastBinAbove(1e-2);
-  int fitEndBin = hBackInt->FindLastBinAbove(1e-7);
-  double fitStart = hBackInt->GetXaxis()->GetBinLowEdge(fitStartBin);
-  double fitEnd = hBackInt->GetXaxis()->GetBinUpEdge(fitEndBin);
-  double xLow = hBackInt->GetXaxis()->GetBinLowEdge(0);
-  double xHigh = hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX());
+  // int fitStartBin = hBackInt->FindLastBinAbove(1e-2);
+  // int fitEndBin = hBackInt->FindLastBinAbove(1e-7);
+  // double fitStart = hBackInt->GetXaxis()->GetBinLowEdge(fitStartBin);
+  // double fitEnd = hBackInt->GetXaxis()->GetBinUpEdge(fitEndBin);
+  // double xLow = hBackInt->GetXaxis()->GetBinLowEdge(0);
+  // double xHigh = hBackInt->GetXaxis()->GetBinUpEdge(hBackInt->GetNbinsX());
 
   // TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
   // const double nPassPreThermalCut = backgroundTree->GetEntries();
