@@ -184,6 +184,12 @@ namespace Acclaim
     inline bool vectorContainsValue(const std::vector<T>& vec, const T& value){
       return std::find(vec.begin(), vec.end(), value)!=vec.end();
     }
+
+
+
+    TH1D* makeIntegralHist(TH1* hist, bool ascendingIntegral = true, bool normalized = true);
   }
+
+
 }
 #endif

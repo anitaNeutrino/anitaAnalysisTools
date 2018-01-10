@@ -1858,3 +1858,28 @@ void Acclaim::RootTools::tokenize(std::vector<TString>& tokenizedOutput, const c
     tokenizedOutput.push_back(inputTokensSoFar[k]);
   }
 }
+
+
+
+TH1D* Acclaim::RootTools::makeIntegralHist(TH1* hist, bool ascendingIntegral, bool normalized){
+
+
+  TString name = hist->GetName();
+  TString suffix = ascendingIntegral ? "_int_asc" : "_int_desc";
+  name += suffix;
+
+  const int nx = hist->GetNbinsX();
+  TH1D* hInt = new TH1D(name, hist->GetTitle(), nx, hist->GetXaxis()->GetBinLowEdge(1), hist->GetXaxis()->GetBinUpEdge(nx));
+
+  double multFactor = normalized ? 1./hist->Integral() : 1; 
+  double total = ascendingIntegral ? 0 : multFactor*hist->Integral();
+  double sumFactor = multFactor*(ascendingIntegral ? 1 : -1);
+   
+  for(int bx=1; bx <= nx; bx++){
+    hInt->SetBinContent(bx, total);
+    total += sumFactor*hist->GetBinContent(bx);
+  }
+
+  return hInt;
+  
+}
