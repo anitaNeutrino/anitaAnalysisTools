@@ -55,7 +55,7 @@ namespace Acclaim
     const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06)); /// (N=1)
     const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06)); /// (N=1)
     const TCut newPayloadBlastCutPart1("newPayloadBlastCutPart1", TString::Format("flags.middleOrBottomPower[1] < %lf * flags.topPower[1]", 1./0.28)); /// (N=1)
-    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 3.0)); /// (N=1)
+    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("Max$(flags.maxBottomToTopRatio) < %lf", 2.67)); /// (N=1)
 
     const TCut highestPeak("highestPeak", "Max$(peak[][].value)==peak[][].value");
     const TCut mostImpulsivePeak("mostImpulsivePeak", "Max$(deconvolved_filtered[][].impulsivityMeasure)==deconvolved_filtered[][].impulsivityMeasure");
@@ -100,6 +100,8 @@ namespace Acclaim
 
     const TString dPhiMC = "FFTtools::wrap(peak_phi - mc_phi, 360, 0)";
     const TString dThetaMC = "peak_theta + mc_theta";/// MC theta has down is +ve, Acclaim reco has down is -ve.
+    const TString dPhiWais = "FFTtools::wrap(peak_phi - wais_phi, 360, 0)";
+    const TString dThetaWais = "peak_theta + wais_theta";/// MC theta has down is +ve, Acclaim reco has down is -ve.
 
     const TCut weight(const TCut cut = "");
     
@@ -108,24 +110,27 @@ namespace Acclaim
     const TCut closeToMC("closeToMC", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
 						      dPhiMC.Data(),   dPhiClose,
 						      dThetaMC.Data(), dThetaClose));    
+    const TCut closeToWais("closeToWais", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
+							  dPhiWais.Data(),   dPhiClose,
+							  dThetaWais.Data(), dThetaClose));    
     const TCut isAboveHorizontal("isAboveHorizontal", "peak_theta > 0");
     const TCut anita3QuietTime = SumTree::anita3QuietTime; // should work for both
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags_pulser==0");
-    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags_pulser==%d",
+    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags_pulser==%d && run >= 331 && run <= 354",
 									    AnitaEventSummary::EventFlags::WAIS).Data());
     const TCut realSnr("realSnr", TString::Format("%s && %s && %s && %s",
 						  "!TMath::IsNaN(coherent_filtered_snr)",
 						  "!TMath::IsNaN(deconvolved_filtered_snr)",
 						  "TMath::Finite(coherent_filtered_snr)",
 						  "TMath::Finite(deconvolved_filtered_snr)"));
-    const TCut isRF("isRF", "flags_isRF==0");
+    const TCut isRF("isRF", "flags_isRF>0");
     const TCut notShortWaveform("notShortWaveform", "flags_isVarner2==0");
 
 
     const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags_middleOrBottomPower_0 < %lf * flags_topPower_0 + %lf", 30./7, 0.06));
     const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags_middleOrBottomPower_0 > %lf * (flags_topPower_0 - %lf)", 7./30, 0.06));
     const TCut newPayloadBlastCutPart1("newPayloadBlastCutPart1", TString::Format("flags_middleOrBottomPower_1 < %lf * flags_topPower_1", 1./0.28)); /// (N=1)
-    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("TMath::Max(flags_maxBottomToTopRatio_0, flags_maxBottomToTopRatio_1) < %lf", 3.0)); /// (N=1)
+    const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("TMath::Max(flags_maxBottomToTopRatio_0, flags_maxBottomToTopRatio_1) < %lf", 2.67)); /// (N=1)
     const TCut newPayloadBlastCutPart3("newPayloadBlastCutPart3", TString::Format("%lf*deconvolved_filtered_peakHilbert > (pol==0)*((1+flags_maxBottomToTopRatio_0)*flags_minBottomToTopRatio_0 - %lf) + (pol==1)*((1+flags_maxBottomToTopRatio_1)*flags_minBottomToTopRatio_1 - %lf)"
 					      ,14.0, 1000.0, 1000.0));
     const TCut notInBlastRotatedCrossCorrelationRegion("notInBlastRotatedCrossCorrelationRegion",
@@ -144,6 +149,10 @@ namespace Acclaim
 									notShortWaveform.GetTitle(),
 									realSnr.GetTitle()));
 
+
+    const TCut analysisSample("analysisSample",   TString::Format("(%s) && !(%s) && (%s)", isRF.GetTitle(), isAboveHorizontal.GetTitle(), isNotTaggedAsPulser.GetTitle()));
+    const TCut thermalSideBand("thermalSideBand", TString::Format("(%s) &&  (%s) && (%s)", isRF.GetTitle(), isAboveHorizontal.GetTitle(), isNotTaggedAsPulser.GetTitle()));
+
     const TCut higherHilbertPeakAfterDedispersion("higherHilbertPeakAfterDedispersion",
 						  "deconvolved_filtered_peakHilbert > coherent_filtered_peakHilbert");
     const TCut higherImpulsivityMeasureAfterDedispersion("higherImpulsivityMeasureAfterDedispersion",
@@ -151,8 +160,7 @@ namespace Acclaim
     const TCut lowerFracPowerWindowGradientAfterDedispersion("lowerFracPowerWindowGradientAfterDedispersion",
 							     "deconvolved_filtered_fracPowerWindowGradient < coherent_filtered_fracPowerWindowGradient");
 
-    const TString fisherDiscriminant = "3.770731+(0.062475*coherent_filtered_fracPowerWindowGradient)+(-0.253348*deconvolved_filtered_fracPowerWindowGradient)+(7.658938*coherent_filtered_impulsivityMeasure)+(2.184438*deconvolved_filtered_impulsivityMeasure)+(-0.027630*coherent_filtered_peakHilbert)+(0.013931*deconvolved_filtered_peakHilbert)+(0.407579*peak_value)";   
-
+    const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
     
   }
 

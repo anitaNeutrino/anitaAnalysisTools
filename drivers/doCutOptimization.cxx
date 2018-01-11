@@ -17,9 +17,7 @@ int main(int argc, char* argv[]){
 
   CutOptimizer co(signalGlob, backgroundGlob);
 
-
   std::vector<const TCut *> signalSelection;
-  
 
   signalSelection.push_back(&ThermalTree::closeToMC);
   
@@ -38,7 +36,7 @@ int main(int argc, char* argv[]){
   // variables.push_back("coherent_filtered_fracPowerWindowGradient");
   // variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
 
-  variables.push_back("deconvolved_filtered_impulsivityMeasure/coherent_filtered_impulsivityMeasure");
+  variables.push_back("coherent_filtered_impulsivityMeasure");
   variables.push_back("deconvolved_filtered_impulsivityMeasure");
   // variables.push_back("coherent_filtered_impulsivityMeasure");
   // variables.push_back("deconvolved_filtered_impulsivityMeasure");

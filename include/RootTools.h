@@ -185,6 +185,15 @@ namespace Acclaim
       return std::find(vec.begin(), vec.end(), value)!=vec.end();
     }
 
+    template <class T>
+    inline T sum(Int_t n, const T* array){
+      T sum = 0;
+      for(int i=0; i < n; i++){
+	sum += array[i];
+      }
+      return sum;
+    }
+
 
 
     TH1D* makeIntegralHist(TH1* hist, bool ascendingIntegral = true, bool normalized = true);

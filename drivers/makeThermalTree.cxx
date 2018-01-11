@@ -25,17 +25,19 @@ int main(int argc, char* argv[]){
   formulas.push_back("eventNumber");
   formulas.push_back("realTime");
 
-  // formulas.push_back("sum.weight()");
   formulas.push_back(SumTree::weight);
-
-  bool mcInput = TString(glob).Contains("_mc_");
   formulas.push_back("mc.phi");
   formulas.push_back("mc.theta");
   formulas.push_back("mc.energy");
+  formulas.push_back("wais.phi");
+  formulas.push_back("wais.theta");
 
   formulas.push_back("peak[][].value");
   formulas.push_back("peak[][].phi");
   formulas.push_back("peak[][].theta");
+  formulas.push_back("peak[][].dphi_rough");
+  formulas.push_back("peak[][].dtheta_rough");
+  
   formulas.push_back("Iteration$");
   formulas.push_back(SumTree::pol);
   formulas.push_back(SumTree::peakInd);
@@ -84,6 +86,17 @@ int main(int argc, char* argv[]){
   formulas.push_back("flags.isVarner");
   formulas.push_back("flags.isVarner2");
 
+
+  
+  
+
+  // GPS info, for clustering
+  formulas.push_back("anitaLocation.longitude");
+  formulas.push_back("anitaLocation.latitude");
+  formulas.push_back("anitaLocation.altitude");    
+  formulas.push_back("anitaLocation.heading");
+
+
   std::vector<const TCut *> cuts;
   TCut runCut(TString::Format("run == %d", run).Data());  
   if(run >= 0){
@@ -130,7 +143,8 @@ int main(int argc, char* argv[]){
 
   std::vector<const char*> fakeArgv;
   fakeArgv.push_back(outFileName);
-  
+
+  bool mcInput = TString(glob).Contains("_mc_");
   if(mcInput){
     fakeArgv.push_back("mc");    
   }

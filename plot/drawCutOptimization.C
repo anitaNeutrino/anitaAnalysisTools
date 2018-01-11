@@ -11,7 +11,7 @@
 #include "RootTools.h"
 #include "TH2D.h"
 
-const int numPreFisherEvents = 20760360; //2527162.0; //8298605; //77e6;
+const int numPreFisherEvents = 20057400; //20760360; //2527162.0; //8298605; //77e6;
 // const int numPreFisherEvents = 78e6; //8298605; //77e6;
 const double numDesiredBackground = 0.5; //ish
 const double backgroundAcceptance = numDesiredBackground/numPreFisherEvents;
@@ -176,20 +176,22 @@ void drawFisherPlot(TFile* f){
   // TTree* backgroundTree = (TTree*) f->Get("backgroundTree");
   // const double nPassPreThermalCut = backgroundTree->GetEntries();
   // std::cerr << "There were " << nPassPreThermalCut << " events passing pre-thermal cuts" << std::endl;
-  std::cerr << fitStart << "\t" << fitEnd << std::endl;
+  // std::cerr << fitStart << "\t" << fitEnd << std::endl;
   // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x)", xLow, xHigh);
-  TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x - [3]*x*x*x + [4]*x*x*x*x)", xLow, xHigh);
+  // TF1* fBackExp = new TF1("fBackExp", "[0]*exp(-[1]*x - [2]*x*x - [3]*x*x*x + [4]*x*x*x*x)", xLow, xHigh);
 
-  auto c1 = new TCanvas();
+  auto c1 = Acclaim::RootTools::canvas();
+  c1->SetLogy(1);
   hSigInt->Draw();
   hBackInt->Draw("same");
-  hBackInt->Fit(fBackExp, "", "", fitStart, fitEnd);
+  // hBackInt->Fit(fBackExp, "", "", fitStart, fitEnd);
 
   hSigInt->SetLineColor(kRed);
   hBackInt->SetLineColor(kBlue);
 
   std::cerr << "With " << numPreFisherEvents << " RF triggers, and only wanting " << numDesiredBackground << " to pass cuts..." << std::endl;
   std::cerr << "I have a background acceptance of " << backgroundAcceptance << std::endl;
+
   double requiredFisherScore = 1e9;
   for(int bx=1; bx < hBackInt->GetNbinsX(); bx++){
     double val = hBackInt->GetBinContent(bx);
@@ -266,13 +268,12 @@ void plotComponents(TFile* f, double fisherCut, std::vector<TString>& treeNames)
                                          fisherComponents.size(), 0,  fisherComponents.size(),
                                          1024, -fisherPlotRange, fisherPlotRange);
 
-    
       // thisTree->Scan(scanCommand, scanCut);
       for(UInt_t i=0; i < fisherComponents.size(); i++){
         TH2D hTemp("hTemp", "hTemp",
                    hSignalComponents->GetNbinsX(), hSignalComponents->GetXaxis()->GetBinLowEdge(1), hSignalComponents->GetXaxis()->GetBinUpEdge(hSignalComponents->GetNbinsX()),
                    hSignalComponents->GetNbinsY(), hSignalComponents->GetYaxis()->GetBinLowEdge(1), hSignalComponents->GetYaxis()->GetBinUpEdge(hSignalComponents->GetNbinsY()));
-        thisTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");      
+        thisTree->Draw(fisherComponents[i] + TString::Format(":%d>>%s", i, hTemp.GetName()), "weight", "goff");
         hSignalComponents->Add(&hTemp);
 
         std::cerr << "done " << i << " of " << fisherComponents.size() << std::endl;
@@ -312,6 +313,6 @@ void drawCutOptimization(const char* fileName){
   
   
   
-  overlayOneDimDists(f);
+  // overlayOneDimDists(f);
   
 }
