@@ -13,6 +13,8 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
   fCut = "";  
   fEntryListDirty = true;
   fEntryList = NULL;
+  fUseProof = false;
+  setBranches();
 }
 
 Acclaim::ThermalChain::~ThermalChain(){
@@ -28,6 +30,27 @@ Acclaim::ThermalChain::~ThermalChain(){
     fChain = NULL;
   }
 }
+
+
+void Acclaim::ThermalChain::setBranches(){
+
+  // these ones need a type conversion before public consumption...
+  fChain->SetBranchAddress("pol", &polFloat);
+  fChain->SetBranchAddress("peakInd", &peakIndFloat);
+  fChain->SetBranchAddress("eventNumber", &eventNumberInt);
+  fChain->SetBranchAddress("realTime", &realTimeInt);
+  
+  fChain->SetBranchAddress("run", &run);
+  fChain->SetBranchAddress("peak_phi", &peak_phi);
+  fChain->SetBranchAddress("peak_theta", &peak_theta);
+  fChain->SetBranchAddress("anitaLocation_longitude", &anita_longitude);
+  fChain->SetBranchAddress("anitaLocation_latitude", &anita_latitude);
+  fChain->SetBranchAddress("anitaLocation_altitude", &anita_altitude);
+  fChain->SetBranchAddress("anitaLocation_heading", &anita_heading);
+  fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+  fChain->SetBranchAddress("weight", &weight);
+}
+
 
 
 
@@ -80,6 +103,14 @@ void Acclaim::ThermalChain::addCut(const TCut& cut){
 }
 
 
+void Acclaim::ThermalChain::SetUseProof(bool useProof){
+  if(useProof){
+    SummarySet::startProof();
+  }
+  fChain->SetProof(useProof);
+  fUseProof = useProof;
+}
+
 
 /** 
  * Work horse function to update the entrylist 
@@ -94,11 +125,12 @@ void Acclaim::ThermalChain::makeSelection() const {
       fEntryList = NULL;
     }
 
+    fChain->SetProof(false);    
+
     std::cout << "Info in " << __PRETTY_FUNCTION__ << ", updating fEntryList..." << std::endl;
     ProgressBar p(1);
     fChain->Draw(">>fEntryList", fCut, "entrylist");
     fEntryList = dynamic_cast<TEntryList*>(gROOT->FindObject("fEntryList"));
-
     if(!fEntryList){
       std::cerr << "Error! couldn't find fEntryList!" << std::endl;
     }
@@ -106,6 +138,9 @@ void Acclaim::ThermalChain::makeSelection() const {
       fEntryListDirty = false;
       fChain->SetEntryList(fEntryList);      
     }
+
+    // Turn proof back on, if it was on...
+    fChain->SetProof(fUseProof);
     
     p++;
   }
@@ -126,5 +161,24 @@ Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
   Int_t treeIndex = -1;
   Long64_t treeEntry = fEntryList->GetEntryAndTree(entry,treeIndex);
   Long64_t chainEntry = treeEntry+fChain->GetTreeOffset()[treeIndex];
-  return fChain->GetEntry(chainEntry);
+
+  Long64_t retVal = fChain->GetEntry(chainEntry);  
+  pol = (AnitaPol::AnitaPol_t) polFloat;
+  peakInd = (Int_t) peakIndFloat;
+  eventNumber = (UInt_t) eventNumberInt;
+  realTime = (UInt_t) realTimeInt;
+  
+  return retVal;
 }
+
+
+Adu5Pat Acclaim::ThermalChain::pat(){
+  Adu5Pat pat;
+  pat.latitude = anita_latitude;
+  pat.longitude = anita_longitude;
+  pat.altitude = anita_altitude;
+  pat.heading = anita_heading;
+  pat.realTime = realTime;
+  return pat;
+}
+
