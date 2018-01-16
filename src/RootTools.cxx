@@ -834,7 +834,7 @@ TString Acclaim::RootTools::nextCanvasName(){
 
 
 
-TCanvas* Acclaim::RootTools::canvas(double fracLength){
+TCanvas* Acclaim::RootTools::canvas(Int_t logAxisBitMask, double fracLength){
 
   if(fracLength < 0.1) fracLength = 0.1;
   else if(fracLength > 1) fracLength = 1;
@@ -862,9 +862,13 @@ TCanvas* Acclaim::RootTools::canvas(double fracLength){
     x1 = x1 % w;
     y1 = y1 % h;
   }
-    
-  return new TCanvas(name, name, x1, y1, cw, ch);
 
+  TCanvas* c = new TCanvas(name, name, x1, y1, cw, ch);
+  c->SetLogx((logAxisBitMask & 1));
+  c->SetLogy((logAxisBitMask & 2));
+  c->SetLogz((logAxisBitMask & 4));
+
+  return c;
 }
 
 

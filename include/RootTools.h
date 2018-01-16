@@ -159,7 +159,7 @@ namespace Acclaim
 
     TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix);
     TString nextCanvasName();
-    TCanvas* canvas(double fracLength = 0.5);
+    TCanvas* canvas(Int_t logAxisBitMask = 0, double fracLength = 0.5);
 
     UsefulAnitaEvent* makeGaussianEvent(UInt_t eventNumber);
 
