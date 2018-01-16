@@ -125,7 +125,7 @@ namespace Acclaim
 						  "TMath::Finite(deconvolved_filtered_snr)"));
     const TCut isRF("isRF", "flags_isRF>0");
     const TCut notShortWaveform("notShortWaveform", "flags_isVarner2==0");
-
+    const TCut goodGps("goodGps", "TMath::Finite(anitaLocation_heading)");
 
     const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags_middleOrBottomPower_0 < %lf * flags_topPower_0 + %lf", 30./7, 0.06));
     const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags_middleOrBottomPower_0 > %lf * (flags_topPower_0 - %lf)", 7./30, 0.06));
