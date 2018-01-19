@@ -29,6 +29,7 @@ class TChain;
 class UsefulAnitaEvent;
 class RawAnitaHeader;
 class Adu5Pat;
+class TGraphAntarctica;
 
 /** @mainpage
  * Yes, the name ACCLAIM is kind of lame, but passed a certain point anitaAnalysisTools was a a bit generic, and it was the best I could do in a lunch break.
@@ -159,7 +160,8 @@ namespace Acclaim
 
     TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix);
     TString nextCanvasName();
-    TCanvas* canvas(Int_t logAxisBitMask = 0, double fracLength = 0.5);
+    TCanvas* canvas(Int_t logAxisBitMask = 0, double fracLength = 0.5, bool forceSquare = false);
+    TCanvas* squareCanvas(Int_t logAxisBitMask = 0, double fracLength = 0.5); /// calls canvas()
 
     UsefulAnitaEvent* makeGaussianEvent(UInt_t eventNumber);
 
@@ -197,6 +199,8 @@ namespace Acclaim
 
 
     TH1D* makeIntegralHist(TH1* hist, bool ascendingIntegral = true, bool normalized = true);
+
+    TGraphAntarctica* flightPath(int anita=3);
   }
 
 

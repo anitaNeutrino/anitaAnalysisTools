@@ -132,7 +132,7 @@ endif()
 
 file(MAKE_DIRECTORY ${UTIL_SHARE_DIR}/anitaMap)
 file(GLOB IMAGE_FILES
-  "anitaMap/*.png"
+  "anitaMap/*"
   )
 install(FILES ${IMAGE_FILES} DESTINATION ${UTIL_SHARE_DIR}/anitaMap)
 
