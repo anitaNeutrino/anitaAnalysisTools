@@ -1,5 +1,6 @@
 #include "DrawStrings.h"
 #include "RootTools.h"
+#include "ThermalChain.h"
 #include "FFTtools.h"
 
 using namespace Acclaim;
@@ -31,32 +32,29 @@ void makeCutTables(const char* thermalTreeDataGlob="data/makeThermalTree*.root",
 
   gROOT->ProcessLine("#include \"FFTtools.h\"");
   
-  TChain* c = new TChain("thermalTree");
-  c->Add(thermalTreeDataGlob);
-
-  TChain* c2 = new TChain("thermalTree");
-  c2->Add(thermalTreeMcGlob);
+  ThermalChain c(thermalTreeDataGlob);
+  ThermalChain c2(thermalTreeMcGlob);
 
   // Double_t w = numPassing(c, "");
   // Double_t n = weightedNumPassing(c2, "");
-  Int_t nData0 = numPassing(c, ThermalTree::analysisSample);
-  Int_t nWais0 = numPassing(c, ThermalTree::isTaggedAsWaisPulser);
-  Double_t nMc0 = weightedNumPassing(c2, "");
+  Int_t nData0 = numPassing(c.getChain(), ThermalTree::analysisSample);
+  Int_t nWais0 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser);
+  Double_t nMc0 = weightedNumPassing(c2.getChain(), "");
 
-  Int_t nData1 = numPassing(c, ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts);  
-  Int_t nWais1 = numPassing(c, ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts);
-  Double_t nMc1 = weightedNumPassing(c2,                           ThermalTree::passAllQualityCuts);
+  Int_t nData1 = numPassing(c.getChain(), ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts);  
+  Int_t nWais1 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts);
+  Double_t nMc1 = weightedNumPassing(c2.getChain(),                           ThermalTree::passAllQualityCuts);
 
 
-  Int_t nData2 = nData1; //numPassing(c, ThermalTree::analysisSample + thermalTree::passAllQualityCuts);
-  Int_t nWais2 = numPassing(c, ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts + ThermalTree::closeToWais);
-  Double_t nMc2 = weightedNumPassing(c2,                           ThermalTree::passAllQualityCuts + ThermalTree::closeToMC);
+  Int_t nData2 = nData1; //numPassing(c.getChain(), ThermalTree::analysisSample + thermalTree::passAllQualityCuts);
+  Int_t nWais2 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts + ThermalTree::closeToWais);
+  Double_t nMc2 = weightedNumPassing(c2.getChain(),                           ThermalTree::passAllQualityCuts + ThermalTree::closeToMC);
 
   const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + " > 5.8007812");
 
-  Int_t nData3 = numPassing(c, ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts                            + fisherCut);
-  Int_t nWais3 = numPassing(c, ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts + ThermalTree::closeToWais + fisherCut);
-  Double_t nMc3 = weightedNumPassing(c2,                           ThermalTree::passAllQualityCuts + ThermalTree::closeToMC   + fisherCut);
+  Int_t nData3 = numPassing(c.getChain(), ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts                            + fisherCut);
+  Int_t nWais3 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts + ThermalTree::closeToWais + fisherCut);
+  Double_t nMc3 = weightedNumPassing(c2.getChain(),                           ThermalTree::passAllQualityCuts + ThermalTree::closeToMC   + fisherCut);
   
   // reconstuction efficiency
   std::cout << "Cut\t"                       << "MC (%)"           << "\t" << "Wais (%)"             << "\t" << "Analysis Sample"      << std::endl;

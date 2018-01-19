@@ -39,6 +39,10 @@ namespace Acclaim {
     void SetUseProof(bool useProof=true);
 
 
+
+    /**
+     * From the thermal chain
+     */
     Int_t run;
     UInt_t eventNumber;
     UInt_t realTime;
@@ -52,11 +56,25 @@ namespace Acclaim {
     Float_t anita_heading;
     Float_t coherent_filtered_snr;
     Float_t weight;
+    Float_t mc_energy;
+
+
+    /**
+     * From the hical chain
+     */
+    Int_t duringHiCal;
+    Double_t hiCalPhi;
+    Double_t hiCalTheta;
+    UInt_t eventNumber2;
+    Int_t run2;
+
 
     Adu5Pat pat();
     
   private:
     TChain* fChain;
+    TChain* fFriendChain;
+
     TCut fCut;
     mutable bool fEntryListDirty;
     mutable TEntryList* fEntryList;

@@ -1906,8 +1906,10 @@ TH1D* Acclaim::RootTools::makeIntegralHist(TH1* hist, bool ascendingIntegral, bo
 }
 
 
-TGraphAntarctica* Acclaim::RootTools::flightPath(int anita){
 
+TGraphAntarctica* Acclaim::RootTools::flightPath(int anita){
+ 
+  static TGraphAntarctica* gr = NULL;
   if(anita!=3){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", currently only implemented for ANITA-3!" << std::endl;
     return NULL;
@@ -1917,7 +1919,7 @@ TGraphAntarctica* Acclaim::RootTools::flightPath(int anita){
   TString fName = TString::Format("%s/share/anitaMap/anita%dFlightPath.root", getenv("ANITA_UTIL_INSTALL_DIR"), anita);
   TFile* f = TFile::Open(fName);
   if(f){
-    TGraphAntarctica* gr = (TGraphAntarctica*) f->Get("grAnita3FlightPath");
+    gr = (TGraphAntarctica*) f->Get("grAnita3FlightPath");
     gDirectory->cd(theRootPwd);
     return gr;
   }

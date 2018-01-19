@@ -17,6 +17,8 @@
 #include "Math/Factory.h"
 #include "AcclaimOpenMP.h"
 #include "RootTools.h"
+#include "DrawStrings.h"
+#include "ThermalChain.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -119,13 +121,33 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
   Adu5Pat pat = anita.pat();
   usefulPat = UsefulAdu5Pat(&pat);
   usefulPat.setInterpSurfaceAboveGeoid(true);
-  usefulPat.setSurfaceCloseEnoughInter(1e-3);
-  usefulPat.setMaxLoopIterations(500); // make this arbitrarily large since it only happens once
-  const double maxThetaAdjust = 8*TMath::DegToRad();
+  // usefulPat.setSurfaceCloseEnoughInter(1e-3);
+  usefulPat.setSurfaceCloseEnoughInter(1);
+  usefulPat.setMaxLoopIterations(5000); // make this arbitrarily large since it only happens once
+  // const double maxThetaAdjust = 8*TMath::DegToRad();
 
   if(calculateSource){
-    usefulPat.traceBackToContinent(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired, maxThetaAdjust, 100);
+    //  if(eventNumber==10047816){ //9887706
+    //   usefulPat.setDebug(true);
+    // }
+    
+    usefulPat.traceBackToContinent3(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired);//, maxThetaAdjust, 10);
+
+    if(altitude < -999){
+      usefulPat.setDebug(true);
+      usefulPat.traceBackToContinent3(phi*TMath::DegToRad(), -theta*TMath::DegToRad(), &longitude, &latitude, &altitude, &thetaAdjustmentRequired);//, maxThetaAdjust, 10);
+    }
+
+    // std::cout << eventNumber << "\t" << longitude << "\t" << latitude << "\t" << altitude << "\t" << thetaAdjustmentRequired << std::endl;
+    
+    // if(usefulPat.getDebug()){
+    //   exit(1);
+    // }
+    
     RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
+    AnitaGeomTool* geom = AnitaGeomTool::Instance();
+    geom->getCartesianCoords(latitude, longitude, altitude, centre);
+
     // std::cerr << eventNumber << "\t" << easting << "\t" << northing << std::endl;
     if(latitude < -90){
       std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", for eventNumber " << eventNumber << "\n";
@@ -144,7 +166,8 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
     }
 
     // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
-    selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, true);
+    // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, true);
+    selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
   }
 }
 
@@ -183,7 +206,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
     }
     if(fDebug){
       std::cerr << __PRETTY_FUNCTION__ << " for " << eventNumber << ", we are " << distM/1000 << "km from the source, after horizon penalty, ll = " << ll << std::endl;
-    }    
+    }
   }
 
   return ll;
@@ -225,6 +248,58 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
 
   // std::cout << eventNumber << "\t" << nThresholds << "\t" << cluster[0] << std::endl;
 }
+
+
+
+
+
+
+
+
+
+Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+				  double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr)
+  : nThresholds(0), cluster(NULL),
+    dThetaCluster(NULL), dPhiCluster(NULL)
+{
+
+  this->eventNumber = eventNumber;
+  this->run = run;
+  this->pol = (AnitaPol::AnitaPol_t) pol;
+  peakIndex = peakInd;
+  // AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  // geom->getCartesianCoords(latitude, longitude, altitude, centre);
+  theta = peak_theta;
+  phi = peak_phi;
+  // thetaAdjustmentRequired = peak.theta_adjustment_needed;
+  selfLogLikelihood = -9999;
+  anita.longitude = anita_longitude;
+  anita.latitude = anita_latitude;
+  anita.altitude = anita_altitude;
+  anita.heading = anita_heading;
+
+  getAngularResolution(coherent_filtered_snr, sigmaTheta, sigmaPhi);  
+  
+  // getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
+  antarcticaHistBin = -1;
+  fDebug = false;
+  nearestKnownBaseLogLikelihood = DBL_MAX;
+  nearestKnownBaseCluster = -1;
+
+  setNThresholds(nT);
+  resetClusteringNumbers();
+  setupUsefulPat();
+
+  // getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);  
+
+  // std::cout << eventNumber << "\t" << nThresholds << "\t" << cluster[0] << std::endl;
+}
+
+
+
+
+
+
 
 
 
@@ -434,6 +509,17 @@ Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::An
 }
 
 
+Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+	     double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr)
+  :  Event(pol, peakInd, peak_phi, peak_theta, nT, eventNumber, run,
+	   anita_longitude, anita_latitude, anita_altitude, anita_heading, coherent_filtered_snr)
+{
+  this->weight = weight;
+  this->energy = energy;
+  // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
+}
+
+
 
 
 
@@ -508,7 +594,7 @@ void Acclaim::Clustering::Cluster::resetClusteringNumbers(){
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   : numMcDivisions(100), fEventsAlreadyClustered(false), fMyBackground(),
     fROOTgErrorIgnoreLevel(gErrorIgnoreLevel), fDrawNewNearbyEventsHistograms(true),
-    fReadInBaseList(false)
+    fReadInBaseList(false), fStoreUnclusteredHistograms(true)
 
 {
   const char* sgeTaskId = getenv("SGE_TASK_ID");
@@ -529,13 +615,20 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
 
   grTestMinimizerWalk = NULL;
   grTestMinimizerValue = NULL;
-  // trivial change
-  llClusterCut = 100;
 
-  // llEventCuts.push_back(10);
-  // llEventCuts.push_back(20);
-  // llEventCuts.push_back(40);
-  // llEventCuts.push_back(70);
+  // for(Int_t i=0; i < 20; i++){
+  //   llEventCuts.push_back(1+i);
+  // }
+
+  llEventCuts.push_back(1);
+  llEventCuts.push_back(2);
+  llEventCuts.push_back(4);
+  llEventCuts.push_back(7);
+  
+  llEventCuts.push_back(10);
+  llEventCuts.push_back(20);
+  llEventCuts.push_back(40);
+  llEventCuts.push_back(70);
 
   llEventCuts.push_back(100);
   llEventCuts.push_back(150);
@@ -561,7 +654,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   llEventCuts.push_back(2500);
   llEventCuts.push_back(3000);
   llEventCuts.push_back(4000);
-
+  
   for(UInt_t z=0; z < llEventCuts.size(); z++){
     clusters.push_back(std::vector<Cluster>());
   }
@@ -933,80 +1026,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents2(UInt_t eventInd, st
 
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::fillLookup(UInt_t eventInd, Double_t maxLL){
-
-  const Event& event = events.at(eventInd);
-
-  const int nx = fMyBackground.GetNbinsX();
-  const int ny = fMyBackground.GetNbinsY();
-
-  if(fLookupEN.size()==0){
-    fLookupEN.reserve(ny);
-    for(int by=1; by <= ny; by++){
-      fLookupEN.push_back(std::vector<std::vector<UInt_t> >(nx,  std::vector<UInt_t>()));
-    }
-  }
-
-  TH2DAntarctica* h2 = fDrawNewNearbyEventsHistograms && eventInd == 0 ? new TH2DAntarctica("hNewBins", "hNewBins", nx, ny) : NULL;
-  TH2DAntarctica* h0 = fDrawNewNearbyEventsHistograms && eventInd == 0 ? new TH2DAntarctica("hOldBins", "hOldBins", nx, ny) : NULL;
-
-  int numBins=0;
-  int numOldBins=0;
-  for(int by=1; by <= ny; by++){
-    for(int bx=1; bx <= nx; bx++){
-      double easting, northing;
-      if(considerBin(event, bx, by, easting, northing)){
-	// std::cout << bx << "\t" << by << std::endl;
-	Double_t lon,lat;
-
-	// ... and evaluate the ll for the closest edge of the bin
-	RampdemReader::EastingNorthingToLonLat(easting, northing, lon, lat);
-	Double_t alt = fMyBackground.GetBinContent(bx, by);
-	Double_t ll = event.logLikelihoodFromPoint(lon, lat, alt, true);
-
-	if(ll < maxLL){
-
-	  if(h2){
-	    h2->SetBinContent(bx, by, 1);
-	  }
-
-	  // std::cout << "close = " << bx << "\t" << by << "\t"  <<  easting << "\t" << northing << std::endl;
-	  numBins++;
-	  fLookupEN[by-1][bx-1].push_back(eventInd);
-	}
-	if(h0){
-	  h0->SetBinContent(bx, by, 1);
-	}
-	numOldBins++;
-      }
-    }
-  }
-
-  if(h2){
-    h2->Write();
-    delete h2;
-    h2 = NULL;
-  }
-  if(h0){
-    h0->Write();
-    delete h0;
-    h0 = NULL;
-  }
-
-
-  if(eventInd==events.size()-1){
-    UInt_t nSum = 0;
-    for(int by=1; by <= ny; by++){
-      for(int bx=1; bx <= nx; bx++){
-	// std::cout << by << "\t" << bx << "\t" << fLookupEN[by-1][bx-1].size() << std::endl;
-	nSum+=fLookupEN[by-1][bx-1].size();
-      }
-    }
-    std::cout << "There are " << nSum << " lookup entries in total" << std::endl;
-  }
-  // std::cout << "Done " << __PRETTY_FUNCTION__ << " for event " << event.eventNumber << ", numBins = " << numBins << ", numOldBins = " << numOldBins << std::endl;
-}
-
 
 
 
@@ -1057,6 +1076,16 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getSumOfMcWeights(){
 Acclaim::Clustering::Event* Acclaim::Clustering::LogLikelihoodMethod::nextEvent(){
 
   // to do this, first we histogram all the events which aren't clustered (using the smallest log-likelihood threshold).
+
+  if(!fStoreUnclusteredHistograms){
+    while(hUnclusteredEvents.size() > 0){
+      delete hUnclusteredEvents.back();
+      hUnclusteredEvents.pop_back();
+    }
+  }
+
+    
+  
   TString name = TString::Format("hUnclusteredEvents_%lu", hUnclusteredEvents.size());
   TH2DAntarctica* h = new TH2DAntarctica(name, name);
   hUnclusteredEvents.push_back(h);
@@ -1167,8 +1196,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(Bool_t mc){
     p.inc(clusterInd);
   }
 
-  // std::vector<Int_t> canICount(llEventCuts.size(), 0);
-
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     Event& event = events.at(eventInd);
     for(int z=0; z < event.nThresholds; z++){
@@ -1176,20 +1203,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(Bool_t mc){
 	Int_t clusterInd = event.nearestKnownBaseCluster;
 	clusters.at(z).at(clusterInd).numDataEvents++;
 	event.cluster[z] = clusterInd;
-	// std::cout << eventInd << "\t" << z << "\t" << clusterInd << "\t" << clusters.at(z).at(clusterInd).numDataEvents << std::endl;
-	// canICount.at(z)++;
       }
     }
   }
-
-  // for(UInt_t z=0; z < llEventCuts.size(); z++){
-  //   Int_t thisCount = 0;
-  //   for(UInt_t clusterInd=0; clusterInd < clusters.at(z).size(); clusterInd++){
-  //     const Cluster& cluster = clusters.at(z).at(clusterInd);
-  //     thisCount += cluster.numDataEvents;
-  //   }
-  //   std::cout << z << "\t" << canICount.at(z) << "\t" << thisCount << std::endl;
-  // }
 }
 
 
@@ -1575,49 +1591,50 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
     }
-    else{
-      SummarySet ss(summaryGlob);
-      n = ss.N();
-      Int_t numReadIn = 0;
-      std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in summaries: " << summaryGlob << std::endl;
 
-      bool useSandbox = false;
-      // bool notUsingSandbox = TString(summaryGlob).Contains("wais");
+    else{
+      ThermalChain tc(summaryGlob);
+      ProgressBar pElist(1);
+
+      // TCut hack("eventNumber==14545077||eventNumber==15202247");
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
+      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + ThermalTree::closeToMC);      
+      // tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
+      // tc.setCut(hack);
+      
+      n = tc.N();
+      std::cout << "There are " << n << " entries matching the selection" << std::endl;
 
       ProgressBar p(n);
-      events.reserve(n);
-
       for(Long64_t entry=0; entry < n; entry++){
-
-	ss.getEntry(entry);
-	AnitaEventSummary* sum = ss.summary();
-	AnitaPol::AnitaPol_t pol = sum->highestPol();
-	Int_t peakIndex = sum->highestPeakInd();
-	Double_t snrHack = sum->deconvolved_filtered[pol][peakIndex].snr;
-
-	// if(!isVaguelyNearMcMurdo(sum->peak[pol][peakIndex])
-	if((!useSandbox || inSandbox(sum->peak[pol][peakIndex]))
-	   && sum->peak[pol][peakIndex].theta < 0
-	   && snrHack < 100){
- 	   // && sum->run > 160){
-
-	  if(sum->mc.weight > 0){
-	    if(entry==0){
-	      const int numReserve = mcDivision > -1 ? 1 + (n/numMcDivisions) : n;
-	      mcEvents.reserve(mcEvents.size() + numReserve);
-	    }
-	  }
-	  else{
-	    if(entry==0){
-	      events.reserve(events.size() + n);
-	    }
-	    addEvent(sum, pol, peakIndex);
-	    numReadIn++;
+	tc.getEntry(entry);
+	
+	if(entry==0){
+	  std::cout << tc.weight << std::endl;
+	  if(tc.weight == 1)
+	    events.reserve(events.size()+n);
+	  else{	    
+	    mcEvents.reserve(mcEvents.size()+n);
 	  }
 	}
-	p.inc(entry, n);
+
+	if(tc.weight==1){
+	  events.push_back(Event(static_cast<int>(tc.pol), static_cast<int>(tc.peakInd),
+				 tc.peak_phi, tc.peak_theta,
+				 (int)llEventCuts.size(), tc.eventNumber, tc.run,
+				 tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
+				 tc.coherent_filtered_snr));
+	}
+	else{
+	  mcEvents.push_back(McEvent(tc.weight, tc.mc_energy, static_cast<int>(tc.pol), static_cast<int>(tc.peakInd),
+				     tc.peak_phi, tc.peak_theta,
+				     (int)llEventCuts.size(), tc.eventNumber, tc.run,
+				     tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
+				     tc.coherent_filtered_snr));
+	}
+	p.inc(entry);
       }
-      std::cout << "Read in " << numReadIn << " summaries" << std::endl;
     }
   }
   return n;
@@ -1677,6 +1694,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::initKDTree(){
   }
 
   const int binSize = 100000; // meters... too small?
+  if(fKDTree){
+    delete fKDTree;
+  }  
   fKDTree = new TKDTreeID(events.size(), 2, binSize);
   fKDTree->SetData(0, &fEventEastings[0]);
   fKDTree->SetData(1, &fEventNorthings[0]);
@@ -1703,6 +1723,71 @@ void Acclaim::Clustering::LogLikelihoodMethod::initKDTree(){
 }
 
 
+
+
+
+
+void Acclaim::Clustering::LogLikelihoodMethod::testSmallClustersFromPointSource(){
+  
+  UInt_t firstEventNumber = events.at(0).eventNumber;
+  UInt_t lastEventNumber = events.at(0).eventNumber;
+  for(UInt_t eventInd=1; eventInd < events.size(); eventInd++){
+    UInt_t eventNumber = events.at(eventInd).eventNumber;
+    if(eventNumber > lastEventNumber){
+      lastEventNumber = eventNumber;
+    }
+    if(eventNumber < firstEventNumber){
+      firstEventNumber = eventNumber;
+    }
+  }
+  TRandom3 randy(123);
+  
+  const int fakeClusterSize = 2;
+  const int nTrials = 1000;
+
+  TH2D* hClusterTrials = new TH2D("hClusterTrials", "clustering trials",
+				  llEventCuts.size(), 0, llEventCuts.size(),
+				  fakeClusterSize, 1, fakeClusterSize+1);
+
+
+  for(int threshInd=0; threshInd < llEventCuts.size(); threshInd++){
+    TString bl = TString::Format("%4.0lf", llEventCuts.at(threshInd));
+    hClusterTrials->GetXaxis()->SetBinLabel(threshInd+1, bl);
+  }
+
+  
+  std::vector<Event> tempEvents;
+  tempEvents.reserve(events.size());
+  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
+    tempEvents.push_back(events.at(eventInd));
+  }
+  
+  // pick random numbers
+  ProgressBar p(nTrials);
+  for(int trialInd=0; trialInd < nTrials; trialInd++){
+
+    
+    events.clear();
+  
+    for(UInt_t z=0; z < clusters.size(); z++){
+      clusters.at(z).clear();
+    }
+
+    for(UInt_t i=0; i < fakeClusterSize; i++){
+      UInt_t eventInd = randy.Uniform(tempEvents.size());
+      events.push_back(tempEvents.at(eventInd));
+    }    
+    initKDTree();
+    
+    doEventEventClustering();
+    
+    for(UInt_t z=0; z < clusters.size(); z++){
+      hClusterTrials->Fill(z, clusters.at(z).size());
+    }
+
+    p.inc(trialInd);
+  }
+}
 
 
 
@@ -1740,10 +1825,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   }
 
   TRandom3 randy(123);
-  std::vector<Int_t> event2Inds(events.size());
-  for(UInt_t i=0; i < event2Inds.size(); i++){
-    event2Inds.at(i) = randy.Uniform(0, events.size());
-  }
 
   
   const Int_t nBins = 1024; //(lastEventNumber + 1) - firstEventNumber;
@@ -1751,13 +1832,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   std::cout << nBins << "\t" << firstEventNumber << "\t" << lastEventNumber << std::endl;
   TH2D* hUnfit = new TH2D("hUnfit_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
   TH2D* hFit = new TH2D("hFit_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
+
+  TH2D* hFitVsSumOfSelfLLs = new TH2D("hFit_vs_sumOfSelfLLs", "", 1024, 0, 50, 1024, 0, 1024);
+  
   TH2D* hFitVsUnfitted = new TH2D("hFit_vs_unfit", "Fitted vs. unfitted WAIS event-event log-likelihood; Unfitted log-likelihood; Fitted log-likelihood", 1024, 0, 1024, 1024, 0, 1024);
   TH1D* hUnfitMinusFit = new TH1D("hFit_minus_unfit", "(Unfitted - fitted) WAIS event-event log-likelihood; #delta (log likelihood)", 1024, -512, 512);
-
-  TH2D* hUnfitSqrt = new TH2D("hUnfitSqrt_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
-  TH2D* hFitSqrt = new TH2D("hFitSqrt_d_vs_pointingAngle", "", 1024, 0, 180, 1024, 0, 1024);
-  TH2D* hFitSqrtVsUnfittedSqrt = new TH2D("hFitSqrt_vs_unfitSqrt", "Fitted vs. unfitted WAIS event-event log-likelihood; Unfitted log-likelihood; Fitted log-likelihood", 1024, 0, 1024, 1024, 0, 1024);
-  TH1D* hUnfitSqrtMinusFitSqrt = new TH1D("hFitSqrt_minus_unfitSqrt", "(Unfitted - fitted) WAIS event-event log-likelihood; #delta (log likelihood)", 1024, -512, 512);
 
   TH2DAntarctica* hEventPos = new TH2DAntarctica("hEventPos", "Event Position");
   TH2DAntarctica* hFittedPos = new TH2DAntarctica("hFittedPos", "Fitted Pair position");
@@ -1765,6 +1844,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   TGraphAntarctica* grAnita = new TGraphAntarctica();
   // TGraphAntarctica* grEventPos = new TGraphAntarctica();
   // TGraphAntarctica* grFittedPos = new TGraphAntarctica();
+
+  const int fakeClusterSize = 2;
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
     const Event& event1 = events.at(eventInd);
@@ -1775,100 +1856,87 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
     TVector3 anita1Pos = AntarcticCoord(AntarcticCoord::WGS84, event1.anita.latitude, event1.anita.longitude, event1.anita.altitude).v();
     TVector3 anitaToEvent1 = event1Pos - anita1Pos;
 
-    const int eventInd2 = 29695; //event2Inds.at(eventInd);
-    const Event& event2 = events.at(eventInd2);
-    grAnita->SetPoint(grAnita->GetN(), event1.anita.longitude, event1.anita.latitude);
-    // if(event2.eventNumber!=fTestEvent2) continue;
+    std::vector<Int_t> event2Inds(fakeClusterSize-1);
+    for(UInt_t eventInd2=0; eventInd2 < event2Inds.size(); eventInd2++){
+      event2Inds.at(eventInd2) = randy.Uniform(0, events.size());
+    }    
 
-    if(event1.eventNumber==fTestEvent1 && event2.eventNumber==fTestEvent2){
-      std::cerr << "Info in " << __PRETTY_FUNCTION__ << " mapping parameter space around WAIS for event pair !"
-		<< fTestEvent1 << " and " << fTestEvent2 << std::endl;
-      AnitaVersion::set(3);
-      double waisEasting, waisNorthing;
-      RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
-      double delta = 700e3;
-      const int nBins = 256;
-      TH2D* hParams = new TH2D("hSingleEventTest", "Event-event fitted log likelihood; Easting (km); Northing (km); L_{sum}",
-			       // nBins, -1090000, -1065000,
-			       // nBins, -484200, -483600);
-			       nBins, waisEasting-delta, waisEasting+delta,
-			       nBins, waisNorthing-delta, waisNorthing+delta);
+    for(UInt_t eventInd2=0; eventInd2 < event2Inds.size(); eventInd2++){
+      const Event& event2 = events.at(eventInd2);
 
-      fFitEvent1s.at(OpenMP::thread()) = &event1;
-      fFitEvent2s.at(OpenMP::thread()) = &event2;
-      double params[2] = {0,0};
-      for(int by=1; by <= hParams->GetNbinsY(); by++){
-	params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
-	for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
-	  params[0] = FITTER_INPUT_SCALING*hParams->GetXaxis()->GetBinCenter(bx);
-	  double ll = evalPairLogLikelihoodAtLonLat(params);
-	  hParams->Fill(FITTER_OUTPUT_SCALING*params[0], FITTER_OUTPUT_SCALING*params[1], ll);
+      if(event1.eventNumber==fTestEvent1 && event2.eventNumber==fTestEvent2){
+	std::cerr << "Info in " << __PRETTY_FUNCTION__ << " mapping parameter space around WAIS for event pair !"
+		  << fTestEvent1 << " and " << fTestEvent2 << std::endl;
+	AnitaVersion::set(3);
+	double waisEasting, waisNorthing;
+	RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
+	double delta = 700e3;
+	const int nBins = 256;
+	TH2D* hParams = new TH2D("hSingleEventTest", "Event-event fitted log likelihood; Easting (km); Northing (km); L_{sum}",
+				 nBins, waisEasting-delta, waisEasting+delta,
+				 nBins, waisNorthing-delta, waisNorthing+delta);
+
+	fFitEvent1s.at(OpenMP::thread()) = &event1;
+	fFitEvent2s.at(OpenMP::thread()) = &event2;
+	double params[2] = {0,0};
+	for(int by=1; by <= hParams->GetNbinsY(); by++){
+	  params[1] = FITTER_INPUT_SCALING*hParams->GetYaxis()->GetBinCenter(by);
+	  for(int bx=1; bx <= hParams->GetNbinsX(); bx++){
+	    params[0] = FITTER_INPUT_SCALING*hParams->GetXaxis()->GetBinCenter(bx);
+	    double ll = evalPairLogLikelihoodAtLonLat(params);
+	    hParams->Fill(FITTER_OUTPUT_SCALING*params[0], FITTER_OUTPUT_SCALING*params[1], ll);
+	  }
 	}
+	std::cout << "done!" << std::endl;
+	hParams->Write();
+	delete hParams;
+
+	TGraphAntarctica* grTestEvent1 = new TGraphAntarctica();
+	grTestEvent1->SetPointEastingNorthing(0, event1.easting, event1.northing);
+	grTestEvent1->SetName("grTestEvent1");
+	grTestEvent1->Write();
+	delete grTestEvent1;
+
+	TGraphAntarctica* grTestEvent2 = new TGraphAntarctica();
+	grTestEvent2->SetPointEastingNorthing(0, event2.easting, event2.northing);
+	grTestEvent2->SetName("grTestEvent2");
+	grTestEvent2->Write();
+	delete grTestEvent2;
+
+	TGraphAntarctica* grWaisTrue = new TGraphAntarctica();
+	grWaisTrue->SetPoint(0, AnitaLocations::LONGITUDE_WAIS_A3, AnitaLocations::LATITUDE_WAIS_A3);
+	grWaisTrue->SetName("grWaisTrue");
+	grWaisTrue->Write();
+	delete grWaisTrue;
       }
-      std::cout << "done!" << std::endl;
-      hParams->Write();
-      delete hParams;
 
-      TGraphAntarctica* grTestEvent1 = new TGraphAntarctica();
-      grTestEvent1->SetPointEastingNorthing(0, event1.easting, event1.northing);
-      grTestEvent1->SetName("grTestEvent1");
-      grTestEvent1->Write();
-      delete grTestEvent1;
+      TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
+      TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
+      TVector3 anitaToEvent2 = event2Pos - anita2Pos;
 
-      TGraphAntarctica* grTestEvent2 = new TGraphAntarctica();
-      grTestEvent2->SetPointEastingNorthing(0, event2.easting, event2.northing);
-      grTestEvent2->SetName("grTestEvent2");
-      grTestEvent2->Write();
-      delete grTestEvent2;
-
-      TGraphAntarctica* grWaisTrue = new TGraphAntarctica();
-      grWaisTrue->SetPoint(0, AnitaLocations::LONGITUDE_WAIS_A3, AnitaLocations::LATITUDE_WAIS_A3);
-      grWaisTrue->SetName("grWaisTrue");
-      grWaisTrue->Write();
-      delete grWaisTrue;
-
-    }
-
-    TVector3 event2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.latitude, event2.longitude, event2.altitude).v();
-    TVector3 anita2Pos = AntarcticCoord(AntarcticCoord::WGS84, event2.anita.latitude, event2.anita.longitude, event2.anita.altitude).v();
-    TVector3 anitaToEvent2 = event2Pos - anita2Pos;
-
-    double dist = dMin(&event1, &event2);
-    Double_t angleBetweenEvents = TMath::RadToDeg()*anitaToEvent1.Angle(anitaToEvent2);
-
+      double dist = dMin(&event1, &event2);
+      Double_t angleBetweenEvents = TMath::RadToDeg()*anitaToEvent1.Angle(anitaToEvent2);
     
-    hUnfit->Fill(angleBetweenEvents, dist);
-    hUnfitSqrt->Fill(angleBetweenEvents, TMath::Sqrt(dist));
+      hUnfit->Fill(angleBetweenEvents, dist);
 
-    double distFitted = dFit(&event1, &event2);
-    hFit->Fill(angleBetweenEvents, distFitted);
-    hFitSqrt->Fill(angleBetweenEvents, TMath::Sqrt(distFitted));
+      double distFitted = dFit(&event1, &event2);
+      hFit->Fill(angleBetweenEvents, distFitted);
 
-    // if(dist > 1000 && distFitted < 10){
-    //   std::cout << dist << "\t" << distFitted << "\t" << angleBetweenEvents << "\t" << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
-    // }
+      hFitVsSumOfSelfLLs->Fill(event1.selfLogLikelihood+event2.selfLogLikelihood, distFitted);
 
-    if(event1.theta > -5.5 && event2.theta > -5.5){
-      std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+      if(event1.theta > -5.5 && event2.theta > -5.5){
+	std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+      }
+
+      double fitLon, fitLat;
+      int t = OpenMP::thread();
+      RampdemReader::EastingNorthingToLonLat(fFitEastings.at(t), fFitNorthings.at(t), fitLon, fitLat);
+      hFittedPos->Fill(fitLon, fitLat);
+      hEventPos->Fill(event1.longitude, event1.latitude);
+
+      hFitVsUnfitted->Fill(dist, distFitted);
+      hUnfitMinusFit->Fill(dist - distFitted);
     }
-    // if(fabs(event1.thetaAdjustmentRequired) > 1e-2 && fabs(event2.thetaAdjustmentRequired) > 1e-2){
-    //   std::cout << dist << "\t" << distFitted << "\t" << angleBetweenEvents << "\t" << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
-    // }
-       
-
-    double fitLon, fitLat;
-    int t = OpenMP::thread();
-    RampdemReader::EastingNorthingToLonLat(fFitEastings.at(t), fFitNorthings.at(t), fitLon, fitLat);
-    hFittedPos->Fill(fitLon, fitLat);
-    hEventPos->Fill(event1.longitude, event1.latitude);
-    // grFittedPos->SetPointEastingNorthing(grFittedPos->GetN(), fFitEasting, fFitNorthing);
-    // grEventPos->SetPointEastingNorthing(grEventPos->GetN(), event1.easting, event1.northing);
-
-    hFitVsUnfitted->Fill(dist, distFitted);
-    hUnfitMinusFit->Fill(dist - distFitted);
-    hFitSqrtVsUnfittedSqrt->Fill(TMath::Sqrt(dist), TMath::Sqrt(distFitted));
-    hUnfitSqrtMinusFitSqrt->Fill(TMath::Sqrt(dist) - TMath::Sqrt(distFitted));
-
     p.inc(eventInd, events.size());
   }
 
@@ -1882,14 +1950,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
   hEventPos->Write();
   delete hEventPos;
 
-  // grFittedPos->SetName("grFittedPos");
-  // grFittedPos->Write();
-  // delete grFittedPos;
-
-  // grEventPos->SetName("grEventPos");
-  // grEventPos->Write();
-  // delete grEventPos;
-
+  hFitVsSumOfSelfLLs->Write();
+  delete hFitVsSumOfSelfLLs;
 
   hWais->Write();
   delete hWais;
@@ -2309,61 +2371,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   std::cout << "Sorting events...";
   std::sort(events.begin(), events.end());
   std::cout << "done" << std::endl;
-
+  
 
   const char* fakeArgv[1] = {outFileName};
   OutputConvention oc(1, const_cast<char**>(fakeArgv));
   TFile* fOut = oc.makeFile();
 
-  std::cout << "Filling log likelihood lookup bins...";
-  const double maxLLThingy = 250; //4000;
-  ProgressBar p(events.size());
-  for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-    fillLookup(eventInd, maxLLThingy);
-    p.inc(eventInd);
-  }
-  std::cout << "filled!" << std::endl;
-
   initKDTree();
-
-  ProgressBar p2(events.size());
-  UInt_t numOld =0, numNew = 0;
-  // for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
-
-  
-  TH2DAntarctica* hOld = new TH2DAntarctica("hOld", "hOld");
-  TH2DAntarctica* hNew = new TH2DAntarctica("hNew", "hNew");
-  for(UInt_t eventInd=0; eventInd < 1; eventInd++){
-    // std::set<UInt_t> nes;
-    std::vector<UInt_t> nes;
-    nearbyEvents2(eventInd, nes);
-    numNew += nes.size();
-
-    for(UInt_t i=0; i < nes.size();  i++){
-      hNew->Fill(events.at(nes[i]).longitude, events.at(nes[i]).latitude);
-    }
-    
-
-    std::vector<Int_t> nes2;
-    double lookup[2] = {events.at(eventInd).easting, events.at(eventInd).northing};
-    fKDTree->FindInRange(lookup, default_range_easting_northing, nes2);
-    numOld += nes2.size();
-
-    for(UInt_t i=0; i < nes2.size();  i++){
-      hOld->Fill(events.at(nes2[i]).longitude,  events.at(nes2[i]).latitude);
-    }
-
-
-    p2.inc(eventInd);
-  }
-  hOld->Write();
-  hNew->Write();
-  
-
-  std::cout << "Final tally, the old = " << numOld << ", the new = " << numNew << std::endl;
-  
-  
-  // return;
 
 
   readInSummaries(mcGlob);
@@ -2382,7 +2396,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   makeSummaryTrees();
   
-  // makeAndWriteNSquaredEventEventHistograms();
+  // testSmallClustersFromPointSource();
   
   fOut->Write();
   fOut->Close();

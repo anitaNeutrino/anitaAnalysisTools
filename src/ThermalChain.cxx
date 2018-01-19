@@ -10,6 +10,16 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
   fChain = new TChain(treeName);
   fChain->Add(glob);
 
+  TString hiCalGlob(glob);
+  hiCalGlob.ReplaceAll("makeThermalTree", "makeHiCalTree");
+  fFriendChain = new TChain("hiCalTree");
+  fFriendChain->Add(hiCalGlob);
+  std::cout << fFriendChain->GetEntries() << std::endl;
+  fChain->AddFriend(fFriendChain);
+
+  
+  gROOT->ProcessLine("#include \"FFTtools.h\""); // hack to get various delta phi wrap Draw things to work in stand alone executables
+
   fCut = "";  
   fEntryListDirty = true;
   fEntryList = NULL;
@@ -24,6 +34,13 @@ Acclaim::ThermalChain::~ThermalChain(){
     delete fEntryList;
     fEntryList = NULL;
   }
+
+  // Pretty sure ROOT takes care of this...
+  fFriendChain = NULL;
+  // if(fFriendChain){
+  //   delete fFriendChain;
+  //   fFriendChain = NULL;
+  // }  
   
   if(fChain){
     delete fChain;
@@ -49,6 +66,16 @@ void Acclaim::ThermalChain::setBranches(){
   fChain->SetBranchAddress("anitaLocation_heading", &anita_heading);
   fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
   fChain->SetBranchAddress("weight", &weight);
+  fChain->SetBranchAddress("mc_energy", &mc_energy);
+
+
+
+  fFriendChain->SetBranchAddress("duringHiCal", &duringHiCal);
+  fFriendChain->SetBranchAddress("hiCalPhi", &hiCalPhi);
+  fFriendChain->SetBranchAddress("hiCalTheta", &hiCalTheta);
+  fFriendChain->SetBranchAddress("eventNumber2", &eventNumber2);
+  fFriendChain->SetBranchAddress("run2", &run2);
+  
 }
 
 
@@ -97,7 +124,7 @@ void Acclaim::ThermalChain::addCut(const char* cut){
 void Acclaim::ThermalChain::addCut(const TCut& cut){
   TCut oldCut;
   fCut += cut;
-  if(fCut != cut){
+  if(fCut != oldCut){
     fEntryListDirty = true;
   }
 }
@@ -167,6 +194,10 @@ Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
   peakInd = (Int_t) peakIndFloat;
   eventNumber = (UInt_t) eventNumberInt;
   realTime = (UInt_t) realTimeInt;
+
+  if(eventNumber2 != eventNumber || run2 != run){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in chains!" << std::endl;    
+  }
   
   return retVal;
 }
