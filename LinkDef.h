@@ -29,7 +29,9 @@
 #pragma link C++ class Acclaim::SummarySelector+;
 #pragma link C++ class Acclaim::SumTreeReductionSelector+;
 #pragma link C++ class Acclaim::CutTreeSelector+;
-#pragma link C++ namespace Acclaim::AnalysisCuts;
+//#pragma link C++ namespace Acclaim::AnalysisCuts;
+#pragma link C++ namespace Acclaim::SumTree;
+#pragma link C++ namespace Acclaim::ThermalTree;
 #pragma link C++ class Acclaim::CutOptimizer::FisherResult+;
 #pragma link C++ class Acclaim::QualityCut+;
 #pragma link C++ class Acclaim::SurfSaturationCut+;

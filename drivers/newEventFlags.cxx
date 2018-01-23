@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
   // TString inGlob = inDir + "/" + inFileBaseName;// + TString::Format("_%d_*.root", run);
   TString inGlob = inDir + "/" + inFileBaseName;
   if(run > -1){
-    inGlob += TString::Format("_%d.root", run);
+    inGlob += TString::Format("_%d_*.root", run);
   }
   else{
     inGlob += TString::Format("*.root", run);

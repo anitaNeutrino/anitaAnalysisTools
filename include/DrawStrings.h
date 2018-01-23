@@ -49,8 +49,10 @@ namespace Acclaim
     const TCut goodGPS("goodGPS", "(!TMath::IsNaN(anitaLocation.heading) && TMath::Finite(anitaLocation.heading))"); /// (N=1)
     const TCut isGood("isGood", "((mc.weight > 0 && flags.isVarner == 0 && flags.isPayloadBlast == 0) || (mc.weight==0 && flags.isGood == 1))"); /// (N=1)
     const TCut isTaggedAsPayloadBlast("isTaggedAsPayloadBlast", "flags.isPayloadBlast > 0"); /// (N=1)
-    const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", AnitaEventSummary::EventFlags::LDB).Data()); /// (N=1)
-    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags.pulser==%d", AnitaEventSummary::EventFlags::WAIS).Data()); /// (N=1)
+    const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", "!(AnitaVersion::get()==3 && run >=200) && flags.pulser==2"); /// (N=1)
+    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", "flags.pulser==1"); /// (N=1)
+    // const TCut isTaggedAsLDBPulser("isTaggedAsLDBPulser", TString::Format("!(AnitaVersion::get()==3 && run >=200) && flags.pulser==%d", (int)AnitaEventSummary::EventFlags::LDB).Data()); /// (N=1)
+    // const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags.pulser==%d", (int)AnitaEventSummary::EventFlags::WAIS).Data()); /// (N=1)
     const TCut isTaggedAsPulser("isTaggedAsPulser", TString::Format("(%s) || (%s)", isTaggedAsLDBPulser.GetTitle(), isTaggedAsWaisPulser.GetTitle())); /// (N=1)
     const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags.middleOrBottomPower[0] < %lf * flags.topPower[0] + %lf", 30./7, 0.06)); /// (N=1)
     const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags.middleOrBottomPower[0] > %lf * (flags.topPower[0] - %lf)", 7./30, 0.06)); /// (N=1)
@@ -116,8 +118,9 @@ namespace Acclaim
     const TCut isAboveHorizontal("isAboveHorizontal", "peak_theta > 0");
     const TCut anita3QuietTime = SumTree::anita3QuietTime; // should work for both
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags_pulser==0");
-    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags_pulser==%d && run >= 331 && run <= 354",
-									    AnitaEventSummary::EventFlags::WAIS).Data());
+    // const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", TString::Format("flags_pulser==%d && run >= 331 && run <= 354",
+    // 									    AnitaEventSummary::EventFlags::WAIS).Data());
+    const TCut isTaggedAsWaisPulser("isTaggedAsWaisPulser", "flags_pulser==1 && run >= 331 && run <= 354");
     const TCut realSnr("realSnr", TString::Format("%s && %s && %s && %s",
 						  "!TMath::IsNaN(coherent_filtered_snr)",
 						  "!TMath::IsNaN(deconvolved_filtered_snr)",
