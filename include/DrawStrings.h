@@ -103,7 +103,9 @@ namespace Acclaim
     const TString dPhiMC = "FFTtools::wrap(peak_phi - mc_phi, 360, 0)";
     const TString dThetaMC = "peak_theta + mc_theta";/// MC theta has down is +ve, Acclaim reco has down is -ve.
     const TString dPhiWais = "FFTtools::wrap(peak_phi - wais_phi, 360, 0)";
-    const TString dThetaWais = "peak_theta + wais_theta";/// MC theta has down is +ve, Acclaim reco has down is -ve.
+    const TString dThetaWais = "peak_theta + wais_theta";/// EventCorrelator theta has down is +ve, Acclaim reco has down is -ve.
+    const TString dPhiHiCal = "FFTtools::wrap(peak_phi - hiCalPhi, 360, 0)";
+    const TString dThetaHiCal = "peak_theta + hiCalTheta";/// EventCorrelator theta has down is +ve, Acclaim reco has down is -ve.
 
     const TCut weight(const TCut cut = "");
     
@@ -114,7 +116,11 @@ namespace Acclaim
 						      dThetaMC.Data(), dThetaClose));    
     const TCut closeToWais("closeToWais", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
 							  dPhiWais.Data(),   dPhiClose,
-							  dThetaWais.Data(), dThetaClose));    
+							  dThetaWais.Data(), dThetaClose));
+
+    const TCut closeToHiCal("closeToHiCal", TString::Format("(duringHiCal > 0 && TMath::Abs(%s) < 5)",
+							    dPhiHiCal.Data()));
+
     const TCut isAboveHorizontal("isAboveHorizontal", "peak_theta > 0");
     const TCut anita3QuietTime = SumTree::anita3QuietTime; // should work for both
     const TCut isNotTaggedAsPulser("isNotTaggedAsPulser", "flags_pulser==0");
@@ -128,7 +134,7 @@ namespace Acclaim
 						  "TMath::Finite(deconvolved_filtered_snr)"));
     const TCut isRF("isRF", "flags_isRF>0");
     const TCut notShortWaveform("notShortWaveform", "flags_isVarner2==0");
-
+    const TCut goodGps("goodGps", "TMath::Finite(anitaLocation_heading)");
 
     const TCut newPayloadBlastCutPart0A("newPayloadBlastCutPart0A", TString::Format("flags_middleOrBottomPower_0 < %lf * flags_topPower_0 + %lf", 30./7, 0.06));
     const TCut newPayloadBlastCutPart0B("newPayloadBlastCutPart0B", TString::Format("flags_middleOrBottomPower_0 > %lf * (flags_topPower_0 - %lf)", 7./30, 0.06));
@@ -147,10 +153,11 @@ namespace Acclaim
 								  newPayloadBlastCutPart3.GetTitle(),
 								  notInBlastRotatedCrossCorrelationRegion.GetTitle()));
 
-    const TCut passAllQualityCuts("passAllQualityCuts", TString::Format("(%s) && (%s) && (%s)",
+    const TCut passAllQualityCuts("passAllQualityCuts", TString::Format("(%s) && (%s) && (%s) && (%s)",
 									notPayloadBlast.GetTitle(),
 									notShortWaveform.GetTitle(),
-									realSnr.GetTitle()));
+									realSnr.GetTitle(),
+									goodGps.GetTitle()));
 
 
     const TCut analysisSample("analysisSample",   TString::Format("(%s) && !(%s) && (%s)", isRF.GetTitle(), isAboveHorizontal.GetTitle(), isNotTaggedAsPulser.GetTitle()));
@@ -164,6 +171,8 @@ namespace Acclaim
 							     "deconvolved_filtered_fracPowerWindowGradient < coherent_filtered_fracPowerWindowGradient");
 
     const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
+
+    const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + " > 5.800012");
     
   }
 

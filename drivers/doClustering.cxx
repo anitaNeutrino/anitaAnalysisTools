@@ -17,6 +17,7 @@ int main(int argc, char* argv[]){
 
   Clustering::LogLikelihoodMethod clusterer;
   // clusterer.setDebug(true);
+  clusterer.fStoreUnclusteredHistograms = false;
   clusterer.doClustering(dataGlob, mcGlob, outFileName);
 
   return 0;

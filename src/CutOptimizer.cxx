@@ -665,7 +665,7 @@ void Acclaim::CutOptimizer::optimize(const std::vector<const TCut*>& signalSelec
       TH1D* hSigInt = new TH1D("hSigInt", "hSigInt", nBinsY, hSignal->GetXaxis()->GetBinLowEdge(1), hSignal->GetXaxis()->GetBinUpEdge(nBinsY));
       TH1D* hBackInt = new TH1D("hBackInt", "hBackInt", nBinsY, hBackground->GetXaxis()->GetBinLowEdge(1), hBackground->GetXaxis()->GetBinUpEdge(nBinsY));
       hSignal->Scale(1./hSignal->Integral());
-      hBackground->Scale(1./hBackground->Integral()); 
+      hBackground->Scale(1./hBackground->Integral());
 
       double cumulativeSignal = 1; //hSignal->Integral();
       double cumulativeBackground = 1; //hBackground->Integral();

@@ -21,6 +21,7 @@
 #include "TGClient.h"
 #include "TGWindow.h"
 #include "TROOT.h"
+#include "TFile.h"
 
 #include "RawAnitaHeader.h"
 #include "UsefulAnitaEvent.h"
@@ -834,7 +835,7 @@ TString Acclaim::RootTools::nextCanvasName(){
 
 
 
-TCanvas* Acclaim::RootTools::canvas(double fracLength){
+TCanvas* Acclaim::RootTools::canvas(Int_t logAxisBitMask, double fracLength, bool forceSquare){
 
   if(fracLength < 0.1) fracLength = 0.1;
   else if(fracLength > 1) fracLength = 1;
@@ -843,8 +844,17 @@ TCanvas* Acclaim::RootTools::canvas(double fracLength){
   UInt_t w, h;
   gVirtualX->GetWindowSize(gClient->GetRoot()->GetId(),x,y,w,h);
 
-  const UInt_t cw = ceil(w*fracLength);
-  const UInt_t ch = ceil(h*fracLength);
+  UInt_t cw = ceil(w*fracLength);
+  UInt_t ch = ceil(h*fracLength);
+
+  if(forceSquare){
+    if(cw < ch){
+      ch = cw;
+    }
+    else{
+      cw = ch;
+    }
+  }
   
   Int_t nc = gROOT->GetListOfCanvases()->GetEntries();
   TString name = nextCanvasName();
@@ -862,10 +872,21 @@ TCanvas* Acclaim::RootTools::canvas(double fracLength){
     x1 = x1 % w;
     y1 = y1 % h;
   }
-    
-  return new TCanvas(name, name, x1, y1, cw, ch);
 
+  TCanvas* c = new TCanvas(name, name, x1, y1, cw, ch);
+  c->SetLogx((logAxisBitMask & 1));
+  c->SetLogy((logAxisBitMask & 2));
+  c->SetLogz((logAxisBitMask & 4));
+
+  return c;
 }
+
+
+TCanvas* Acclaim::RootTools::squareCanvas(Int_t logAxisBitMask, double fracLength){
+
+  return canvas(logAxisBitMask, fracLength, true);
+}
+
 
 
 
@@ -1880,6 +1901,30 @@ TH1D* Acclaim::RootTools::makeIntegralHist(TH1* hist, bool ascendingIntegral, bo
     total += sumFactor*hist->GetBinContent(bx);
   }
 
-  return hInt;
+  return hInt;  
   
+}
+
+
+
+TGraphAntarctica* Acclaim::RootTools::flightPath(int anita){
+ 
+  static TGraphAntarctica* gr = NULL;
+  if(anita!=3){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", currently only implemented for ANITA-3!" << std::endl;
+    return NULL;
+  }
+
+  const TString theRootPwd = gDirectory->GetPath();
+  TString fName = TString::Format("%s/share/anitaMap/anita%dFlightPath.root", getenv("ANITA_UTIL_INSTALL_DIR"), anita);
+  TFile* f = TFile::Open(fName);
+  if(f){
+    gr = (TGraphAntarctica*) f->Get("grAnita3FlightPath");
+    gDirectory->cd(theRootPwd);
+    return gr;
+  }
+  else{
+    std::cout << "Error in " << __PRETTY_FUNCTION__ << ", unable to find file " << fName << ", is ANITA_UTIL_INSTALL_DIR set?" << std::endl;
+  }
+  return NULL;
 }

@@ -32,8 +32,8 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
-    const Double_t default_range_easting_northing = 700e3;
-    const Double_t default_horizon_distance = 700e3;
+    const Double_t default_range_easting_northing = 750e3;
+    const Double_t default_horizon_distance = 750e3;
 
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
@@ -98,7 +98,10 @@ namespace Acclaim{
       Event(Int_t nT=0);
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
       Event(const Event& event);
-      Event& operator=(const Event& event);      
+      Event& operator=(const Event& event);
+      Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
+
 
       TArrowAntarctica* makeArrowFromAnitaToEvent();
       void setupUsefulPat(bool calculateNow = true);
@@ -139,6 +142,8 @@ namespace Acclaim{
 
       McEvent(Int_t nT = 0);
       McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
+      McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
 
       virtual ~McEvent(){;}
 	
@@ -203,11 +208,12 @@ namespace Acclaim{
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
-      void fillLookup(UInt_t eventInd,  Double_t maxLogLikelihood);
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
 
+      bool fStoreUnclusteredHistograms;
+      
     private:
       Double_t getDistSqEventCluster(const Event& event, const Cluster& cluster);
       Double_t getAngDistSqEventCluster(const Event& event, const Cluster& cluster);
@@ -235,6 +241,7 @@ namespace Acclaim{
       Double_t dFit(const Event* event1, const Event* event2);
 
       void testTriangleInequality();
+      void testSmallClustersFromPointSource();
       Int_t removeLargeBasesNearMcMurdo();
 
       void doBaseEventClustering(Bool_t mc=false);
@@ -259,7 +266,6 @@ namespace Acclaim{
       Int_t mcDivision; // Which of the MC divisions should I read in? (runs from 0 to numMcDivisions-1)
 
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
-      Double_t llClusterCut;				       	/// The cut-off for log-likelihood, which defines the boundary of a cluster
       Bool_t fEventsAlreadyClustered;
 
       std::vector<std::vector<Acclaim::Clustering::Cluster> >clusters;	/// Vector of clusters,
