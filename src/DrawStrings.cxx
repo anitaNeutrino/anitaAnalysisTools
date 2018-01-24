@@ -8,12 +8,12 @@
  * 
  * @return the new weighted cut
  */
-const TCut Acclaim::ThermalTree::weight(const TCut cut){
+const TCut Acclaim::ThermalTree::weight(const TCut cut, double multiplier){
 
   if(strlen(cut.GetTitle()) > 0){
-    return TCut(TString::Format("weight*(%s)", cut.GetTitle()).Data());
+    return TCut(TString::Format("%lf*weight*(%s)", multiplier, cut.GetTitle()).Data());
   }
   else{
-    return TCut("weight");
+    return TCut(TString::Format("%lf*weight", multiplier).Data());
   }
 }

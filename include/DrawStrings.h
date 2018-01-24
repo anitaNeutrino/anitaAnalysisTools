@@ -105,7 +105,7 @@ namespace Acclaim
     const TString dPhiHiCal = "FFTtools::wrap(peak_phi - hiCalPhi, 360, 0)";
     const TString dThetaHiCal = "peak_theta + hiCalTheta";/// EventCorrelator theta has down is +ve, Acclaim reco has down is -ve.
 
-    const TCut weight(const TCut cut = "");
+    const TCut weight(const TCut cut = "", double multiplier=1);
     
     const double dPhiClose = 5.5;
     const double dThetaClose = 3.5;
