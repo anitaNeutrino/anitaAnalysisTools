@@ -90,6 +90,9 @@ namespace Acclaim{
       Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
       Int_t nearestKnownBaseCluster;            /// How far to the nearest known base?      
       Double_t selfLogLikelihood;               /// If the event is above the continent surface, this may be non-zero
+      Double_t nearestEventSurfaceDistanceKm;   /// How far away to the nearest event, in kilometers?
+      UInt_t nearestEventSurfaceEventNumber;   /// What's the event number of the nearest surface neighbour?
+      Double_t nearestEventSurfaceLogLikelihood;   /// What's the fitted log likelihood to the nearest surface neighbour?
 
       Int_t antarcticaHistBin;  		/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!              /// Only construct this once
@@ -114,6 +117,12 @@ namespace Acclaim{
       double logLikelihoodFromPoint(const T& point, bool addOverHorizonPenalty=false) const {
 	return logLikelihoodFromPoint(point.longitude, point.latitude, point.altitude, addOverHorizonPenalty);
       }
+      inline double cartesianSeparation(const Event& event2){
+	double d0 = centre[0]-event2.centre[0];
+	double d1 = centre[1]-event2.centre[1];
+	double d2 = centre[2]-event2.centre[2];
+	return TMath::Sqrt(d0*d0 + d1*d1 + d2*d2);
+      }
 
       /** 
        * For sorting based on event number
@@ -126,7 +135,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 11)
+      ClassDef(Event, 13)
     };
 
 

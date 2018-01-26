@@ -50,6 +50,10 @@ void printClusterMultiplicityTable(TFile* f){
 }
 
 
+
+
+
+
 void drawClusters2(TFile* f){
 
   gStyle->SetPalette(kRainBow);
@@ -70,10 +74,12 @@ void drawClusters2(TFile* f){
 	t->SetBranchAddress("cluster", &cluster);
 	t->GetEntry(0);
 	llEventCuts.push_back(cluster->llEventCut);
+	std::cout << cluster->llEventCut << std::endl;
       }
       llCutInd++;
     } while(t!=NULL);
   }
+  
 
   const int numKnownBases = 437;
   const int nz = llEventCuts.size();
@@ -86,35 +92,56 @@ void drawClusters2(TFile* f){
     grLarges[i]->SetName(TString::Format("grLarge%d", i));
     grLarges[i]->SetTitle(TString::Format("n > %d", largeSizes[i]));
   }
+  TGraph* grNumClusters = new TGraph();
+  TGraph* grNumSmallClusters = new TGraph();
+
   TH2D* hKnown = new TH2D("hKnown", "Clusters associated with known bases; Event cut size; Number of events", nz, 0, nz, 10, 1, 11);
   TH2D* hUnknown = new TH2D("hUnknown", "Clusters not associated with known bases; Event cut size; Number of events", nz, 0, nz, 10, 1, 11);
 
   ProgressBar p(nz);
+  TGraphAntarctica* grTest = NULL;
+
   for(int z=0; z <nz; z++){
     TTree* clusterTree = clusterTrees[z];
-    const int nc = clusterTree->GetEntries();
+
     
+    const int nc = clusterTree->GetEntries();
+
     TString histName = TString::Format("hc_%d", z);
     TH1D* hc = new TH1D(histName, histName, nc, 0, nc);
 
     TString draw = TString::Format("cluster[%d]>>" + histName, z);
-    // TString selfLLCut = TString::Format("selfLogLikelihood < %lf", llEventCuts[0]);
+    TString selfLLCut = TString::Format("selfLogLikelihood < %lf", llEventCuts[z]);
     // TString selfLLCut = TString::Format("selfLogLikelihood < 1e-3");
     // TString selfLLCut = TString::Format("thetaAdjustmentRequired==0 && latitude < -75 && latitude > -80 && longitude > 150 && longitude < 180");
-    TString selfLLCut = TString::Format("thetaAdjustmentRequired==0");        
+    // TString selfLLCut = TString::Format("thetaAdjustmentRequired==0");
     // TString selfLLCut = "";
     eventTree->Draw(draw, selfLLCut, "goff");
 
-    int nLarges[nL] = {0};
+    
+    int nLarges[nL] = {0};    
+    int numNonZeroClusters = 0;
+
+    std::vector<Int_t> nonBaseSingletClusters;
     
     for(int c=0; c < nc; c++){
       int nEvents = hc->GetBinContent(c+1);
+
+      if(nEvents > 0){
+	numNonZeroClusters++;
+      }
+
       bool knownBase = c < numKnownBases;
       if(knownBase){
 	hKnown->Fill(z, nEvents);
       }
       else{
-	hUnknown->Fill(z, nEvents);
+	if(nEvents  > 1){
+	  hUnknown->Fill(z, nEvents);
+	}
+	else if(nEvents==1){
+	  nonBaseSingletClusters.push_back(c);
+	}
       }
       for(int i=0; i < nL; i++){
 	if(nEvents == largeSizes[i]){
@@ -123,37 +150,79 @@ void drawClusters2(TFile* f){
       }
     }
 
-    for(int i=0; i < nL; i++){    
+    if(z==5){
+      std::cout << "ll = " << llEventCuts.at(z) << std::endl;
+      TString scanCut = "(";
+      for(auto c : nonBaseSingletClusters){
+    	if(scanCut != "("){
+    	  scanCut += " || ";
+    	}
+    	scanCut += TString::Format("cluster[%d] == %d && pol == 1", z, c);
+      }
+      scanCut += ")";
+      eventTree->Scan("pol", scanCut, "goff");
+      new TCanvas();
+      eventTree->Draw("theta:TMath::Log10(nearestEventSurfaceDistanceKm)", scanCut, "colz");
+      grTest = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut));
+      grTest->SetName("grTest");
+    }
+
+    for(int i=0; i < nL; i++){
       grLarges[i]->SetPoint(z, llEventCuts.at(z), nLarges[i]);
     }
-    
+    for(int i=0; i < nL; i++){
+      grNumClusters->SetPoint(z, llEventCuts.at(z), numNonZeroClusters);
+    }
+
     delete hc;
     p.inc(z);
   }
 
+  if(grTest){
+    new TCanvas();
+    TH2DAntarctica* hEvents = (TH2DAntarctica*)f->Get("hEvents");
+    if(hEvents){
+      hEvents->Draw("colz");
+      Acclaim::RootTools::flightPath()->Draw("lsame");
+      grTest->Draw("psame");
+    }
+    else{
+      grTest->Draw("p");
+    }
+    return;
+  }
+  
 
-  RootTools::canvas(3);
+  RootTools::canvas(1);
   for(int i=0; i < nL; i++){
-    
+
     // double z0 = grLarges[i]->GetY()[0];
     // for(int z=0; z < grLarges[i]->GetN(); z++){
     //   grLarges[i]->GetY()[z] -= z0;
     // }
 
     TGraph* grGrad = Acclaim::RootTools::makeDerivativeTGraph(grLarges[i]);
-    for(int z=0; z < grGrad->GetN(); z++){
-      grGrad->GetY()[z] *= -1;
-    }
+    // for(int z=0; z < grGrad->GetN(); z++){
+    //   grGrad->GetY()[z] *= -1;
+    // }
     
     const char* opt = i == 0 ? "al" : "lsame";
     // grLarges[i]->Draw(opt);
-    grGrad->Draw(opt);    
+    grGrad->Draw(opt);
   }
-  
-  RootTools::canvas(4);
+  RootTools::canvas();
   hKnown->Draw("colz");
-  RootTools::canvas(4);
+  RootTools::canvas();
   hUnknown->Draw("colz");
+  RootTools::canvas(1);
+  grNumClusters->SetTitle("Number of clusters; -2 log L threshold (no units); Number of clusters");
+  grNumClusters->Draw("alp");
+  
+  // TGraph* grGradNumClusters = Acclaim::RootTools::makeDerivativeTGraph(grNumClusters);
+  // grGradNumClusters->SetTitle("Number of clusters derivative; -2 log L (no units); #frac{dN_{c}}{d (-2 log L)}");
+  // grGradNumClusters->Draw("alp");
+  
+  
 }
 
 
@@ -268,7 +337,7 @@ void drawClusters(TFile* f){
 	  if(entry > -1){
 
 	    TCut inCluster("inCluster", TString::Format("cluster[%d]==%d", llCutInd, entry));
-	    eventTree->Draw(">>elist2", inCluster, "entrylist");	  
+	    eventTree->Draw(">>elist2", inCluster, "entrylist");
 	    // TCut selfLLCut("selfLLCut", TString::Format("selfLogLikelihood < %lf", llEventCuts.at(llCutInd)));
 	    // eventTree->Draw(">>elist2", inCluster + selfLLCut, "entrylist");
 	    TEntryList *elist2 = (TEntryList*)gDirectory->Get("elist2");
@@ -555,11 +624,10 @@ void plotClustering(const char* fileName = ""){
   // }
   // plotDebug(f);
   // drawClusters(f);
-  drawClusters2(f);  
+  drawClusters2(f);
 
   // drawResolutionDistributions(f);
 
   return;
   // printClusterMultiplicityTable(f);
-
 }

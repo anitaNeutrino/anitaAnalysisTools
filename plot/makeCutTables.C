@@ -5,6 +5,22 @@
 
 using namespace Acclaim;
 
+
+Double_t weightedNumPassing(TChain* c,  const TCut& baseCut, const TCut& soFar, const TCut& newCut){
+  c->Draw("weight", cut, "goff");
+  Int_t n = c->GetSelectedRows();
+  Double_t* v1 = c->GetV1();
+  return RootTools::sum(n, v1);
+
+  // in seq, if only, all other cuts...
+  
+}
+
+
+
+
+
+
 Double_t weightedNumPassing(TChain* c,  const TCut& cut){
   c->Draw("weight", cut, "goff");
   Int_t n = c->GetSelectedRows();
@@ -17,6 +33,8 @@ Int_t numPassing(TChain* c,  const TCut& cut){
   Int_t n = c->GetSelectedRows();
   return n;
 }
+
+
 
 inline TString result(double n, double total){
   return TString::Format("%.2lf (%.2lf%%)", n, 100*n/total);  
@@ -35,15 +53,33 @@ void makeCutTables(const char* thermalTreeDataGlob="data/makeThermalTree*.root",
   ThermalChain c(thermalTreeDataGlob);
   ThermalChain c2(thermalTreeMcGlob);
 
+
   // Double_t w = numPassing(c, "");
   // Double_t n = weightedNumPassing(c2, "");
   Int_t nData0 = numPassing(c.getChain(), ThermalTree::analysisSample);
   Int_t nWais0 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser);
   Double_t nMc0 = weightedNumPassing(c2.getChain(), "");
+  
+  bool detailedQualityCuts = true;
+  if(detailedQualityCuts){
+    Int_t nData1 = numPassing(c.getChain(), ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts);
+    Int_t nWais1 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts);
+    Double_t nMc1 = weightedNumPassing(c2.getChain(),                           ThermalTree::passAllQualityCuts);
+    return;
+  }
+  
 
+  
   Int_t nData1 = numPassing(c.getChain(), ThermalTree::analysisSample       + ThermalTree::passAllQualityCuts);  
   Int_t nWais1 = numPassing(c.getChain(), ThermalTree::isTaggedAsWaisPulser + ThermalTree::passAllQualityCuts);
   Double_t nMc1 = weightedNumPassing(c2.getChain(),                           ThermalTree::passAllQualityCuts);
+
+
+
+
+  
+
+
 
 
   Int_t nData2 = nData1; //numPassing(c.getChain(), ThermalTree::analysisSample + thermalTree::passAllQualityCuts);

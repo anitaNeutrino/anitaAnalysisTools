@@ -139,6 +139,7 @@ namespace Acclaim
     const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("TMath::Max(flags_maxBottomToTopRatio_0, flags_maxBottomToTopRatio_1) < %lf", 2.67)); /// (N=1)
     const TCut newPayloadBlastCutPart3("newPayloadBlastCutPart3", TString::Format("%lf*deconvolved_filtered_peakHilbert > (pol==0)*((1+flags_maxBottomToTopRatio_0)*flags_minBottomToTopRatio_0 - %lf) + (pol==1)*((1+flags_maxBottomToTopRatio_1)*flags_minBottomToTopRatio_1 - %lf)"
 					      ,14.0, 1000.0, 1000.0));
+					      // ,11.0, 1000.0, 1000.0));    
     const TCut notInBlastRotatedCrossCorrelationRegion("notInBlastRotatedCrossCorrelationRegion",
 						       "!((coherent_filtered_peakHilbert > 100) && (peak_value < 0.15))");
 

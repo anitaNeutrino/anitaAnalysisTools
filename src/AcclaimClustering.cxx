@@ -1597,8 +1597,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       ProgressBar pElist(1);
 
       // TCut hack("eventNumber==14545077||eventNumber==15202247");
-      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
-      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + ThermalTree::closeToMC);      
       // tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
       // tc.setCut(hack);
@@ -1720,6 +1720,25 @@ void Acclaim::Clustering::LogLikelihoodMethod::initKDTree(){
     fKDTree->FindInRange(lookup, rangeEN, neighbours);
     std::cout << "There are " << neighbours.size() << " events within a sphere of radius " << rangeEN << std::endl;
   }
+
+
+
+
+  const int n = 2;
+  std::vector<int> nns(n);
+  std::vector<double> dists(n);
+	
+  Acclaim::ProgressBar p(events.size());
+  for(Long64_t eventInd=0; eventInd < events.size(); eventInd++){
+    Event& event = events.at(eventInd);
+    fKDTree->FindNearestNeighbors(&event.easting, n, &nns[0], &dists[0]);
+    event.nearestEventSurfaceDistanceKm = 1e-3*dists.at(1);
+    const Event& event2 = events.at(nns.at(1));
+    event.nearestEventSurfaceEventNumber = event2.eventNumber;
+    events.at(eventInd).nearestEventSurfaceLogLikelihood = dFit(&event, &event2);
+      
+    p.inc(eventInd);
+  }  
 }
 
 
@@ -2378,20 +2397,20 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   TFile* fOut = oc.makeFile();
 
   initKDTree();
+  fEventsAlreadyClustered = false;
 
+  // readInSummaries(mcGlob);
 
-  readInSummaries(mcGlob);
+  // if(!fEventsAlreadyClustered){
+  //   readInBaseList();
+  //   doBaseEventClustering();
+  // }
+  // doMcBaseClustering();
 
-  if(!fEventsAlreadyClustered){
-    readInBaseList();
-    doBaseEventClustering();
-  }
-  doMcBaseClustering();
-
-  if(!fEventsAlreadyClustered){
-    doEventEventClustering();
-  }
-  doMcEventClustering();
+  // if(!fEventsAlreadyClustered){
+  //   doEventEventClustering();
+  // }
+  // doMcEventClustering();
 
 
   makeSummaryTrees();
