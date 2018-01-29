@@ -1,6 +1,10 @@
-#include "AnalysisFlow.h"
+#include "AcclaimCmdLineArgs.h"
 #include "AcclaimFilters.h"
 #include "UCFilters.h"
+#include "TGraphAligned.h"
+#include "AnalysisFlow.h"
+#include "AnitaDataset.h"
+#include "FilteredAnitaEvent.h"
 
 using namespace Acclaim;
 
@@ -15,10 +19,21 @@ using namespace Acclaim;
  */
 void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
 
-  FilterStrategy* strat = new FilterStrategy();  
-  UCorrelator::fillStrategyWithKey(strat,Acclaim::Filters::getCosminsFavouriteSineSubName());
+
+  const int argc = 4;
+  TString runStr = TString::Format("%d", run);
+  const char* fakeArgv[argc] = {"interactiveAnalysisOneEvent",  "-r", runStr.Data(),  "--all"};
+  char** argv = const_cast<char**>(fakeArgv);
+
+  FilterStrategy* strat = new FilterStrategy();
+  ALFAFilter* alfaFilter = new ALFAFilter(Acclaim::Filters::Bands::alfaLowPassGHz);
+  strat->addOperation(alfaFilter);
+  UCorrelator::fillStrategyWithKey(strat, Acclaim::Filters::getCosminsFavouriteSineSubName());  
+
+  Acclaim::CmdLineArgs args(argc, argv);
+  // Acclaim::AnalysisFlow flow(&args, strat);
   
-  AnalysisFlow flow(NULL, run, AnalysisFlow::kAll, strat);
+  AnalysisFlow flow(&args, strat);//NULL, run, AnalysisFlow::kAll, strat);
   flow.doEvent(eventNumber);
   AnalysisReco* reco = flow.getReco(); // this object is what is in magic display
 
@@ -84,9 +99,6 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
     }
   }  
   
-  // reco->wavesInCoherent(, std::vector<Double_t> &dts, std::vector<TGraphAligned *> &grs)
-  
-  
 
   TCanvas* cWaves = new TCanvas("cWaves", "The coherent waveforms", 1200, 600);
   // cWaves->Divide(AnitaPol::kNotAPol);  
@@ -99,7 +111,7 @@ void interactiveAnalysisOneEvent(int run=352, UInt_t eventNumber=60832108){
     TGraphAligned* gr = coherentWaves[pol]->updateEven();
     gr->Draw();
 
-    deconvolvedWaves[pol] = reco->getDeconvolved(pol);
+    deconvolvedWaves[pol] = reco->getDeconvolvedFiltered(pol);
     TGraphAligned* gr2 = deconvolvedWaves[pol]->updateEven();
     gr2->SetLineColor(kRed);
     gr2->Draw("lsame");
