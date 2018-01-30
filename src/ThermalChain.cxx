@@ -12,11 +12,19 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
 
   TString hiCalGlob(glob);
   hiCalGlob.ReplaceAll("makeThermalTree", "makeHiCalTree");
-  fFriendChain = new TChain("hiCalTree");
-  fFriendChain->Add(hiCalGlob);
-  std::cout << fFriendChain->GetEntries() << std::endl;
-  fChain->AddFriend(fFriendChain);
 
+  fFriendChain1 = new TChain("hiCalTree");
+  fFriendChain1->Add(hiCalGlob);
+
+  TString surfaceGlob(glob);
+  surfaceGlob.ReplaceAll("makeThermalTree", "makeSurfaceTree");
+
+  fFriendChain2 = new TChain("surfaceTree");
+  fFriendChain2->Add(surfaceGlob);
+
+  // std::cout << fFriendChain2->GetEntries() << std::endl;
+  fChain->AddFriend(fFriendChain1);
+  fChain->AddFriend(fFriendChain2);
   
   gROOT->ProcessLine("#include \"FFTtools.h\""); // hack to get various delta phi wrap Draw things to work in stand alone executables
 
@@ -36,7 +44,8 @@ Acclaim::ThermalChain::~ThermalChain(){
   }
 
   // Pretty sure ROOT takes care of this...
-  fFriendChain = NULL;
+  fFriendChain1 = NULL;
+  fFriendChain2 = NULL;
   // if(fFriendChain){
   //   delete fFriendChain;
   //   fFriendChain = NULL;
@@ -70,11 +79,22 @@ void Acclaim::ThermalChain::setBranches(){
 
 
 
-  fFriendChain->SetBranchAddress("duringHiCal", &duringHiCal);
-  fFriendChain->SetBranchAddress("hiCalPhi", &hiCalPhi);
-  fFriendChain->SetBranchAddress("hiCalTheta", &hiCalTheta);
-  fFriendChain->SetBranchAddress("eventNumber2", &eventNumber2);
-  fFriendChain->SetBranchAddress("run2", &run2);
+  fFriendChain1->SetBranchAddress("duringHiCal", &duringHiCal);
+  fFriendChain1->SetBranchAddress("hiCalPhi", &hiCalPhi);
+  fFriendChain1->SetBranchAddress("hiCalTheta", &hiCalTheta);
+  fFriendChain1->SetBranchAddress("eventNumber2", &eventNumber2);
+  fFriendChain1->SetBranchAddress("run2", &run2);
+
+
+  fFriendChain2->SetBranchAddress("longitude", &longitude);
+  fFriendChain2->SetBranchAddress("latitude", &latitude);
+  fFriendChain2->SetBranchAddress("altitude", &altitude);
+  fFriendChain2->SetBranchAddress("thetaAdjustmentRequired", &thetaAdjustmentRequired);
+  fFriendChain2->SetBranchAddress("onContinent", &onContinent);
+  fFriendChain2->SetBranchAddress("onIceShelf", &onIceShelf);
+  fFriendChain2->SetBranchAddress("iceThickness", &iceThickness);
+  fFriendChain2->SetBranchAddress("eventNumber3", &eventNumber3);
+  fFriendChain2->SetBranchAddress("run3", &run3);
   
 }
 
@@ -196,9 +216,12 @@ Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
   realTime = (UInt_t) realTimeInt;
 
   if(eventNumber2 != eventNumber || run2 != run){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in chains!" << std::endl;    
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in friendChain1!" << std::endl;
   }
-  
+  if(eventNumber3 != eventNumber || run3 != run){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in friendChain2!" << std::endl;
+  }
+
   return retVal;
 }
 

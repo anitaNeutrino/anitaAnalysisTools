@@ -69,11 +69,27 @@ namespace Acclaim {
     Int_t run2;
 
 
+
+    /**
+     * From the surface chain
+     */
+    Double_t longitude;
+    Double_t latitude;
+    Double_t altitude;
+    Double_t thetaAdjustmentRequired;
+    Int_t onContinent;
+    Int_t onIceShelf;
+    Double_t iceThickness;
+    UInt_t eventNumber3;
+    Int_t run3;
+
+
     Adu5Pat pat();
     
   private:
     TChain* fChain;
-    TChain* fFriendChain;
+    TChain* fFriendChain1;
+    TChain* fFriendChain2;
 
     TCut fCut;
     mutable bool fEntryListDirty;
