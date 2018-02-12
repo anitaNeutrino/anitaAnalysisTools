@@ -634,14 +634,13 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fMyBackground.SetCoarseness(120);  // lower coarseness implies more bins...
   std::cout << fMyBackground.GetXaxis()->GetBinWidth(1) << "\t" << fMyBackground.GetYaxis()->GetBinWidth(1) << std::endl;
 
-
   grTestMinimizerWalk = NULL;
   grTestMinimizerValue = NULL;
 
   // for(Int_t i=0; i < 20; i++){
   //   llEventCuts.push_back(1+i);
   // }
-  surfaceDistThresholdKm = 50;
+  surfaceDistThresholdKm = 30;
   llEventCuts.push_back(1);
   llEventCuts.push_back(2);
   llEventCuts.push_back(4);
@@ -682,8 +681,9 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   }
 
   // both above horizon; good improvement; actual test
-  fTestEvent1 = 55510391; // 61156660; //61033430;
-  fTestEvent2 = 61338514; //55789194; //61424151;
+  fTestEvent1 = 61284883; //55510391; // 61156660; //61033430;
+  fTestEvent2 = 55352006; //61338514; //55789194; //61424151;
+  
 
   fKDTree = NULL;
   fDebug = false;
@@ -1815,11 +1815,11 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       // TCut hack("eventNumber==14545077||eventNumber==15202247");
       // TCut goodPosition = "(onContinent > 0 && onIceShelf==0)";
       // tc.setCut(goodPosition + !ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
-      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);      
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);      
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + ThermalTree::closeToMC);      
-      // tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
+      tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
       // tc.setCut(hack);
       
       n = tc.N();
@@ -2110,9 +2110,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
 	RampdemReader::LonLatToEastingNorthing(AnitaLocations::getWaisLongitude(), AnitaLocations::getWaisLatitude(), waisEasting, waisNorthing);
 	double delta = 700e3;
 	const int nBins = 256;
-	TH2D* hParams = new TH2D("hSingleEventTest", "Event-event fitted log likelihood; Easting (km); Northing (km); L_{sum}",
+	TH2D* hParams = new TH2D("hSingleEventTest", "Event-event fitted log likelihood; Easting (m); Northing (m); L_{sum}",
 				 nBins, waisEasting-delta, waisEasting+delta,
 				 nBins, waisNorthing-delta, waisNorthing+delta);
+	grAnita->SetPoint(grAnita->GetN(), event1.usefulPat.longitude, event1.usefulPat.latitude);	
+	grAnita->SetPoint(grAnita->GetN(), event2.usefulPat.longitude, event2.usefulPat.latitude);
 
 	fFitEvent1s.at(OpenMP::thread()) = &event1;
 	fFitEvent2s.at(OpenMP::thread()) = &event2;
@@ -2162,7 +2164,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeAndWriteNSquaredEventEventHis
 
       hFitVsSumOfSelfLLs->Fill(event1.selfLogLikelihood+event2.selfLogLikelihood, distFitted);
 
-      if(event1.theta > -5.5 && event2.theta > -5.5){
+      // if(event1.theta > -5.5 && event2.theta > -5.5){
+      // 	std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
+      // }
+      if(distFitted > 30){
 	std::cout << event1.eventNumber << "\t" << event2.eventNumber << std::endl;
       }
 
@@ -2628,19 +2633,20 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
   readInSummaries(mcGlob);
 
-  if(!fEventsAlreadyClustered){
-    readInBaseList();
-    doBaseEventClustering();
-  }
-  doMcBaseClustering();
+  // if(!fEventsAlreadyClustered){
+  //   readInBaseList();
+  //   doBaseEventClustering();
+  // }
+  // doMcBaseClustering();
 
-  if(!fEventsAlreadyClustered){
-    doEventEventClustering();
-  }
-  doMcEventClustering();
+  // if(!fEventsAlreadyClustered){
+  //   doEventEventClustering();
+  // }
+  // doMcEventClustering();
 
-  makeSummaryTrees();
-  
+  // makeSummaryTrees();
+
+  makeAndWriteNSquaredEventEventHistograms();
   // testSmallClustersFromPointSource();
   
   fOut->Write();

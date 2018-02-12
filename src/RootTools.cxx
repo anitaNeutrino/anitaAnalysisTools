@@ -1254,7 +1254,7 @@ void Acclaim::RootTools::getLocalMaxToMinWithinLimits(const TGraph* gr,
 void Acclaim::RootTools::saveCanvas(TCanvas* c, TString fileName){
 
   std::cout << "Saving this canvas as an .eps, .png, and .C file..." << std::endl;
-  TString fName = fileName + ".eps";
+  TString fName = fileName + ".pdf";
   c->SaveAs(fName);
   fName = fileName + ".png";
   c->SaveAs(fName);
