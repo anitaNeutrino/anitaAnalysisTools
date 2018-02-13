@@ -2609,12 +2609,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
           }
 
           double ll = dMin(&event1, &event2);
-          if(ll > llFitThreshold){
+          Double_t surfaceDist = 1e-3*event1.cartesianSeparation(event2);
+          
+          if(ll > llFitThreshold && surfaceDist > surfaceDistThresholdKm){
             ll = dFit(&event1, &event2);
           }
 
           for(int z=0; z < event1.nThresholds; z++){
-            if(event1.cluster[z] < 0 && ll < llEventCuts.at(z)){
+            if(surfaceDist < surfaceDistThresholdKm || ll <= llEventCuts.at(z)){
               event1.cluster[z] = event2.cluster[z];
             }
           }

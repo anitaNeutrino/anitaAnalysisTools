@@ -225,6 +225,7 @@ namespace Acclaim{
       
       void setCut(TCut cut){ fCut = cut; }
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
+      void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
