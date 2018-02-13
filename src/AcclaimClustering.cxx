@@ -19,6 +19,7 @@
 #include "RootTools.h"
 #include "DrawStrings.h"
 #include "ThermalChain.h"
+#include "Hical2.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
@@ -667,7 +668,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fKDTree = NULL;
   fDebug = false;
   fUseBaseList = true;
-  fListCut = 0;
+  fCut = 0;
+  fCutHical = 0;
   fEntryList = 0;
 
   fMaxFitterAttempts = 1;
@@ -1912,7 +1914,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       t->SetBranchAddress("isWais", &isWais);
       t->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
 
-      t->Draw(">>fEntryList", fListCut, "entrylist");
+      t->Draw(">>fEntryList", fCut, "entrylist");
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
       t->SetEntryList(fEntryList);
       printf("%d entries loaded\n", fEntryList->GetN());
@@ -1920,7 +1922,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
         t->GetEntry(t->GetEntryNumber(entry));
-        eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew)); 
+        eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
+        if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi)) continue;
         if(weight <= 0 && peak_theta > 0)
         {
           // switches theta convention (i used the UCorrelator convention for theta)

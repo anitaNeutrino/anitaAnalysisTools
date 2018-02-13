@@ -223,7 +223,8 @@ namespace Acclaim{
 	fUseBaseList = useBaseList;
       }
       
-      void setListCut(TCut cut){ fListCut = cut; }
+      void setCut(TCut cut){ fCut = cut; }
+      void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -273,7 +274,8 @@ namespace Acclaim{
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
-      TCut fListCut; /// What to cut on when using tmva trees
+      TCut fCut; /// What to cut on when using tmva trees
+      bool fCutHical; /// cut hical? (when using tmva trees)
       TEntryList* fEntryList; /// Entry list that gets filled by cut when using tmva trees
 
       UInt_t fTestEvent1; /// For debugging
