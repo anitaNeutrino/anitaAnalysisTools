@@ -14,6 +14,8 @@
 #include "BaseList.h"
 #include "AnitaEventSummary.h"
 #include "TKDTree.h"
+#include "TCut.h"
+#include "TEntryList.h"
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
 #include "AcclaimOpenMP.h"
@@ -214,12 +216,14 @@ namespace Acclaim{
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
 
-      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
+      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=1);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
+      
+      void setListCut(TCut cut){ fListCut = cut; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -233,6 +237,7 @@ namespace Acclaim{
 
 
       Long64_t readInSummaries(const char* summaryGlob);
+      Long64_t readInTMVATreeSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
@@ -268,6 +273,8 @@ namespace Acclaim{
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
+      TCut fListCut; /// What to cut on when using tmva trees
+      TEntryList* fEntryList; /// Entry list that gets filled by cut when using tmva trees
 
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
