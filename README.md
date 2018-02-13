@@ -1,4 +1,6 @@
-# Acclaim (ANITA Cross-Correlation Library with Associated Interferometric Methods)
+# anitaAnalysisTools
+
+## Acclaim (ANITA Cross-Correlation Library with Associated Interferometric Methods)
 Formerly known as ANITA Analysis Tools
 
 ## Installation
