@@ -2424,6 +2424,24 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
               ll = dFit(event1, &event2);
             }
 
+            if(ll < event1->nearestEventSurfaceLogLikelihood){
+              event1->nearestEventSurfaceLogLikelihood = ll;
+            }
+
+            if(surfaceDist < event1->nearestEventSurfaceDistanceKm){
+              event1->nearestEventSurfaceDistanceKm = surfaceDist;
+              event1->nearestEventSurfaceEventNumber = event2.eventNumber;
+            }
+            
+            if(ll < event2.nearestEventSurfaceLogLikelihood){
+              event2.nearestEventSurfaceLogLikelihood = ll;
+            }
+
+            if(surfaceDist < event2.nearestEventSurfaceDistanceKm){
+              event2.nearestEventSurfaceDistanceKm = surfaceDist;
+              event2.nearestEventSurfaceEventNumber = event1->eventNumber;
+            }
+
             for(int z=0; z < event1->nThresholds; z++){
               if(surfaceDist < surfaceDistThresholdKm || ll <= llEventCuts.at(z)){
                 event2Inds[t][z].push_back(event2Ind); // the events to merge
