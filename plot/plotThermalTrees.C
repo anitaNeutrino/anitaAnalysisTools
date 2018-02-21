@@ -83,12 +83,12 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
 
     hTheta_above->SetTitle("Distribution of highest map peak #theta;Peak #theta (Degrees); Events per bin");
     hTheta_above->SetLineColor(kBlue);
-    hTheta_above->SetFillColor(kBlue);
-    hTheta_above->SetFillStyle(3345);
+    hTheta_above->SetFillColorAlpha(kBlue, 0.2);
+    hTheta_above->SetFillStyle(1);
     hTheta_above->Draw();
     hTheta_below->Draw("same");
     hTheta_below->SetLineColor(kRed);
-    hTheta_below->SetFillColorAlpha(kRed, 0.5);
+    hTheta_below->SetFillColorAlpha(kRed, 0.2);
 
     std::cout << "theta above = " << hTheta_above->Integral() << std::endl;
     std::cout << "theta below = " << hTheta_below->Integral() << std::endl;    
@@ -364,28 +364,34 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   hFu->Scale(1./hFu->Integral());
 
   hFu->SetTitle(";Fisher Discriminant (no units);Fraction of population per bin");
+  hFm->SetTitle(";Fisher Discriminant (no units);Fraction of population per bin");  
 
-  
-  hFu->Draw("hist");
-  hFu->SetMaximum(1e-1);  
-  
-
-  TLatex* fuTitle = new TLatex(-30, 1.85*hFu->GetMaximum(), "Analysis #bf{B} Fisher discriminant distributions");
-  fuTitle->SetTextSize(0.05);
-  fuTitle->Draw();
-  
-  hFu->SetFillColorAlpha(hFu->GetLineColor(), 0.5);
+  hFu->SetLineColorAlpha(hFu->GetLineColor(), 0.9);
+  hFu->SetFillColorAlpha(hFu->GetLineColor(), 0.2);  
+  hFu->SetFillStyle(1001);
   hFu->SetLineWidth(2);
-  hFu->SetFillStyle(1);
 
-  hFm->Draw("histsame");
-  hFm->SetFillColor(hFm->GetLineColor());
-  hFm->SetFillStyle(3345);
+  hFm->SetLineColorAlpha(hFm->GetLineColor(), 0.9);  
+  hFm->SetFillColorAlpha(hFm->GetLineColor(), 0.2);
+  hFm->SetFillStyle(1001);
   hFm->SetLineWidth(2);
-  // hFm->Rebin(5);
+
+
+  hFm->Draw("hist");
+  hFu->Draw("histsame");
+  {
+    const double histMax = 0.1;
+    hFu->SetMaximum(histMax);
+    hFm->SetMaximum(histMax);    
+  }
+
+  TLatex* fuTitle = new TLatex(-30, 2*hFu->GetMaximum(), "Analysis #bf{B} Fisher discriminant distributions");
+  fuTitle->SetTextSize(0.05);  
+  fuTitle->Draw();
+
   
+
   TLegend* l2 = new TLegend(0.75, 0.79, 0.99, 0.99);
-  
   l2->AddEntry(hFu, "Non-impulsive sideband", "fl");  
   if(hFd){
     hFd->Draw("histsame");    
@@ -401,6 +407,12 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   } 
   l2->AddEntry(hFm, "MC neutrinos", "fl");
   l2->Draw();
+  
+  // return;
+
+
+  // hFm->Rebin(5);
+  
   
   // return;
   
