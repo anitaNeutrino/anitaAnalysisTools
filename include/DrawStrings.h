@@ -173,7 +173,8 @@ namespace Acclaim
 
     const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
 
-    const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + " > 5.800012");
+    const double fisherThreshold = 5.800012;
+    const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + TString::Format(" > %lf", fisherThreshold));
 
     const TCut continentNotIceShelf("continentNotIceShelf", "RampdemReader::isOnContinent(longitude,latitude)");
   }

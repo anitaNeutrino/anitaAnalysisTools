@@ -2,39 +2,44 @@
 using namespace Acclaim;
 
 
-//const TString isSalt = "(eventNumber==14545077||eventNumber==15202247||eventNumber==22377564||eventNumber==26008234||eventNumber==30044333||eventNumber==37387052||eventNumber==39512687||eventNumber==39619438||eventNumber==40040470||eventNumber==49572920||eventNumber==56674128||eventNumber==67024575||eventNumber==71536794||eventNumber==75011721)";
+const TString isSalt = "(eventNumber==14545077||eventNumber==15202247||eventNumber==22377564||eventNumber==26008234||eventNumber==30044333||eventNumber==37387052||eventNumber==39512687||eventNumber==39619438||eventNumber==40040470||eventNumber==49572920||eventNumber==56674128||eventNumber==67024575||eventNumber==71536794||eventNumber==75011721)";
 
-const TString isSalt = "0";
+// const TString isSalt = "0";
 
 
-const int numSizeGroups = 31; //21; //11; //7;
+// const int numSizeGroups = 7;
 // const int sizeGroups[numSizeGroups] = {100, 10, 5, 4, 3, 2, 1};
-const int sizeGroups[numSizeGroups] = {100, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+
+const int numSizeGroups = 11;
+const int sizeGroups[numSizeGroups] = {100, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+
+// const int numSizeGroups = 31;
+// const int sizeGroups[numSizeGroups] = {100, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
 const TCut sizeGroupCuts[numSizeGroups] = {"numDataEvents >= 100",
-					   "numDataEvents >= 30 && numDataEvents < 100",
+					   // "numDataEvents >= 30 && numDataEvents < 100",
 					   // // "numDataEvents >= 20 && numDataEvents < 100",
-					   // "numDataEvents >= 10 && numDataEvents < 100",
+					   "numDataEvents >= 10 && numDataEvents < 100",
 					   // "numDataEvents >= 5 && numDataEvents < 10",
-					   "numDataEvents == 29",
-					   "numDataEvents == 28",
-					   "numDataEvents == 27",
-					   "numDataEvents == 26",
-					   "numDataEvents == 25",
-					   "numDataEvents == 24",
-					   "numDataEvents == 23",
-					   "numDataEvents == 22",
-					   "numDataEvents == 21",
-					   "numDataEvents == 20",
-					   "numDataEvents == 19",
-					   "numDataEvents == 18",
-					   "numDataEvents == 17",
-					   "numDataEvents == 16",
-					   "numDataEvents == 15",
-					   "numDataEvents == 14",
-					   "numDataEvents == 13",
-					   "numDataEvents == 12",
-					   "numDataEvents == 11",
-					   "numDataEvents == 10",
+					   // "numDataEvents == 29",
+					   // "numDataEvents == 28",
+					   // "numDataEvents == 27",
+					   // "numDataEvents == 26",
+					   // "numDataEvents == 25",
+					   // "numDataEvents == 24",
+					   // "numDataEvents == 23",
+					   // "numDataEvents == 22",
+					   // "numDataEvents == 21",
+					   // "numDataEvents == 20",
+					   // "numDataEvents == 19",
+					   // "numDataEvents == 18",
+					   // "numDataEvents == 17",
+					   // "numDataEvents == 16",
+					   // "numDataEvents == 15",
+					   // "numDataEvents == 14",
+					   // "numDataEvents == 13",
+					   // "numDataEvents == 12",
+					   // "numDataEvents == 11",
+					   // "numDataEvents == 10",
 					   "numDataEvents == 9",
 					   "numDataEvents == 8",
 					   "numDataEvents == 7",
@@ -54,8 +59,8 @@ const EMarkerStyle sizeGroupMarkers[numSizeGroups] = {kFullCircle,kFullSquare,kF
 const int numK = 3;
 const TCut knownCuts[numK] = {"knownBase", "!knownBase", "knownBase || !knownBase"};
 
-const int minMaxSmall = 5;
-const int maxMaxSmall = 30;  
+const int minMaxSmall = 4;
+const int maxMaxSmall = 9;  
 
 
 void printClusterMultiplicityTable(TFile* f){
@@ -161,12 +166,31 @@ void drawClusters2(TFile* f){
 
   std::vector<TGraph*> grKnowns(numSizeGroups, NULL);
   std::vector<TGraph*> grUnknowns(numSizeGroups, NULL);
+  std::vector<TGraph*> grKnownsN(numSizeGroups, NULL);
+  std::vector<TGraph*> grUnknownsN(numSizeGroups, NULL);
+  std::vector<TGraph*> grKnownsH(numSizeGroups, NULL);
+  std::vector<TGraph*> grUnknownsH(numSizeGroups, NULL);
+  std::vector<TGraph*> grKnownsV(numSizeGroups, NULL);
+  std::vector<TGraph*> grUnknownsV(numSizeGroups, NULL);
   for(int s=0; s < numSizeGroups; s++){
     grKnowns[s] = new TGraph();
     grUnknowns[s] = new TGraph();
+    grKnownsN[s] = new TGraph();
+    grUnknownsN[s] = new TGraph();
+    grKnownsH[s] = new TGraph();
+    grUnknownsH[s] = new TGraph();
+    grKnownsV[s] = new TGraph();
+    grUnknownsV[s] = new TGraph();
+    
     for(int z=0; z < nz; z++){
       grKnowns[s]->SetPoint(z, llEventCuts[z], 0);
       grUnknowns[s]->SetPoint(z, llEventCuts[z], 0);      
+      grKnownsN[s]->SetPoint(z, llEventCuts[z], 0);
+      grUnknownsN[s]->SetPoint(z, llEventCuts[z], 0);      
+      grKnownsH[s]->SetPoint(z, llEventCuts[z], 0);
+      grUnknownsH[s]->SetPoint(z, llEventCuts[z], 0);      
+      grKnownsV[s]->SetPoint(z, llEventCuts[z], 0);
+      grUnknownsV[s]->SetPoint(z, llEventCuts[z], 0);      
     }
   }
   
@@ -179,18 +203,30 @@ void drawClusters2(TFile* f){
 
     TString histName = TString::Format("hc_%d", z);
     TH1D* hc = new TH1D(histName, histName, nc, 0, nc);
+    TH1D* hcH = new TH1D(histName + "H", histName + "H", nc, 0, nc);
+    TH1D* hcV = new TH1D(histName + "V", histName + "V", nc, 0, nc);
 
     TString draw = TString::Format("cluster[%d]>>" + histName, z);
     TString selfLLCut = TString::Format("selfLogLikelihood < %lf", llEventCuts[z]);
+
+    selfLLCut += " && !" + isSalt;
+    
+    TString drawV = TString::Format("cluster[%d]>>" + histName + "V", z);
+    TString selfLLCutV = selfLLCut + " && pol==1";
+
+
+    TString drawH = TString::Format("cluster[%d]>>" + histName + "H", z);
+    TString selfLLCutH = selfLLCut + " && pol==0";
+    
     // TString selfLLCut = TString::Format("selfLogLikelihood < %lf && pol==0", llEventCuts[z]);
     // TString selfLLCut = TString::Format("selfLogLikelihood < 0.01");
     // TString selfLLCut = TString::Format("thetaAdjustmentRequired==0 && latitude < -75 && latitude > -80 && longitude > 150 && longitude < 180");
     // TString selfLLCut = TString::Format("thetaAdjustmentRequired==0");
     // TString selfLLCut = "";
-
-    TString unblindCut = selfLLCut += " && !" + isSalt;
+    
     eventTree->Draw(draw, selfLLCut, "goff");
-    // eventTree->Draw(draw, unblindCut, "goff");    
+    eventTree->Draw(drawV, selfLLCutH, "goff");
+    eventTree->Draw(drawH, selfLLCutV, "goff");
 
     
     int nLarges[nL] = {0};    
@@ -207,6 +243,11 @@ void drawClusters2(TFile* f){
 	numNonZeroClusters++;
       }
 
+      // TString drawPol = TString::Format("pol>>hPol(2, 0, 2)");
+      // TString cutPol = TString::Format("cluster[%d]==%d", z, c);
+      // eventTree->Draw(drawPol, cutPol,  "goff");
+      // TH1F* hPol =  (TH1F*) gROOT->FindObject("hPol");      
+
       bool knownBase = c < numKnownBases;
 
       for(int s=0; s < numSizeGroups; s++){
@@ -215,10 +256,19 @@ void drawClusters2(TFile* f){
 	  if(llEventCuts[z]==4 && s != numSizeGroups - 1){
  	    binnedClusters[s].push_back(c);
 	  }
-	    
- 	  // std::cout << nEvents << "\t" << sizeGroups[s] << std::endl;
+
+	  if(llEventCuts[z]==4 && sizeGroups[s]==2){
+	    std::cout << "The cluster you want is " << c << std::endl;
+	  }
+
+	  TGraph* grN = knownBase ? grKnownsN[s] : grUnknownsN[s];
+	  TGraph* grH = knownBase ? grKnownsH[s] : grUnknownsH[s];
+	  TGraph* grV = knownBase ? grKnownsV[s] : grUnknownsV[s];
+	  grN->GetY()[z] += hc->GetBinContent(c+1);
+	  grH->GetY()[z] += hcH->GetBinContent(c+1);
+	  grV->GetY()[z] += hcV->GetBinContent(c+1);
+
 	  TGraph* gr = knownBase ? grKnowns[s] :  grUnknowns[s];
-	  // gr->GetY()[z] += nEvents;
 	  gr->GetY()[z] += 1;
 	  break;
 	}
@@ -271,7 +321,7 @@ void drawClusters2(TFile* f){
       scanCut2 += " && !" + isSalt;
       
 
-      eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut, "goff");
+      // eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut, "goff");
       // new TCanvas();
       // eventTree->Draw("theta:TMath::Log10(nearestEventSurfaceDistanceKm)", scanCut, "colz");
       grSinglets0 = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut) + TCut("pol==0"));
@@ -280,7 +330,7 @@ void drawClusters2(TFile* f){
       grSinglets1->SetName("grSinglets1");
       grSinglets2 = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut2));      
       grSinglets2->SetName("grSinglets2");
-      eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut2, "goff");
+      // eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut2, "goff");
 
       grSalt = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(isSalt));
     }
@@ -297,7 +347,7 @@ void drawClusters2(TFile* f){
     p.inc(z);
   }
 
-  bool varyingSmall = false;//true;
+  bool varyingSmall = true;
   
   if(varyingSmall){
     
@@ -338,31 +388,84 @@ void drawClusters2(TFile* f){
     hPolVsSmall->SetMinimum(0);
     hPolVsSmall->SetMaximum(1);
     // return;
-    TH1D* hTau = new TH1D("hTau", "Distribution of tau", 1024, 0, 2);
-    TGraph* grTauVsSmall = new TGraph();    
+    TH1D* hTau = new TH1D("hTau", "Distribution of #tau", 10, 0, 2);
+    TH1D* hTau2 = new TH1D("hTau2", "Distribution of #tau_{2}", 10, 0, 2);    
+    TH1D* hBHat = new TH1D("hBHat", "Distribution of estimated clustering backgrounds; Anthropogenic background estimate", 20, 0, 4);
+    TH1D* hBHat2 = new TH1D("hBHat2", "Distribution of estimated clustering backgrounds; Anthropogenic background estimate", 20, 0, 4);    
+    
+    TGraph* grTauVsSmall = new TGraph();
+    grTauVsSmall->SetName("grTauVsSmall");
+    grTauVsSmall->SetTitle("How does the background estimate vary as we change what we consider \"small\"?;Upper limit on small (2 #leq n #leq x); #tau_{anthro}");
+    grTauVsSmall->SetMinimum(0);
+
+    auto grBHat = new TGraph();
+    grBHat->SetName("grBHat");
+    grBHat->SetTitle("Background estimate (H+V);Upper limit on small;");
+
     for(int maxSmall = minMaxSmall; maxSmall < maxMaxSmall ; maxSmall++){
-      const int z = 4;
+
+      const int z = 2;
       double knownInt = 0;
       double unknownInt = 0;
+
       for(int s=0; s < numSizeGroups; s++){
 	// if(sizeGroups[s] >= 2 && sizeGroups[s] < 5){
-	if(sizeGroups[s] >= 2 && sizeGroups[s] < maxSmall){
+	if(sizeGroups[s] >= 2 && sizeGroups[s] <= maxSmall){
 	  knownInt += grKnowns[s]->GetY()[z];
 	  unknownInt += grUnknowns[s]->GetY()[z];
 	}
       }
-      double tau = knownInt/unknownInt;
-      std::cout << maxSmall << "\t" << knownInt << "\t" << unknownInt << "\t" << tau << std::endl;
+      const double polFactor = 2; //1; //2;
+      double tau = polFactor*knownInt/unknownInt;
+      double tau2 = polFactor*(knownInt-1)/(unknownInt);
+      double C = grKnowns[numSizeGroups-1]->GetY()[z];
+      double C2 = C + 1;
+      double bHat = C/tau;
+      double bHat2 = C2/tau2;
+
+      std::cout << "Interesting stuff here!" << maxSmall << "\t" << knownInt << "\t" << unknownInt << "\t" << tau << "\t" << bHat << "\t" << bHat2 << std::endl;
       if(TMath::Finite(tau)){
 	grTauVsSmall->SetPoint(grTauVsSmall->GetN(), maxSmall, tau);
+	grBHat->SetPoint(grBHat->GetN(), maxSmall, bHat);
       }
       hTau->Fill(tau);
+      hTau2->Fill(tau2);
+      hBHat->Fill(bHat);
+      hBHat2->Fill(bHat2);      
     }
     RootTools::canvas();
     grTauVsSmall->Draw();
+    grBHat->Draw("lsame");
+    grBHat->SetLineColor(kRed);
+    auto l1 = new TLegend(0.8, 0.8, 1, 1);
+    l1->AddEntry(grTauVsSmall, "#tau_{anthro}", "l");
+    l1->AddEntry(grBHat, "Anthropogenic background estimate", "l");
+    l1->Draw();
     RootTools::canvas();
     hTau->Draw();
-    // return;
+    // hBHat->Draw();
+    hBHat2->SetLineColor(kBlue);
+    hBHat2->SetFillStyle(3345);
+    hBHat2->SetFillColor(kBlue);    
+
+    hBHat->SetLineColor(kBlack);
+    hBHat->SetFillStyle(3354);
+    hBHat->SetFillColor(kBlack);    
+
+    TH1D* hs[2] = {hBHat, hBHat2};
+    RootTools::drawHistsWithStatsBoxes(2, hs, "", "mre");
+    auto l2 = new TLegend();
+    l2->AddEntry(hBHat, "Initial estimate", "fl");
+    l2->AddEntry(hBHat2, "Removing 70124461", "fl");
+    l2->Draw();
+
+    RootTools::canvas();    
+    TH1D* hBHatCombined = (TH1D*)hBHat->Clone("hBHatCombined");
+    hBHatCombined->Add(hBHat2);
+    hBHatCombined->Draw();
+    
+
+    return;
   }
   
   
@@ -392,12 +495,17 @@ void drawClusters2(TFile* f){
     for(int z=0; z < grKnowns[s]->GetN(); z++){
       if(llEventCuts[z]==4){
 	std::cout << sizeGroups[s] << "\t" << grKnowns[s]->GetY()[z] << "\t" << grUnknowns[s]->GetY()[z] << std::endl;
+
+	std::cout << grKnownsN[s]->GetY()[z] << "(" << grKnownsH[s]->GetY()[z] << ", " << grKnownsV[s]->GetY()[z] << ")\t"
+		  << grUnknownsN[s]->GetY()[z] << "(" << grUnknownsH[s]->GetY()[z] << ", " << grUnknownsV[s]->GetY()[z] << ")\t" << std::endl;
+	// std::cout << "H" << sizeGroups[s] << "\t" << grKnownsH[s]->GetY()[z] << "\t" << grUnknownsH[s]->GetY()[z] << std::endl;	
+	// std::cout << "V" << sizeGroups[s] << "\t" << grKnownsV[s]->GetY()[z] << "\t" << grUnknownsV[s]->GetY()[z] << std::endl;	
 	// std::cout << "Known " << sizeGroups[s] << "\t" << grKnowns[s]->GetY()[z] << std::endl;
 	// std::cout << "Unknown " << sizeGroups[s] << "\t" << grUnknowns[s]->GetY()[z] << std::endl;
       }
     }
   }
-  // return;
+  return;
 
   for(int s=0; s < numSizeGroups; s++){    
     if(sizeGroups[s] == 1){

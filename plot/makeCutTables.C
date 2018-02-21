@@ -36,11 +36,15 @@ Double_t numPassing(TChain* c,  const TCut& cut, const char* hName = NULL){
 
 void getCutTableParams(TChain* c, bool mc, std::vector<TCut>& cuts, std::vector<Double_t>& inSeq, std::vector<Double_t>& ifOnly, std::vector<Double_t>& ifNot){
   // cut 0 is preselection
-
+  std::cout << "cuts.size() == " << cuts.size() << std::endl;
+  inSeq.reserve(cuts.size());
+  ifOnly.reserve(cuts.size());
+  ifNot.reserve(cuts.size());
+  
   if(cuts.size() > 1){
     int numCuts = cuts.size();
     const int whichCut = 0;
-    for(int cutInd=whichCut; cutInd < TMath::Min(whichCut + 1, numCuts); cutInd++){
+    for(int cutInd=whichCut; cutInd < TMath::Max(whichCut + 1, numCuts); cutInd++){
     
     // for(int cutInd=0; cutInd < numCuts; cutInd++){
 
@@ -70,15 +74,18 @@ void getCutTableParams(TChain* c, bool mc, std::vector<TCut>& cuts, std::vector<
       double no = 0;
 
       TString histNameBase = TString::Format("hCut_%d", cutInd);
-      
-      seq = numPassing(c, seqCut, histNameBase + "_seq");
-      only = numPassing(c, onlyCut, histNameBase + "_only");
-      no = numPassing(c, notCut, histNameBase + "_no");
+      TString hNameSeq = histNameBase + "_seq";
+      TString hNameOnly  = histNameBase + "_only";
+      TString hNameNo = histNameBase + "_no";
+      seq = numPassing(c, seqCut, hNameSeq.Data());
+      only = numPassing(c, onlyCut, hNameOnly.Data());
+      no = numPassing(c, notCut, hNameNo.Data());
 
       inSeq.push_back(seq);
       ifOnly.push_back(only);
       ifNot.push_back(no);
       std::cout << cutInd << "\t" << int(seq) << "\t" << int(only) << "\t" << int(no) << std::endl;
+      // std::cout << cutInd << "\t" << seq << "\t" << only << "\t" << no << std::endl;      
     }
   }
 }
@@ -109,48 +116,75 @@ void makeCutTables(const char* thermalTreeDataGlob="data/makeThermalTree_*.root"
   std::vector<TString> quickNames;
   std::vector<TCut> waisCuts;
   std::vector<TCut> mcNuCuts;
-  std::vector<TCut> dataCuts;
+  std::vector<TCut> dataCutsVPol;
+  std::vector<TCut> dataCutsHPol;
+
+  const int n = 10;
+  waisCuts.reserve(n);
+  mcNuCuts.reserve(n);
+  dataCutsVPol.reserve(n);
+  dataCutsHPol.reserve(n);
   
+
   /// 0. pre-selection
-  dataCuts.push_back(ThermalTree::analysisSample);
+  dataCutsHPol.push_back(ThermalTree::analysisSample + TCut("pol==0"));
+  dataCutsVPol.push_back(ThermalTree::analysisSample + TCut("pol==1"));
   waisCuts.push_back(ThermalTree::isTaggedAsWaisPulser);
   mcNuCuts.push_back(mcPreselection);
   quickNames.push_back("None");
 
   
   /// 1. reco efficiency
-  dataCuts.push_back(allPass);
+  dataCutsVPol.push_back(allPass);
+  dataCutsHPol.push_back(allPass);  
   waisCuts.push_back(ThermalTree::closeToWais);
   mcNuCuts.push_back(ThermalTree::closeToMC);
   quickNames.push_back("Close to truth");
 
   /// 2. quality cuts
-  dataCuts.push_back(ThermalTree::passAllQualityCuts);
+  dataCutsVPol.push_back(ThermalTree::passAllQualityCuts);
+  dataCutsHPol.push_back(ThermalTree::passAllQualityCuts);  
   waisCuts.push_back(ThermalTree::passAllQualityCuts);
   mcNuCuts.push_back(ThermalTree::passAllQualityCuts);
   quickNames.push_back("Quality cuts");  
   
   /// 3. thermal cut
-  dataCuts.push_back(ThermalTree::fisherCut);
+  dataCutsHPol.push_back(ThermalTree::fisherCut);
+  dataCutsVPol.push_back(ThermalTree::fisherCut);  
   waisCuts.push_back(ThermalTree::fisherCut);
   mcNuCuts.push_back(ThermalTree::fisherCut);
   quickNames.push_back("Pass thermal cut");
 
   /// 4. hical cut
-  dataCuts.push_back(TCut(!ThermalTree::closeToHiCal));
+  dataCutsHPol.push_back(TCut(!ThermalTree::closeToHiCal));
+  dataCutsVPol.push_back(TCut(!ThermalTree::closeToHiCal));  
   waisCuts.push_back(TCut(!ThermalTree::closeToHiCal));
   mcNuCuts.push_back(TCut(!ThermalTree::closeToHiCal));
   quickNames.push_back("Not HiCal");
 
 
-  std::vector<Double_t> dataSeq, dataIfOnly, dataIfNot;
-  getCutTableParams(c.getChain(), true, dataCuts, dataSeq, dataIfOnly, dataIfNot);
-  for(int i=0; i < dataSeq.size(); i++){
-    const char* label = i < quickNames.size() ? quickNames[i].Data() : "???";
-    std::cout << " | " << label << " | " << dataSeq[i] << " | " << dataIfOnly[i] << " | " << dataIfNot[i] << " | " << std::endl;    
+  bool doVPol = false;
+  if(doVPol){
+    std::vector<Double_t> dataSeqVPol, dataIfOnlyVPol, dataIfNotVPol;
+    getCutTableParams(c.getChain(), true, dataCutsVPol, dataSeqVPol, dataIfOnlyVPol, dataIfNotVPol);
+    for(int i=0; i < dataCutsVPol.size(); i++){
+      const char* label = i < quickNames.size() ? quickNames[i].Data() : "???";
+      std::cout << " | " << label << " | " << int(dataSeqVPol[i]) << " | " << int(dataIfOnlyVPol[i]) << " | " << int(dataIfNotVPol[i]) << " | " << std::endl;    
+    }
+    return;
   }
-  return;
-  
+
+
+  bool doHPol = true;
+  if(doHPol){  
+    std::vector<Double_t> dataSeqHPol, dataIfOnlyHPol, dataIfNotHPol;
+    getCutTableParams(c.getChain(), true, dataCutsHPol, dataSeqHPol, dataIfOnlyHPol, dataIfNotHPol);
+    for(int i=0; i < dataCutsHPol.size(); i++){
+      const char* label = i < quickNames.size() ? quickNames[i].Data() : "???";
+      std::cout << " | " << label << " | " << int(dataSeqHPol[i]) << " | " << int(dataIfOnlyHPol[i]) << " | " << int(dataIfNotHPol[i]) << " | " << std::endl;        
+    }
+    return;
+  }  
 
   std::vector<Double_t> mcNuSeq, mcNuIfOnly, mcNuIfNot;
   getCutTableParams(c2.getChain(), true, mcNuCuts, mcNuSeq, mcNuIfOnly, mcNuIfNot);
