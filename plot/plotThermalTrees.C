@@ -380,7 +380,7 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   hFm->Draw("hist");
   hFu->Draw("histsame");
   {
-    const double histMax = 0.1;
+    const double histMax = 1;
     hFu->SetMaximum(histMax);
     hFm->SetMaximum(histMax);    
   }
