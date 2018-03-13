@@ -77,6 +77,13 @@ void Acclaim::ThermalChain::setBranches(){
   fChain->SetBranchAddress("weight", &weight);
   fChain->SetBranchAddress("mc_energy", &mc_energy);
 
+  fChain->SetBranchAddress("peak_value", &peak_value);
+  fChain->SetBranchAddress("coherent_filtered_peakHilbert", &coherent_filtered_peakHilbert);
+  fChain->SetBranchAddress("deconvolved_filtered_peakHilbert", &deconvolved_filtered_peakHilbert);
+  fChain->SetBranchAddress("coherent_filtered_impulsivityMeasure", &coherent_filtered_impulsivityMeasure);  
+  fChain->SetBranchAddress("deconvolved_filtered_impulsivityMeasure", &deconvolved_filtered_impulsivityMeasure);  
+  fChain->SetBranchAddress("coherent_filtered_fracPowerWindowGradient", &coherent_filtered_fracPowerWindowGradient);
+  fChain->SetBranchAddress("deconvolved_filtered_fracPowerWindowGradient", &deconvolved_filtered_fracPowerWindowGradient);
 
 
   fFriendChain1->SetBranchAddress("duringHiCal", &duringHiCal);

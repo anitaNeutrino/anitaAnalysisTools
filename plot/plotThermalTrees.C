@@ -343,7 +343,7 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   hFmI->Draw("histsame");
   hFmI->SetLineColor(kBlue);
   hFm->SetLineColor(kBlue);
-
+  
   
   // hFuI->SetTitle("Analysis #bf{B} Fisher discriminant distributions;Fisher discriminant score, F (no units); Fraction of pre-thermal cut sample above F (no units)");  
   auto l = new TLegend(0.8, 0.8, 1, 1);
@@ -385,9 +385,9 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
     hFm->SetMaximum(histMax);    
   }
 
-  TLatex* fuTitle = new TLatex(-30, 2*hFu->GetMaximum(), "Analysis #bf{B} Fisher discriminant distributions");
-  fuTitle->SetTextSize(0.05);  
-  fuTitle->Draw();
+  // TLatex* fuTitle = new TLatex(-30, 2*hFu->GetMaximum(), "Analysis #bf{B} Fisher discriminant distributions");
+  // fuTitle->SetTextSize(0.05);  
+  // fuTitle->Draw();
 
   
 

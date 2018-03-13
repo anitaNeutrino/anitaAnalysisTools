@@ -225,8 +225,8 @@ void drawClusters2(TFile* f){
     // TString selfLLCut = "";
     
     eventTree->Draw(draw, selfLLCut, "goff");
-    eventTree->Draw(drawV, selfLLCutH, "goff");
-    eventTree->Draw(drawH, selfLLCutV, "goff");
+    // eventTree->Draw(drawV, selfLLCutH, "goff");
+    // eventTree->Draw(drawH, selfLLCutV, "goff");
 
     
     int nLarges[nL] = {0};    
@@ -297,7 +297,7 @@ void drawClusters2(TFile* f){
     }
 
     if(llEventCuts[z]==4){
-      std::cout << "ll = " << llEventCuts.at(z) << std::endl;
+      std::cout << "ll = " << llEventCuts.at(z) << ", z = " << z << std::endl;
       TString scanCut = "(";
       for(auto c : nonBaseSingletClusters){
     	if(scanCut != "("){
@@ -321,7 +321,7 @@ void drawClusters2(TFile* f){
       scanCut2 += " && !" + isSalt;
       
 
-      // eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut, "goff");
+      eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut, "goff");
       // new TCanvas();
       // eventTree->Draw("theta:TMath::Log10(nearestEventSurfaceDistanceKm)", scanCut, "colz");
       grSinglets0 = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut) + TCut("pol==0"));
@@ -330,7 +330,7 @@ void drawClusters2(TFile* f){
       grSinglets1->SetName("grSinglets1");
       grSinglets2 = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut2));      
       grSinglets2->SetName("grSinglets2");
-      // eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut2, "goff");
+      eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut2, "goff");
 
       grSalt = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(isSalt));
     }

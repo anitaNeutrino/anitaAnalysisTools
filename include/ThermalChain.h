@@ -43,6 +43,7 @@ namespace Acclaim {
     /**
      * From the thermal chain
      */
+    
     Int_t run;
     UInt_t eventNumber;
     UInt_t realTime;
@@ -57,6 +58,13 @@ namespace Acclaim {
     Float_t coherent_filtered_snr;
     Float_t weight;
     Float_t mc_energy;
+    Float_t peak_value;
+    Float_t coherent_filtered_peakHilbert;
+    Float_t deconvolved_filtered_peakHilbert;
+    Float_t coherent_filtered_impulsivityMeasure;
+    Float_t deconvolved_filtered_impulsivityMeasure;
+    Float_t coherent_filtered_fracPowerWindowGradient;
+    Float_t deconvolved_filtered_fracPowerWindowGradient;    
 
 
     /**
