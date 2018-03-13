@@ -689,9 +689,9 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 	Int_t zoomThetaInd = minThetaBin + thetaBin;
 	// Double_t zoomThetaWave = zoomedThetaWaves[zoomThetaInd];
 	// Double_t partBA = partBAsZoom[pol][combo][zoomThetaInd];
-	Double_t partBA = dtCache->partBAsZoom[dtCache->partBAsIndex(pol, combo, zoomThetaInd)]; //)[pol][combo][zoomThetaInd];      
+	Double_t partBA = dtCache->fPartBAsZoom[dtCache->partBAsIndex(pol, combo, zoomThetaInd)]; //)[pol][combo][zoomThetaInd];      
 	// Double_t dtFactor = dtFactors[zoomThetaInd];
-	Double_t dtFactor = dtCache->dtFactors[zoomThetaInd];
+	Double_t dtFactor = dtCache->fDtFactors[zoomThetaInd];
 
 	// for(Int_t phiBin = 0; phiBin < NUM_BINS_PHI_ZOOM; phiBin++){
 	for(Int_t phiBin = 0; phiBin < GetNbinsPhi(); phiBin++){
@@ -699,9 +699,9 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
 	  // Double_t zoomPhiWave = zoomedPhiWaveLookup[zoomPhiInd];
 
 	  int p21 = dtCache->part21sIndex(pol, combo, zoomPhiInd);
-	  Double_t offsetLowDouble = dtFactor*(partBA - dtCache->part21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
+	  Double_t offsetLowDouble = dtFactor*(partBA - dtCache->fPart21sZoom[p21]);//[pol][combo][zoomPhiInd]);		
 
-	  offsetLowDouble += dtCache->kUseOffAxisDelay > 0 ? dtCache->offAxisDelaysDivided[p21] : 0;	  
+	  offsetLowDouble += dtCache->fUseOffAxisDelay > 0 ? dtCache->fOffAxisDelaysDivided[p21] : 0;	  
 	
 	  offsetLowDouble += cc->startTimes[pol][ant1]/cc->correlationDeltaT;
 	  offsetLowDouble -= cc->startTimes[pol][ant2]/cc->correlationDeltaT;
