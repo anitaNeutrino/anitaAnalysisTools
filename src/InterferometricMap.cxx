@@ -11,6 +11,9 @@
 #include "UsefulAdu5Pat.h"
 #include "RampdemReader.h"
 #include "TruthAnitaEvent.h"
+#include "TGraphAntarctica.h"
+#include "TArrowAntarctica.h"
+#include "TLegend.h"
 
 ClassImp(Acclaim::InterferometricMap);
 
@@ -469,130 +472,6 @@ void Acclaim::InterferometricMap::addTruthInfo(const TruthAnitaEvent* truth){
     truthLat = truth->sourceLat;
     truthAlt = truth->sourceAlt;
   }
-  // std::cerr << truthLon << "\t" << truthLat << "\t" << truthAlt << std::endl;
-}
-
-
-
-
-/**
- * @brief For making a heat map.
- * Loops over the TProfile2D projection bins (easting/northing).
- * For each bin, gets theta/phi at the payload and does bilinear interpolation of the map value.
- * This is currently VERY slow, and so I'm not recommending its use.
- *
- * @param proj should be a histogram of Antarctica in Easting/Northing
- * @param horizonKilometers is a cut-off distance at which to stop in km.
- */
-void Acclaim::InterferometricMap::project(TProfile2D* proj, double horizonKilometers){
-
-  if(!fUsefulPat){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", GPS info required to project interferometric map." << std::endl;
-    return;
-  }
-  if(!proj){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", require projection histogram to be non-NULL." << std::endl;
-    return;
-  }
-
-
-  Int_t nx = proj->GetNbinsX();
-  Int_t ny = proj->GetNbinsY();
-
-  const double closeNorthing = proj->GetYaxis()->GetBinLowEdge(2) - proj->GetYaxis()->GetBinLowEdge(1);
-  const double closeEasting = proj->GetXaxis()->GetBinLowEdge(2) - proj->GetXaxis()->GetBinLowEdge(1);
-
-  const int nPhi = GetNbinsPhi();
-  const double phiMin = fXaxis.GetBinLowEdge(1);
-  const double phiMax = fXaxis.GetBinLowEdge(nPhi);
-
-  const double thetaMin = fYaxis.GetBinLowEdge(1);
-  const double thetaMax = fYaxis.GetBinLowEdge(GetNbinsTheta());
-  const double floatPointErrorEpsilon = 0.0001;
-  for(int by=1; by <= ny; by++){
-    double northing = proj->GetYaxis()->GetBinLowEdge(by);
-
-    for(int bx=1; bx <= nx; bx++){
-      double easting = proj->GetXaxis()->GetBinLowEdge(bx);
-
-      double lon, lat;
-      RampdemReader::EastingNorthingToLonLat(easting, northing, lon, lat);
-      double alt = RampdemReader::SurfaceAboveGeoid(lon, lat);
-
-      double dist_km = 1e-3*fUsefulPat->getDistanceFromSource(lat, lon, alt);
-      if(dist_km < horizonKilometers){
-
-        // first get the theta/phi at the payload
-        Double_t thetaWave, phiWave;
-        fUsefulPat->getThetaAndPhiWave(lon, lat, alt, thetaWave, phiWave);
-
-        // this is a naive collision detection...
-        // I'm going to trace those theta/phi back to the continent
-        // if it hits the same place (or very close) then we will go ahead
-        double lat2, lon2,  alt2, theta_adj;
-        fUsefulPat->traceBackToContinent(phiWave, thetaWave, &lat2, &lon2, &alt2, &theta_adj);
-
-        double easting2, northing2;
-        RampdemReader::LonLatToEastingNorthing(lon2, lat2, easting2, northing2);
-
-        const double deltaEasting = TMath::Abs(easting2 - easting);
-        const double deltaNorthing = TMath::Abs(northing2 - northing);
-
-        if(deltaEasting < closeEasting && deltaNorthing < closeNorthing){
-
-          Double_t thetaDeg = -1*thetaWave*TMath::RadToDeg();
-
-          if(thetaDeg >= thetaMin && thetaDeg <= thetaMax){
-            Double_t phiDeg = phiWave*TMath::RadToDeg();
-            phiDeg = phiDeg <  phiMin ? phiDeg + DEGREES_IN_CIRCLE : phiDeg;
-            phiDeg = phiDeg >= phiMax ? phiDeg - DEGREES_IN_CIRCLE : phiDeg;
-
-            if(phiDeg >= phiMin && phiDeg <= phiMax){
-
-
-              // my axis binning is that the low edge of the bin is the actual value
-              // so can't use TH2::Interpolate, which (sensibly) uses the bin centres
-              // so here's my implementation.
-
-              // Get the grid points and values
-              Int_t phiBinLow = fXaxis.FindBin(phiDeg);
-              Int_t thetaBinLow = fYaxis.FindBin(thetaDeg);
-              Int_t phiBinHigh = phiBinLow == nPhi ? 1 : phiBinLow + 1;
-
-              double x1 = fXaxis.GetBinLowEdge(phiBinLow);
-              double x2 = fXaxis.GetBinLowEdge(phiBinHigh);
-
-              double y1 = fYaxis.GetBinLowEdge(thetaBinLow);
-              double y2 = fYaxis.GetBinLowEdge(thetaBinLow+1);
-
-              double v11 = GetBinContent(phiBinLow, thetaBinLow);
-              double v12 = GetBinContent(phiBinLow, thetaBinLow+1);
-              double v21 = GetBinContent(phiBinHigh, thetaBinLow);
-              double v22 = GetBinContent(phiBinHigh, thetaBinLow+1);
-
-              // this image is very helpful to visualize what's going on here
-              // https://en.wikipedia.org/wiki/Bilinear_interpolation#/media/File:Comparison_of_1D_and_2D_interpolation.svg
-              // need to do three linear interpolations...
-              double dx = phiDeg - x1;
-              double dy = thetaDeg - y1;
-              double deltaX = x2 - x1 > 0 ? x2 - x1 : DEGREES_IN_CIRCLE + x2 - x1;
-              double deltaY = y2 - y1;
-
-              double v11_v21_interp = v11 + dx*(v21 - v11)/(deltaX);
-              double v12_v22_interp = v12 + dx*(v22 - v12)/(deltaX);
-              double val = v11_v21_interp + dy*(v12_v22_interp - v11_v21_interp)/(deltaY);
-
-              // std::cout << x1  << "\t" << x2  << "\t" << y1  << "\t" <<  y2 << std::endl;
-              // std::cout << v11 << "\t" << v12 << "\t" << v21 << "\t" << v22 << std::endl;
-              // std::cout << v11_v21_interp << "\t" << v12_v22_interp << "\t" << val << std::endl;
-
-              proj->Fill(easting+floatPointErrorEpsilon, northing+floatPointErrorEpsilon, val);
-            }
-          }
-        }
-      }
-    }
-  }
 }
 
 
@@ -1038,7 +917,73 @@ void Acclaim::InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>
       break;
     }
   }
+}
 
+
+
+
+TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
+
+  if(fUsefulPat){
+    double phiWave = fPeakPhi*TMath::DegToRad();
+    double thetaWave = -fPeakTheta*TMath::DegToRad();
+    double sourceLon, sourceLat, sourceAlt, thetaAdj;
+    
+    int success = fUsefulPat->traceBackToContinent3(phiWave, thetaWave, &sourceLon, &sourceLat, &sourceAlt, &thetaAdj);
+
+    TGraphAntarctica* grSource = new TGraphAntarctica(1, &sourceLon, &sourceLat);
+    grSource->SetName("Source");
+
+    TPad* thisPad = pad ?  pad : new TCanvas();
+    thisPad->cd();
+    grSource->SetMarkerStyle(8);
+
+    const TGraphInteractive* grPeak = getPeakPointGraph();
+    grSource->SetMarkerColor(grPeak->GetMarkerColor());
+
+    AntarcticaBackground* b = new AntarcticaBackground();
+    b->Draw();
+    
+    grSource->Draw("psame");    
+    grSource->SetBit(kCanDelete);
+
+    TGraphAntarctica* grAnita = new TGraphAntarctica(1, &fUsefulPat->longitude,  &fUsefulPat->latitude);
+    grAnita->SetName("ANITA");    
+
+    grAnita->SetMarkerColor(kGreen);
+    grAnita->SetMarkerStyle(8);
+    grAnita->Draw("psame");
+    grAnita->SetBit(kCanDelete);
+
+
+    TArrowAntarctica* arr = new TArrowAntarctica(grAnita,  grSource);
+    arr->SetBit(kCanDelete);
+    arr->SetFillColor(grSource->GetMarkerColor());
+    arr->SetLineColor(grSource->GetMarkerColor());
+    arr->Draw();
+
+    
+    thisPad->Update();
+
+    double meanEasting = 0.5*(grSource->GetEasting()[0] + grAnita->GetEasting()[0]);
+    double meanNorthing = 0.5*(grSource->GetNorthing()[0] + grAnita->GetNorthing()[0]);    
+
+    const double zoomRangeEastingNorthing = 500*1000;
+    grSource->GetXaxis()->SetRangeUser(meanEasting - zoomRangeEastingNorthing, meanEasting + zoomRangeEastingNorthing);
+    grSource->GetYaxis()->SetRangeUser(meanNorthing - zoomRangeEastingNorthing, meanNorthing + zoomRangeEastingNorthing);
+
+    b->SetGrayScale(true);
+    b->SetShowBases(true);
+    
+    TLegend* l = new TLegend(0.79, 0.69, 0.99, 0.99);
+    l->AddEntry(grAnita, "ANITA", "p");
+    l->AddEntry(grSource, "Source", "p");
+    l->AddEntry(arr, "Projection", "l");
+    l->Draw();
+    
+    return thisPad;
+  }
+  return pad;
 }
 
 

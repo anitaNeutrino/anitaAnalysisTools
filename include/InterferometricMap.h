@@ -85,7 +85,25 @@ class InterferometricMap : public TH2D, public GuiParent {
   void addTruthInfo(const TruthAnitaEvent* truth);
   // void addGpsInfo(const UsefulAdu5Pat* usefulPat);
 
-  void project(TProfile2D* proj, double horizonKilometers);
+
+  /** 
+   * @brief Project this peak direction to the surface and draw a summary on the pad
+   * 
+   * Requires the GPS data to work, i.e. #fUsefulPat is non-NULL.
+   * @see addGpsInfo(const Adu5Pat* pat)
+   * 
+   * @param pad is the pad to draw on, makes a new TCanvas if null
+   * 
+   * @return pointer to the new canvas if pad is NULL, pad otherwise
+   */
+  TPad* makeProjectionCanvas(TPad* pad);
+
+  /** 
+   * Version of makeProjectionCanvas(TPad* pad) for ROOT context menu
+   * 
+   * @return same as makeProjectionCanvas(TPad* pad)
+   */
+  TPad* makeProjectionCanvas(){return makeProjectionCanvas(NULL);} //*MENU*
 
   inline Int_t GetNbinsPhi() const {return GetNbinsX();}
   inline Int_t GetNbinsTheta() const {return GetNbinsY();}
