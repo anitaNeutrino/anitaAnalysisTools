@@ -414,14 +414,11 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
             Double_t phiWave = TMath::DegToRad()*sum->peak[pol][peakInd].phi;
             Double_t thetaWave = -1*TMath::DegToRad()*sum->peak[pol][peakInd].theta;
 
-            // *   Returns 0 if never hits the ground, even with maximum adjustment
-            // *   Returns 1 if hits the ground with no adjustment
-            // *   Returns 2 if it hits the ground with adjustment
-            success = usefulPat.traceBackToContinent(phiWave, thetaWave,
-                                                     &sum->peak[pol][peakInd].longitude,
-                                                     &sum->peak[pol][peakInd].latitude,
-                                                     &sum->peak[pol][peakInd].altitude,
-                                                     &sum->peak[pol][peakInd].theta_adjustment_needed);
+            success = usefulPat.traceBackToContinent3(phiWave, thetaWave,
+						      &sum->peak[pol][peakInd].longitude,
+						      &sum->peak[pol][peakInd].latitude,
+						      &sum->peak[pol][peakInd].altitude,
+						      &sum->peak[pol][peakInd].theta_adjustment_needed);
           }
           if(success==0){
             sum->peak[pol][peakInd].longitude = -9999;
