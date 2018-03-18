@@ -14,6 +14,7 @@
 #include "TGraphAntarctica.h"
 #include "TArrowAntarctica.h"
 #include "TLegend.h"
+#include "AcclaimClustering.h"
 
 ClassImp(Acclaim::InterferometricMap);
 
@@ -409,7 +410,8 @@ Acclaim::InterferometricMap::InterferometricMap()
   minPhiBin = -1;
   minThetaBin = -1;
   peakIndex = -1;
-
+  fSigmaTheta = -1;
+  fSigmaPhi = -1;
   const std::vector<double> coarseBinsPhi = Acclaim::InterferometricMap::getCoarseBinEdgesPhi();
   const std::vector<double> coarseBinsTheta = Acclaim::InterferometricMap::getCoarseBinEdgesTheta();
   SetBins(coarseBinsPhi.size()-1, &coarseBinsPhi[0], coarseBinsTheta.size()-1, &coarseBinsTheta[0]);
@@ -719,7 +721,7 @@ void Acclaim::InterferometricMap::fitPeakWithQuadratic(Int_t peakPhiBin, Int_t p
   TVectorD residual = svd.GetMatrix()*quadraticCoefficients - peakData;
   fPeakReducedChisquare = residual.Norm2Sqr()/(residual.GetNrows());
 
-  // TODO, add uncertainties in phi/theta and covariance
+  // @todo, add uncertainties in phi/theta and covariance
   // would have been better to do a gaussian fit
   // by taking the logarithm beforehand...
   fPeakSigmaPhi = 0;
@@ -874,6 +876,8 @@ void Acclaim::InterferometricMap::initializeInternals(){
   fPeakPhi = -9999;
   fPeakTheta = -9999;
   fPeakValue = -1;
+  fSigmaTheta = -1;
+  fSigmaPhi = -1;
   setDefaultName();
 }
 
@@ -919,8 +923,10 @@ void Acclaim::InterferometricMap::getIndicesOfEdgeBins(const std::vector<double>
   }
 }
 
-
-
+void Acclaim::InterferometricMap::setResolutionEstimateFromWaveformSNR(double snr){
+  Acclaim::Clustering::getAngularResolution(snr, fSigmaTheta, fSigmaPhi);
+  // std::cout << fSigmaTheta << "\t"  << fSigmaPhi << std::endl;
+}
 
 TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
 
@@ -980,6 +986,50 @@ TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
     l->AddEntry(grSource, "Source", "p");
     l->AddEntry(arr, "Projection", "l");
     l->Draw();
+
+    if(fSigmaTheta > 0 && fSigmaPhi > 0){
+
+      const int numSigma = 3;
+      const int numPointsPerContour = 100;
+      const double x0 = phiWave;
+      const double y0 = thetaWave;
+      
+      for(int sigma = 1; sigma <= numSigma; sigma++){
+	
+	TGraphAntarctica* grSigma = new TGraphAntarctica();
+	grSigma->SetName(TString::Format("%d_sigma_contour", sigma));
+	grSigma->SetBit(kCanDelete);
+
+	const double sigmaThetaRad = sigma*fSigmaTheta*TMath::DegToRad();
+	const double sigmaPhiRad = sigma*fSigmaPhi*TMath::DegToRad();
+
+	for(int point=0; point < numPointsPerContour; point++){
+
+	  // trace out an ellipse...
+	  // 1.5 rather than 0.5 as +ve  theta is down in the UsefulAdu5Pat
+	  // so this will stop lines getting drawn across the top of the ellipse 
+	  // if it goes over the horizon
+	  double alpha = 1.5*TMath::Pi() + TMath::TwoPi()*point/(numPointsPerContour - 1); // -1 to make a complete loop
+	  double x = sigmaThetaRad*cos(alpha);
+	  double y = sigmaPhiRad*sin(alpha);
+	  
+	  double lon, lat, alt, dTheta = 0;
+	  int success = fUsefulPat->traceBackToContinent3(x+x0, y+y0, &lon, &lat, &alt, &dTheta);
+
+	  if(fabs(dTheta) <= 1e-8){
+	    grSigma->SetPoint(grSigma->GetN(), lon, lat);
+	  }
+	}
+
+	if(grSigma->GetN() > 0){
+	  grSigma->SetLineStyle(1+sigma);
+	  grSigma->Draw("lsame");
+	}
+	else{
+	  delete grSigma;
+	}
+      }
+    }
     
     return thisPad;
   }

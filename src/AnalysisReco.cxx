@@ -88,18 +88,35 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   waveStore[0] = coherentWave;
   
   info.snr = 0;
-  if(noiseMonitor){  
+  {
     double noise = 0;
     for(unsigned antInd = 0; antInd < theAnts.size(); antInd++){
       int ant = theAnts[antInd];
-      double thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
 
+      double thisRMS = 0;
+      if(noiseMonitor){
+	thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
+      }
+      else{
+	static int warnCount = 0;
+	const TGraphAligned* gr = fEv->getFilteredGraph(ant, pol)->even();
+	thisRMS = gr->GetRMS(2);
+	const int numWarnings = 10;
+	if(warnCount < numWarnings){
+	  std::cerr << "Warning ("<< warnCount + 1 << "/" << numWarnings << ") in "
+		    << __PRETTY_FUNCTION__ << ", getting RMS from entire waveform rather than NoiseMonitor."
+		    << " this many overestimate the noise... thisRMS = " << thisRMS << std::endl;
+	  warnCount++;
+	}
+      }
       noise += thisRMS;
       
     }
     noise /= theAnts.size();
     
     info.snr = largestPeakToPeak/(2*noise);
+
+    // std::cout << "SNR = " << info.snr << std::endl;
   }
 
   
@@ -393,6 +410,8 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
       
         fillWaveformInfo(pol, sum->coherent_filtered[pol][peakInd],    fEv,      fCoherentFiltered[pol][peakInd],    h, noiseMonitor);
         fillWaveformInfo(pol, sum->deconvolved_filtered[pol][peakInd], fEvDeco,  fDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+
+	h->setResolutionEstimateFromWaveformSNR(sum->deconvolved_filtered[pol][peakInd].snr);
 
 	if(fFillUnfiltered){
 	  fillWaveformInfo(pol, sum->coherent[pol][peakInd], fEvMin,        fCoherent[pol][peakInd],            h, noiseMonitor);	
