@@ -27,13 +27,14 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
   // std::cout << fFriendChain2->GetEntries() << std::endl;
   fChain->AddFriend(fFriendChain1);
   fChain->AddFriend(fFriendChain2);
-  
+
   gROOT->ProcessLine("#include \"FFTtools.h\""); // hack to get various delta phi wrap Draw things to work in stand alone executables
 
   fCut = "";  
   fEntryListDirty = true;
   fEntryList = NULL;
   fUseProof = false;
+  fMadeEventNumberIndex = false;
   setBranches();
 }
 
@@ -209,7 +210,7 @@ void Acclaim::ThermalChain::makeSelection() const {
  */
 Long64_t Acclaim::ThermalChain::N() const {
   makeSelection();
-  return fEntryList->GetN();  
+  return fEntryList->GetN();
 }
 
 Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
@@ -232,6 +233,16 @@ Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
   }
 
   return retVal;
+}
+
+
+Long64_t Acclaim::ThermalChain::getEvent(UInt_t eventNumber){
+
+  if(!fMadeEventNumberIndex){
+    fChain->BuildIndex("eventNumber");
+    fMadeEventNumberIndex = true;
+  }
+  return fChain->GetEntryWithIndex(eventNumber);
 }
 
 

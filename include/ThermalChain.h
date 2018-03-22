@@ -35,6 +35,7 @@ namespace Acclaim {
     Long64_t N() const;
 
     Long64_t getEntry(Long64_t entry);
+    Long64_t getEvent(UInt_t eventNumber);
     bool GetUseProof(){return fUseProof;}
     void SetUseProof(bool useProof=true);
 
@@ -105,6 +106,8 @@ namespace Acclaim {
     mutable TEntryList* fEntryList;
     bool fUseProof;
     void makeSelection() const;
+
+    bool fMadeEventNumberIndex;
 
     void setBranches();
     Int_t eventNumberInt;
