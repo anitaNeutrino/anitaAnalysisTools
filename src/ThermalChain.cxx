@@ -245,7 +245,8 @@ void Acclaim::ThermalChain::doTypeConversions(){
 
 
 Long64_t Acclaim::ThermalChain::getEvent(UInt_t eventNumber){
-  // Rolled my own lookup by eventNumber since TChainIndex doesn't seem up to the task
+  // Rolled my own lookup-by-eventNumber since TChainIndex doesn't seem up to the task
+  // maybe because the eventNumber marker isn't as well behaved as we would like?
 
   // First set the correct AnitaVersion in case I compile with the default to ANITA-4  
   if(!fAnitaVersion){ 

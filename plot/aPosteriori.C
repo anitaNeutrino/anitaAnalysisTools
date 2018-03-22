@@ -24,9 +24,10 @@ void aPosteriori(){
   TH2DAntarctica* hA = new TH2DAntarctica("hA", "asdf");
   TH2DAntarctica* hB = new TH2DAntarctica("hB", "ghjk");
 
-  ThermalChain tc("data/makeThermalTree_4*.root");
+  ThermalChain tc("data/makeThermalTree_*.root");
   auto c = tc.getChain();
-  std::cout << c->GetEntries() << std::endl;  
+  std::cout << c->GetEntries() << std::endl;
+
   auto geom = AnitaGeomTool::Instance();
   std::vector<TGraph*> grRcc;
   std::vector<TGraph*> grPwg;
@@ -42,20 +43,52 @@ void aPosteriori(){
 
   std::vector<std::vector<UInt_t> > eventGroups;
   std::vector<std::vector<Double_t> > lons, lats, alts, xs, ys, zs;
-  eventGroups.push_back(std::vector<UInt_t>{83139414});
-  // eventGroups.push_back(std::vector<UInt_t>{15717147});
+
+  // unknown-base singlets
+  eventGroups.push_back(std::vector<UInt_t>{ 7613856});
+  eventGroups.push_back(std::vector<UInt_t>{ 9097075});
+  eventGroups.push_back(std::vector<UInt_t>{11116669});
+  eventGroups.push_back(std::vector<UInt_t>{11989349});
+  eventGroups.push_back(std::vector<UInt_t>{15717147}); // Peter's
+  eventGroups.push_back(std::vector<UInt_t>{16952229});
+  eventGroups.push_back(std::vector<UInt_t>{19459851});
+  eventGroups.push_back(std::vector<UInt_t>{22345215});
+  eventGroups.push_back(std::vector<UInt_t>{23695286});
+  eventGroups.push_back(std::vector<UInt_t>{27142546});
+  eventGroups.push_back(std::vector<UInt_t>{32907848});
+  eventGroups.push_back(std::vector<UInt_t>{33484995});
+  eventGroups.push_back(std::vector<UInt_t>{41529195});
+  eventGroups.push_back(std::vector<UInt_t>{48837708});
+  eventGroups.push_back(std::vector<UInt_t>{58592863});
+  eventGroups.push_back(std::vector<UInt_t>{62273732});
+  eventGroups.push_back(std::vector<UInt_t>{65187079});
+  eventGroups.push_back(std::vector<UInt_t>{66313844});
+  eventGroups.push_back(std::vector<UInt_t>{68298837});
+  eventGroups.push_back(std::vector<UInt_t>{70013898});
+  eventGroups.push_back(std::vector<UInt_t>{71171108});
+  eventGroups.push_back(std::vector<UInt_t>{71766273});
+  eventGroups.push_back(std::vector<UInt_t>{73726742});
+  eventGroups.push_back(std::vector<UInt_t>{74592579});
+  eventGroups.push_back(std::vector<UInt_t>{75277769});
   eventGroups.push_back(std::vector<UInt_t>{80840274});
+  eventGroups.push_back(std::vector<UInt_t>{83877990}); // VPol
 
-    // std::vector<UInt_t> eventsOfInterest {84650299, 84653556};
-    // std::vector<UInt_t> eventsOfInterest {15717147};  
-    // std::vector<UInt_t> eventsOfInterest {15717147};
+  eventGroups.push_back(std::vector<UInt_t> {84650299, 84653556}); // known-base doublet
+  eventGroups.push_back(std::vector<UInt_t> {70029023, 70124461}); // known-base doublet
   
-    // std::vector<UInt_t> eventsOfInterest {41128241, 41475569};
-  
+  eventGroups.push_back(std::vector<UInt_t> {41128241, 41475569}); // unknown Doublet
+  eventGroups.push_back(std::vector<UInt_t> {69846620});           // known-base singlet
 
+  std::vector<UInt_t> allEvents;
+  TCut allEventsCut;
   for(int e=0; e < eventGroups.size(); e++){
     
     const std::vector<UInt_t>& eventsOfInterest = eventGroups[e];
+    for(auto e : eventsOfInterest){
+      allEvents.push_back(e);
+      TString cutStr = TString::Format("eventNumber!=%u", e);
+      allEventsCut += TCut(cutStr.Data());
+    }
 
 
     TString titleBit = "";
@@ -124,9 +157,9 @@ void aPosteriori(){
       // std::cout << "here6 " << ev << std::endl;      
     }
   }
-  tc.addCut(ThermalTree::passAllQualityCuts);
+  tc.addCut(ThermalTree::passAllQualityCuts + allEventsCut);
   
-  const double dThresh = 100e3; // meters
+  const double dThresh = 40e3; //100e3; // meters
   const double dSqThresh = dThresh*dThresh;
 
   // std::cout  << "here2 " << std::endl;
@@ -137,38 +170,31 @@ void aPosteriori(){
     tc.getEntry(entry);
     hA->Fill(tc.longitude, tc.latitude);
 
-    int i=0;
-    for(const auto& eventsOfInterest : eventGroups){
-      if(!RootTools::vectorContainsValue(eventsOfInterest, tc.eventNumber)){
+    double cart[nd];
+    geom->getCartesianCoords(tc.latitude, tc.longitude, tc.altitude, cart);
 
-	double cart[nd];
-	geom->getCartesianCoords(tc.latitude, tc.longitude, tc.altitude, cart);
+    for(int i=0; i < eventGroups.size(); i++){
+      double minDsq = DBL_MAX;
 
-	double minDsq = DBL_MAX;
-
-	for(int j=0; j < eventsOfInterest.size(); j++){
-	  const double nuCart[nd] = {xs[i][j], ys[i][j], zs[i][j]};
-	  
-	
-	  double dSquared = dSq(cart, nuCart);
-	  minDsq = TMath::Min(dSquared, minDsq);
-	  
-	}
-
-	if(minDsq < dSqThresh){
-	  // std::cout << dSquared << "\t" << dThresh << "\t" << cart[0] << "\t" << cart[1] << "\t" << cart[2]  << std::endl;
-	  // std::cout << cart[0] << "\t" << cart[1] << "\t" << cart[2]  << std::endl;
-	  // std::cout << nuCart[0] << "\t" << nuCart[1] << "\t" << nuCart[2]  << std::endl;
-	  hB->Fill(tc.longitude, tc.latitude);
-	
-	  hRccs[i]->Fill(tc.peak_value, tc.coherent_filtered_peakHilbert);
-	  hPwgs[i]->Fill(tc.deconvolved_filtered_fracPowerWindowGradient, tc.coherent_filtered_fracPowerWindowGradient);
-	  hIms[i]->Fill(tc.deconvolved_filtered_impulsivityMeasure, tc.coherent_filtered_impulsivityMeasure);
-	  hPhs[i]->Fill(tc.deconvolved_filtered_peakHilbert, tc.coherent_filtered_peakHilbert);
-	  hFds[i]->Fill(tc.fisherDiscriminant());
-	}
+      for(int j=0; j < eventGroups[i].size(); j++){
+	const double nuCart[nd] = {xs[i][j], ys[i][j], zs[i][j]};
+	double dSquared = dSq(cart, nuCart);
+	minDsq = TMath::Min(dSquared, minDsq);
       }
-      i++;
+
+      if(minDsq < dSqThresh){
+	hB->Fill(tc.longitude,
+		 tc.latitude);
+	hRccs[i]->Fill(tc.peak_value,
+		       tc.coherent_filtered_peakHilbert);
+	hPwgs[i]->Fill(tc.deconvolved_filtered_fracPowerWindowGradient,
+		       tc.coherent_filtered_fracPowerWindowGradient);
+	hIms[i]->Fill(tc.deconvolved_filtered_impulsivityMeasure,
+		      tc.coherent_filtered_impulsivityMeasure);
+	hPhs[i]->Fill(tc.deconvolved_filtered_peakHilbert,
+		      tc.coherent_filtered_peakHilbert);
+	hFds[i]->Fill(tc.fisherDiscriminant());
+      }
     }
     p.inc(entry);
   }
