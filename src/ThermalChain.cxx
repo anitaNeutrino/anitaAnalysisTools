@@ -4,7 +4,7 @@
 #include "TEntryList.h"
 #include "ProgressBar.h"
 #include "TROOT.h"
-
+#include "AnitaDataset.h"
 
 
 Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
@@ -34,7 +34,7 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
   fEntryListDirty = true;
   fEntryList = NULL;
   fUseProof = false;
-  fMadeEventNumberIndex = false;
+  fAnitaVersion = 0;
   setBranches();
 }
 
@@ -214,12 +214,20 @@ Long64_t Acclaim::ThermalChain::N() const {
 }
 
 Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
+  
   makeSelection();
   Int_t treeIndex = -1;
   Long64_t treeEntry = fEntryList->GetEntryAndTree(entry,treeIndex);
   Long64_t chainEntry = treeEntry+fChain->GetTreeOffset()[treeIndex];
 
   Long64_t retVal = fChain->GetEntry(chainEntry);  
+  
+  doTypeConversions();
+
+  return retVal;
+}
+
+void Acclaim::ThermalChain::doTypeConversions(){
   pol = (AnitaPol::AnitaPol_t) polFloat;
   peakInd = (Int_t) peakIndFloat;
   eventNumber = (UInt_t) eventNumberInt;
@@ -231,18 +239,71 @@ Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
   if(eventNumber3 != eventNumber || run3 != run){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in friendChain2!" << std::endl;
   }
-
-  return retVal;
 }
 
 
-Long64_t Acclaim::ThermalChain::getEvent(UInt_t eventNumber){
 
-  if(!fMadeEventNumberIndex){
-    fChain->BuildIndex("eventNumber");
-    fMadeEventNumberIndex = true;
+
+Long64_t Acclaim::ThermalChain::getEvent(UInt_t eventNumber){
+  // Rolled my own lookup by eventNumber since TChainIndex doesn't seem up to the task
+
+  // First set the correct AnitaVersion in case I compile with the default to ANITA-4  
+  if(!fAnitaVersion){ 
+    fChain->GetEntry(0);
+    doTypeConversions();
+    AnitaVersion::setVersionFromUnixTime(realTime);
+    fAnitaVersion = AnitaVersion::get();
   }
-  return fChain->GetEntryWithIndex(eventNumber);
+
+  // Look up the run, and find the appropriate file
+  Int_t run = AnitaDataset::getRunContainingEventNumber(eventNumber);
+  TString desiredFileName = TString::Format("makeThermalTree_%d_", run);
+  TIter next(fChain->GetListOfFiles());
+  Int_t desiredTreeNumber = -1;
+  while(TObject* f = next()){
+    desiredTreeNumber++;    
+    TString fileName = f->GetTitle();
+    if(fileName.Contains(desiredFileName)){
+      break;
+    }
+  }
+
+
+  // Check boundaries
+  if(desiredTreeNumber > -1 && desiredTreeNumber < fChain->GetListOfFiles()->GetEntries()){
+
+    // Get the first entry in file corresponding to run
+    Long64_t entry = fChain->GetTreeOffset()[desiredTreeNumber];
+    fChain->GetEntry(entry);
+    doTypeConversions();
+
+    // If event number was perfectly monotonic with no gaps this would work first time
+    // But as it is, need multiple attempts
+    const int maxTries = 50; // (Allow a lot of attempts)
+    for(int numTries = 0; numTries < maxTries; numTries++){
+
+      // Update entry difference in eventNumber from last event and desired event
+      Int_t deltaEntries = eventNumber - this->eventNumber;
+      entry += deltaEntries;
+
+      // Get most recent guessed entry
+      Long64_t nb = fChain->GetEntry(entry); 
+      doTypeConversions();
+      
+      // If it's a match then we're done, if not then loop again
+      if(this->eventNumber == eventNumber){
+	// std::cout << this->eventNumber << "\t" << eventNumber << std::endl;
+	return nb;
+	break;
+      }
+
+    }
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find eventNumber "
+	      << eventNumber << " after " << maxTries << " attempts, giving up!" << std::endl;
+    return -1;
+  }
+  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find file corresponding to run " << run << std::endl;
+  return -1;
 }
 
 

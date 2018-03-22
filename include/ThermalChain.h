@@ -106,8 +106,9 @@ namespace Acclaim {
     mutable TEntryList* fEntryList;
     bool fUseProof;
     void makeSelection() const;
-
-    bool fMadeEventNumberIndex;
+    void doTypeConversions();
+    
+    Int_t fAnitaVersion;
 
     void setBranches();
     Int_t eventNumberInt;
