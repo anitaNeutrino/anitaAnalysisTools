@@ -5,6 +5,8 @@
 #include "ProgressBar.h"
 #include "TROOT.h"
 
+
+
 Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
 
   fChain = new TChain(treeName);
@@ -243,3 +245,15 @@ Adu5Pat Acclaim::ThermalChain::pat(){
   return pat;
 }
 
+
+
+Double_t Acclaim::ThermalChain::fisherDiscriminant(){
+  //////////////////////////////////////////
+  // THIS NEEDS TO BE MAINTAINED BY HAND! //
+  //////////////////////////////////////////
+  
+  // from DrawStrings.h
+  // const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
+
+  return 0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value);
+}

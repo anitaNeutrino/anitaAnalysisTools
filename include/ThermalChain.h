@@ -18,7 +18,7 @@ namespace Acclaim {
    * @class ThermalChain
    * @brief A class to handle loading Thermal Trees into chains and applying cuts
    * 
-   * Because the ROOT TEntryList interface to TChains is quite annoying
+   * Because the ROOT TEntryList interface to TChains is quite annoying, and I only want to type it once.
    */
 
   class ThermalChain {
@@ -93,6 +93,7 @@ namespace Acclaim {
 
 
     Adu5Pat pat();
+    Double_t fisherDiscriminant();
     
   private:
     TChain* fChain;
