@@ -591,9 +591,13 @@ void Acclaim::Clustering::Cluster::resetClusteringNumbers(){
 
 
 Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
-: numMcDivisions(100), fEventsAlreadyClustered(false), fMyBackground(),
-  fROOTgErrorIgnoreLevel(gErrorIgnoreLevel), fDrawNewNearbyEventsHistograms(true),
-  fReadInBaseList(false), fStoreUnclusteredHistograms(true)
+  : fStoreUnclusteredHistograms(true),
+    numMcDivisions(100),
+    fEventsAlreadyClustered(false),
+    fMyBackground(),
+    fROOTgErrorIgnoreLevel(gErrorIgnoreLevel),
+    fDrawNewNearbyEventsHistograms(true),
+    fReadInBaseList(false)
 
 {
   const char* sgeTaskId = getenv("SGE_TASK_ID");
@@ -1917,7 +1921,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       t->Draw(">>fEntryList", fCut, "entrylist");
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
       t->SetEntryList(fEntryList);
-      printf("%d entries loaded\n", fEntryList->GetN());
+      printf("%lld entries loaded\n", fEntryList->GetN());
 
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
