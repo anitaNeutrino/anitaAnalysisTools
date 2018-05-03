@@ -109,7 +109,7 @@ namespace Acclaim
     
     const double dPhiClose = 5.5;
     const double dThetaClose = 3.5;
-    const TCut closeToMC("closeToMC", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
+    const TCut closeToMC("closeToMC", TString::Format("(weight == 1 || TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf)",
 						      dPhiMC.Data(),   dPhiClose,
 						      dThetaMC.Data(), dThetaClose));    
     const TCut closeToWais("closeToWais", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",

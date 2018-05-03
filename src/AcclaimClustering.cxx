@@ -1182,62 +1182,66 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 
   for(Long64_t eventInd=0; eventInd < nEvents; eventInd++){
     Event* event = &events.at(eventInd);
+    if(event->cluster[0] < 0){
+      // std::cout << "eventNumber = " << event->eventNumber << "\t" << event->cluster[0] << std::endl;
+      std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
+      for(int clusterInd=0; clusterInd < nBases; clusterInd++){
+	Cluster& cluster = clusters.at(0).at(clusterInd);
+	if(cluster.knownBase){
+	  double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+	  if(distM < default_horizon_distance){
+	    double ll = event->logLikelihoodFromPoint(cluster.longitude, cluster.latitude, cluster.altitude, true);
+	    double surfaceSeparationKm = 1e-3*event->cartesianSeparation(cluster);
 
-    std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
-    for(int clusterInd=0; clusterInd < nBases; clusterInd++){
-      Cluster& cluster = clusters.at(0).at(clusterInd);
-      if(cluster.knownBase){
-        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
-        if(distM < default_horizon_distance){
-          double ll = event->logLikelihoodFromPoint(cluster.longitude, cluster.latitude, cluster.altitude, true);
-          double surfaceSeparationKm = 1e-3*event->cartesianSeparation(cluster);
+	    if(surfaceSeparationKm < surfaceDistThresholdKm){ // then true for all cluster sizes
+	      for(int z=0; z < llEventCuts.size(); z++){
+		matchedClustersThisEvent[z].push_back(clusterInd);
+	      }
+	    }
+	    else{
+	      for(int z=0; z < llEventCuts.size(); z++){
+		if(ll < llEventCuts.at(z)){
+		  matchedClustersThisEvent[z].push_back(clusterInd);
+		  // if(z < 6){
+		  //   std::cout << "z = " << z << ", matched clusters " << matchedClustersThisEvent[z].back() << "\t" << BaseList::getBase(clusterInd).getName() << std::endl;
+		  // }
+		}
+	      }
+	    }
 
-          if(surfaceSeparationKm < surfaceDistThresholdKm){ // then true for all cluster sizes
-            for(int z=0; z < llEventCuts.size(); z++){
-              matchedClustersThisEvent[z].push_back(clusterInd);
-            }
-          }
-          else{
-            for(int z=0; z < llEventCuts.size(); z++){
-              if(ll < llEventCuts.at(z)){
-                matchedClustersThisEvent[z].push_back(clusterInd);
-              }
-            }
-          }
-
-          if(ll < event->nearestKnownBaseLogLikelihood){
-            event->nearestKnownBaseLogLikelihood = ll;
-            event->nearestKnownBaseCluster = clusterInd;
-          }
-          if(surfaceSeparationKm < event->nearestKnownBaseSurfaceSeparationKm){
-            event->nearestKnownBaseSurfaceSeparationKm = surfaceSeparationKm;
-            event->nearestKnownBaseClusterSurface = clusterInd;
-          }
-        }
+	    if(ll < event->nearestKnownBaseLogLikelihood){
+	      event->nearestKnownBaseLogLikelihood = ll;
+	      event->nearestKnownBaseCluster = clusterInd;
+	    }
+	    if(surfaceSeparationKm < event->nearestKnownBaseSurfaceSeparationKm){
+	      event->nearestKnownBaseSurfaceSeparationKm = surfaceSeparationKm;
+	      event->nearestKnownBaseClusterSurface = clusterInd;
+	    }
+	  }
+	}
+	else{
+	  std::cerr << "You shouldn't get here!!!" << std::endl;
+	}
       }
-      else{
-        std::cerr << "You shouldn't get here!!!" << std::endl;
+      for(int z=0; z < llEventCuts.size(); z++){
+	if(matchedClustersThisEvent[z].size() > 0){
+
+	  // for all matched clusters
+	  for(int i = 0; i < matchedClustersThisEvent[z].size(); i++){
+	    Int_t matchedCluster = matchedClustersThisEvent[z][i];
+
+	    // add other matched clusters to their list...
+	    for(int j = 0; j < matchedClustersThisEvent[z].size(); j++){
+	      Int_t matchedCluster2 = matchedClustersThisEvent[z][j];
+
+	      if(!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster], matchedCluster2)){
+		matchedClusters[z][matchedCluster].push_back(matchedCluster2);
+	      }
+	    }
+	  }
+	}
       }
     }
-    for(int z=0; z < llEventCuts.size(); z++){
-      if(matchedClustersThisEvent[z].size() > 0){
-
-        // for all matched clusters
-        for(int i = 0; i < matchedClustersThisEvent[z].size(); i++){
-          Int_t matchedCluster = matchedClustersThisEvent[z][i];
-
-          // add other matched clusters to their list...
-          for(int j = 0; j < matchedClustersThisEvent[z].size(); j++){
-            Int_t matchedCluster2 = matchedClustersThisEvent[z][j];
-
-            if(!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster], matchedCluster2)){
-              matchedClusters[z][matchedCluster].push_back(matchedCluster2);
-            }
-          }
-        }	
-      }
-    }
-
     p.inc(eventInd);
   }
 
@@ -1290,14 +1294,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 
         for(int i=0; i < matchedClusters[z][b].size(); i++){
           int cluster = matchedClusters[z][b][i];
-
           if(cluster < reassignedTo[b]){
             reassignedTo[b] = cluster;
           }
         }
       }
     }
-
 
     if(fDebug){
       bool printed = false;
@@ -1322,7 +1324,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
         clusterInd = event.nearestKnownBaseClusterSurface;
       }
       if(clusterInd >= 0){
-
         Int_t reassignedCluster = reassignedTo[clusterInd];
         event.cluster[z] = reassignedCluster;
         clusters.at(z).at(reassignedCluster).numDataEvents++;
@@ -1692,7 +1693,6 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
      * First, let's try and see if we're reading in the output of a clustering!
      * This will be the case in the new MC clustering paradigm
      */
-
     TFile* f = TFile::Open(summaryGlob);
     TTree* eventTree = NULL;
     if(f){
@@ -1766,17 +1766,14 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
     else{
       ThermalChain tc(summaryGlob);
+      // std::cout << "Before cuts there are " << tc.N() << " entries. " << std::endl;
       ProgressBar pElist(1);
 
-      // TCut hack("eventNumber==14545077||eventNumber==15202247");
-      // TCut goodPosition = "(onContinent > 0 && onIceShelf==0)";
-      // tc.setCut(goodPosition + !ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
-      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
-      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);      
-      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
-      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + ThermalTree::closeToMC);      
-      tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
-      // tc.setCut(hack);
+
+      for(UInt_t c=0; c < fThermalChainCuts.size(); c++){
+	tc.addCut(fThermalChainCuts[c]);
+      }
+
 
       n = tc.N();
       std::cout << "There are " << n << " entries matching the selection" << std::endl;
@@ -1795,18 +1792,20 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
         }
 
         if(tc.weight==1){
+	  fEventsAlreadyClustered = false;
           events.push_back(Event(static_cast<int>(tc.pol), static_cast<int>(tc.peakInd),
-                tc.peak_phi, tc.peak_theta,
-                (int)llEventCuts.size(), tc.eventNumber, tc.run,
-                tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
-                tc.coherent_filtered_snr));
+				 tc.peak_phi, tc.peak_theta,
+				 (int)llEventCuts.size(), tc.eventNumber, tc.run,
+				 tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
+				 tc.coherent_filtered_snr));
+	  std::cout << events.back().eventNumber <<  std::endl;
         }
         else{
           mcEvents.push_back(McEvent(tc.weight, tc.mc_energy, static_cast<int>(tc.pol), static_cast<int>(tc.peakInd),
-                tc.peak_phi, tc.peak_theta,
-                (int)llEventCuts.size(), tc.eventNumber, tc.run,
-                tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
-                tc.coherent_filtered_snr));
+				     tc.peak_phi, tc.peak_theta,
+				     (int)llEventCuts.size(), tc.eventNumber, tc.run,
+				     tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
+				     tc.coherent_filtered_snr));
         }
         p.inc(entry);
       }
@@ -1929,25 +1928,25 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
         eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
         if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi)) continue;
         if(weight <= 0 && peak_theta > 0)
-        {
-          // switches theta convention (i used the UCorrelator convention for theta)
-          peak_theta = -1* peak_theta;
-          events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
-                (double)peak_phi, (double)peak_theta,
-                (int)llEventCuts.size(), eventNumber, (int)run,
-                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)coherent_filtered_snr));
-        }
+	  {
+	    // switches theta convention (i used the UCorrelator convention for theta)
+	    peak_theta = -1* peak_theta;
+	    events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
+				   (double)peak_phi, (double)peak_theta,
+				   (int)llEventCuts.size(), eventNumber, (int)run,
+				   (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+				   (double)coherent_filtered_snr));
+	  }
         if(weight > 0)
-        {
-          // switches theta convention
-          peak_theta = -1* peak_theta;
-          mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
-                (double)peak_phi, (double)peak_theta,
-                (int)llEventCuts.size(), eventNumber, (int)run,
-                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)coherent_filtered_snr));
-        }
+	  {
+	    // switches theta convention
+	    peak_theta = -1* peak_theta;
+	    mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
+				       (double)peak_phi, (double)peak_theta,
+				       (int)llEventCuts.size(), eventNumber, (int)run,
+				       (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+				       (double)coherent_filtered_snr));
+	  }
       }
       delete t;
     }
@@ -2725,30 +2724,29 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles){
 
   useAcclaimFiles ? readInSummaries(dataGlob) : readInTMVATreeSummaries(dataGlob);
+  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob);
+  
   std::cout << "Sorting events...";
   std::sort(events.begin(), events.end());
   std::cout << "done" << std::endl;
 
-  const char* fakeArgv[1] = {outFileName};
-  TFile* fOut = 0;
-  OutputConvention oc(1, const_cast<char**>(fakeArgv));
-  fOut = useAcclaimFiles ? oc.makeFile() : new TFile(outFileName, "RECREATE");
-
   initKDTree();
-  // fEventsAlreadyClustered = false;
 
-  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob);
+  const char* fakeArgv[1] = {outFileName};
+  OutputConvention oc(1, const_cast<char**>(fakeArgv));
+  TFile* fOut = useAcclaimFiles ? oc.makeFile() : new TFile(outFileName, "RECREATE");
+  std::cout << fOut->GetTitle() << "\t" << fOut->GetName() << std::endl;
 
-  // if(!fEventsAlreadyClustered){
-  //   readInBaseList();
-  //   doBaseEventClustering();
-  // }
-  // doMcBaseClustering();
+  if(!fEventsAlreadyClustered){
+    readInBaseList();
+    doBaseEventClustering();
+  }
+  doMcBaseClustering();
 
-  // if(!fEventsAlreadyClustered){
-  //   doEventEventClustering();
-  // }
-  // doMcEventClustering();
+  if(!fEventsAlreadyClustered){
+    doEventEventClustering();
+  }
+  doMcEventClustering();
 
   makeSummaryTrees();
 
@@ -2760,5 +2758,3 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
 
 
 }
-
-

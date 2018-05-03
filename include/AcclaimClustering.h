@@ -216,7 +216,8 @@ namespace Acclaim{
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
 
-      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=1);
+      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
+      void extendClustering(const char* dataGlob, const char* subThresholdGlob, const char* outFileName);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
@@ -229,6 +230,16 @@ namespace Acclaim{
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
+
+      /** 
+       * Add a ThermalChain style cut
+       * 
+       * @return number of cuts to be applied
+       */
+      size_t addCut(const TCut c){
+	fThermalChainCuts.push_back(c);
+	return fThermalChainCuts.size();
+      }
 
       bool fStoreUnclusteredHistograms;
       
@@ -272,6 +283,10 @@ namespace Acclaim{
 
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
+
+
+
+
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
@@ -314,6 +329,8 @@ namespace Acclaim{
       Int_t fROOTgErrorIgnoreLevel;
       bool fDrawNewNearbyEventsHistograms;
       bool fReadInBaseList;
+
+      std::vector<TCut> fThermalChainCuts;
     };
   }
 }

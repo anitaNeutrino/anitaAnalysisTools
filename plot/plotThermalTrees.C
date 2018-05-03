@@ -295,10 +295,9 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   // return;
 
 
-  bool plotWaisAndDown = false;
+  bool plotWaisAndDown = true;
   TH1F* hFw = NULL;
   TH1F* hFd = NULL;
-  TH1F* hFp = NULL;
   TH1D* hFwI = NULL;
   TH1D* hFdI = NULL;
   if(plotWaisAndDown){
@@ -309,26 +308,42 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
     // return;
     hFwI = RootTools::makeIntegralHist(hFw, false);
     hFw->SetLineColor(kMagenta);
+    hFw->SetLineColor(kMagenta);
+    hFw->SetLineWidth(2);
+    hFw->SetFillColorAlpha(kMagenta, 0.2);
+
     hFwI->SetLineColor(kMagenta);  
     c1_n2->cd();
+    hFw->Scale(1./hFw->Integral());
+    hFw->Scale(1./hFw->Integral());
     hFwI->Draw("same");
-
 
     RootTools::canvas(2);
     c->Draw(ThermalTree::fisherDiscriminant + ">>hFd" + fdBins, ThermalTree::weight(ThermalTree::analysisSample + ThermalTree::passAllQualityCuts));
     hFd = (TH1F*) gProof->GetOutputList()->FindObject("hFd");
+    hFd->SetLineColor(kBlack);
+    hFd->SetLineColor(kBlack);
+    hFd->SetLineWidth(2);
+    hFd->SetFillColorAlpha(kBlack, 0.2);
+    hFd->Scale(1./hFd->Integral());
+
 
     hFdI = RootTools::makeIntegralHist(hFd, false);
     c1_n2->cd();
     hFd->SetLineColor(kBlack);
-    hFdI->SetLineColor(kBlack);  
-    // hFdI->Draw("same");
+    hFdI->SetLineColor(kBlack);
+  }
 
+  TH1F* hFp = NULL;
+  bool plotPayloadBlasts = false;
+  if(plotPayloadBlasts){
     RootTools::canvas(2);
     c->Draw(ThermalTree::fisherDiscriminant + ">>hFp" + fdBins, ThermalTree::weight(!ThermalTree::notPayloadBlast));
     hFp = (TH1F*) gProof->GetOutputList()->FindObject("hFp");
     hFp->SetLineColor(kOrange);
-    
+    hFp->SetLineWidth(2);
+    hFp->SetFillColorAlpha(kOrange, 0.2);
+    hFp->Scale(1./hFp->Integral());    
   }
 
   
@@ -349,10 +364,10 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   auto l = new TLegend(0.8, 0.8, 1, 1);
   l->AddEntry(hFuI, "Non-impulsive sideband", "lf");
   if(hFdI){
-    l->AddEntry(hFdI, "Below horizontal RF triggers", "l");
+    l->AddEntry(hFdI, "Below horizontal RF triggers", "lf");
   }
   if(hFwI){
-    l->AddEntry(hFwI, "WAIS pulses", "l");
+    l->AddEntry(hFwI, "WAIS pulses", "lf");
   }
   l->AddEntry(hFmI, "MC neutrinos", "lf");
   l->Draw();
@@ -395,18 +410,38 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   l2->AddEntry(hFu, "Non-impulsive sideband", "fl");  
   if(hFd){
     hFd->Draw("histsame");    
-    l2->AddEntry(hFd, "Below horizontal RF triggers", "l");
+    l2->AddEntry(hFd, "Below horizontal RF triggers", "lf");
   }
   if(hFp){
     hFp->Draw("histsame");
-    l2->AddEntry(hFp, "Payload Blast", "l");      
+    l2->AddEntry(hFp, "Payload Blast", "lf");
   }
   if(hFw){
     hFw->Draw("histsame");
-    l2->AddEntry(hFw, "WAIS pulses", "l");
+    l2->AddEntry(hFw, "WAIS pulses", "lf");
   } 
   l2->AddEntry(hFm, "MC neutrinos", "fl");
   l2->Draw();
+
+  bool drawPartition = true;
+  if(drawPartition){
+    const int nSubRegions = 7;
+    for(int i=0; i < nSubRegions; i++){
+      TGraph* grTemp = new TGraph();
+      int np=0;
+      const double fHigh = ThermalTree::fisherThreshold - i;
+      // const double fLow = ThermalTree::fisherThreshold - i - 1;
+      // grTemp->SetPoint(np++, fLow, -1);
+      // grTemp->SetPoint(np++, fLow, 2);
+      grTemp->SetPoint(np++, fHigh, 2);
+      grTemp->SetPoint(np++, fHigh, -1);
+      // grTemp->SetPoint(np++, fLow, -1);
+      grTemp->SetLineColor(kGreen);
+      grTemp->SetLineStyle(2);      
+      grTemp->SetLineWidth(2);
+      grTemp->Draw("l");
+    }
+  }
   
   // return;
 
