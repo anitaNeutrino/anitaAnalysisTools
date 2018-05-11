@@ -107,11 +107,11 @@ namespace Acclaim
     const TString dPhiHiCal = "FFTtools::wrap(peak_phi - hiCalPhi, 360, 0)";
     const TString dThetaHiCal = "peak_theta + hiCalTheta";/// EventCorrelator theta has down is +ve, Acclaim reco has down is -ve.
 
-    const TCut weight(const TCut cut = "");
+    const TCut weight(const TCut cut = "", double multiplier=1);
     
     const double dPhiClose = 5.5;
     const double dThetaClose = 3.5;
-    const TCut closeToMC("closeToMC", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
+    const TCut closeToMC("closeToMC", TString::Format("(weight == 1 || TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf)",
 						      dPhiMC.Data(),   dPhiClose,
 						      dThetaMC.Data(), dThetaClose));    
     const TCut closeToWais("closeToWais", TString::Format("TMath::Abs(%s) < %lf && TMath::Abs(%s) < %lf",
@@ -120,6 +120,8 @@ namespace Acclaim
 
     const TCut closeToHiCal("closeToHiCal", TString::Format("(duringHiCal > 0 && TMath::Abs(%s) < 5)",
 							    dPhiHiCal.Data()));
+
+    const TCut smallDeltaRough("smallDeltaRough","TMath::Abs(peak_dphi_rough) < 4.0 && TMath::Abs(peak_dtheta_rough) < 4.0");
 
     const TCut isAboveHorizontal("isAboveHorizontal", "peak_theta > 0");
     const TCut anita3QuietTime = SumTree::anita3QuietTime; // should work for both
@@ -142,6 +144,7 @@ namespace Acclaim
     const TCut newPayloadBlastCutPart2("newPayloadBlastCutPart2", TString::Format("TMath::Max(flags_maxBottomToTopRatio_0, flags_maxBottomToTopRatio_1) < %lf", 2.67)); /// (N=1)
     const TCut newPayloadBlastCutPart3("newPayloadBlastCutPart3", TString::Format("%lf*deconvolved_filtered_peakHilbert > (pol==0)*((1+flags_maxBottomToTopRatio_0)*flags_minBottomToTopRatio_0 - %lf) + (pol==1)*((1+flags_maxBottomToTopRatio_1)*flags_minBottomToTopRatio_1 - %lf)"
 					      ,14.0, 1000.0, 1000.0));
+					      // ,11.0, 1000.0, 1000.0));    
     const TCut notInBlastRotatedCrossCorrelationRegion("notInBlastRotatedCrossCorrelationRegion",
 						       "!((coherent_filtered_peakHilbert > 100) && (peak_value < 0.15))");
 
@@ -153,11 +156,12 @@ namespace Acclaim
 								  newPayloadBlastCutPart3.GetTitle(),
 								  notInBlastRotatedCrossCorrelationRegion.GetTitle()));
 
-    const TCut passAllQualityCuts("passAllQualityCuts", TString::Format("(%s) && (%s) && (%s) && (%s)",
+    const TCut passAllQualityCuts("passAllQualityCuts", TString::Format("(%s) && (%s) && (%s) && (%s) && (%s)",
 									notPayloadBlast.GetTitle(),
 									notShortWaveform.GetTitle(),
 									realSnr.GetTitle(),
-									goodGps.GetTitle()));
+									goodGps.GetTitle(),
+									smallDeltaRough.GetTitle()));
 
 
     const TCut analysisSample("analysisSample",   TString::Format("(%s) && !(%s) && (%s)", isRF.GetTitle(), isAboveHorizontal.GetTitle(), isNotTaggedAsPulser.GetTitle()));
@@ -172,8 +176,10 @@ namespace Acclaim
 
     const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
 
-    const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + " > 5.800012");
-    
+    const double fisherThreshold = 5.800012;
+    const TCut fisherCut("fisherCut", ThermalTree::fisherDiscriminant + TString::Format(" > %lf", fisherThreshold));
+
+    const TCut continentNotIceShelf("continentNotIceShelf", "RampdemReader::isOnContinent(longitude,latitude)");
   }
 
 }

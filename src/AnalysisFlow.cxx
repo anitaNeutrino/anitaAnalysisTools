@@ -11,16 +11,6 @@
 
 ClassImp(Acclaim::AnalysisFlow);
 
-/** 
- * @brief Constructor (use this one!)
- *
- * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
- * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
- * This allows for easy cluster scripting.
- * 
- * @param args contains the command line arguments
- * @param filterStrat is the filter stragtegy to use
- */
 
 Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* filterStrat){
 
@@ -56,51 +46,6 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
 }
 
 
-
-
-// /** 
-//  * @brief Constructor (deprecated)
-//  *
-//  * Also searches for the environment variable SGE_TASK_ID, which indicates this code is running on the hoffman2 cluster.
-//  * If this is the case, then some of the passed variables (run,  division, numDivisions) are overwritten with information endoded in SGE_TASK_ID.
-//  * This allows for easy cluster scripting.
-//  * 
-//  * @param run is the run to analyse
-//  * @param selection is the event selection to apply
-//  * @param filterStrat is the filterStrategy to use
-//  * @param blindStrat is the blinding strategy to use
-//  * @param division selects which sub division of the run to do. The run is divied into numDivisions divisions, so division goes from 0 -> numDivisions-1, default is 0.
-//  * @param numDivisions divides the run into pieces. 
-//  */
-
-// Acclaim::AnalysisFlow::AnalysisFlow(const char* outFileBaseName, int run, Acclaim::AnalysisFlow::selection selection, FilterStrategy* filterStrat, AnitaDataset::BlindingStrategy blindStrat, int division, int numDivisions){
-
-//   fOutFileBaseName = outFileBaseName ? TString::Format("%s", outFileBaseName) : "";
-//   fSelection = selection;
-//   fFilterStrat = filterStrat;
-//   fBlindStrat = blindStrat;
-
-//   if(!checkForSgeTaskId()){
-//     fDivision = division;
-//     fNumDivisions = numDivisions;
-//     fRun = run;
-//   }
-
-//   fSumTree = NULL;
-//   fData = NULL;
-//   fReco = NULL;
-//   fOutFile = NULL;
-//   fSettings = NULL;
-//   fEventSummary = NULL;
-//   fEv = NULL;
-
-//   fFirstEntry=0;
-//   fLastEntry=0;
-//   fLastEventConsidered = 0;
-//   fDebug = 0;
-
-//   prepareEverything();
-// }
 
 
 
@@ -155,10 +100,6 @@ Bool_t Acclaim::AnalysisFlow::checkForSgeTaskId(){
 
 
 
-/** 
- * @brief Destructor
- * 
- */
 Acclaim::AnalysisFlow::~AnalysisFlow(){
 
   if(fEv){
@@ -198,11 +139,6 @@ Acclaim::AnalysisFlow::~AnalysisFlow(){
 
 
 
-/** 
- * @brief Create the data set if not already done
- *
- * Creates an instance of the AnitaDataset class and finds the first/last entries to process using the division/numDivision member variables.
- */
 void Acclaim::AnalysisFlow::prepareDataSet(){
 
   if(fData==NULL){
@@ -227,13 +163,6 @@ void Acclaim::AnalysisFlow::prepareDataSet(){
 }
 
 
-
-/** 
- * @brief Coax the OutputConvention class into creating appropriately named output files
- *
- * The OutputConvention class was written some time ago to convert the cpp default main arguments (argc/argv) into an output file with a helpful name.
- * This function goes around the houses to generate some fake argc/argv variables and passes them to an OutputConvention object. 
- */
 void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
@@ -294,14 +223,6 @@ void Acclaim::AnalysisFlow::prepareOutputFiles(){
 
 
 
-/** 
- * @brief Applies high level event selection
- * 
- * @param header is the RawAnitaHeader for this event
- * @param usefulPat is the UsefulAdu5Pat for the event
- * 
- * @return true is event satisfies selection criteria, false otherwise
- */
 Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
 
   Bool_t doEvent = false;
@@ -335,14 +256,6 @@ Bool_t Acclaim::AnalysisFlow::shouldIDoThisEvent(RawAnitaHeader* header, UsefulA
 
 
 
-/** 
- * Applies my WAIS pulser selection
- * 
- * @param header is the event header
- * @param usefulPat is a usefulAdu5Pat object
- * 
- * @return true if the event matches the timing criteria
- */
 Bool_t Acclaim::AnalysisFlow::isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
 
   const UInt_t triggerTimeNsExpected = usefulPat->getWaisDivideTriggerTimeNs();
@@ -366,14 +279,6 @@ Bool_t Acclaim::AnalysisFlow::isPulserWAIS(RawAnitaHeader* header, UsefulAdu5Pat
 
 
 
-/** 
- * Applies Linda's LDB pulser selection, I've not actually tested this in a while
- * 
- * @param header is the event header
- * @param usefulPat is a usefulAdu5Pat object
- * 
- * @return true if the event matches the timing criteria
- */
 Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat){
 
   const UInt_t triggerTimeNsExpected = usefulPat->getLDBTriggerTimeNs();
@@ -411,13 +316,6 @@ Bool_t Acclaim::AnalysisFlow::isPulserLDB(RawAnitaHeader* header, UsefulAdu5Pat*
 
 
 
-/**
- * Set the pulser flags in the AnitaEventSummary
- *
- * @param header is the event header
- * @param usefulPat is the ANITA gps data
- * @param sum is the AnitaEventSummary in which to set the flag
- */
 void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat* usefulPat, AnitaEventSummary* sum){
 
   if(isPulserWAIS(header, usefulPat)){
@@ -431,10 +329,6 @@ void Acclaim::AnalysisFlow::setPulserFlags(RawAnitaHeader* header, UsefulAdu5Pat
 
 
 
-/** 
- * Set up all I/O
- * 
- */
 void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileName){
 
   if(fRun >= 257 && fRun <= 263){
@@ -484,13 +378,6 @@ void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileN
 
 
 
-/** 
- * Does my analysis on a single eventNumber in the run
- * 
- * @param eventNumber is the event to process, must be in the run and event selection!
- * 
- * @return the generated AnitaEventSummary, it is the caller's responsibility to delete this.
- */
 AnitaEventSummary* Acclaim::AnalysisFlow::doEvent(UInt_t eventNumber){
   int entry = fData->getEvent(eventNumber);
   return entry > 0 ? doEntry(entry) : NULL;
@@ -498,13 +385,6 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEvent(UInt_t eventNumber){
 
 
 
-/** 
- * Does my analysis on a single entry in the run
- * 
- * @param entry is the entry to process
- * 
- * @return the generated AnitaEventSummary, it is the caller's responsibility to delete this.
- */
 AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
 
   fData->getEntry(entry);
@@ -560,9 +440,6 @@ AnitaEventSummary* Acclaim::AnalysisFlow::doEntry(Long64_t entry){
 
 
 
-/** 
- * Does the main analysis loop for all specified events
- */
 void Acclaim::AnalysisFlow::doAnalysis(Long64_t startAtThisEntry){
 
   fLastEventConsidered = 0;

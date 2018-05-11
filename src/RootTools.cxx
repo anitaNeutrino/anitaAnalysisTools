@@ -1253,13 +1253,26 @@ void Acclaim::RootTools::getLocalMaxToMinWithinLimits(const TGraph* gr,
 */
 void Acclaim::RootTools::saveCanvas(TCanvas* c, TString fileName){
 
-  std::cout << "Saving this canvas as an .eps, .png, and .C file..." << std::endl;
-  TString fName = fileName + ".eps";
-  c->SaveAs(fName);
-  fName = fileName + ".png";
-  c->SaveAs(fName);
-  fName = fileName + ".C";
-  c->SaveAs(fName);
+  const int numTypes = 3;
+  const char* suffixes[numTypes] = {"pdf", "png", "C"};
+
+  
+  std::cout << "Saving this canvas as a ";
+  for(int t=0; t < numTypes; t++){
+    std::cout << suffixes[t];
+    if(t < numTypes - 2){
+      std::cout << ", ";
+    }
+    else if(t < numTypes - 1){
+      std::cout << " and ";
+    }
+  }
+  std::cout << " file..." << std::endl;
+
+  for(int t=0; t < numTypes; t++){
+    TString fName = fileName + "." + TString(suffixes[t]);
+    c->SaveAs(fName);
+  }
   std::cout << "...Complete!" << std::endl;
   c->Update();
 }
@@ -1882,7 +1895,7 @@ void Acclaim::RootTools::tokenize(std::vector<TString>& tokenizedOutput, const c
 
 
 
-TH1D* Acclaim::RootTools::makeIntegralHist(TH1* hist, bool ascendingIntegral, bool normalized){
+TH1D* Acclaim::RootTools::makeIntegralHist(const TH1* hist, bool ascendingIntegral, bool normalized){
 
 
   TString name = hist->GetName();
@@ -1892,14 +1905,24 @@ TH1D* Acclaim::RootTools::makeIntegralHist(TH1* hist, bool ascendingIntegral, bo
   const int nx = hist->GetNbinsX();
   TH1D* hInt = new TH1D(name, hist->GetTitle(), nx, hist->GetXaxis()->GetBinLowEdge(1), hist->GetXaxis()->GetBinUpEdge(nx));
 
-  double multFactor = normalized ? 1./hist->Integral() : 1; 
-  double total = ascendingIntegral ? 0 : multFactor*hist->Integral();
-  double sumFactor = multFactor*(ascendingIntegral ? 1 : -1);
-   
+  // double multFactor = normalized ? 1./hist->Integral() : 1; 
+  // double total = ascendingIntegral ? 0 : multFactor*hist->Integral();
+  // double sumFactor = multFactor*(ascendingIntegral ? 1 : -1);
+  int startBin = ascendingIntegral ? 1 : nx;
   for(int bx=1; bx <= nx; bx++){
+    int bx1 = TMath::Min(startBin, bx);
+    int bx2 = TMath::Max(startBin, bx);
+    double err = 0;
+    double total = hist->IntegralAndError(bx1, bx2, err);
     hInt->SetBinContent(bx, total);
-    total += sumFactor*hist->GetBinContent(bx);
+    hInt->SetBinError(bx, err);
+
+    // hInt->SetBinError(bx, TMath::Sqrt(total));
+    // total += sumFactor*hist->GetBinContent(bx);
   }
+  if(normalized){
+    hInt->Scale(1./hist->Integral());
+  }  
 
   return hInt;  
   

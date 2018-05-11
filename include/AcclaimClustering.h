@@ -14,6 +14,8 @@
 #include "BaseList.h"
 #include "AnitaEventSummary.h"
 #include "TKDTree.h"
+#include "TCut.h"
+#include "TEntryList.h"
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
 #include "AcclaimOpenMP.h"
@@ -58,41 +60,46 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       // determined by reconstruction
       //--------------------------------------------------------------------------------
-      UInt_t eventNumber;			/// Event number
-      Int_t run;				/// Run
-      AnitaPol::AnitaPol_t pol;			/// Polarization
-      Int_t peakIndex;				/// Which peak in the map does this represent?
+      UInt_t eventNumber;				/// Event number
+      Int_t run;					/// Run
+      AnitaPol::AnitaPol_t pol;				/// Polarization
+      Int_t peakIndex;					/// Which peak in the map does this represent?
 
-      Double_t centre[3];//!			/// Cartesian coordinates, does not persist in ROOT
-      Double_t latitude;			/// latitude
-      Double_t longitude;			/// longitude
-      Double_t altitude;			/// longitude
-      Double_t easting;                         /// easting
-      Double_t northing;                        /// northing
-      AnitaEventSummary::PayloadLocation anita;	/// Anita's position
+      Double_t centre[3];//!				/// Cartesian coordinates, does not persist in ROOT
+      Double_t latitude;				/// latitude
+      Double_t longitude;				/// longitude
+      Double_t altitude;				/// longitude
+      Double_t easting;					/// easting
+      Double_t northing;				/// northing
+      AnitaEventSummary::PayloadLocation anita;		/// Anita's position
 
-      Double_t theta;				/// reconstructed theta
-      Double_t phi;				/// reconstructed phi
-      Double_t thetaAdjustmentRequired;         /// the adjustment from traceBackToContinent
+      Double_t theta;					/// reconstructed theta
+      Double_t phi;					/// reconstructed phi
+      Double_t thetaAdjustmentRequired;			/// the adjustment from traceBackToContinent
 
-      Double_t sigmaTheta;			/// resolution associated with this snr?
-      Double_t sigmaPhi;			/// resolution associated with this snr?
+      Double_t sigmaTheta;				/// resolution associated with this snr?
+      Double_t sigmaPhi;				/// resolution associated with this snr?
 
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
       Int_t nThresholds;                        
-      Int_t* cluster;//[nThresholds]		/// which cluster am I associated with?
-      Double_t* dThetaCluster;//[nThresholds]	/// theta distance to cluster
-      Double_t* dPhiCluster;//[nThresholds]     /// phi distance to cluster
+      Int_t* cluster;//[nThresholds]			/// which cluster am I associated with?
+      Double_t* dThetaCluster;//[nThresholds]		/// theta distance to cluster
+      Double_t* dPhiCluster;//[nThresholds]		/// phi distance to cluster
 
-      Bool_t eventEventClustering;              /// Remove huge clusters near MCM before doing event-to-event clustering
-      Double_t nearestKnownBaseLogLikelihood;   /// How far to the nearest known base?
-      Int_t nearestKnownBaseCluster;            /// How far to the nearest known base?      
-      Double_t selfLogLikelihood;               /// If the event is above the continent surface, this may be non-zero
+      Bool_t eventEventClustering;			/// Remove huge clusters near MCM before doing event-to-event clustering
+      Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base?
+      Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base?
+      Int_t nearestKnownBaseCluster;			/// How far to the nearest known base?
+      Int_t nearestKnownBaseClusterSurface;		/// How far to the nearest known base?
+      Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero
+      Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
+      UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
+      Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
 
-      Int_t antarcticaHistBin;  		/// Which global bin in the TH2DAntarctica?
-      UsefulAdu5Pat usefulPat; //!              /// Only construct this once
+      Int_t antarcticaHistBin;				/// Which global bin in the TH2DAntarctica?
+      UsefulAdu5Pat usefulPat; //!			/// Only construct this once
       mutable Bool_t fDebug; //!
 
       Event(Int_t nT=0);
@@ -114,6 +121,13 @@ namespace Acclaim{
       double logLikelihoodFromPoint(const T& point, bool addOverHorizonPenalty=false) const {
 	return logLikelihoodFromPoint(point.longitude, point.latitude, point.altitude, addOverHorizonPenalty);
       }
+      template<class T>
+      inline double cartesianSeparation(const T& event2){
+	double d0 = centre[0] - event2.centre[0];
+	double d1 = centre[1] - event2.centre[1];
+	double d2 = centre[2] - event2.centre[2];
+	return TMath::Sqrt(d0*d0 + d1*d1 + d2*d2);
+      }
 
       /** 
        * For sorting based on event number
@@ -126,7 +140,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 11)
+      ClassDef(Event, 14)
     };
 
 
@@ -202,15 +216,30 @@ namespace Acclaim{
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
 
-      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName);
+      void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
+      void extendClustering(const char* dataGlob, const char* subThresholdGlob, const char* outFileName);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
 	fUseBaseList = useBaseList;
       }
 
+      void setCut(TCut cut){ fCut = cut; }
+      void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
+      void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
+
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
+
+      /** 
+       * Add a ThermalChain style cut
+       * 
+       * @return number of cuts to be applied
+       */
+      size_t addCut(const TCut c){
+	fThermalChainCuts.push_back(c);
+	return fThermalChainCuts.size();
+      }
 
       bool fStoreUnclusteredHistograms;
       
@@ -221,6 +250,7 @@ namespace Acclaim{
 
 
       Long64_t readInSummaries(const char* summaryGlob);
+      Long64_t readInTMVATreeSummaries(const char* summaryGlob);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
@@ -228,7 +258,6 @@ namespace Acclaim{
 
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
-      void forEachEventFindClosestKnownBase(int z=0);
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();
@@ -244,7 +273,7 @@ namespace Acclaim{
       void testSmallClustersFromPointSource();
       Int_t removeLargeBasesNearMcMurdo();
 
-      void doBaseEventClustering(Bool_t mc=false);
+      void doBaseEventClustering();
       void doEventEventClustering();
 
       void doMcEventClustering();
@@ -254,9 +283,16 @@ namespace Acclaim{
 
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
+
+
+
+
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
+      TCut fCut; /// What to cut on when using tmva trees
+      bool fCutHical; /// cut hical? (when using tmva trees)
+      TEntryList* fEntryList; /// Entry list that gets filled by cut when using tmva trees
 
       UInt_t fTestEvent1; /// For debugging
       UInt_t fTestEvent2; /// For debugging
@@ -266,6 +302,7 @@ namespace Acclaim{
       Int_t mcDivision; // Which of the MC divisions should I read in? (runs from 0 to numMcDivisions-1)
 
       std::vector<Double_t> llEventCuts;                        /// Try doing a range of llEventCuts at once...
+      Double_t surfaceDistThresholdKm;
       Bool_t fEventsAlreadyClustered;
 
       std::vector<std::vector<Acclaim::Clustering::Cluster> >clusters;	/// Vector of clusters,
@@ -292,6 +329,8 @@ namespace Acclaim{
       Int_t fROOTgErrorIgnoreLevel;
       bool fDrawNewNearbyEventsHistograms;
       bool fReadInBaseList;
+
+      std::vector<TCut> fThermalChainCuts;
     };
   }
 }

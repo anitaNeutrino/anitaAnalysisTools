@@ -18,7 +18,7 @@ namespace Acclaim {
    * @class ThermalChain
    * @brief A class to handle loading Thermal Trees into chains and applying cuts
    * 
-   * Because the ROOT TEntryList interface to TChains is quite annoying
+   * Because the ROOT TEntryList interface to TChains is quite annoying, and I only want to type it once.
    */
 
   class ThermalChain {
@@ -35,6 +35,7 @@ namespace Acclaim {
     Long64_t N() const;
 
     Long64_t getEntry(Long64_t entry);
+    Long64_t getEvent(UInt_t eventNumber);
     bool GetUseProof(){return fUseProof;}
     void SetUseProof(bool useProof=true);
 
@@ -43,6 +44,7 @@ namespace Acclaim {
     /**
      * From the thermal chain
      */
+    
     Int_t run;
     UInt_t eventNumber;
     UInt_t realTime;
@@ -57,6 +59,13 @@ namespace Acclaim {
     Float_t coherent_filtered_snr;
     Float_t weight;
     Float_t mc_energy;
+    Float_t peak_value;
+    Float_t coherent_filtered_peakHilbert;
+    Float_t deconvolved_filtered_peakHilbert;
+    Float_t coherent_filtered_impulsivityMeasure;
+    Float_t deconvolved_filtered_impulsivityMeasure;
+    Float_t coherent_filtered_fracPowerWindowGradient;
+    Float_t deconvolved_filtered_fracPowerWindowGradient;    
 
 
     /**
@@ -69,17 +78,37 @@ namespace Acclaim {
     Int_t run2;
 
 
+
+    /**
+     * From the surface chain
+     */
+    Double_t longitude;
+    Double_t latitude;
+    Double_t altitude;
+    Double_t thetaAdjustmentRequired;
+    Int_t onContinent;
+    Int_t onIceShelf;
+    Double_t iceThickness;
+    UInt_t eventNumber3;
+    Int_t run3;
+
+
     Adu5Pat pat();
+    Double_t fisherDiscriminant();
     
   private:
     TChain* fChain;
-    TChain* fFriendChain;
+    TChain* fFriendChain1;
+    TChain* fFriendChain2;
 
     TCut fCut;
     mutable bool fEntryListDirty;
     mutable TEntryList* fEntryList;
     bool fUseProof;
     void makeSelection() const;
+    void doTypeConversions();
+    
+    Int_t fAnitaVersion;
 
     void setBranches();
     Int_t eventNumberInt;

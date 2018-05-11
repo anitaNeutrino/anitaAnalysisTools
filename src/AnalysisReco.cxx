@@ -27,19 +27,10 @@ Acclaim::AnalysisReco::AnalysisReco(){
  */
 Acclaim::AnalysisReco::~AnalysisReco(){
 
-  if(spawnedCrossCorrelator && fCrossCorr){
+  if(fSpawnedCrossCorrelator && fCrossCorr){
     delete fCrossCorr;
     fCrossCorr = NULL;
-  }
-
-
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    if(heatMaps[polInd]){
-      delete heatMaps[polInd];
-      heatMaps[polInd] = NULL;
-    }
-  }
-
+  }  
   nicelyDeleteInternalFilteredEvents();  
 }
 
@@ -62,17 +53,6 @@ void Acclaim::AnalysisReco::nicelyDeleteInternalFilteredEvents(){
 
 
 
-/**
- * Calculate relevant quantities and fill the waveform info in the AnitaEventSummary
- *
- * This section may change rapidly as the analysis continues...
- *
- * @param pol is the polarisation
- * @param info is the selected WaveformInfo in the ANITA event summary
- * @param fEv is the FilteredAnitaEvent from which we are coherently summing
- * @param waveStore is the internal storage in the AnalysisReco class (used to save a copy for MagicDisplay)
- * @param h is the InterferometricMap which contains the peak direction in which we want to coherently sum
- */
 void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                                              AnitaEventSummary::WaveformInfo& info,
                                              const FilteredAnitaEvent* fEv,
@@ -108,18 +88,35 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   waveStore[0] = coherentWave;
   
   info.snr = 0;
-  if(noiseMonitor){  
+  {
     double noise = 0;
     for(unsigned antInd = 0; antInd < theAnts.size(); antInd++){
       int ant = theAnts[antInd];
-      double thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
 
+      double thisRMS = 0;
+      if(noiseMonitor){
+	thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
+      }
+      else{
+	static int warnCount = 0;
+	const TGraphAligned* gr = fEv->getFilteredGraph(ant, pol)->even();
+	thisRMS = gr->GetRMS(2);
+	const int numWarnings = 10;
+	if(warnCount < numWarnings){
+	  std::cerr << "Warning ("<< warnCount + 1 << "/" << numWarnings << ") in "
+		    << __PRETTY_FUNCTION__ << ", getting RMS from entire waveform rather than NoiseMonitor."
+		    << " this many overestimate the noise... thisRMS = " << thisRMS << std::endl;
+	  warnCount++;
+	}
+      }
       noise += thisRMS;
       
     }
     noise /= theAnts.size();
     
     info.snr = largestPeakToPeak/(2*noise);
+
+    // std::cout << "SNR = " << info.snr << std::endl;
   }
 
   
@@ -309,38 +306,11 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
 
 
-/**
- * Creates the histogram with the easting/northing dimensions for Antarctica
- *
- * @param name is the histogram name
- * @param title is the histogram title
- *
- * @return a pointer to the newly created histogram
- */
-TProfile2D* Acclaim::AnalysisReco::makeHeatMap(const TString& name, const TString& title){
-
-  const int coarseness = 20;
-  Int_t nx, ny;
-  RampdemReader::getNumXY(nx, ny);
-  nx/=coarseness;
-  ny/=coarseness;
-  Double_t xMin, xMax, yMin, yMax;
-  RampdemReader::getMapCoordinates(xMin, yMin, xMax, yMax);
-
-  return new TProfile2D(name, title, nx, xMin, xMax, ny, yMin, yMax);    
-}
 
 
 
 
 
-
-/** 
- * Fill Peng's ChannelInfo object, it might come in handy...
- * 
- * @param fEv is the filtered event
- * @param sum is the event summary to fill
- */
 void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum){
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
@@ -360,14 +330,6 @@ void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, Anita
 }
 
 
-/** 
- * Reconstructs the FilteredAnitaEvent and fills the pointing and coherent bits of the AnitaEventSummary
- * 
- * @param fEv is the FilteredAnitaEvent to reconstruct
- * @param usefulPat is the useful version of the ANITA gps object, can trace direction to the ground
- * @param sum is the AnitaEventSummary to fill during the recontruction
- * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
- */
 
 void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSummary * sum, NoiseMonitor* noiseMonitor, TruthAnitaEvent* truth) {
 
@@ -377,8 +339,8 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
   // spawn a CrossCorrelator if we need one
   if(!fCrossCorr){
     fCrossCorr = new CrossCorrelator();
-    spawnedCrossCorrelator = true;
-    dtCache.init(fCrossCorr, this);
+    fSpawnedCrossCorrelator = true;
+    fDtCache.init(fCrossCorr, this);
   }
 
   // FilteredAnitaEvent fEvMin(fEv->getUsefulAnitaEvent(), fMinFilter, fEv->getGPS(), fEv->getHeader(), false); // just the minimum filter
@@ -413,14 +375,6 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
     coarseMaps[pol]->addGpsInfo(fEv->getGPS());
     coarseMaps[pol]->addTruthInfo(truth);
 
-    if(fDoHeatMap > 0){
-      if(!heatMaps[pol]){
-        TString name = pol == AnitaPol::kHorizontal ? "heatMapH" : "heatMapV";
-        heatMaps[pol] = makeHeatMap(name, name);
-      }
-      coarseMaps[pol]->project(heatMaps[pol], fHeatMapHorizonKm);
-    }
-
     sum->nPeaks[pol] = fNumPeaks;
 
     for(Int_t peakInd=0; peakInd < fNumPeaks; peakInd++){
@@ -454,12 +408,14 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
         // deconvolved
         // deconvolved_filtered
       
-        fillWaveformInfo(pol, sum->coherent_filtered[pol][peakInd],    fEv,      wfCoherentFiltered[pol][peakInd],    h, noiseMonitor);
-        fillWaveformInfo(pol, sum->deconvolved_filtered[pol][peakInd], fEvDeco,  wfDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+        fillWaveformInfo(pol, sum->coherent_filtered[pol][peakInd],    fEv,      fCoherentFiltered[pol][peakInd],    h, noiseMonitor);
+        fillWaveformInfo(pol, sum->deconvolved_filtered[pol][peakInd], fEvDeco,  fDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+
+	h->setResolutionEstimateFromWaveformSNR(sum->deconvolved_filtered[pol][peakInd].snr);
 
 	if(fFillUnfiltered){
-	  fillWaveformInfo(pol, sum->coherent[pol][peakInd], fEvMin,        wfCoherent[pol][peakInd],            h, noiseMonitor);	
-	  fillWaveformInfo(pol, sum->deconvolved[pol][peakInd], fEvMinDeco, wfDeconvolved[pol][peakInd],         h, noiseMonitor);
+	  fillWaveformInfo(pol, sum->coherent[pol][peakInd], fEvMin,        fCoherent[pol][peakInd],            h, noiseMonitor);	
+	  fillWaveformInfo(pol, sum->deconvolved[pol][peakInd], fEvMinDeco, fDeconvolved[pol][peakInd],         h, noiseMonitor);
 	}
 
 	// if(sum->eventNumber==60840043){
@@ -477,14 +433,11 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
             Double_t phiWave = TMath::DegToRad()*sum->peak[pol][peakInd].phi;
             Double_t thetaWave = -1*TMath::DegToRad()*sum->peak[pol][peakInd].theta;
 
-            // *   Returns 0 if never hits the ground, even with maximum adjustment
-            // *   Returns 1 if hits the ground with no adjustment
-            // *   Returns 2 if it hits the ground with adjustment
-            success = usefulPat.traceBackToContinent(phiWave, thetaWave,
-                                                     &sum->peak[pol][peakInd].longitude,
-                                                     &sum->peak[pol][peakInd].latitude,
-                                                     &sum->peak[pol][peakInd].altitude,
-                                                     &sum->peak[pol][peakInd].theta_adjustment_needed);
+            success = usefulPat.traceBackToContinent3(phiWave, thetaWave,
+						      &sum->peak[pol][peakInd].longitude,
+						      &sum->peak[pol][peakInd].latitude,
+						      &sum->peak[pol][peakInd].altitude,
+						      &sum->peak[pol][peakInd].theta_adjustment_needed);
           }
           if(success==0){
             sum->peak[pol][peakInd].longitude = -9999;
@@ -504,7 +457,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
   }
 
   // keep internal copy of summary
-  summary = (*sum);
+  fSummary = (*sum);
 }
 
 
@@ -578,13 +531,6 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
 
 
 
-/** 
- * Sets the phi depended trigger stuff in the peak
- * 
- * @param header is the RawAnitaHeader
- * @param h is the interferometric map
- * @param peak is a reference
- */
 void Acclaim::AnalysisReco::setTriggerInfoFromPeakPhi(const RawAnitaHeader* header,
                                                       AnitaPol::AnitaPol_t pol,
                                                       Int_t peakPhiSector,
@@ -625,34 +571,29 @@ void Acclaim::AnalysisReco::setTriggerInfoFromPeakPhi(const RawAnitaHeader* head
 }
 
 
-/**
- * Set default values and zero pointers for dynamically initialised heap dwelling members
- *
- */
 void Acclaim::AnalysisReco::initializeInternals(){
 
   fCrossCorr = NULL;
-  spawnedCrossCorrelator = false;
+  fSpawnedCrossCorrelator = false;
   fWhichResponseDir = 0;
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
-      rArray[pol].push_back(geom->getAntR(ant, AnitaPol::AnitaPol_t(pol)));
-      zArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
-      phiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
+      fRArray[pol].push_back(geom->getAntR(ant, AnitaPol::AnitaPol_t(pol)));
+      fZArray[pol].push_back(geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol)));
+      fPhiArrayDeg[pol].push_back(geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg());
     }
   }
 
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
     coarseMaps[polInd] = NULL;
-    heatMaps[polInd] = NULL;
     for(int peakInd=0; peakInd < AnitaEventSummary::maxDirectionsPerPol; peakInd++){
       fineMaps[polInd][peakInd] = NULL;
       for(int xPol=0; xPol < AnitaPol::kNotAPol; xPol++){
-        wfCoherentFiltered[polInd][peakInd][xPol] = NULL;
-        wfCoherent[polInd][peakInd][xPol] = NULL;
-        wfDeconvolved[polInd][peakInd][xPol] = NULL;
-        wfDeconvolvedFiltered[polInd][peakInd][xPol] = NULL;
+        fCoherentFiltered[polInd][peakInd][xPol] = NULL;
+        fCoherent[polInd][peakInd][xPol] = NULL;
+        fDeconvolved[polInd][peakInd][xPol] = NULL;
+        fDeconvolvedFiltered[polInd][peakInd][xPol] = NULL;
       }
     }
   }
@@ -662,8 +603,6 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fCoherentDeltaPhi = 2;
   fLastCoherentDeltaPhi = -1;
   fNumPeaks = 3;
-  fDoHeatMap = 0;
-  fHeatMapHorizonKm = 800;
   fCoherentDtNs = 0.01;
   fSlopeFitStartFreqGHz = 0.18;
   fSlopeFitEndFreqGHz = 1.3;
@@ -698,13 +637,6 @@ void Acclaim::AnalysisReco::initializeInternals(){
 
 
 
-/** 
- * Get the off boresight delay for a single antenna
- * 
- * @param deltaPhiDeg is the phi angle from boresight
- * 
- * @return the delay
- */
 Double_t Acclaim::AnalysisReco::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) const {
 
 
@@ -745,21 +677,11 @@ Double_t Acclaim::AnalysisReco::singleAntennaOffAxisDelay(Double_t deltaPhiDeg) 
 
 
 
-/** 
- * Get the off axis delay between two antennas for a given phi angle
- * 
- * @param pol is the polarisation
- * @param ant1 is the first antenna
- * @param ant2 is the second antennas
- * @param phiDeg is the position in degrees in payload coordinates relative to ADU5 aft-fore
- * 
- * @return the relative off axis delay
- */
 Double_t Acclaim::AnalysisReco::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2,
                                                      Double_t phiDeg) const {
 
-  Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant1), phiDeg);
-  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(phiArrayDeg[pol].at(ant2), phiDeg);
+  Double_t deltaPhiDeg1 = RootTools::getDeltaAngleDeg(fPhiArrayDeg[pol].at(ant1), phiDeg);
+  Double_t deltaPhiDeg2 = RootTools::getDeltaAngleDeg(fPhiArrayDeg[pol].at(ant2), phiDeg);
   Double_t delay1 = singleAntennaOffAxisDelay(deltaPhiDeg1);
   Double_t delay2 = singleAntennaOffAxisDelay(deltaPhiDeg2);
   return (delay1-delay2);
@@ -768,23 +690,12 @@ Double_t Acclaim::AnalysisReco::relativeOffAxisDelay(AnitaPol::AnitaPol_t pol, I
 
 
 
-/** 
- * Get the expected delay between antenna pairs for a given direction
- * 
- * @param pol is the polarisation
- * @param ant1 is the first antenna
- * @param ant2 is the second antenna
- * @param phiWave is the incoming plane wave direction in radians in payload coordinate relative to ADU5 aft-fore
- * @param thetaWave is the incoming plane wave direction in radians (theta=0 is horizontal, +ve theta is up)
- * 
- * @return the expected time difference in nano-seconds
- */
 Double_t Acclaim::AnalysisReco::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave) const {
 
   // Double_t tanThetaW = tan(thetaWave);
   Double_t tanThetaW = tan(-1*thetaWave);
-  Double_t part1 = zArray[pol].at(ant1)*tanThetaW - rArray[pol].at(ant1)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant1));
-  Double_t part2 = zArray[pol].at(ant2)*tanThetaW - rArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant2));
+  Double_t part1 = fZArray[pol].at(ant1)*tanThetaW - fRArray[pol].at(ant1)*cos(phiWave-TMath::DegToRad()*fPhiArrayDeg[pol].at(ant1));
+  Double_t part2 = fZArray[pol].at(ant2)*tanThetaW - fRArray[pol].at(ant2)*cos(phiWave-TMath::DegToRad()*fPhiArrayDeg[pol].at(ant2));
   Double_t tdiff = 1e9*((cos(thetaWave) * (part2 - part1))/SPEED_OF_LIGHT); // Returns time in ns
 
   return tdiff;
@@ -793,22 +704,14 @@ Double_t Acclaim::AnalysisReco::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_
 
 
 
-/** 
- * Inserts the photogrammetry geometry from AnitaGeomTool into this classes copy of the antenna position. 
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * !WARNING! This class overwrites the "extra cable delays" in AnitaEventCalibrator with zero! 
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * Probably don't use this, or if you do, use with caution.
- * 
- */
 void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(1);
   for(Int_t pol=0; pol < AnitaPol::kNotAPol; pol++){
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
-      rArray[pol].at(ant) = geom->getAntR(ant, AnitaPol::AnitaPol_t(pol));
-      zArray[pol].at(ant) = geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol));
-      phiArrayDeg[pol].at(ant) = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg();
+      fRArray[pol].at(ant) = geom->getAntR(ant, AnitaPol::AnitaPol_t(pol));
+      fZArray[pol].at(ant) = geom->getAntZ(ant, AnitaPol::AnitaPol_t(pol));
+      fPhiArrayDeg[pol].at(ant) = geom->getAntPhiPositionRelToAftFore(ant, AnitaPol::AnitaPol_t(pol))*TMath::RadToDeg();
     }
   }
 
@@ -821,10 +724,10 @@ void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
 
   if(!fCrossCorr){
     fCrossCorr = new CrossCorrelator();
-    spawnedCrossCorrelator = true;
+    fSpawnedCrossCorrelator = true;
   }
   
-  dtCache.init(fCrossCorr, this, true);
+  fDtCache.init(fCrossCorr, this, true);
   geom->usePhotogrammetryNumbers(0);
 
 }
@@ -834,13 +737,6 @@ void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
 
 
 
-/** 
- * Get the coarse interferometric map in class memory. It is the user's responsibility to delete!
- * 
- * @param pol is the polarisation of the map to get.
- * 
- * @return the internal copy of the interferometric map
- */
 Acclaim::InterferometricMap* Acclaim::AnalysisReco::getMap(AnitaPol::AnitaPol_t pol){
   InterferometricMap* h = coarseMaps[pol];
   coarseMaps[pol] = NULL;
@@ -852,13 +748,6 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getMap(AnitaPol::AnitaPol_t 
 
 
 
-/** 
- * Get the fine interferometric map in class memory from the chosen peak. It is the user's responsibility to delete!
- * 
- * @param pol is the polarisation of the map to get.
- * 
- * @return the internal copy of the interferometric map
- */
 Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd){
 
   InterferometricMap* h = fineMaps[pol][peakInd];
@@ -879,12 +768,6 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
 
 
 
-/** 
- * Do the coarsely binned reconstruction.
- * Overwrites the last map in memory, if there was one, creates one otherwise.
- * 
- * @param pol is the polarisation to reconstruct
- */
 void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat) {
 
   if(coarseMaps[pol]==NULL)
@@ -902,20 +785,12 @@ void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat*
     coarseMaps[pol]->addGpsInfo(pat);
   }
 
-  coarseMaps[pol]->Fill(pol, fCrossCorr, &dtCache);
+  coarseMaps[pol]->Fill(pol, fCrossCorr, &fDtCache);
 }
 
 
 
 
-/** 
- * 
- * 
- * @param pol 
- * @param peakIndex 
- * @param zoomCenterPhiDeg 
- * @param zoomCenterThetaDeg 
- */
 void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peakIndex, Double_t zoomCenterPhiDeg, Double_t zoomCenterThetaDeg, const Adu5Pat* pat) {
 
   // Some kind of sanity check here due to the unterminating while loop inside RootTools::getDeltaAngleDeg
@@ -939,7 +814,7 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
   if(pat){
     h->addGpsInfo(pat);
   }
-  h->Fill(pol, fCrossCorr, &dtCache);  
+  h->Fill(pol, fCrossCorr, &fDtCache);  
 
   // std::cout << h->GetName() << std::endl;
   // std::cout << "in " << __PRETTY_FUNCTION__ << ": " << fineMaps[pol][peakIndex] << std::endl;
@@ -950,23 +825,6 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
 }
 
 
-
-
-
-
-
-/** 
- * Directly insert some geometry generated by Linda.
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * !WARNING! This class overwrites the "extra cable delays" in AnitaEventCalibrator with zero! 
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * Probably don't use this, or if you do, use with caution.
- * 
- * @param pathToLindasFile points to the file containing the antenna positions/cable delays.
- * @param pol is the polarisation to overwrite.
- * 
- * @return 1 on error, 0 if successful.
- */
 Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, AnitaPol::AnitaPol_t pol){
 
   // Since I am simulataneously testing many of Linda's geometries on lots of different files
@@ -1021,17 +879,6 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
   return 0;
 }
 
-
-
-
-
-
-
-/** 
- * Generate a set of antennas to use to generate the coherent waveform.
- * 
- * @param coherentDeltaPhi is the number of neighbouring phi-sectors to use.
- */
 void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDeltaPhi){
 
   // std::cerr << __PRETTY_FUNCTION__ << std::endl;
@@ -1039,9 +886,9 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
   if(coherentDeltaPhi!=fLastCoherentDeltaPhi){
 
     for(int peakPhiSector = 0; peakPhiSector < NUM_PHI; peakPhiSector++){
-      phiSectorToAnts[peakPhiSector] = std::vector<Int_t>();
+      fPhiSectorToAnts[peakPhiSector] = std::vector<Int_t>();
 
-      // phiSectorToAnts[peakPhiSector].clear();
+      // fPhiSectorToAnts[peakPhiSector].clear();
       for(int deltaPhiSect=-fCoherentDeltaPhi; deltaPhiSect <= fCoherentDeltaPhi; deltaPhiSect++){
 
         Int_t phiSector = peakPhiSector + deltaPhiSect;
@@ -1050,7 +897,7 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
 
         for(int ring = 0; ring < AnitaRing::kNotARing; ring++){
           int ant = AnitaGeomTool::getAntFromPhiRing(phiSector, AnitaRing::AnitaRing_t(ring));
-          phiSectorToAnts[peakPhiSector].push_back(ant);
+          fPhiSectorToAnts[peakPhiSector].push_back(ant);
         }
       }
     }
@@ -1058,17 +905,6 @@ void Acclaim::AnalysisReco::chooseAntennasForCoherentlySumming(int coherentDelta
   }
 }
 
-
-
-/** 
- * Modularising the coherently summed waveforms
- * 
- * @param theAnts are the antenna indices
- * @param pol is the polarisation
- * @param peakPhiDeg is the phi angle relative to ADU5 aft-fore (degrees)
- * @param peakThetaDeg is the theta angle (0 = horizontal, +ve theta is up)
- * @param dts is a vector which gets filled with the time offsets
- */
 void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_t>& theAnts, AnitaPol::AnitaPol_t pol,
                                                           Double_t peakPhiDeg, Double_t peakThetaDeg, std::vector<double>& dts) {
 
@@ -1082,20 +918,6 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
   }
 }
 
-
-
-
-/** 
- * Takes a polarisation, set of antennas, and coherently sums the waveforms in the FilteredAnitaEvents with the time delays implied by the incoming direction
- * 
- * @param fEv is the FilteredAnitaEvent from which to draw the waveforms to coherently sum
- * @param pol is the polarisation of the waveforms in the FilteredAnitaEvent 
- * @param theAnts is the set of antennas to use in the coherent sum
- * @param peakPhiDeg is the incoming phi-direction in degrees in payload coordinates relative to ADU5 aft-fore
- * @param peakThetaDeg is the elevation in degrees (theta=0 is horizontal, +ve theta is up) in payload coordinates relative to ADU5 aft-fore
- * 
- * @return the coherently summed waveform
- */
 AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol,
                                                        const std::vector<Int_t>& theAnts,
                                                        Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak) {
@@ -1150,20 +972,6 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   return coherentlySum(waves, dts);
 }
 
-
-
-
-
-
-
-/** 
- * Check vector lengths are correct, trims/pads the dts if required
- * 
- * @param waves the waveforms to sum
- * @param dts the time offsets to apply
- * 
- * @return the size of both vectors
- */
 size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
   size_t s = waves.size();
   if(s < 1){    
@@ -1188,18 +996,6 @@ size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWa
   return s;
 }
 
-
-
-
-
-/** 
- * Coherently sum waveforms
- * 
- * @param waves is a set of waveforms to coherently sum
- * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
- * 
- * @return a newly created AnalysisWaveform, created by coherently summing the input waves
- */
 AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
 
   if(checkWavesAndDtsMatch(waves, dts)==0){
@@ -1269,17 +1065,6 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   return coherentWave;
 }
 
-
-
-
-/** 
- * Generate the waveforms that do into the coherent sum
- * 
- * @param waves is a set of waveforms to coherently sum
- * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
- * 
- * @return a newly created AnalysisWaveform, created by coherently summing the input waves
- */
 void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, std::vector<TGraphAligned*>& grs){
 
   for(unsigned w=0; w < waves.size(); w++){
@@ -1294,24 +1079,6 @@ void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-/** 
- * Function for MagicDisplay
- * 
- * @param summaryPad is the pad if it already exists (makes a new Canvas if passed NULL)
- * @param pol is the polarization to draw
- */
 void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
 
   const int numColsForNow = 3;
@@ -1376,17 +1143,17 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
 
     // TODO, make this selectable?
-    AnalysisWaveform* primaryWave = wfCoherentFiltered[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &primaryInfo = summary.coherent_filtered[pol][peakInd];
+    AnalysisWaveform* primaryWave = fCoherentFiltered[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &primaryInfo = fSummary.coherent_filtered[pol][peakInd];
     
-    AnalysisWaveform* secondaryWave = wfDeconvolvedFiltered[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &secondaryInfo = summary.deconvolved_filtered[pol][peakInd];
+    AnalysisWaveform* secondaryWave = fDeconvolvedFiltered[pol][peakInd][0];
+    AnitaEventSummary::WaveformInfo &secondaryInfo = fSummary.deconvolved_filtered[pol][peakInd];
 
-    // AnalysisWaveform* secondaryWave = wfCoherent[pol][peakInd][0];
-    // AnitaEventSummary::WaveformInfo &secondaryInfo = summary.coherent[pol][peakInd];
+    // AnalysisWaveform* secondaryWave = fCoherent[pol][peakInd][0];
+    // AnitaEventSummary::WaveformInfo &secondaryInfo = fSummary.coherent[pol][peakInd];
     
-    // AnalysisWaveform* secondaryWave = wfDeconvolved[pol][peakInd][0];
-    // AnalysisWaveform* secondaryWave = wfDeconvolvedFiltered[pol][peakInd][0];
+    // AnalysisWaveform* secondaryWave = fDeconvolved[pol][peakInd][0];
+    // AnalysisWaveform* secondaryWave = fDeconvolvedFiltered[pol][peakInd][0];
     if(primaryWave && secondaryWave){
 
       const char* opt = "al";
@@ -1535,14 +1302,14 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     pt->SetTextColor(peakColors[pol][peakInd]);
     pt->SetLineColor(peakColors[pol][peakInd]);
     
-    pt->AddText(TString::Format("Image peak = %4.4lf", summary.peak[pol][peakInd].value));
-    pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", summary.peak[pol][peakInd].phi));
-    pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",summary.peak[pol][peakInd].theta));
-    pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", summary.coherent[pol][peakInd].peakHilbert));            
+    pt->AddText(TString::Format("Image peak = %4.4lf", fSummary.peak[pol][peakInd].value));
+    pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", fSummary.peak[pol][peakInd].phi));
+    pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",fSummary.peak[pol][peakInd].theta));
+    pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", fSummary.coherent[pol][peakInd].peakHilbert));            
 
-    pt->AddText(TString::Format("Latitude = %4.2lf #circ", summary.peak[pol][peakInd].latitude));
-    pt->AddText(TString::Format("Longitude = %4.2lf #circ", summary.peak[pol][peakInd].longitude));
-    pt->AddText(TString::Format("Altitude = %4.2lf #circ", summary.peak[pol][peakInd].altitude));                    
+    pt->AddText(TString::Format("Latitude = %4.2lf #circ", fSummary.peak[pol][peakInd].latitude));
+    pt->AddText(TString::Format("Longitude = %4.2lf #circ", fSummary.peak[pol][peakInd].longitude));
+    pt->AddText(TString::Format("Altitude = %4.2lf #circ", fSummary.peak[pol][peakInd].altitude));                    
     
     pt->Draw();
   }
@@ -1553,85 +1320,38 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
 
 
-/** 
- * @brief Coherently summed filtered (un-deconvolved) waveform accessor for external processes. 
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @param pol is the polarisation
- * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
- * @param xPol direct or cross polarisation compared to pol.
- * 
- * @return pointer to the AnalysisWaveform
- */
 AnalysisWaveform* Acclaim::AnalysisReco::getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
-  AnalysisWaveform* wf = wfCoherentFiltered[pol][peakInd][xPol];
-  wfCoherentFiltered[pol][peakInd][xPol] = NULL;
+  AnalysisWaveform* wf = fCoherentFiltered[pol][peakInd][xPol];
+  fCoherentFiltered[pol][peakInd][xPol] = NULL;
   return wf;  
 }
 
 
-/** 
- * @brief Coherently summed (un-filtered, un-deconvolved) waveform accessor for external processes. 
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @param pol is the polarisation
- * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
- * @param xPol direct or cross polarisation compared to pol.
- * 
- * @return pointer to the AnalysisWaveform
- */
 AnalysisWaveform* Acclaim::AnalysisReco::getCoherent(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
-  AnalysisWaveform* wf = wfCoherent[pol][peakInd][xPol];
-  wfCoherent[pol][peakInd][xPol] = NULL;
+  AnalysisWaveform* wf = fCoherent[pol][peakInd][xPol];
+  fCoherent[pol][peakInd][xPol] = NULL;
   return wf;  
 }
 
 
 
-/** 
- * @brief Coherently summed (un-filtered) deconvolved waveform accessor for external processes. 
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @param pol is the polarisation
- * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
- * @param xPol direct or cross polarisation compared to pol.
- * 
- * @return pointer to the AnalysisWaveform
- */
 AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolved(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
-  AnalysisWaveform* wf = wfDeconvolved[pol][peakInd][xPol];
-  wfDeconvolved[pol][peakInd][xPol] = NULL;
+  AnalysisWaveform* wf = fDeconvolved[pol][peakInd][xPol];
+  fDeconvolved[pol][peakInd][xPol] = NULL;
   return wf;
 }
 
 
-
-/** 
- * @brief Coherently summed filtered deconvolved waveform accessor for external processes. 
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @param pol is the polarisation
- * @param peakInd corresponds to which peak in the interferometric map (0 is highest up to fNumPeaks)
- * @param xPol direct or cross polarisation compared to pol.
- * 
- * @return pointer to the AnalysisWaveform
- */
 
 AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolvedFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
-  AnalysisWaveform* wf = wfDeconvolvedFiltered[pol][peakInd][xPol];
-  wfDeconvolvedFiltered[pol][peakInd][xPol] = NULL;
+  AnalysisWaveform* wf = fDeconvolvedFiltered[pol][peakInd][xPol];
+  fDeconvolvedFiltered[pol][peakInd][xPol] = NULL;
   return wf;
 }
 
 
 
 
-/** 
- * Access for internally produce minimally filtered event
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @return The minimally filtered version of the event
- */
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMin(){
   FilteredAnitaEvent* f = fEvMin;
   fEvMin = NULL;
@@ -1640,12 +1360,6 @@ FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMin(){
 
 
 
-/** 
- * Access for internally produced minimally filtered, deconvolved event
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @return The minimally filtered, deconvolved version of the event
- */
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMinDeco(){
   FilteredAnitaEvent* f = fEvMinDeco;
   fEvMinDeco = NULL;
@@ -1654,12 +1368,6 @@ FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMinDeco(){
 
 
 
-/** 
- * Access for internally produced filtered, deconvolved event
- * Only works once per event processed as ownership is transferred to the function caller.
- * 
- * @return The deconvolved version of the event
- */
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvDeco(){
   FilteredAnitaEvent* f = fEvDeco;
   fEvDeco = NULL;

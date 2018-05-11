@@ -198,7 +198,7 @@ namespace Acclaim
 
 
 
-    TH1D* makeIntegralHist(TH1* hist, bool ascendingIntegral = true, bool normalized = true);
+    TH1D* makeIntegralHist(const TH1* hist, bool ascendingIntegral = true, bool normalized = true);
 
     TGraphAntarctica* flightPath(int anita=3);
   }

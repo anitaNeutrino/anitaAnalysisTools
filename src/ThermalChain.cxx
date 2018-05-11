@@ -4,6 +4,8 @@
 #include "TEntryList.h"
 #include "ProgressBar.h"
 #include "TROOT.h"
+#include "AnitaDataset.h"
+
 
 Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
 
@@ -12,18 +14,27 @@ Acclaim::ThermalChain::ThermalChain(const char* glob, const char* treeName){
 
   TString hiCalGlob(glob);
   hiCalGlob.ReplaceAll("makeThermalTree", "makeHiCalTree");
-  fFriendChain = new TChain("hiCalTree");
-  fFriendChain->Add(hiCalGlob);
-  std::cout << fFriendChain->GetEntries() << std::endl;
-  fChain->AddFriend(fFriendChain);
 
-  
+  fFriendChain1 = new TChain("hiCalTree");
+  fFriendChain1->Add(hiCalGlob);
+
+  TString surfaceGlob(glob);
+  surfaceGlob.ReplaceAll("makeThermalTree", "makeSurfaceTree");
+
+  fFriendChain2 = new TChain("surfaceTree");
+  fFriendChain2->Add(surfaceGlob);
+
+  // std::cout << fFriendChain2->GetEntries() << std::endl;
+  fChain->AddFriend(fFriendChain1);
+  fChain->AddFriend(fFriendChain2);
+
   gROOT->ProcessLine("#include \"FFTtools.h\""); // hack to get various delta phi wrap Draw things to work in stand alone executables
 
   fCut = "";  
   fEntryListDirty = true;
   fEntryList = NULL;
   fUseProof = false;
+  fAnitaVersion = 0;
   setBranches();
 }
 
@@ -36,7 +47,8 @@ Acclaim::ThermalChain::~ThermalChain(){
   }
 
   // Pretty sure ROOT takes care of this...
-  fFriendChain = NULL;
+  fFriendChain1 = NULL;
+  fFriendChain2 = NULL;
   // if(fFriendChain){
   //   delete fFriendChain;
   //   fFriendChain = NULL;
@@ -68,13 +80,31 @@ void Acclaim::ThermalChain::setBranches(){
   fChain->SetBranchAddress("weight", &weight);
   fChain->SetBranchAddress("mc_energy", &mc_energy);
 
+  fChain->SetBranchAddress("peak_value", &peak_value);
+  fChain->SetBranchAddress("coherent_filtered_peakHilbert", &coherent_filtered_peakHilbert);
+  fChain->SetBranchAddress("deconvolved_filtered_peakHilbert", &deconvolved_filtered_peakHilbert);
+  fChain->SetBranchAddress("coherent_filtered_impulsivityMeasure", &coherent_filtered_impulsivityMeasure);  
+  fChain->SetBranchAddress("deconvolved_filtered_impulsivityMeasure", &deconvolved_filtered_impulsivityMeasure);  
+  fChain->SetBranchAddress("coherent_filtered_fracPowerWindowGradient", &coherent_filtered_fracPowerWindowGradient);
+  fChain->SetBranchAddress("deconvolved_filtered_fracPowerWindowGradient", &deconvolved_filtered_fracPowerWindowGradient);
 
 
-  fFriendChain->SetBranchAddress("duringHiCal", &duringHiCal);
-  fFriendChain->SetBranchAddress("hiCalPhi", &hiCalPhi);
-  fFriendChain->SetBranchAddress("hiCalTheta", &hiCalTheta);
-  fFriendChain->SetBranchAddress("eventNumber2", &eventNumber2);
-  fFriendChain->SetBranchAddress("run2", &run2);
+  fFriendChain1->SetBranchAddress("duringHiCal", &duringHiCal);
+  fFriendChain1->SetBranchAddress("hiCalPhi", &hiCalPhi);
+  fFriendChain1->SetBranchAddress("hiCalTheta", &hiCalTheta);
+  fFriendChain1->SetBranchAddress("eventNumber2", &eventNumber2);
+  fFriendChain1->SetBranchAddress("run2", &run2);
+
+
+  fFriendChain2->SetBranchAddress("longitude", &longitude);
+  fFriendChain2->SetBranchAddress("latitude", &latitude);
+  fFriendChain2->SetBranchAddress("altitude", &altitude);
+  fFriendChain2->SetBranchAddress("thetaAdjustmentRequired", &thetaAdjustmentRequired);
+  fFriendChain2->SetBranchAddress("onContinent", &onContinent);
+  fFriendChain2->SetBranchAddress("onIceShelf", &onIceShelf);
+  fFriendChain2->SetBranchAddress("iceThickness", &iceThickness);
+  fFriendChain2->SetBranchAddress("eventNumber3", &eventNumber3);
+  fFriendChain2->SetBranchAddress("run3", &run3);
   
 }
 
@@ -180,26 +210,101 @@ void Acclaim::ThermalChain::makeSelection() const {
  */
 Long64_t Acclaim::ThermalChain::N() const {
   makeSelection();
-  return fEntryList->GetN();  
+  return fEntryList->GetN();
 }
 
 Long64_t Acclaim::ThermalChain::getEntry(Long64_t entry){
+  
   makeSelection();
   Int_t treeIndex = -1;
   Long64_t treeEntry = fEntryList->GetEntryAndTree(entry,treeIndex);
   Long64_t chainEntry = treeEntry+fChain->GetTreeOffset()[treeIndex];
 
   Long64_t retVal = fChain->GetEntry(chainEntry);  
+  
+  doTypeConversions();
+
+  return retVal;
+}
+
+void Acclaim::ThermalChain::doTypeConversions(){
   pol = (AnitaPol::AnitaPol_t) polFloat;
   peakInd = (Int_t) peakIndFloat;
   eventNumber = (UInt_t) eventNumberInt;
   realTime = (UInt_t) realTimeInt;
 
   if(eventNumber2 != eventNumber || run2 != run){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in chains!" << std::endl;    
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in friendChain1!" << std::endl;
   }
-  
-  return retVal;
+  if(eventNumber3 != eventNumber || run3 != run){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", mismatch in friendChain2!" << std::endl;
+  }
+}
+
+
+
+
+Long64_t Acclaim::ThermalChain::getEvent(UInt_t eventNumber){
+  // Rolled my own lookup-by-eventNumber since TChainIndex doesn't seem up to the task
+  // maybe because the eventNumber marker isn't as well behaved as we would like?
+
+  // First set the correct AnitaVersion in case I compile with the default to ANITA-4  
+  if(!fAnitaVersion){ 
+    fChain->GetEntry(0);
+    doTypeConversions();
+    AnitaVersion::setVersionFromUnixTime(realTime);
+    fAnitaVersion = AnitaVersion::get();
+  }
+
+  // Look up the run, and find the appropriate file
+  Int_t run = AnitaDataset::getRunContainingEventNumber(eventNumber);
+  TString desiredFileName = TString::Format("makeThermalTree_%d_", run);
+  TIter next(fChain->GetListOfFiles());
+  Int_t desiredTreeNumber = -1;
+  while(TObject* f = next()){
+    desiredTreeNumber++;    
+    TString fileName = f->GetTitle();
+    if(fileName.Contains(desiredFileName)){
+      break;
+    }
+  }
+
+
+  // Check boundaries
+  if(desiredTreeNumber > -1 && desiredTreeNumber < fChain->GetListOfFiles()->GetEntries()){
+
+    // Get the first entry in file corresponding to run
+    Long64_t entry = fChain->GetTreeOffset()[desiredTreeNumber];
+    fChain->GetEntry(entry);
+    doTypeConversions();
+
+    // If event number was perfectly monotonic with no gaps this would work first time
+    // But as it is, need multiple attempts
+    const int maxTries = 50; // (Allow a lot of attempts)
+    for(int numTries = 0; numTries < maxTries; numTries++){
+
+      // Update entry difference in eventNumber from last event and desired event
+      Int_t deltaEntries = eventNumber - this->eventNumber;
+      entry += deltaEntries;
+
+      // Get most recent guessed entry
+      Long64_t nb = fChain->GetEntry(entry); 
+      doTypeConversions();
+      
+      // If it's a match then we're done, if not then loop again
+      if(this->eventNumber == eventNumber){
+	// std::cout << this->eventNumber << "\t" << eventNumber << std::endl;
+	return nb;
+	break;
+      }
+
+    }
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find eventNumber "
+	      << eventNumber << " after " << maxTries << " attempts, giving up!" << std::endl;
+    return -1;
+  }
+  std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find file corresponding to run " << run << std::endl;
+  return -1;
 }
 
 
@@ -213,3 +318,15 @@ Adu5Pat Acclaim::ThermalChain::pat(){
   return pat;
 }
 
+
+
+Double_t Acclaim::ThermalChain::fisherDiscriminant(){
+  //////////////////////////////////////////
+  // THIS NEEDS TO BE MAINTAINED BY HAND! //
+  //////////////////////////////////////////
+  
+  // from DrawStrings.h
+  // const TString fisherDiscriminant = "0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value)";
+
+  return 0.898497+(1.929594*coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient)+(-0.195909*deconvolved_filtered_fracPowerWindowGradient)+(5.943355*coherent_filtered_impulsivityMeasure)+(0.826114*deconvolved_filtered_impulsivityMeasure)+(0.021763*coherent_filtered_peakHilbert)+(-0.012670*deconvolved_filtered_peakHilbert)+(-0.394201*peak_value);
+}

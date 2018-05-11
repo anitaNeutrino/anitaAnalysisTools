@@ -19,7 +19,16 @@ int main(int argc, char* argv[]){
   Clustering::LogLikelihoodMethod clusterer;
   // clusterer.setDebug(true);
   clusterer.fStoreUnclusteredHistograms = false;
-  clusterer.addCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+  // clusterer.addCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+
+  const TCut subThresholdFisherCut("subThresholdFisherCut", ThermalTree::fisherDiscriminant + TString::Format(" > %lf", ThermalTree::fisherThreshold - 0.2));
+  
+  clusterer.addCut( !ThermalTree::isAboveHorizontal);
+  clusterer.addCut(  ThermalTree::passAllQualityCuts);
+  clusterer.addCut(  ThermalTree::isNotTaggedAsPulser);
+  clusterer.addCut(  subThresholdFisherCut);
+  clusterer.addCut( !ThermalTree::closeToHiCal);
+  clusterer.addCut(  ThermalTree::closeToMC);
 
   clusterer.doClustering(dataGlob, mcGlob, outFileName);
 
