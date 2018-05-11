@@ -1598,7 +1598,17 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
       // TCut hack("eventNumber==14545077||eventNumber==15202247");
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal);
-      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+      const char* whichTwentieth = getenv("WHICH_TWENTIETH");
+      int which = 0;
+      if(whichTwentieth){
+	which = atoi(whichTwentieth);
+      }
+      std::cout << "found WHICH_TWENTIES = " << which << std::endl;
+      // exit(0);
+      const TCut hackyCut("hackyCut", TString::Format("Entry$%20==%d", which));
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+      tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC + hackyCut);
+      // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
       // tc.setCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + ThermalTree::closeToMC);      
       // tc.setCut(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais);
       // tc.setCut(hack);
@@ -2373,14 +2383,24 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   std::cout << "done" << std::endl;
   
 
-  const char* fakeArgv[1] = {outFileName};
-  OutputConvention oc(1, const_cast<char**>(fakeArgv));
+  readInSummaries(mcGlob);
+
+  const char* sgeTaskId = getenv("SGE_TASK_ID");
+    
+  std::vector<const char*> fakeArgv;
+  fakeArgv.push_back(outFileName);
+  if(mcEvents.size() > 0){
+    fakeArgv.push_back("mc");
+  }
+  if(sgeTaskId){
+    fakeArgv.push_back(sgeTaskId);
+  }
+
+  OutputConvention oc(fakeArgv.size(), const_cast<char**>(&fakeArgv[0]));
   TFile* fOut = oc.makeFile();
 
   initKDTree();
 
-
-  readInSummaries(mcGlob);
 
   if(!fEventsAlreadyClustered){
     readInBaseList();
