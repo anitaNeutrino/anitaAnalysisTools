@@ -33,9 +33,9 @@ int main(int argc, char* argv[]){
 
 
   const TCut belowHorizontal = !ThermalTree::isAboveHorizontal;
-  const TCut fpwg("deconvolved_filtered_fracPowerWindowGradient > 4.0");
+  // const TCut fpwg("deconvolved_filtered_fracPowerWindowGradient > 4.0");
   backgroundSelection.push_back(&belowHorizontal);
-  backgroundSelection.push_back(&fpwg);
+  // backgroundSelection.push_back(&fpwg);
   backgroundSelection.push_back(&ThermalTree::fisherCut);
   backgroundSelection.push_back(&ThermalTree::isNotTaggedAsPulser);
   backgroundSelection.push_back(&ThermalTree::passAllQualityCuts);
@@ -44,19 +44,19 @@ int main(int argc, char* argv[]){
 
   std::vector<TString> variables;
 
-  variables.push_back("coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient");
-  variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
-  // variables.push_back("coherent_filtered_fracPowerWindowGradient");
+  // variables.push_back("coherent_filtered_fracPowerWindowGradient/deconvolved_filtered_fracPowerWindowGradient");
+  // variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
+  variables.push_back("coherent_filtered_fracPowerWindowGradient");
   // variables.push_back("deconvolved_filtered_fracPowerWindowGradient");
 
   variables.push_back("coherent_filtered_impulsivityMeasure");
-  variables.push_back("deconvolved_filtered_impulsivityMeasure");
+  // variables.push_back("deconvolved_filtered_impulsivityMeasure");
   // variables.push_back("coherent_filtered_impulsivityMeasure");
   // variables.push_back("deconvolved_filtered_impulsivityMeasure");
 
-  // variables.push_back("coherent_filtered_peakHilbert");
+  variables.push_back("coherent_filtered_peakHilbert");
   // variables.push_back("deconvolved_filtered_peakHilbert");
-  // variables.push_back("peak_value");
+  variables.push_back("peak_value");
   
   // co.setDebug(true);
   co.optimize(signalSelection, backgroundSelection, variables, outFileName);

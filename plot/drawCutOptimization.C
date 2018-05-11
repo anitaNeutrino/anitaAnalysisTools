@@ -307,10 +307,10 @@ void drawCutOptimization(const char* fileName){
   fr = (Acclaim::CutOptimizer::FisherResult*) f->Get("FisherResult");  
   // std::vector<TString> treeNames = {"signalCuts", "backgroundCuts"};//, "waisTree", "blastTree"};
   std::vector<TString> treeNames = {"signalTree", "backgroundTree"};//, "waisTree", "blastTree"};
-  // drawFisherPlot(f);
+  drawFisherPlot(f);
   // drawEfficiencies(f, true);
   // findBackgroundOutliers(f, 50);
-  plotComponents(f, 4, treeNames);
+  // plotComponents(f, 4, treeNames);
   
   
   

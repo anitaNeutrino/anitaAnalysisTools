@@ -301,7 +301,7 @@ void plotThermalTrees(const char* thermalTreeDataGlob = "data/makeThermalTree_*.
   TH1D* hFwI = NULL;
   TH1D* hFdI = NULL;
   if(plotWaisAndDown){
-  
+
     RootTools::canvas(2);
     c->Draw(ThermalTree::fisherDiscriminant + ">>hFw" + fdBins, ThermalTree::weight(ThermalTree::isTaggedAsWaisPulser + ThermalTree::closeToWais + ThermalTree::passAllQualityCuts));
     hFw = (TH1F*) gProof->GetOutputList()->FindObject("hFw");

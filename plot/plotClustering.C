@@ -232,6 +232,7 @@ void drawClusters2(TFile* f){
     int nLarges[nL] = {0};    
     int numNonZeroClusters = 0;
 
+    std::vector<Int_t> smallClusters;
     std::vector<Int_t> nonBaseSingletClusters;
     std::vector<Int_t> baseSingletClusters;
     
@@ -273,12 +274,17 @@ void drawClusters2(TFile* f){
 	  break;
 	}
       }
-      
+
+      const int defSmallForScan = 20;
       if(knownBase){
 	hKnown->Fill(z, nEvents);
 	if(nEvents==1){
 	  baseSingletClusters.push_back(c);
 	}
+	else if(nEvents > 0 && nEvents <= defSmallForScan){
+	  smallClusters.push_back(c);
+	}
+	
       }
       else{
 	if(nEvents  > 1){
@@ -288,6 +294,10 @@ void drawClusters2(TFile* f){
 	if(nEvents==1){
 	  nonBaseSingletClusters.push_back(c);
 	}
+	else if(nEvents >  1 && nEvents <= defSmallForScan){
+	  smallClusters.push_back(c);
+	}
+	
       }
       for(int i=0; i < nL; i++){
 	if(nEvents == largeSizes[i]){
@@ -319,6 +329,19 @@ void drawClusters2(TFile* f){
       }
       scanCut2 += ")";
       scanCut2 += " && !" + isSalt;
+
+
+
+      TString scanCut3 = "(";
+      for(auto c : smallClusters){
+    	if(scanCut3 != "("){
+    	  scanCut3 += " || ";
+    	}
+    	scanCut3 += TString::Format("cluster[%d] == %d", z, c);
+      }
+      scanCut3 += ")";
+      scanCut3 += " && !" + isSalt;
+      
       
 
       eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut, "goff");
@@ -331,6 +354,9 @@ void drawClusters2(TFile* f){
       grSinglets2 = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(scanCut2));      
       grSinglets2->SetName("grSinglets2");
       eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude", scanCut2, "goff");
+
+      std::cout << "Event list of small clusters!" << std::endl;
+      eventTree->Scan("run:eventNumber:pol:theta:longitude:latitude:cluster[2]", scanCut3, "goff");
 
       grSalt = new TGraphAntarctica(eventTree, "longitude", "latitude", TCut(isSalt));
     }
