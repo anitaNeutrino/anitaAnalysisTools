@@ -614,6 +614,13 @@ void Acclaim::AnalysisReco::initializeInternals(){
   fCurrentEventNumber = 0;
   fCurrentRun = 0;
 
+  fDrawNPeaks = 3;
+  fDrawDomain = kTimeDomain;
+  fDrawCoherent=1;
+  fDrawDedispersed=1;
+  fDrawXPol=1;
+  fDrawXPolDedispersed=1;
+
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
   if(!fMinFilter){
@@ -1079,6 +1086,10 @@ void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>
   }
 }
 
+
+
+
+
 void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
 
   const int numColsForNow = 3;
@@ -1097,7 +1108,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   
 
   TPad* wholeTitlePad = RootTools::makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
-  TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);  
+  (void) wholeTitlePad;
+  TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);
   TString wholeTitleText; // = TString::Format(");
   wholeTitleText += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
   wholeTitleText += " Reconstruction";
@@ -1108,19 +1120,38 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   
   TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
   
-  InterferometricMap* hCoarse = coarseMaps[pol];  
+  InterferometricMap* hCoarse = coarseMaps[pol];
 
-  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.35, 1, 0.75, "peaks");
+  const double fracFinePeak = 0.2; // fraction of pad width for the fine peak, the rest is split between coherent/dedispsered
+
+  TPad* tempPad = RootTools::makeSubPad(wholePad, 0, 0.72, 1, 0.75, "TempTitlePad");
+  tempPad->cd();
+  TPaveText* t1 = new TPaveText(0, 0, fracFinePeak, 1);
+  t1->AddText("Fine Map");
+  TPaveText* t2 = new TPaveText(fracFinePeak, 0, fracFinePeak+0.5*(1-fracFinePeak), 1);
+  t2->AddText("Coherent");
+  TPaveText* t3 = new TPaveText(fracFinePeak+0.5*(1-fracFinePeak), 0, 1, 1);
+  t3->AddText("Dedispersed");
+
+  TPaveText* paves[3] = {t1, t2, t3};
+  for(int i=0; i < 3; i++){
+    paves[i]->SetBit(kCanDelete);
+    paves[i]->SetShadowColor(0);
+    paves[i]->SetLineWidth(0);
+    paves[i]->SetLineColor(0);
+    paves[i]->Draw();
+  }
+
+  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.3, 1, 0.72, "peaks");
 
   std::list<InterferometricMap*> drawnFineMaps;
-  Double_t coherentMax = -1e9, coherentMin = 1e9;
-  
-  const int nFine = 3; // maybe discover this dynamically?
+
+  const int nFine = TMath::Min(fNumPeaks, fDrawNPeaks);
   for(int peakInd = 0; peakInd < nFine; peakInd++){
     double yUp = 1 - double(peakInd)/nFine;
-    double yLow = yUp - double(1)/nFine;    
-    TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, 0.2, yUp, "fine");
-
+    double yLow = yUp - double(1)/nFine;
+    TPad* finePeak = RootTools::makeSubPad(finePeaksAndCoherent, 0, yLow, fracFinePeak, yUp, "fine");
+    (void) finePeak;
     
     InterferometricMap* h = fineMaps[pol][peakInd];
     if(h){
@@ -1139,116 +1170,153 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       hCoarse->addGuiChild(*grEdge, "l");
     }
 
-    TPad* coherentPad    = RootTools::makeSubPad(finePeaksAndCoherent, 0.2, yLow, 0.6, yUp, "coherent");
-    TPad* coherentFftPad = RootTools::makeSubPad(finePeaksAndCoherent, 0.6, yLow,   1, yUp, "coherentFFT");
+    double x0 = fCoherentFiltered[pol][peakInd][0]->even()->GetX()[0] - 10;
+    double xN = fCoherentFiltered[pol][peakInd][0]->even()->GetX()[fCoherentFiltered[pol][peakInd][0]->even()->GetN()-1] + 10;
 
-    // TODO, make this selectable?
-    AnalysisWaveform* primaryWave = fCoherentFiltered[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &primaryInfo = fSummary.coherent_filtered[pol][peakInd];
-    
-    AnalysisWaveform* secondaryWave = fDeconvolvedFiltered[pol][peakInd][0];
-    AnitaEventSummary::WaveformInfo &secondaryInfo = fSummary.deconvolved_filtered[pol][peakInd];
-
-    // AnalysisWaveform* secondaryWave = fCoherent[pol][peakInd][0];
-    // AnitaEventSummary::WaveformInfo &secondaryInfo = fSummary.coherent[pol][peakInd];
-    
-    // AnalysisWaveform* secondaryWave = fDeconvolved[pol][peakInd][0];
-    // AnalysisWaveform* secondaryWave = fDeconvolvedFiltered[pol][peakInd][0];
-    if(primaryWave && secondaryWave){
-
-      const char* opt = "al";
-
-      // don't want to be able to edit it by accident so copy it...
-      TGraphAligned* gr2 = const_cast<TGraphAligned*>(primaryWave->even());
-      TGraphAligned* gr4 = const_cast<TGraphAligned*>(secondaryWave->even());
-
-      gr2->SetFillColor(0);
-      gr4->SetFillColor(0);
-      gr2->SetLineColor(peakColors[pol][peakInd]);
-      gr4->SetLineColor(kRed);      
-      gr4->SetLineStyle(3);
-
-      TGraphInteractive* gr = new TGraphInteractive(gr2, "l");
-      gr->SetBit(kCanDelete); // Let ROOT track and handle deletion
-      
-      TString title = "Coherent Filtered;Time (ns); Amplitiude (mV)";
-      gr->SetTitle(title);
-
-      gr4->SetTitle("Coherent Unfiltered");
-      gr->addGuiChild(*gr4, "l");
-      
-      coherentPad->cd();
-
-      gr->DrawGroup(opt);
-
-      TGraphAligned* grPower2 = const_cast<TGraphAligned*>(primaryWave->powerdB());
-      TGraphAligned* grPower4 = const_cast<TGraphAligned*>(secondaryWave->powerdB());
-
-      grPower2->SetLineColor(peakColors[pol][peakInd]);
-      grPower4->SetLineColor(kRed);
-
-      TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
-      grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
-      const double maxFreqGHz = 1.3;
-      grPower->GetXaxis()->SetRangeUser(0, maxFreqGHz);
-
-      title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
-      grPower->SetTitle(title);
-
-      TGraphInteractive* grSlope = new TGraphInteractive(0, NULL, NULL, "l");
-      grSlope->SetPoint(0, fSlopeFitStartFreqGHz, primaryInfo.spectrumSlope*fSlopeFitStartFreqGHz + primaryInfo.spectrumIntercept);
-      grSlope->SetPoint(1, fSlopeFitEndFreqGHz, primaryInfo.spectrumSlope*fSlopeFitEndFreqGHz + primaryInfo.spectrumIntercept);
-      grSlope->SetLineColor(grPower->GetLineColor());
-      
-      grPower->addGuiChild(grSlope); // pass it a pointer and it takes ownership
-      
-
-      grPower4->SetTitle("PSD Coherent Unfiltered");
-      grPower->addGuiChild(*grPower4, "l");
-      
-
-      TGraphInteractive* grSlope4 = new TGraphInteractive(0, NULL, NULL, "l");
-      grSlope4->SetPoint(0, fSlopeFitStartFreqGHz, secondaryInfo.spectrumSlope*fSlopeFitStartFreqGHz + secondaryInfo.spectrumIntercept);
-      grSlope4->SetPoint(1, fSlopeFitEndFreqGHz, secondaryInfo.spectrumSlope*fSlopeFitEndFreqGHz + secondaryInfo.spectrumIntercept);
-      grSlope4->SetLineColor(grPower4->GetLineColor());
-      grPower->addGuiChild(grSlope4);
-
-
-      double df = primaryWave->deltaF();
-      TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
-      grCoherentPeakMarker->SetMarkerStyle(4);
-      grCoherentPeakMarker->SetMarkerSize(0.75);
-      grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
-      
-      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
-        if(primaryInfo.peakFrequency[i] > 0){
-          int powerBin = TMath::Nint(primaryInfo.peakFrequency[i]/df);
-          grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
-        }
+    for(int j=0; j <= 1; j++){ // j loops over a coherent/dedispersed
+      std::vector<AnalysisWaveform*> wavesToDraw;
+      std::vector<const AnitaEventSummary::WaveformInfo*> waveInfo;
+      std::vector<EColor> waveColors;
+      std::vector<Style_t> lineStyles;
+      std::vector<TString> legText;
+      if(j==0) {
+	if(fDrawCoherent > 0){
+	  wavesToDraw.push_back(fCoherentFiltered[pol][peakInd][0]);
+	  waveInfo.push_back(&fSummary.coherent_filtered[pol][peakInd]);
+	  waveColors.push_back(peakColors[pol][peakInd]);
+	  lineStyles.push_back(1);
+	  legText.push_back("Co-pol");
+	}
+	if(fDrawXPol > 0){
+	  wavesToDraw.push_back(fCoherentFiltered[pol][peakInd][1]);
+	  waveInfo.push_back(NULL);
+	  // waveColors.push_back(peakColors[pol][peakInd]);
+	  waveColors.push_back(kRed);
+	  lineStyles.push_back(7);
+	  legText.push_back("Cross-pol");
+	}
       }
-      grPower->addGuiChild(grCoherentPeakMarker);
-
-      double df2 = secondaryWave->deltaF();
-      TGraphInteractive* grCoherentUnfilteredPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
-      grCoherentUnfilteredPeakMarker->SetMarkerStyle(4);
-      grCoherentUnfilteredPeakMarker->SetMarkerSize(0.75);
-      grCoherentUnfilteredPeakMarker->SetMarkerColor(grPower4->GetLineColor());
-      
-      for(int i=0; i < AnitaEventSummary::peaksPerSpectrum; i++){
-        if(secondaryInfo.peakFrequency[i] > 0){
-          int powerBin = TMath::Nint(secondaryInfo.peakFrequency[i]/df2);
-          grCoherentUnfilteredPeakMarker->SetPoint(grCoherentUnfilteredPeakMarker->GetN(), grPower4->GetX()[powerBin], grPower4->GetY()[powerBin]);
-        }
+      else{
+	if(fDrawDedispersed > 0){
+	  wavesToDraw.push_back(fDeconvolvedFiltered[pol][peakInd][0]);
+	  waveInfo.push_back(&fSummary.deconvolved_filtered[pol][peakInd]);
+	  waveColors.push_back(peakColors[pol][peakInd]);
+	  lineStyles.push_back(1);
+	  legText.push_back("Co-pol");
+	}
+	if(fDrawXPolDedispersed > 0){
+	  wavesToDraw.push_back(fDeconvolvedFiltered[pol][peakInd][1]);
+	  waveInfo.push_back(NULL);
+	  waveColors.push_back(kRed); //peakColors[pol][peakInd]);
+	  lineStyles.push_back(7);
+	  legText.push_back("Cross-pol");
+	}
       }
-      grPower->addGuiChild(grCoherentUnfilteredPeakMarker);
-          
 
-      coherentFftPad->cd();
-      grPower->DrawGroup(opt);
+      // if(fDebug) std::cerr << "Draw flags:\t" << fDrawCoherent << "\t" << fDrawXPol << "\t" << fDrawDedispersed << "\t" << fDrawXPolDedispersed << std::endl;
+      // if(fDebug) std::cerr << "This gives us " << wavesToDraw.size() << " waveforms" << std::endl;
+      TGraphInteractive* gr = NULL;
+    
+      for(int i=0; i < wavesToDraw.size(); i++){
+	if(fDrawDomain==kTimeDomain){
+	  const TGraphAligned* gr2 = wavesToDraw[i]->even();
       
-    }
-    else{
-      std::cerr << "missing coherent pointer(s)?\t" << pol << "\t" << peakInd << "\t" << primaryWave << "\t" << secondaryWave << std::endl;
+	  TGraphInteractive* gr3 = new TGraphInteractive(gr2, "l");
+	  gr3->SetFillColor(0);
+	  gr3->SetLineColor(waveColors[i]);
+	  gr3->SetMarkerColor(waveColors[i]);
+	  gr3->SetLineStyle(lineStyles[i]);
+
+	  gr3->GetXaxis()->SetTitleSize(1);
+	  gr3->GetYaxis()->SetTitleSize(1);
+
+	  gr3->SetBit(kCanDelete); // Let ROOT track and handle deletion
+
+	  if(gr){
+	    gr->addGuiChild(gr3);
+	  }
+	  else {
+	    gr = gr3;
+
+	    TString title;
+	    switch (peakInd){
+	    case 0:  title = "Largest Peak ";                                  break;
+	    case 1:  title = "2nd Largest Peak ";                              break;
+	    case 2:  title = "3rd Largest Peak ";                              break;
+	    default: title = TString::Format("%dth Largest Peak",  peakInd+1); break;
+	    }
+	    title += (j == 0 ? "Coherent Waveform" : "Dedispersed Waveform");
+	    title += (pol == AnitaPol::kHorizontal ? " HPol" : " VPol");
+	    title += ";Time (ns);Amplitude (mV)";
+	    gr->SetTitle(title);
+	    gr->GetXaxis()->SetRangeUser(x0, xN);
+	  }
+	}
+	else{ // freq domain
+	  const TGraphAligned* grPower2 = wavesToDraw[i]->powerdB();
+
+	  TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
+
+	  grPower->SetLineColor(waveColors[i]);
+	  grPower->SetMarkerColor(waveColors[i]);
+	  grPower->SetLineStyle(lineStyles[i]);
+
+	  grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
+
+	  if(!gr){
+	    gr = grPower;
+	    const double maxFreqGHz = 1.3;
+	    gr->GetXaxis()->SetRangeUser(0, maxFreqGHz);
+	    TString title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
+	    grPower->SetTitle(title);
+	  }
+	  else{
+	    gr->addGuiChild(grPower);
+	  }
+
+
+	  if(waveInfo[i] && gr){
+	    double y0 = waveInfo[i]->spectrumSlope*fSlopeFitStartFreqGHz + waveInfo[i]->spectrumIntercept;
+	    TGraphInteractive* grSlope = new TGraphInteractive(1, &fSlopeFitStartFreqGHz, &y0, "l");
+	    grSlope->SetPoint(1, fSlopeFitEndFreqGHz, waveInfo[i]->spectrumSlope*fSlopeFitEndFreqGHz + waveInfo[i]->spectrumIntercept);
+	    grSlope->SetLineColor(grPower->GetLineColor());
+	    gr->addGuiChild(grSlope); // pass it a pointer and it takes ownership
+
+	    double df = wavesToDraw[i]->deltaF();
+	    TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+	    grCoherentPeakMarker->SetMarkerStyle(4);
+	    grCoherentPeakMarker->SetMarkerSize(0.75);
+	    grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
+      
+	    for(int k=0; k < AnitaEventSummary::peaksPerSpectrum; k++){
+	      if(waveInfo[i]->peakFrequency[k] > 0){
+		int powerBin = TMath::Nint(waveInfo[i]->peakFrequency[k]/df);
+		grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower->GetX()[powerBin], grPower->GetY()[powerBin]);
+	      }
+	    }
+	    gr->addGuiChild(grCoherentPeakMarker);
+	  }
+	}
+      
+      }
+      if(j==0){
+	TPad* coherentPad = RootTools::makeSubPad(finePeaksAndCoherent, fracFinePeak, yLow, fracFinePeak + 0.5*(1 - fracFinePeak), yUp, "coherent");
+	coherentPad->cd();
+      }
+      else{
+	TPad* dedispersedPad = RootTools::makeSubPad(finePeaksAndCoherent, fracFinePeak + 0.5*(1 - fracFinePeak), yLow, 1, yUp, "dedispersed");
+	dedispersedPad->cd();
+      }
+      if(gr){
+	gr->DrawGroup("al");
+	// if(peakInd==0){
+	//   gPad->Update(); // necessary to get root to paint it into existence
+	//   TPaveText* titlePave = (TPaveText*)gPad->FindObject("title");
+	//   if(titlePave){
+	//     std::cout << titlePave->GetSize() << std::endl;
+	//   }
+	// }
+      }
     }
   }
 
@@ -1277,11 +1345,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     // std::cout << polMax << "\t" << polMin << std::endl;
   }
 
-  TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.35, "text");
-  
+  const double epsilon = 0.001; // so there's enough room for line border on the edges of the pave text
+  TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.3, "text");
+  (void) textPad;
   for(int peakInd=0; peakInd < nFine; peakInd++){
     double xlow = double(peakInd)/nFine;
-    double xup = xlow + double(1.)/nFine;
+    double xup = xlow + double(1.)/nFine - epsilon;
     
     TPaveText *title = new TPaveText(xlow, 0.9, xup, 1);
     // title->SetBorderSize(0);
@@ -1296,7 +1365,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     
     title->Draw();
     
-    TPaveText *pt = new TPaveText(xlow, 0, xup, 0.9);
+    TPaveText *pt = new TPaveText(xlow, epsilon, xup, 0.9);
     // pt->SetBorderSize(0);
     pt->SetBit(kCanDelete, true);
     pt->SetTextColor(peakColors[pol][peakInd]);

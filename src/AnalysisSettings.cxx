@@ -128,9 +128,9 @@ Bool_t Acclaim::AnalysisSettings::stringIsKeyValuePair(const TString& commentStr
   // If there are two tokens, then there was one delimeter so we're good
   if(nTokens == 2){
     key = ((TObjString*) tokens->At(0))->GetString();
-    key.Strip().String(); // should string trailing whitespace
+    key.Strip().String(); // should strip trailing whitespace
     value = ((TObjString*) tokens->At(1))->GetString();
-    value.Strip().String(); // should string trailing whitespace
+    value.Strip().String(); // should strip trailing whitespace
     isKeyValuePair = true;
   }
   delete tokens;
@@ -325,7 +325,7 @@ void Acclaim::AnalysisSettings::parseSettingsFile(){
       }
       else{
         TString key, value;
-        Bool_t isKeyValuePair = stringIsKeyValuePair(thisLineCommentsRemoved, key, value);        
+        Bool_t isKeyValuePair = stringIsKeyValuePair(thisLineCommentsRemoved, key, value);
         if(isKeyValuePair){
           handleKeyValue(varMap, key, value);
         }
