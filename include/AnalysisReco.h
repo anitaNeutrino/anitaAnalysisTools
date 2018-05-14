@@ -63,6 +63,8 @@ namespace Acclaim
     /**
      * @brief Get the expected delay between antenna pairs for a given direction
      *
+     * This one is used for interferometry
+     * 
      * @param pol is the polarisation
      * @param ant1 is the first antenna
      * @param ant2 is the second antenna
@@ -72,6 +74,21 @@ namespace Acclaim
      * @return the expected time difference in nano-seconds
      */
     Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2, Double_t phiWave, Double_t thetaWave) const;
+
+
+    /**
+     * @brief Get the expected delay between a single antenna and the center of the payload for a given direction
+     * 
+     * This one is used for coherent summing
+     *
+     * @param pol is the polarisation
+     * @param ant is the antenna
+     * @param phiWave is the incoming plane wave direction in radians in payload coordinate relative to ADU5 aft-fore
+     * @param thetaWave is the incoming plane wave direction in radians (theta=0 is horizontal, +ve theta is up)
+     *
+     * @return the expected time difference in nano-seconds
+     */
+    Double_t getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t phiWave, Double_t thetaWave) const;
 
     /**
      * @brief Get the off axis delay between two antennas for a given phi angle

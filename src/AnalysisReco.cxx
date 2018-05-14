@@ -709,6 +709,17 @@ Double_t Acclaim::AnalysisReco::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_
 }
 
 
+Double_t Acclaim::AnalysisReco::getDeltaTExpected(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t phiWave, Double_t thetaWave) const {
+
+  // Double_t tanThetaW = tan(thetaWave);
+  Double_t tanThetaW = tan(-1*thetaWave);
+  Double_t part = fZArray[pol].at(ant)*tanThetaW - fRArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*fPhiArrayDeg[pol].at(ant));
+  Double_t tdiff = 1e9*((cos(thetaWave) * (part))/SPEED_OF_LIGHT); // Returns time in ns
+
+  return tdiff;
+}
+
+
 
 
 void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
@@ -916,6 +927,8 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
                                                           Double_t peakPhiDeg, Double_t peakThetaDeg, std::vector<double>& dts) {
 
   dts.clear(); // first empty the vector
+  dts.reserve(theAnts.size());
+
   Double_t phiWave = peakPhiDeg*TMath::DegToRad();
   Double_t thetaWave = peakThetaDeg*TMath::DegToRad();
   for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
@@ -1123,18 +1136,48 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   InterferometricMap* hCoarse = coarseMaps[pol];
 
   const double fracFinePeak = 0.2; // fraction of pad width for the fine peak, the rest is split between coherent/dedispsered
+  const EColor xPolColor = kRed;
+  const double xPolTitleBoxWidth = 0.1;
 
   TPad* tempPad = RootTools::makeSubPad(wholePad, 0, 0.72, 1, 0.75, "TempTitlePad");
   tempPad->cd();
-  TPaveText* t1 = new TPaveText(0, 0, fracFinePeak, 1);
-  t1->AddText("Fine Map");
-  TPaveText* t2 = new TPaveText(fracFinePeak, 0, fracFinePeak+0.5*(1-fracFinePeak), 1);
-  t2->AddText("Coherent");
-  TPaveText* t3 = new TPaveText(fracFinePeak+0.5*(1-fracFinePeak), 0, 1, 1);
-  t3->AddText("Dedispersed");
+  std::vector<TPaveText*> paves;
+  paves.push_back(new TPaveText(0, 0, fracFinePeak, 1));
+  paves.back()->AddText("Fine Map");
+  paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
 
-  TPaveText* paves[3] = {t1, t2, t3};
-  for(int i=0; i < 3; i++){
+  paves.push_back(new TPaveText(fracFinePeak, 0, fracFinePeak+0.5*(1-fracFinePeak)-0.1, 1));
+  paves.back()->AddText("Coherent");
+  paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
+  if(fDrawXPol){
+    double x2 = paves.back()->GetX2();
+    double x1 = x2 - xPolTitleBoxWidth;
+    paves.back()->SetX2(x1);
+    paves.back()->SetTextAlign(kVAlignCenter + kHAlignRight);
+
+    paves.push_back(new TPaveText(x1, 0, x2, 1));
+    paves.back()->AddText("(XPol)");
+    paves.back()->SetTextAlign(kVAlignCenter + kHAlignLeft);
+    ((TText*)paves.back()->GetListOfLines()->Last())->SetTextColor(xPolColor);
+  }
+
+  paves.push_back(new TPaveText(fracFinePeak+0.5*(1-fracFinePeak), 0, 1, 1));
+  paves.back()->AddText("Dedispersed");
+  paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
+
+  if(fDrawXPolDedispersed){
+    double x2 = paves.back()->GetX2();
+    double x1 = x2 - xPolTitleBoxWidth;
+    paves.back()->SetX2(x1);
+    paves.back()->SetTextAlign(kVAlignCenter + kHAlignRight);
+
+    paves.push_back(new TPaveText(x1, 0, x2, 1));
+    paves.back()->AddText("(XPol)");
+    ((TText*)paves.back()->GetListOfLines()->Last())->SetTextColor(xPolColor);
+    paves.back()->SetTextAlign(kVAlignCenter + kHAlignLeft);
+  }
+
+  for(int i=0; i < paves.size(); i++){
     paves[i]->SetBit(kCanDelete);
     paves[i]->SetShadowColor(0);
     paves[i]->SetLineWidth(0);
@@ -1191,7 +1234,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	  wavesToDraw.push_back(fCoherentFiltered[pol][peakInd][1]);
 	  waveInfo.push_back(NULL);
 	  // waveColors.push_back(peakColors[pol][peakInd]);
-	  waveColors.push_back(kRed);
+	  waveColors.push_back(xPolColor);
 	  lineStyles.push_back(7);
 	  legText.push_back("Cross-pol");
 	}
@@ -1207,7 +1250,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	if(fDrawXPolDedispersed > 0){
 	  wavesToDraw.push_back(fDeconvolvedFiltered[pol][peakInd][1]);
 	  waveInfo.push_back(NULL);
-	  waveColors.push_back(kRed); //peakColors[pol][peakInd]);
+	  waveColors.push_back(xPolColor); //peakColors[pol][peakInd]);
 	  lineStyles.push_back(7);
 	  legText.push_back("Cross-pol");
 	}
@@ -1297,7 +1340,6 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    gr->addGuiChild(grCoherentPeakMarker);
 	  }
 	}
-      
       }
       if(j==0){
 	TPad* coherentPad = RootTools::makeSubPad(finePeaksAndCoherent, fracFinePeak, yLow, fracFinePeak + 0.5*(1 - fracFinePeak), yUp, "coherent");
