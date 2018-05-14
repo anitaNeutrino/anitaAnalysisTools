@@ -933,7 +933,8 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
   Double_t thetaWave = peakThetaDeg*TMath::DegToRad();
   for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
     int ant = theAnts.at(antInd);
-    Double_t dt = getDeltaTExpected(pol, theAnts.at(0), ant, phiWave, thetaWave);
+    // Double_t dt = getDeltaTExpected(pol, theAnts.at(0), ant, phiWave, thetaWave);
+    Double_t dt = getDeltaTExpected(pol, ant, phiWave, thetaWave);
     dts.push_back(dt);
   }
 }
@@ -944,10 +945,14 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
 
   Int_t biggest = -1;
   Double_t largestPeakToPeak = 0;
+  std::vector<const AnalysisWaveform*> waves;
+  waves.reserve(theAnts.size());
+
   for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
     int ant = theAnts.at(antInd);
 
     const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
+    waves.push_back(wf);
     const TGraphAligned* gr = wf->even();
 
     Double_t vMax, vMin, tMax, tMin;
@@ -969,25 +974,13 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   }
 
   if(biggest < 0 || biggest >= NUM_SEAVEYS){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", I couldn't find a waveform where vMax - vMin > 0. "
-              << "Something's wrong, and I'm probably about to vomit a stack trace all over your terminal..." << std::endl;
-  }
-
-  // now we've found the channel with the biggest peak-to-peak
-  // prepare to coherently sum the waves with this channel first
-  std::vector<const AnalysisWaveform*> waves;
-  waves.push_back(fEv->getFilteredGraph(biggest, pol));
-  std::vector<int> orderedAnts(1, biggest);
-  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
-    int ant = theAnts.at(antInd);
-    if(ant != biggest){
-      waves.push_back(fEv->getFilteredGraph(ant, pol));
-      orderedAnts.push_back(ant);
-    }
+    std::cerr << "Error in " << __PRETTY_FUNCTION__
+	      << ", I couldn't find a waveform where vMax - vMin > 0. "
+              << "Something's wrong!" << std::endl;
   }
 
   std::vector<double> dts;
-  directionAndAntennasToDeltaTs(orderedAnts, pol, peakPhiDeg, peakThetaDeg, dts);
+  directionAndAntennasToDeltaTs(theAnts, pol, peakPhiDeg, peakThetaDeg, dts);  
   
   return coherentlySum(waves, dts);
 }
@@ -1021,14 +1014,15 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   if(checkWavesAndDtsMatch(waves, dts)==0){
     std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
     return NULL;
-  }  
+  }
 
+  const double extraTimeNs = 20; //2*(*std::max_element(dts.begin(), dts.end()));
   const TGraph* gr0 = waves[0]->even();
-  const double totalTime = gr0->GetX()[gr0->GetN()-1] - gr0->GetX()[0];
+  const double totalTime = gr0->GetX()[gr0->GetN()-1] - gr0->GetX()[0] + extraTimeNs;
   const int interpN = floor(totalTime/fCoherentDtNs);
   
   std::vector<double> zeros(interpN, 0);
-  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0]);
+  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0] - 0.5*extraTimeNs);
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
   for(UInt_t i=0; i < waves.size(); i++){
@@ -1156,7 +1150,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     paves.back()->SetTextAlign(kVAlignCenter + kHAlignRight);
 
     paves.push_back(new TPaveText(x1, 0, x2, 1));
-    paves.back()->AddText("(XPol)");
+    paves.back()->AddText("(Cross-Pol)");
     paves.back()->SetTextAlign(kVAlignCenter + kHAlignLeft);
     ((TText*)paves.back()->GetListOfLines()->Last())->SetTextColor(xPolColor);
   }
@@ -1172,7 +1166,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     paves.back()->SetTextAlign(kVAlignCenter + kHAlignRight);
 
     paves.push_back(new TPaveText(x1, 0, x2, 1));
-    paves.back()->AddText("(XPol)");
+    paves.back()->AddText("(Cross-Pol)");
     ((TText*)paves.back()->GetListOfLines()->Last())->SetTextColor(xPolColor);
     paves.back()->SetTextAlign(kVAlignCenter + kHAlignLeft);
   }
