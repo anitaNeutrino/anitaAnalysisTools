@@ -50,6 +50,7 @@ int main(int argc, char* argv[]){
   const char* optionForTFile = "create";
   
   TFile* fNewHeadFile = new TFile(outputDir + TString::Format("headFile%d.root", outputRun), optionForTFile);
+
   if(!fNewHeadFile){
     return 1;
   }
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]){
   TTree* fHeadTree = new TTree("headTree", "headTree");
   RawAnitaHeader* header = NULL;
   fHeadTree->Branch("header", &header);
+
 
   TFile* fNewEventFile = new TFile(outputDir + TString::Format("calEventFile%d.root", outputRun), optionForTFile);
   if(!fNewEventFile){
@@ -78,6 +80,7 @@ int main(int argc, char* argv[]){
 
   int runOfLastEvent = -1;
   AnitaDataset* d = NULL;
+  AnitaVersion::set(3);
   for(UInt_t i=0; i < eventNumbers.size(); i++){
     UInt_t eventNumber = eventNumbers[i];
     Int_t run = AnitaDataset::getRunContainingEventNumber(eventNumber);
@@ -145,7 +148,7 @@ int parseCommandLine(int argc, char* argv[],  std::vector<UInt_t>& eventNumbers)
 
   for(int i=1; i < argc; i++){
     TString opt(argv[i]);
-    std::cout << "argv[" << i << "] = " << opt << std::endl;
+    // std::cout << "argv[" << i << "] = " << opt << std::endl;
     if(opt=="-r"){
       expectingRun = true;
       expectingEventNumber = false;
