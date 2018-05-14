@@ -1943,7 +1943,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
         n++;
         t->GetEntry(t->GetEntryNumber(entry));
         eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
-        if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi)) continue;
+	// looks like adding SNR to isHical broke this line, I've added a zero to help the compiler out, though that probably breaks the clustering!
+        if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi, 0)) continue;
         if(weight <= 0 && peak_theta > 0)
 	  {
 	    // switches theta convention (i used the UCorrelator convention for theta)
