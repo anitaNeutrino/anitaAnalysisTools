@@ -139,7 +139,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
   AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
   Double_t largestPeakToPeakXPol = 0;
-  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol); // cross polarisation
+  AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol, &gr->GetX()[0]); // cross polarisation
 
   // Internal storage
   if(waveStore[1]){
@@ -172,9 +172,11 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // (1,  0,  0,  0) Unpolarised
 
   FFTtools::stokesParameters(grH->GetN(),
-                             grH->GetY(),  grH_hilbert->GetY(),
+                             grH->GetY(), grH_hilbert->GetY(),
                              grV->GetY(), grV_hilbert->GetY(),
-                             &(info.I), &(info.Q), &(info.U), &(info.V));
+                             &info.I,      &info.Q,     &info.U,     &info.V,
+			     &info.max_dI, &info.max_dQ,&info.max_dU,&info.max_dV,
+			     true);
 
   info.totalPower = RootTools::getTimeIntegratedPower(coherentWave->even());
   info.totalPowerXpol = RootTools::getTimeIntegratedPower(xPolCoherentWave->even());
@@ -482,7 +484,6 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
       for(UInt_t ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
   	Int_t ant = ring*NUM_PHI + phi;
 
-	
 	const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
 	const TGraphAligned* grPow = wf->power();
 	const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
@@ -941,7 +942,8 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
 
 AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol,
                                                        const std::vector<Int_t>& theAnts,
-                                                       Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak) {
+                                                       Double_t peakPhiDeg, Double_t peakThetaDeg,
+						       Double_t* biggestPeakToPeak, Double_t* forceT0) {
 
   Int_t biggest = -1;
   Double_t largestPeakToPeak = 0;
@@ -980,9 +982,9 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   }
 
   std::vector<double> dts;
-  directionAndAntennasToDeltaTs(theAnts, pol, peakPhiDeg, peakThetaDeg, dts);  
+  directionAndAntennasToDeltaTs(theAnts, pol, peakPhiDeg, peakThetaDeg, dts);
   
-  return coherentlySum(waves, dts);
+  return coherentlySum(waves, dts, forceT0);
 }
 
 size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
@@ -1009,7 +1011,7 @@ size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWa
   return s;
 }
 
-AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts) {
+AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, Double_t* forceT0) {
 
   if(checkWavesAndDtsMatch(waves, dts)==0){
     std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
@@ -1022,7 +1024,8 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   const int interpN = floor(totalTime/fCoherentDtNs);
   
   std::vector<double> zeros(interpN, 0);
-  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, gr0->GetX()[0] - 0.5*extraTimeNs);
+  double t0 = forceT0 ? *forceT0 : gr0->GetX()[0] - 0.5*extraTimeNs;
+  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, t0);
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
   for(UInt_t i=0; i < waves.size(); i++){
@@ -1094,7 +1097,16 @@ void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>
 }
 
 
-
+inline TString nameLargestPeak(Int_t peakInd){
+  TString title;
+  switch (peakInd){
+  case 0:  title = "Largest Peak ";                                  break;
+  case 1:  title = "2nd Largest Peak ";                              break;
+  case 2:  title = "3rd Largest Peak ";                              break;
+  default: title = TString::Format("%dth Largest Peak",  peakInd+1); break;
+  }
+  return title;
+}
 
 
 void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
@@ -1275,16 +1287,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	  else {
 	    gr = gr3;
 
-	    TString title;
-	    switch (peakInd){
-	    case 0:  title = "Largest Peak ";                                  break;
-	    case 1:  title = "2nd Largest Peak ";                              break;
-	    case 2:  title = "3rd Largest Peak ";                              break;
-	    default: title = TString::Format("%dth Largest Peak",  peakInd+1); break;
-	    }
+	    TString title = nameLargestPeak(peakInd);
 	    title += (j == 0 ? "Coherent Waveform" : "Dedispersed Waveform");
 	    title += (pol == AnitaPol::kHorizontal ? " HPol" : " VPol");
 	    title += ";Time (ns);Amplitude (mV)";
+
 	    gr->SetTitle(title);
 	    gr->GetXaxis()->SetRangeUser(x0, xN);
 	  }
@@ -1304,15 +1311,17 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    gr = grPower;
 	    const double maxFreqGHz = 1.3;
 	    gr->GetXaxis()->SetRangeUser(0, maxFreqGHz);
-	    TString title = "PSD Coherent Filtered;Frequency (GHz);Power Spectral Density (dBm/MHz)";
+	    TString title = nameLargestPeak(peakInd);
+	    title += (j == 0 ? "Coherent Waveform" : "Dedispersed Waveform");
+	    title += (pol == AnitaPol::kHorizontal ? " HPol" : " VPol");
+	    title += ";Frequency (GHz);Power Spectral Density (dBm/MHz)";
 	    grPower->SetTitle(title);
 	  }
 	  else{
 	    gr->addGuiChild(grPower);
 	  }
 
-
-	  if(waveInfo[i] && gr){
+	  if(waveInfo[i] && fFillSpectrumInfo && gr){
 	    double y0 = waveInfo[i]->spectrumSlope*fSlopeFitStartFreqGHz + waveInfo[i]->spectrumIntercept;
 	    TGraphInteractive* grSlope = new TGraphInteractive(1, &fSlopeFitStartFreqGHz, &y0, "l");
 	    grSlope->SetPoint(1, fSlopeFitEndFreqGHz, waveInfo[i]->spectrumSlope*fSlopeFitEndFreqGHz + waveInfo[i]->spectrumIntercept);
@@ -1324,7 +1333,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    grCoherentPeakMarker->SetMarkerStyle(4);
 	    grCoherentPeakMarker->SetMarkerSize(0.75);
 	    grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
-      
+
 	    for(int k=0; k < AnitaEventSummary::peaksPerSpectrum; k++){
 	      if(waveInfo[i]->peakFrequency[k] > 0){
 		int powerBin = TMath::Nint(waveInfo[i]->peakFrequency[k]/df);

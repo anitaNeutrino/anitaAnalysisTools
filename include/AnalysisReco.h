@@ -175,10 +175,11 @@ namespace Acclaim
      * @param peakPhiDeg is the incoming phi-direction in degrees in payload coordinates relative to ADU5 aft-fore
      * @param peakThetaDeg is the elevation in degrees (theta=0 is horizontal, +ve theta is up) in payload coordinates relative to ADU5 aft-fore
      * @param biggestPeakToPeak if non-NULL stores the largest peak-to-peak in the set of channels passed to the function
+     * @param forceT0 if non-NULL forces the newly created analysis waveform to start at a time pointed to (default is NULL)
      *
      * @return pointer to a newly created AnalysisWaveform, produces by coherently summing the parts
      */
-    AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol, const std::vector<Int_t>& theAnts, Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak=NULL);
+    AnalysisWaveform* coherentlySum(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol, const std::vector<Int_t>& theAnts, Double_t peakPhiDeg, Double_t peakThetaDeg, Double_t* biggestPeakToPeak=NULL ,double* forceT0 = NULL);
 
 
     /**
@@ -186,10 +187,11 @@ namespace Acclaim
      *
      * @param waves is a set of waveforms to coherently sum
      * @param dts is the set of time offsets (ns) to apply to those waveforms when summing
+     * @param forceT0 if non-NULL forces the newly created analysis waveform to start at a time pointed to (default is NULL)
      *
      * @return a pointer to a newly created AnalysisWaveform, produced by coherently averaging the input waveforms
      */
-    AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts);
+    AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, double* forceT0 = NULL);
 
 
 
