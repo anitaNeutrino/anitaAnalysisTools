@@ -1113,7 +1113,20 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
   const int numColsForNow = 3;
   EColor peakColors[AnitaPol::kNotAPol][numColsForNow] = {{kBlack, EColor(kMagenta+2), EColor(kViolet+2)},
-                                                          {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}}; 
+                                                          {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}};
+
+  // will go from top to bottom, like this...
+  // 0-1: vpol/hpol Reconstruction
+  // 1-2: Coarse Map
+  // 2-3: Fine map layers title
+  // 3-4: Fine maps (divided into fDrawNPeaks internally)
+  // 4-5: Detailed data tables
+  std::vector<double> wholePadVLayers = {1, 0.95, 0.75, 0.72, 0.3,  0};
+  Int_t wholePadLayer = 0;
+
+  if(fDrawNPeaks==1){ // tweak layout as there's too much space for just 1 fine map
+    wholePadVLayers = {1, 0.95, 0.65, 0.62, 0.35,  0};
+  }
 
   if(wholePad==NULL){
     UInt_t eventNumber = fCrossCorr->eventNumber[pol];
@@ -1125,8 +1138,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   }
   wholePad->Clear();
   
+  TPad* wholeTitlePad = RootTools::makeSubPad(wholePad,
+					      0, wholePadVLayers.at(wholePadLayer+1),
+					      1, wholePadVLayers.at(wholePadLayer),
+					      TString::Format("%d_title", (int)pol));
+  wholePadLayer++;
 
-  TPad* wholeTitlePad = RootTools::makeSubPad(wholePad, 0, 0.95, 1, 1, TString::Format("%d_title", (int)pol));
   (void) wholeTitlePad;
   TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);
   TString wholeTitleText; // = TString::Format(");
@@ -1137,16 +1154,25 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   wholeTitle->SetLineWidth(0);
   wholeTitle->Draw();
   
-  TPad* coarseMapPad = RootTools::makeSubPad(wholePad, 0, 0.75, 1, 0.95, TString::Format("%d_coarse", (int)pol));
-  
+  TPad* coarseMapPad = RootTools::makeSubPad(wholePad,
+					     0, wholePadVLayers.at(wholePadLayer+1),
+					     1, wholePadVLayers.at(wholePadLayer),
+					     TString::Format("%d_coarse", (int)pol));
+  wholePadLayer++;
+
   InterferometricMap* hCoarse = coarseMaps[pol];
 
   const double fracFinePeak = 0.2; // fraction of pad width for the fine peak, the rest is split between coherent/dedispsered
   const EColor xPolColor = kRed;
   const double xPolTitleBoxWidth = 0.1;
 
-  TPad* tempPad = RootTools::makeSubPad(wholePad, 0, 0.72, 1, 0.75, "TempTitlePad");
+  TPad* tempPad = RootTools::makeSubPad(wholePad,
+					0, wholePadVLayers.at(wholePadLayer+1),
+					1, wholePadVLayers.at(wholePadLayer),
+					"tempTitlePad");
+  wholePadLayer++;
   tempPad->cd();
+
   std::vector<TPaveText*> paves;
   paves.push_back(new TPaveText(0, 0, fracFinePeak, 1));
   paves.back()->AddText("Fine Map");
@@ -1191,7 +1217,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     paves[i]->Draw();
   }
 
-  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad, 0, 0.3, 1, 0.72, "peaks");
+  TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad,
+						     0, wholePadVLayers.at(wholePadLayer+1),
+						     1, wholePadVLayers.at(wholePadLayer),
+						     "peaks");
+  wholePadLayer++;
 
   std::list<InterferometricMap*> drawnFineMaps;
 
@@ -1391,7 +1421,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   }
 
   const double epsilon = 0.001; // so there's enough room for line border on the edges of the pave text
-  TPad* textPad = RootTools::makeSubPad(wholePad, 0, 0, 1, 0.3, "text");
+  TPad* textPad = RootTools::makeSubPad(wholePad,
+					0, wholePadVLayers.at(wholePadLayer+1),
+					1, wholePadVLayers.at(wholePadLayer),
+					"text");
+  wholePadLayer++;
   (void) textPad;
   for(int peakInd=0; peakInd < nFine; peakInd++){
     double xlow = double(peakInd)/nFine;
