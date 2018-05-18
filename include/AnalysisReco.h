@@ -58,7 +58,7 @@ namespace Acclaim
      * @param noiseMonitor is an optional parameter, which points to a NoiseMonitor, which tracks the RMS of MinBias events (used in SNR calculation)
      * @param truth is an optional pointer to the TruthAnitaEvent class generated with MC events
      */
-    void process(const FilteredAnitaEvent * ev, AnitaEventSummary * summary, NoiseMonitor* noiseMonitor=NULL, TruthAnitaEvent* truth = NULL);
+    void process(const FilteredAnitaEvent * fEv, AnitaEventSummary * sum, NoiseMonitor* noiseMonitor=NULL, TruthAnitaEvent* truth = NULL);
 
     /**
      * @brief Get the expected delay between antenna pairs for a given direction
@@ -119,7 +119,7 @@ namespace Acclaim
      * @param pad is the pad do draw on if it already exists (makes a new Canvas if passed NULL)
      * @param pol is the polarization to draw
      */
-    void drawSummary(TPad* pad, AnitaPol::AnitaPol_t pol);
+    void drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol);
 
     /**
      * @brief Get a pointer to the coarsely binned interferometric map stored in memory, once called, you own this InterferometricMap and must delete it.
@@ -191,7 +191,7 @@ namespace Acclaim
      *
      * @return a pointer to a newly created AnalysisWaveform, produced by coherently averaging the input waveforms
      */
-    AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, double* forceT0 = NULL);
+    AnalysisWaveform* coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, const double* forceT0 = NULL);
 
 
 

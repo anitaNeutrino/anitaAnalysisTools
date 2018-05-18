@@ -27,26 +27,26 @@ Acclaim::AnalysisReco::AnalysisReco(){
  */
 Acclaim::AnalysisReco::~AnalysisReco(){
 
-  if(fSpawnedCrossCorrelator && fCrossCorr){
+  if(fSpawnedCrossCorrelator && (fCrossCorr != nullptr)){
     delete fCrossCorr;
-    fCrossCorr = NULL;
+    fCrossCorr = nullptr;
   }  
   nicelyDeleteInternalFilteredEvents();  
 }
 
 
 void Acclaim::AnalysisReco::nicelyDeleteInternalFilteredEvents(){
-  if(fEvMin != NULL){
+  if(fEvMin != nullptr){
     delete fEvMin;
-    fEvMin = NULL;
+    fEvMin = nullptr;
   }
-  if(fEvMinDeco != NULL){
+  if(fEvMinDeco != nullptr){
     delete fEvMinDeco;
-    fEvMinDeco = NULL;
+    fEvMinDeco = nullptr;
   }
-  if(fEvDeco != NULL){
+  if(fEvDeco != nullptr){
     delete fEvDeco;
-    fEvDeco = NULL;  
+    fEvDeco = nullptr;
   }  
 }
 
@@ -82,7 +82,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   AnalysisWaveform* coherentWave = coherentlySum(fEv, pol, theAnts, phiDeg, thetaDeg, &largestPeakToPeak);
 
   // Internal storage
-  if(waveStore[0]){
+  if(waveStore[0] != nullptr){
     delete waveStore[0];
   }
   waveStore[0] = coherentWave;
@@ -90,11 +90,9 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   info.snr = 0;
   {
     double noise = 0;
-    for(unsigned antInd = 0; antInd < theAnts.size(); antInd++){
-      int ant = theAnts[antInd];
-
+    for(int ant : theAnts){
       double thisRMS = 0;
-      if(noiseMonitor){
+      if(noiseMonitor != nullptr){
 	thisRMS = noiseMonitor->getRMS(pol, ant, fEv->getHeader()->realTime);
       }
       else{
@@ -142,7 +140,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol, &gr->GetX()[0]); // cross polarisation
 
   // Internal storage
-  if(waveStore[1]){
+  if(waveStore[1] != nullptr){
     delete waveStore[1];
   }
   waveStore[1] = xPolCoherentWave;
@@ -206,7 +204,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   grHilbert->getMoments(sizeof(info.peakMoments)/sizeof(double), info.peakTime, info.peakMoments);
 
   // set impulsivity measure defined in AnitaAnalysisSummary
-  info.impulsivityMeasure = impulsivity::impulsivityMeasure(coherentWave, NULL, maxIndex, true);
+  info.impulsivityMeasure = impulsivity::impulsivityMeasure(coherentWave, nullptr, maxIndex, true);
 
   for(int w=0; w < AnitaEventSummary::numFracPowerWindows; w++){
     const double powerFraction = (w+1)*0.1;
@@ -228,7 +226,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   // from the time domain. Therefore there's a bunch of trailing high frequency crap that I want to ignore
   // The maximum useful frequency is the nominal sampling
 
-  if(fFillSpectrumInfo){
+  if(fFillSpectrumInfo != 0){
     const double maxFreqIfIHadNotIntepolated = FancyFFTs::getNumFreqs(NUM_SAMP)*(1./(NOMINAL_SAMPLING_DELTAT*NUM_SAMP));
     const double df = coherentWave->deltaF(); // the actual deltaF
     int numGoodFreqBins = floor(maxFreqIfIHadNotIntepolated/df);
@@ -315,7 +313,7 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
 
 void Acclaim::AnalysisReco::fillChannelInfo(const FilteredAnitaEvent* fEv, AnitaEventSummary* sum){
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    auto pol = (AnitaPol::AnitaPol_t) polInd;
     for(int ant=0; ant<NUM_SEAVEYS; ant++){
       const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
       const TGraphAligned* gr = wf->even();
@@ -339,7 +337,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
   fCurrentRun = fEv->getHeader()->run;
 
   // spawn a CrossCorrelator if we need one
-  if(!fCrossCorr){
+  if(fCrossCorr == nullptr){
     fCrossCorr = new CrossCorrelator();
     fSpawnedCrossCorrelator = true;
     fDtCache.init(fCrossCorr, this);
@@ -353,7 +351,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
   fEvMinDeco = new FilteredAnitaEvent(fEv->getUsefulAnitaEvent(), fMinDecoFilter, fEv->getGPS(), fEv->getHeader(), false); // minimum + deconvolution
   fEvDeco = new FilteredAnitaEvent(fEv, fMinDecoFilter); // extra deconvolution
 
-  if(fFillChannelInfo){
+  if(fFillChannelInfo != 0){
     fillChannelInfo(fEv, sum);
   }
 
@@ -363,7 +361,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 
   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
 
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    auto pol = (AnitaPol::AnitaPol_t) polInd;
 
     fCrossCorr->correlateEvent(fEv, pol);
 
@@ -383,7 +381,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
       reconstructZoom(pol, peakInd, coarseMapPeakPhiDegs.at(peakInd), coarseMapPeakThetaDegs.at(peakInd));
 
       InterferometricMap* h = fineMaps[pol][peakInd];
-      if(h){
+      if(h != nullptr){
 
         // for plotting
         h->addGpsInfo(fEv->getGPS());
@@ -415,7 +413,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 
 	h->setResolutionEstimateFromWaveformSNR(sum->deconvolved_filtered[pol][peakInd].snr);
 
-	if(fFillUnfiltered){
+	if(fFillUnfiltered != 0){
 	  fillWaveformInfo(pol, sum->coherent[pol][peakInd], fEvMin,        fCoherent[pol][peakInd],            h, noiseMonitor);	
 	  fillWaveformInfo(pol, sum->deconvolved[pol][peakInd], fEvMinDeco, fDeconvolved[pol][peakInd],         h, noiseMonitor);
 	}
@@ -428,7 +426,7 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 	//   std::cout << x << std::endl;
 	// }
 
-        if(fEv->getGPS() != NULL){
+        if(fEv->getGPS() != nullptr){
           UsefulAdu5Pat usefulPat(fEv->getGPS());
           int success = 0;
           if(sum->peak[pol][peakInd].theta < 0){ // work around for bug in traceBackToContinent
@@ -479,7 +477,7 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
   }
   
   for(Int_t polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
+    auto pol = (AnitaPol::AnitaPol_t) polInd;
     for(UInt_t phi=0; phi < NUM_PHI; phi++){
       for(UInt_t ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
   	Int_t ant = ring*NUM_PHI + phi;
@@ -513,7 +511,7 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
   
   for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
     int ant = flags.middleOrBottomAnt[band] % NUM_PHI;
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) flags.middleOrBottomPol[band];
+    auto pol = (AnitaPol::AnitaPol_t) flags.middleOrBottomPol[band];
     const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
     const TGraphAligned* grPow = wf->power();
     const double df_GHz = grPow->GetX()[1] - grPow->GetX()[0];
@@ -562,19 +560,17 @@ void Acclaim::AnalysisReco::setTriggerInfoFromPeakPhi(const RawAnitaHeader* head
     }
   }
 
-  peak.triggered = header->isInL3Pattern(peakPhiSector, pol);
-  peak.triggered_xpol = header->isInL3Pattern(peakPhiSector, xPol);
+  peak.triggered = (header->isInL3Pattern(peakPhiSector, pol) != 0);
+  peak.triggered_xpol = (header->isInL3Pattern(peakPhiSector, xPol) != 0);
 
-  peak.masked = header->isInPhiMaskOffline(peakPhiSector, pol) || header->isInL1MaskOffline(peakPhiSector, pol);
-  peak.masked_xpol = header->isInPhiMaskOffline(peakPhiSector, xPol) || header->isInL1MaskOffline(peakPhiSector, xPol);
-
-  return;
+  peak.masked = (header->isInPhiMaskOffline(peakPhiSector, pol) != 0) || (header->isInL1MaskOffline(peakPhiSector, pol) != 0);
+  peak.masked_xpol = (header->isInPhiMaskOffline(peakPhiSector, xPol) != 0) || (header->isInL1MaskOffline(peakPhiSector, xPol) != 0);
 }
 
 
 void Acclaim::AnalysisReco::initializeInternals(){
 
-  fCrossCorr = NULL;
+  fCrossCorr = nullptr;
   fSpawnedCrossCorrelator = false;
   fWhichResponseDir = 0;
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
@@ -587,14 +583,14 @@ void Acclaim::AnalysisReco::initializeInternals(){
   }
 
   for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    coarseMaps[polInd] = NULL;
+    coarseMaps[polInd] = nullptr;
     for(int peakInd=0; peakInd < AnitaEventSummary::maxDirectionsPerPol; peakInd++){
-      fineMaps[polInd][peakInd] = NULL;
+      fineMaps[polInd][peakInd] = nullptr;
       for(int xPol=0; xPol < AnitaPol::kNotAPol; xPol++){
-        fCoherentFiltered[polInd][peakInd][xPol] = NULL;
-        fCoherent[polInd][peakInd][xPol] = NULL;
-        fDeconvolved[polInd][peakInd][xPol] = NULL;
-        fDeconvolvedFiltered[polInd][peakInd][xPol] = NULL;
+        fCoherentFiltered[polInd][peakInd][xPol] = nullptr;
+        fCoherent[polInd][peakInd][xPol] = nullptr;
+        fDeconvolved[polInd][peakInd][xPol] = nullptr;
+        fDeconvolvedFiltered[polInd][peakInd][xPol] = nullptr;
       }
     }
   }
@@ -624,19 +620,19 @@ void Acclaim::AnalysisReco::initializeInternals(){
 
   const TString minFiltName = "Minimum";
   fMinFilter = Filters::findDefaultStrategy(minFiltName);
-  if(!fMinFilter){
+  if(fMinFilter == nullptr){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minFiltName << std::endl;
   }  
 
   const TString minDecoFiltName = "Deconvolve";
   fMinDecoFilter = Filters::findDefaultStrategy(minDecoFiltName);
-  if(!fMinDecoFilter){
+  if(fMinDecoFilter == nullptr){
     std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", unable to find default filter " << minDecoFiltName << std::endl;
   }
 
-  fEvMin = NULL;
-  fEvMinDeco = NULL;
-  fEvDeco = NULL;
+  fEvMin = nullptr;
+  fEvMinDeco = nullptr;
+  fEvDeco = nullptr;
 
   chooseAntennasForCoherentlySumming(fCoherentDeltaPhi);
   
@@ -735,13 +731,13 @@ void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
   }
 
   AnitaEventCalibrator* cal = AnitaEventCalibrator::Instance();
-  for(int surf=0; surf < NUM_SURF; surf++){
-    for(int chan=0; chan < NUM_CHAN; chan++){
-      cal->relativePhaseCenterToAmpaDelays[surf][chan] = 0;
+  for(auto & delaysPerSurf : cal->relativePhaseCenterToAmpaDelays){
+    for(double& delayThisChannel : delaysPerSurf){
+      delayThisChannel = 0;
     }
   }
 
-  if(!fCrossCorr){
+  if(fCrossCorr == nullptr){
     fCrossCorr = new CrossCorrelator();
     fSpawnedCrossCorrelator = true;
   }
@@ -758,7 +754,7 @@ void Acclaim::AnalysisReco::insertPhotogrammetryGeometry(){
 
 Acclaim::InterferometricMap* Acclaim::AnalysisReco::getMap(AnitaPol::AnitaPol_t pol){
   InterferometricMap* h = coarseMaps[pol];
-  coarseMaps[pol] = NULL;
+  coarseMaps[pol] = nullptr;
   return h;
 }
 
@@ -770,13 +766,13 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getMap(AnitaPol::AnitaPol_t 
 Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPol_t pol, UInt_t peakInd){
 
   InterferometricMap* h = fineMaps[pol][peakInd];
-  if(h==NULL){
+  if(h==nullptr){
     std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run "
 	      << fCurrentRun << ", eventNumber " << fCurrentEventNumber
 	      << ", unable to find fineMap with pol " << pol
               << " for peakInd = " << peakInd << " about to return NULL." << std::endl;
   }
-  fineMaps[pol][peakInd] = NULL;
+  fineMaps[pol][peakInd] = nullptr;
 
   return h;
 }
@@ -789,7 +785,7 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
 
 void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat) {
 
-  if(coarseMaps[pol]==NULL)
+  if(coarseMaps[pol]==nullptr)
   {
     // std::cerr << "new coarse map " << pol << std::endl;
     // I don't own the map or there isn't one, so I'll make a new one
@@ -800,7 +796,7 @@ void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat*
     coarseMaps[pol]->Reset();
   }
 
-  if(pat){
+  if(pat != nullptr){
     coarseMaps[pol]->addGpsInfo(pat);
   }
 
@@ -829,15 +825,15 @@ void Acclaim::AnalysisReco::reconstructZoom(AnitaPol::AnitaPol_t pol, Int_t peak
 
   Int_t phiSector = floor(deltaPhiDegPhi0/PHI_RANGE);
 
-  InterferometricMap* h = new InterferometricMap(peakIndex, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
-  if(pat){
+  auto* h = new InterferometricMap(peakIndex, phiSector, zoomCenterPhiDeg, PHI_RANGE_ZOOM, zoomCenterThetaDeg, THETA_RANGE_ZOOM);
+  if(pat != nullptr){
     h->addGpsInfo(pat);
   }
   h->Fill(pol, fCrossCorr, &fDtCache);  
 
   // std::cout << h->GetName() << std::endl;
   // std::cout << "in " << __PRETTY_FUNCTION__ << ": " << fineMaps[pol][peakIndex] << std::endl;
-  if(fineMaps[pol][peakIndex]){
+  if(fineMaps[pol][peakIndex] != nullptr){
     delete fineMaps[pol][peakIndex];
   }
   fineMaps[pol][peakIndex] = h;
@@ -855,7 +851,7 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
 
 
   std::ifstream lindasNums(pathToLindasFile.Data());
-  if(lindasNums.is_open()==0){
+  if(static_cast<int>(lindasNums.is_open())==0){
     return 1; // This is an error
   }
 
@@ -865,7 +861,7 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
   while(lindasNums >> ant >> dr >> dz >> dPhiRad >> dt){
 
     Int_t surf, chan, ant2;
-    geom->getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
+    AnitaGeomTool::getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
                                        surf, chan, ant2);
 
     Double_t newR = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dr;
@@ -932,8 +928,7 @@ void Acclaim::AnalysisReco::directionAndAntennasToDeltaTs(const std::vector<Int_
 
   Double_t phiWave = peakPhiDeg*TMath::DegToRad();
   Double_t thetaWave = peakThetaDeg*TMath::DegToRad();
-  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
-    int ant = theAnts.at(antInd);
+  for(int ant : theAnts){
     // Double_t dt = getDeltaTExpected(pol, theAnts.at(0), ant, phiWave, thetaWave);
     Double_t dt = getDeltaTExpected(pol, ant, phiWave, thetaWave);
     dts.push_back(dt);
@@ -950,9 +945,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
   std::vector<const AnalysisWaveform*> waves;
   waves.reserve(theAnts.size());
 
-  for(unsigned antInd=0; antInd < theAnts.size(); antInd++){
-    int ant = theAnts.at(antInd);
-
+  for(int ant : theAnts){
     const AnalysisWaveform* wf = fEv->getFilteredGraph(ant, pol);
     waves.push_back(wf);
     const TGraphAligned* gr = wf->even();
@@ -971,7 +964,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(const FilteredAnitaEvent*
     }
   }
 
-  if(biggestPeakToPeak){
+  if(biggestPeakToPeak != nullptr){
     (*biggestPeakToPeak) = largestPeakToPeak;
   }
 
@@ -1011,11 +1004,11 @@ size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWa
   return s;
 }
 
-AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, Double_t* forceT0) {
+AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const AnalysisWaveform*>& waves, std::vector<Double_t>& dts, const Double_t* forceT0) {
 
   if(checkWavesAndDtsMatch(waves, dts)==0){
     std::cerr << "Nothing to sum.. about to return NULL" << std::endl;
-    return NULL;
+    return nullptr;
   }
 
   const double extraTimeNs = 20; //2*(*std::max_element(dts.begin(), dts.end()));
@@ -1024,8 +1017,8 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
   const int interpN = floor(totalTime/fCoherentDtNs);
   
   std::vector<double> zeros(interpN, 0);
-  double t0 = forceT0 ? *forceT0 : gr0->GetX()[0] - 0.5*extraTimeNs;
-  AnalysisWaveform* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, t0);
+  double t0 = forceT0 != nullptr ? *forceT0 : gr0->GetX()[0] - 0.5*extraTimeNs;
+  auto* coherentWave = new AnalysisWaveform(interpN, &zeros[0], fCoherentDtNs, t0);
   TGraphAligned* grCoherent = coherentWave->updateEven();
 
   for(UInt_t i=0; i < waves.size(); i++){
@@ -1035,7 +1028,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
     const double t0 = grU->GetX()[0];
     const double tN = grU->GetX()[grU->GetN()-1];
 
-    if(fDebug){
+    if(fDebug != 0){
       std::cerr << "Debug in " << __PRETTY_FUNCTION__ << ", waves[" << i << "] has even with " << grU->GetN() << " points. "; 
       const TGraphAligned* grA = waves[i]->uneven();
 
@@ -1086,7 +1079,7 @@ void Acclaim::AnalysisReco::wavesInCoherent(std::vector<const AnalysisWaveform*>
 
   for(unsigned w=0; w < waves.size(); w++){
     const TGraphAligned* grOld = waves[w]->even();
-    TGraphAligned* gr = new TGraphAligned(grOld->GetN(), grOld->GetX(), grOld->GetY());
+    auto* gr = new TGraphAligned(grOld->GetN(), grOld->GetX(), grOld->GetY());
 
     for(int i=0; i < gr->GetN(); i++){
       gr->GetX()[i] -= dts[w];
@@ -1128,7 +1121,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     wholePadVLayers = {1, 0.95, 0.65, 0.62, 0.35,  0};
   }
 
-  if(wholePad==NULL){
+  if(wholePad==nullptr){
     UInt_t eventNumber = fCrossCorr->eventNumber[pol];
     TString canName = TString::Format("can%u", eventNumber);
     TString polSuffix = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
@@ -1145,7 +1138,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   wholePadLayer++;
 
   (void) wholeTitlePad;
-  TPaveText *wholeTitle = new TPaveText(0, 0, 1, 1);
+  auto *wholeTitle = new TPaveText(0, 0, 1, 1);
   TString wholeTitleText; // = TString::Format(");
   wholeTitleText += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
   wholeTitleText += " Reconstruction";
@@ -1181,7 +1174,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   paves.push_back(new TPaveText(fracFinePeak, 0, fracFinePeak+0.5*(1-fracFinePeak)-0.1, 1));
   paves.back()->AddText("Coherent");
   paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
-  if(fDrawXPol){
+  if(fDrawXPol != 0){
     double x2 = paves.back()->GetX2();
     double x1 = x2 - xPolTitleBoxWidth;
     paves.back()->SetX2(x1);
@@ -1197,7 +1190,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   paves.back()->AddText("Dedispersed");
   paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
 
-  if(fDrawXPolDedispersed){
+  if(fDrawXPolDedispersed != 0){
     double x2 = paves.back()->GetX2();
     double x1 = x2 - xPolTitleBoxWidth;
     paves.back()->SetX2(x1);
@@ -1209,12 +1202,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     paves.back()->SetTextAlign(kVAlignCenter + kHAlignLeft);
   }
 
-  for(int i=0; i < paves.size(); i++){
-    paves[i]->SetBit(kCanDelete);
-    paves[i]->SetShadowColor(0);
-    paves[i]->SetLineWidth(0);
-    paves[i]->SetLineColor(0);
-    paves[i]->Draw();
+  for(auto & pave : paves){
+    pave->SetBit(kCanDelete);
+    pave->SetShadowColor(0);
+    pave->SetLineWidth(0);
+    pave->SetLineColor(0);
+    pave->Draw();
   }
 
   TPad* finePeaksAndCoherent = RootTools::makeSubPad(wholePad,
@@ -1233,7 +1226,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     (void) finePeak;
     
     InterferometricMap* h = fineMaps[pol][peakInd];
-    if(h){
+    if(h != nullptr){
       h->SetTitleSize(1);
       h->GetXaxis()->SetTitleSize(0.01);
       h->GetYaxis()->SetTitleSize(0.01);
@@ -1264,15 +1257,15 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	  waveInfo.push_back(&fSummary.coherent_filtered[pol][peakInd]);
 	  waveColors.push_back(peakColors[pol][peakInd]);
 	  lineStyles.push_back(1);
-	  legText.push_back("Co-pol");
+	  legText.emplace_back("Co-pol");
 	}
 	if(fDrawXPol > 0){
 	  wavesToDraw.push_back(fCoherentFiltered[pol][peakInd][1]);
-	  waveInfo.push_back(NULL);
+	  waveInfo.push_back(nullptr);
 	  // waveColors.push_back(peakColors[pol][peakInd]);
 	  waveColors.push_back(xPolColor);
 	  lineStyles.push_back(7);
-	  legText.push_back("Cross-pol");
+	  legText.emplace_back("Cross-pol");
 	}
       }
       else{
@@ -1281,26 +1274,26 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	  waveInfo.push_back(&fSummary.deconvolved_filtered[pol][peakInd]);
 	  waveColors.push_back(peakColors[pol][peakInd]);
 	  lineStyles.push_back(1);
-	  legText.push_back("Co-pol");
+	  legText.emplace_back("Co-pol");
 	}
 	if(fDrawXPolDedispersed > 0){
 	  wavesToDraw.push_back(fDeconvolvedFiltered[pol][peakInd][1]);
-	  waveInfo.push_back(NULL);
+	  waveInfo.push_back(nullptr);
 	  waveColors.push_back(xPolColor); //peakColors[pol][peakInd]);
 	  lineStyles.push_back(7);
-	  legText.push_back("Cross-pol");
+	  legText.emplace_back("Cross-pol");
 	}
       }
 
       // if(fDebug) std::cerr << "Draw flags:\t" << fDrawCoherent << "\t" << fDrawXPol << "\t" << fDrawDedispersed << "\t" << fDrawXPolDedispersed << std::endl;
       // if(fDebug) std::cerr << "This gives us " << wavesToDraw.size() << " waveforms" << std::endl;
-      TGraphInteractive* gr = NULL;
+      TGraphInteractive* gr = nullptr;
     
       for(int i=0; i < wavesToDraw.size(); i++){
 	if(fDrawDomain==kTimeDomain){
 	  const TGraphAligned* gr2 = wavesToDraw[i]->even();
       
-	  TGraphInteractive* gr3 = new TGraphInteractive(gr2, "l");
+	  auto* gr3 = new TGraphInteractive(gr2, "l");
 	  gr3->SetFillColor(0);
 	  gr3->SetLineColor(waveColors[i]);
 	  gr3->SetMarkerColor(waveColors[i]);
@@ -1311,7 +1304,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
 	  gr3->SetBit(kCanDelete); // Let ROOT track and handle deletion
 
-	  if(gr){
+	  if(gr != nullptr){
 	    gr->addGuiChild(gr3);
 	  }
 	  else {
@@ -1329,7 +1322,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	else{ // freq domain
 	  const TGraphAligned* grPower2 = wavesToDraw[i]->powerdB();
 
-	  TGraphInteractive* grPower = new TGraphInteractive(grPower2, "l");
+	  auto* grPower = new TGraphInteractive(grPower2, "l");
 
 	  grPower->SetLineColor(waveColors[i]);
 	  grPower->SetMarkerColor(waveColors[i]);
@@ -1337,7 +1330,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
 	  grPower->SetBit(kCanDelete); // Let ROOT track and handle deletion
 
-	  if(!gr){
+	  if(gr == nullptr){
 	    gr = grPower;
 	    const double maxFreqGHz = 1.3;
 	    gr->GetXaxis()->SetRangeUser(0, maxFreqGHz);
@@ -1351,22 +1344,22 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    gr->addGuiChild(grPower);
 	  }
 
-	  if(waveInfo[i] && fFillSpectrumInfo && gr){
+	  if((waveInfo[i] != nullptr) && (fFillSpectrumInfo != 0) && (gr != nullptr)){
 	    double y0 = waveInfo[i]->spectrumSlope*fSlopeFitStartFreqGHz + waveInfo[i]->spectrumIntercept;
-	    TGraphInteractive* grSlope = new TGraphInteractive(1, &fSlopeFitStartFreqGHz, &y0, "l");
+	    auto* grSlope = new TGraphInteractive(1, &fSlopeFitStartFreqGHz, &y0, "l");
 	    grSlope->SetPoint(1, fSlopeFitEndFreqGHz, waveInfo[i]->spectrumSlope*fSlopeFitEndFreqGHz + waveInfo[i]->spectrumIntercept);
 	    grSlope->SetLineColor(grPower->GetLineColor());
 	    gr->addGuiChild(grSlope); // pass it a pointer and it takes ownership
 
 	    double df = wavesToDraw[i]->deltaF();
-	    TGraphInteractive* grCoherentPeakMarker = new TGraphInteractive(0, NULL, NULL, "p");
+	    auto* grCoherentPeakMarker = new TGraphInteractive(0, nullptr, nullptr, "p");
 	    grCoherentPeakMarker->SetMarkerStyle(4);
 	    grCoherentPeakMarker->SetMarkerSize(0.75);
 	    grCoherentPeakMarker->SetMarkerColor(grPower->GetLineColor());
 
-	    for(int k=0; k < AnitaEventSummary::peaksPerSpectrum; k++){
-	      if(waveInfo[i]->peakFrequency[k] > 0){
-		int powerBin = TMath::Nint(waveInfo[i]->peakFrequency[k]/df);
+	    for(double k : waveInfo[i]->peakFrequency){
+	      if(k > 0){
+		int powerBin = TMath::Nint(k/df);
 		grCoherentPeakMarker->SetPoint(grCoherentPeakMarker->GetN(), grPower->GetX()[powerBin], grPower->GetY()[powerBin]);
 	      }
 	    }
@@ -1382,7 +1375,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	TPad* dedispersedPad = RootTools::makeSubPad(finePeaksAndCoherent, fracFinePeak + 0.5*(1 - fracFinePeak), yLow, 1, yUp, "dedispersed");
 	dedispersedPad->cd();
       }
-      if(gr){
+      if(gr != nullptr){
 	gr->DrawGroup("al");
 	// if(peakInd==0){
 	//   gPad->Update(); // necessary to get root to paint it into existence
@@ -1398,8 +1391,8 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   coarseMapPad->cd();
   hCoarse->DrawGroup("colz");  
 
-  if(drawnFineMaps.size() > 0){
-    std::list<InterferometricMap*>::iterator it = drawnFineMaps.begin();
+  if(!drawnFineMaps.empty()){
+    auto it = drawnFineMaps.begin();
     Double_t polMax = -1e9;
     Double_t polMin = 1e9;    
     for(; it!=drawnFineMaps.end(); ++it){
@@ -1410,11 +1403,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       (*it)->SetMaximum(polMax);
       (*it)->SetMinimum(polMin);
     }
-    if(hCoarse){
+    if(hCoarse != nullptr){
       hCoarse->SetMaximum(polMax);
       // hCoarse->SetMinimum(polMin);      
     }
-    while(drawnFineMaps.size() > 0){
+    while(!drawnFineMaps.empty()){
       drawnFineMaps.pop_back();
     }
     // std::cout << polMax << "\t" << polMin << std::endl;
@@ -1431,7 +1424,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     double xlow = double(peakInd)/nFine;
     double xup = xlow + double(1.)/nFine - epsilon;
     
-    TPaveText *title = new TPaveText(xlow, 0.9, xup, 1);
+    auto *title = new TPaveText(xlow, 0.9, xup, 1);
     // title->SetBorderSize(0);
     title->SetBit(kCanDelete, true);
     title->SetTextColor(peakColors[pol][peakInd]);
@@ -1444,7 +1437,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     
     title->Draw();
     
-    TPaveText *pt = new TPaveText(xlow, epsilon, xup, 0.9);
+    auto *pt = new TPaveText(xlow, epsilon, xup, 0.9);
     // pt->SetBorderSize(0);
     pt->SetBit(kCanDelete, true);
     pt->SetTextColor(peakColors[pol][peakInd]);
@@ -1470,14 +1463,14 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 
 AnalysisWaveform* Acclaim::AnalysisReco::getCoherentFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
   AnalysisWaveform* wf = fCoherentFiltered[pol][peakInd][xPol];
-  fCoherentFiltered[pol][peakInd][xPol] = NULL;
+  fCoherentFiltered[pol][peakInd][xPol] = nullptr;
   return wf;  
 }
 
 
 AnalysisWaveform* Acclaim::AnalysisReco::getCoherent(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
   AnalysisWaveform* wf = fCoherent[pol][peakInd][xPol];
-  fCoherent[pol][peakInd][xPol] = NULL;
+  fCoherent[pol][peakInd][xPol] = nullptr;
   return wf;  
 }
 
@@ -1485,7 +1478,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::getCoherent(AnitaPol::AnitaPol_t pol, I
 
 AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolved(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
   AnalysisWaveform* wf = fDeconvolved[pol][peakInd][xPol];
-  fDeconvolved[pol][peakInd][xPol] = NULL;
+  fDeconvolved[pol][peakInd][xPol] = nullptr;
   return wf;
 }
 
@@ -1493,7 +1486,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolved(AnitaPol::AnitaPol_t pol
 
 AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolvedFiltered(AnitaPol::AnitaPol_t pol, Int_t peakInd, bool xPol){
   AnalysisWaveform* wf = fDeconvolvedFiltered[pol][peakInd][xPol];
-  fDeconvolvedFiltered[pol][peakInd][xPol] = NULL;
+  fDeconvolvedFiltered[pol][peakInd][xPol] = nullptr;
   return wf;
 }
 
@@ -1502,7 +1495,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::getDeconvolvedFiltered(AnitaPol::AnitaP
 
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMin(){
   FilteredAnitaEvent* f = fEvMin;
-  fEvMin = NULL;
+  fEvMin = nullptr;
   return f;
 }
 
@@ -1510,7 +1503,7 @@ FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMin(){
 
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMinDeco(){
   FilteredAnitaEvent* f = fEvMinDeco;
-  fEvMinDeco = NULL;
+  fEvMinDeco = nullptr;
   return f;
 }
 
@@ -1518,6 +1511,6 @@ FilteredAnitaEvent* Acclaim::AnalysisReco::getEvMinDeco(){
 
 FilteredAnitaEvent* Acclaim::AnalysisReco::getEvDeco(){
   FilteredAnitaEvent* f = fEvDeco;
-  fEvDeco = NULL;
+  fEvDeco = nullptr;
   return f;
 }
