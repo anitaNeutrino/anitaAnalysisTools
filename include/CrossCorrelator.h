@@ -77,13 +77,13 @@ namespace Acclaim
 
     void doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector);  
 
-    TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
-    TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2);
-    TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol,
-					   Int_t ant1, Int_t ant2);
+    TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const;
+    TGraph* getUpsampledCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const;
+    TGraph* getCrossCorrelationGraphWorker(Int_t numSamps, AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const;
 
 
     virtual Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
+    Double_t getTimeOfMaximumUpsampledCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const;
 
     void initializeVariables();
     void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, bool raw = false);
@@ -96,7 +96,7 @@ namespace Acclaim
     void fillCombosToUse();
     void do5PhiSectorCombinatorics();
 
-    Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT);
+    Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
 
 
 

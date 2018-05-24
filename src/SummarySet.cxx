@@ -1,26 +1,33 @@
 #include "SummarySet.h"
-#include "TChain.h"
-#include "AnitaEventSummary.h"
+
+#include <stdlib.h>
 #include <iostream>
+
+#include "TChain.h"
 #include "TH2D.h"
-#include "AnalysisPlot.h"
 #include "TFile.h"
 #include "TProof.h"
-#include <stdlib.h>
-#include "SummarySelector.h"
 #include "TCanvas.h"
 #include "TSeqCollection.h"
 #include "TChainElement.h"
 #include "TROOT.h"
 
+#include "AnitaEventSummary.h"
+
+#include "SummarySelector.h"
 #include "ProgressBar.h"
 #include "TH2DAntarctica.h"
 #include "TGraphAntarctica.h"
+#include "RootTools.h"
+
+
 
 Acclaim::SummarySet::SummarySet(const char* pathToSummaryFiles, const char* treeName, const char* summaryBranchName, bool useProof)
     : fPathToSummaryFiles(pathToSummaryFiles), fTreeName(treeName), fSummaryBranchName(summaryBranchName),
       fChain(NULL), fSum(NULL), fFirstTime(0), fFirstEventNumber(0), fLastTime(0), fLastEventNumber(0),
-      fUseProof(useProof), fProof(NULL) {
+      fUseProof(useProof), fProof(NULL), fBuiltIndex(false), fFlagChain(NULL), fFlags(NULL), fFlagEventNumber(0),
+      fDrawOutput(NULL)
+{
   
   init();
 }
@@ -51,6 +58,22 @@ Acclaim::SummarySet::~SummarySet(){
 }
 
 
+TProof* Acclaim::SummarySet::startProof(){
+  if(gProof){
+    std::cerr << "Warning in " << __PRETTY_FUNCTION__
+	      << " won't start new PROOF session if one is already running!"
+	      << std::endl;
+    return gProof;
+  }
+
+  gProof = TProof::Open("");
+  const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
+  TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
+  gProof->Load(loadAnita);
+  std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
+  return gProof;
+}
+
 
 /** 
  * Enable (disable) PROOF, if fUseProof is true (false)
@@ -58,20 +81,8 @@ Acclaim::SummarySet::~SummarySet(){
 void Acclaim::SummarySet::initProof(){
 
   if(fUseProof && !fProof){
-    if(gProof){
-      std::cerr << "Warning in " << __PRETTY_FUNCTION__
-		<< " won't start new PROOF session if one is already running!"
-		<< std::endl;
-      return;
-    }
-
-    fProof = TProof::Open("");
-    const char* anitaUtilInstallDir = getenv("ANITA_UTIL_INSTALL_DIR");
-    TString loadAnita = TString::Format("%s/share/Acclaim/loadAnita.C", anitaUtilInstallDir);
-    fProof->Load(loadAnita);
-    std::cout << "Info in " << __PRETTY_FUNCTION__ << ", started PROOF!" << std::endl;
-  }
-  
+    fProof = startProof();
+  }  
   if(fChain){
     fChain->SetProof(fUseProof);
   }
@@ -87,6 +98,22 @@ Long64_t Acclaim::SummarySet::Process(TSelector* selector, Option_t* option, Lon
   return retVal;
 }
 
+
+void Acclaim::SummarySet::addFlagChain(const char* flagFileGlob, const char* flagTreeName){
+
+  if(flagFileGlob){
+    if(fFlagChain){
+      delete fFlagChain;
+      fFlagChain = NULL;
+    }
+
+    fFlagChain = new TChain(flagTreeName);
+    fFlagChain->Add(flagFileGlob);
+
+    fFlagChain->SetBranchAddress("eventNumber", &fFlagEventNumber);
+    fFlagChain->SetBranchAddress("flags", &fFlags);
+  }
+}
 
 
 void Acclaim::SummarySet::init(){
@@ -150,8 +177,45 @@ Double_t Acclaim::SummarySet::getTotalSize() const{
  * @return the number of bytes read (same as TChain::GetEntry(entry))
  */
 Long64_t Acclaim::SummarySet::getEntry(Long64_t entry){
-  return fChain->GetEntry(entry);
+  Long64_t nb = fChain->GetEntry(entry);
+
+  if(fFlagChain){
+    fFlagChain->GetEntry(entry);
+
+    if(fFlagEventNumber!=fSum->eventNumber){
+      std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", fSum->eventNumber = " << fSum->eventNumber
+		<< ", but fFlagEventNumber = " << fFlagEventNumber << "!" << std::endl;
+    }
+
+    // std::cout << fFlags->topPower[0] << "\t" << fSum->flags.topPower[0] << "\t" << std::endl;
+
+    fSum->flags = *fFlags;
+  }
+
+
+  return nb;
 }
+
+
+
+/** 
+ * Loads eventNumber from the fChain, access with summary()
+ * 
+ * @param eventNumber is the entry to load
+ * 
+ * @return the number of bytes read (same as TChain::GetEntry(entry))
+ */
+Long64_t Acclaim::SummarySet::getEvent(UInt_t eventNumber){
+  if(!fBuiltIndex){
+    fChain->BuildIndex("eventNumber");
+    fBuiltIndex = true;
+  }
+
+  Long64_t entry = fChain->GetEntryNumberWithIndex(eventNumber);
+  return getEntry(entry);
+}
+
+
 
 
 
@@ -232,88 +296,102 @@ TH2DAntarctica* Acclaim::SummarySet::makeAntarcticaHist(AnitaPol::AnitaPol_t pol
 
 
 
+
+
+/** 
+ * Parses the varexp to get the created hist name and stores the result in fDrawOutput
+ * 
+ * @param varexp 
+ */
+void Acclaim::SummarySet::findHist(const char* varexp){
+
+  std::vector<TString> tokens;
+  RootTools::tokenize(tokens, varexp, ">>");
+
+
+  TString histName = "htemp";
+
+  if(tokens.size()>0){
+    UInt_t i = tokens.size() > 1 ? 1 : 0;
+    std::vector<TString> tokens2;
+    RootTools::tokenize(tokens2, tokens[i], "(");
+  
+    histName = tokens2.at(0);
+    // std::cout << histName << std::endl;
+  }
+
+  TObject* obj = gROOT->FindObject(histName);
+  if(obj){
+    if(fDrawOutput){
+      delete fDrawOutput;
+      fDrawOutput = NULL;
+    }
+    fDrawOutput = obj->Clone();
+  }
+}
+
+
+
+
 /** 
  * Little hack to make PROOF give me a histogram and canvas with different names
  * 
  * @param varexp the Draw expression
  */
 void Acclaim::SummarySet::renameProofCanvas(const char* varexp){
-  TCanvas* c = gPad->GetCanvas();
-  TString canName = c->GetName();
-  TString command = varexp;
-  TString histName = "htemp";
-  if(command.Contains(">>")){ // then we have a histogram name, let's go get it
-    TObjArray* tkns = command.Tokenize(">>");
-    TObjString* s1 = (TObjString*) tkns->At(1);
-    TString s1Str = s1->String();
-    TObjArray* tkns2 = s1Str.Tokenize("(");
-    TObjString* s2 = (TObjString*) tkns2->At(0);
-    histName = s2->String();
-    delete tkns;
-    delete tkns2;
-  }
 
-  // for some reason, proof does this...
-  // and if I want the histogram on the command line, I need to rename the canvas
-  if(canName==histName){
-    TString defCanName = gROOT->GetDefCanvasName();
-    TSeqCollection* cans = gROOT->GetListOfCanvases();
-    bool alreadyHaveThisCanName = true;
-    int i=1;
-    TString newCanName;
-    while(alreadyHaveThisCanName){
-      newCanName = i == 1 ? defCanName : defCanName + TString::Format("_n%d", i);
-      alreadyHaveThisCanName = cans->Contains(newCanName);
+  if(gPad){
+    TCanvas* c = gPad->GetCanvas();
+    TString canName = c->GetName();
+    TString command = varexp;
+    TString histName = "htemp";
+    if(command.Contains(">>")){ // then we have a histogram name, let's go get it
+      std::vector<TString> tokens;
+      RootTools::tokenize(tokens, varexp, ">>");
+      
+      if(tokens.size()>0){
+	UInt_t i = tokens.size() > 1 ? 1 : 0;
+	std::vector<TString> tokens2;
+	RootTools::tokenize(tokens2, tokens[i], "(");
+
+	if(tokens2.size() > 0){
+	  histName = tokens2[0];
+	}
+      }
     }
-    c->SetName(newCanName);
-    c->SetTitle(newCanName);
-  }      
+  
+    // for some reason, proof does this...
+    // and if I want the histogram on the command line, I need to rename the canvas
+    if(canName==histName){
+      TString newCanName = RootTools::nextCanvasName();
+      c->SetName(newCanName);
+      c->SetTitle(newCanName);
+    }
+  }
 }
 
 
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const TCut &selection, Option_t *option, Long64_t nentries, Long64_t firstentry){
   initProof();
+
+  ProgressBar p(1);
   Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
 
   if(fUseProof){
     renameProofCanvas(varexp);
   }
+  findHist(varexp);
+
+  p++;
   return retVal;
   
 }
 
 Long64_t Acclaim::SummarySet::Draw(const char* varexp, const char* selection, Option_t* option, Long64_t nentries, Long64_t firstentry){
-  initProof();
-  Long64_t retVal = fChain->Draw(varexp, selection, option, nentries, firstentry);
-  if(fUseProof){
-    renameProofCanvas(varexp);
-  }
-  return retVal;
+  TCut cut = selection;
+  return Draw(varexp, cut, option, nentries, firstentry);
 }
 
-Acclaim::AnalysisProf* Acclaim::SummarySet::bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
-  return h;
-}
-
-
-Acclaim::AnalysisProf* Acclaim::SummarySet::bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisProf* h = new AnalysisProf(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
-  return h;
-}
-
-
-
-Acclaim::AnalysisPlot* Acclaim::SummarySet::bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstTime(), getLastTime(), ny, yMin, yMax);
-  return h;
-}
-
-
-Acclaim::AnalysisPlot* Acclaim::SummarySet::bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax){
-  AnalysisPlot* h = new AnalysisPlot(name, title, nx, getFirstEventNumber(), getLastEventNumber(), ny, yMin, yMax);
-  return h;
-}
 
 
 

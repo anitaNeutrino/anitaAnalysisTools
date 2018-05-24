@@ -1,4 +1,4 @@
-#include "AnalysisCuts.h"
+#include "DrawStrings.h"
 #include "CutTreeSelector.h"
 #include "SummarySet.h"
 #include "OutputConvention.h"
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
   fs.push_back("sum.trainingPeak().value");
   cts.setFormulaStrings(fs);
 
-  cts.addEventSelectionCut(&AnalysisCuts::isAboveHorizontal);
+  cts.addCut(&SumTree::isAboveHorizontal);
   
   ss.Process(&cts);
 

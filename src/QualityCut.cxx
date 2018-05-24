@@ -193,13 +193,12 @@ void Acclaim::SurfSaturationCut::apply(const UsefulAnitaEvent* useful, AnitaEven
  */
 Acclaim::PayloadBlastCut::PayloadBlastCut(){
   ratioCutHigh = 2.8;
-  // ratioCutLow = -1; // no longer used
+  ratioCutLow = -1; // no longer used
   maxRatio = 0;
   maxRatioPhi = -1;
   maxRatioPol = AnitaPol::kNotAPol;
   eventPassesCut = true;
-  description = "Removes events with where any peak-to-peak in the top ring is significantly greater than the bottom ring.";
-      
+  description = "Removes events with where the peak-to-peak in the top ring is significantly lower than the bottom ring channel with the largest peak-to-peak.";      
 }
 
 
@@ -217,10 +216,12 @@ Acclaim::PayloadBlastCut::PayloadBlastCut(){
  */
 void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
 
-  maxRatio = 0;
   int anitaVersion = AnitaVersion::get();
 
+
   if(sum){
+    sum->flags.nSectorsWhereBottomExceedsTop = 0;
+
     for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
       sum->flags.maxBottomToTopRatio[polInd] = -9999;
       sum->flags.maxBottomToTopRatioSector[polInd] = -1;
@@ -229,104 +230,81 @@ void Acclaim::PayloadBlastCut::apply(const UsefulAnitaEvent* useful, AnitaEventS
     }
   }
 
-  AnitaPol::AnitaPol_t maxPol = AnitaPol::kNotAPol;
-  AnitaRing::AnitaRing_t maxRing = AnitaRing::kNotARing;
-  int maxPhi = -1;
-
-  int nBottomOrMidGreaterThanTop = 0;
-
-  double largestPeakToPeak = -DBL_MAX;
-  double correspondingTopPeakToPeak = -DBL_MAX;
-
   for(int pol=0; pol < AnitaPol::kNotAPol; pol++){
 
-    double largestPeakToPeakPol = -DBL_MAX; // stored per polarisation
-    double correspondingTopPeakToPeakPol = -DBL_MAX;
+    Double_t peakToPeaks[AnitaRing::kNotARing][NUM_PHI];
+    Double_t maxPeakToPeak = 0;
+    Int_t maxAnt = -1;
 
     for(int phi=0; phi < NUM_PHI; phi++){
 
-      // skip ALFA channel
-      if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==4){
-	continue;
-      }
-      // ALFA cross talk
-      if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==12){
-	continue;
-      }
-      // and channel with occasionally broken amplifer
+      // skip ALFA channels/ALFA cross talk
       if(anitaVersion==3 && pol==AnitaPol::kVertical && phi==7){
 	continue;
       }
-      // ... luckily none of those are next to each other
-      // and real blasts have enough power do many phi-sectors
+      if(anitaVersion==3 && pol==AnitaPol::kHorizontal && phi==4){
+	continue;
+      }
 
-
-      // first get the top ring
-      TGraph* grTop = useful->getGraph(phi, (AnitaPol::AnitaPol_t) pol);
-      const int nT = grTop->GetN() == NUM_SAMP ? quickFixMC(grTop->GetN(), grTop->GetX()) : grTop->GetN();
-      Double_t maxY, maxX, minY, minX;
-      RootTools::getLocalMaxToMinWithinLimits(grTop, maxY, maxX, minY, minX, grTop->GetX()[0], grTop->GetX()[nT-1]+1e-10);
-
-      Double_t peakToPeakTop = (maxY - minY);
-      delete grTop;
-
-
-      // then get the mid/bottom rings
-      for(int ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
-
-	int ant = ring*NUM_PHI + phi;
-
+      for(int ring=AnitaRing::kTopRing; ring < AnitaRing::kNotARing; ring++){
+	int ant = phi + NUM_PHI*ring;
 	TGraph* gr = useful->getGraph(ant, (AnitaPol::AnitaPol_t) pol);
+
+	// quick hack to fix this version of Linda's MC
 	const int n = gr->GetN() == NUM_SAMP ? quickFixMC(gr->GetN(), gr->GetX()) : gr->GetN();
+	while(gr->GetN() > n) gr->RemovePoint(gr->GetN()-1);
+
 	Double_t maxY, maxX, minY, minX;
-      	RootTools::getLocalMaxToMinWithinLimits(gr, maxY, maxX, minY, minX, gr->GetX()[0], gr->GetX()[n-1]+1e-10);
-
-	Double_t peakToPeak = (maxY - minY);
-	if(peakToPeak > largestPeakToPeakPol){
-	  maxPhi = phi;
-	  maxRing = (AnitaRing::AnitaRing_t) ring;
-	  largestPeakToPeakPol = peakToPeak;
-	  correspondingTopPeakToPeakPol = peakToPeakTop;
-	}
-
-	if(peakToPeak > peakToPeakTop){
-	  nBottomOrMidGreaterThanTop++;
-	}
+	RootTools::getLocalMaxToMin((const TGraph*)gr, maxY, maxX, minY, minX);
 
 	delete gr;
+
+	Double_t p2p = maxY - minY;
+
+	peakToPeaks[ring][phi] = p2p;
+
+	if(ring > 0 && p2p > maxPeakToPeak){
+	  maxPeakToPeak = p2p;
+	  maxAnt = ant;
+
+	  if(sum && ring==AnitaRing::kBottomRing && peakToPeaks[ring][phi] > peakToPeaks[0][phi]){
+	    sum->flags.nSectorsWhereBottomExceedsTop++;
+	  }
+	}
       }
     }
 
+    int ant = (maxAnt%NUM_PHI);
+    Double_t p2pTop = 0;
+    if(ant > -1){
+      p2pTop = peakToPeaks[ant/NUM_PHI][ant % NUM_PHI];
+    }
+
+    Double_t ratio = p2pTop > 0 ? maxPeakToPeak/p2pTop : -1; // shouldn't be possible, but avoid division by 0
+
     if(sum){
-      sum->flags.maxBottomToTopRatio[pol] = largestPeakToPeakPol/correspondingTopPeakToPeakPol;
-      sum->flags.maxBottomToTopRatioSector[pol] = maxPhi + maxRing*NUM_PHI;
+      sum->flags.maxBottomToTopRatio[pol] = ratio;
+      sum->flags.maxBottomToTopRatioSector[pol] = maxAnt;
+      sum->flags.minBottomToTopRatio[pol] = maxPeakToPeak;
     }
 
-    if(largestPeakToPeakPol > largestPeakToPeak){
-      maxPol = (AnitaPol::AnitaPol_t) pol;
-      largestPeakToPeak = largestPeakToPeakPol;
-      correspondingTopPeakToPeak = correspondingTopPeakToPeakPol;
-    }
-  }
-
-
-  double maxRatio = largestPeakToPeak/correspondingTopPeakToPeak;
-  if(maxRatio > ratioCutHigh || maxRatio < ratioCutLow){
-    eventPassesCut = false;
-  }
-  else{
-    eventPassesCut = true;
-  }
-  if(sum!=NULL){
-    sum->flags.nSectorsWhereBottomExceedsTop = nBottomOrMidGreaterThanTop;
-    if(eventPassesCut){
-      sum->flags.isPayloadBlast = 0;
+    if(ratio > ratioCutHigh || ratio < ratioCutLow){
+      eventPassesCut = false;
     }
     else{
-      sum->flags.isPayloadBlast = 1;
+      eventPassesCut = true;
     }
-  }  
+    if(sum!=NULL){
+      if(eventPassesCut){
+	sum->flags.isPayloadBlast = 0;
+      }
+      else{
+	sum->flags.isPayloadBlast = 1;
+      }
+    }
+  }
 }
+
 
 
 
@@ -360,14 +338,20 @@ Acclaim::NumPointsCut::NumPointsCut(){
  */
 void Acclaim::NumPointsCut::apply(const UsefulAnitaEvent* useful, AnitaEventSummary* sum){
   eventPassesCut = true;
-  for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
-    const int numPoints = useful->fNumPoints[chanIndex];
-    if(numPoints < numPointsCutLow){
-      eventPassesCut = false;
-      break;
+
+  // yet another hacky fix for MC here, as 2017Aug MC runs < 100, fail the numPoints cut, as it's not set properly
+  // @todo remove this in the future when this is fixed in the MC...
+  if(sum->mc.weight==0){
+
+    for(int chanIndex=0; chanIndex < NUM_CHAN*NUM_SURF; chanIndex++){
+      const int numPoints = useful->fNumPoints[chanIndex];
+      if(numPoints < numPointsCutLow){
+	eventPassesCut = false;
+	break;
+      }
     }
   }
-
+    
   if(sum){
     if(!eventPassesCut){
       // silly old flag name      

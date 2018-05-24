@@ -3,6 +3,10 @@
 #include "TChain.h"
 #include "AnitaConventions.h"
 #include "TGraphAntarctica.h"
+#include "AnitaEventSummary.h"
+
+#ifndef ACCLAIM_SUMMARY_SET_H
+#define ACCLAIM_SUMMARY_SET_H
 
 // This is a guess at the version number, if this doesn't work for you
 // feel free to try harder to track down the change
@@ -12,7 +16,7 @@
 #define TCHAIN_NENTRIES_DEFAULT TChain::kMaxEntries
 #endif   
 
-class AnitaEventSummary;
+
 class TH2D;
 class TH2DAntarctica;
 class TProfile2DAntarctica;
@@ -21,8 +25,8 @@ class TProof;
 namespace Acclaim
 {
 
-  class AnalysisPlot;
-  class AnalysisProf;
+  // class AnalysisPlot;
+  // class AnalysisProf;
 
   class SummarySet {
   public:
@@ -33,6 +37,7 @@ namespace Acclaim
     AnitaEventSummary * summary() const { return fSum;}
 
     Long64_t getEntry(Long64_t entry);
+    Long64_t getEvent(UInt_t eventNumber);
     Long64_t first(){return getEntry(0);}
     Long64_t last(){return fN > 0 ? getEntry(fN-1) : -1;}
 
@@ -41,11 +46,11 @@ namespace Acclaim
     UInt_t getFirstEventNumber(){return fFirstEventNumber;}
     UInt_t getLastEventNumber(){return fLastEventNumber;}
 
-    AnalysisProf* bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
-    AnalysisProf* bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisProf* bookTimeAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisProf* bookEventNumberAnalysisProf(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
-    AnalysisPlot* bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
-    AnalysisPlot* bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisPlot* bookTimeAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
+    // AnalysisPlot* bookEventNumberAnalysisPlot(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
 
     TH2D* bookTimeHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
     TH2D* bookEventNumberHistogram(const char* name, const char* title, int nx, int ny, double yMin, double yMax);
@@ -76,30 +81,41 @@ namespace Acclaim
     }
     void SetUseProof(bool useProof=true) {fUseProof = useProof;}
     Bool_t GetUseProof() {return fUseProof;}
+    void addFlagChain(const char* flagFileGlob, const char* flagTreeName = "flagTree");
 
+    TObject* getDrawOutput() {TObject* o = fDrawOutput; fDrawOutput = NULL; return o;} /// You take it, you own it, you delete it.
 
+    static TProof* startProof();
 
   protected:
 
     void init();
     void initProof();
     void renameProofCanvas(const char* varexp);
+    void findHist(const char* varexp);
 
-    TString fPathToSummaryFiles;	/// The glob passed to the TChain
-    TString fTreeName;			/// The name of the TTrees, default is "sumTree"
-    TString fSummaryBranchName;		/// Branch name of the AnitaEventSummary, default is "sum"
+    TString fPathToSummaryFiles;		/// The glob passed to the TChain
+    TString fTreeName;				/// The name of the TTrees, default is "sumTree"
+    TString fSummaryBranchName;			/// Branch name of the AnitaEventSummary, default is "sum"
 
-    TChain* fChain;			/// The chain of TTrees containing the AnitaEventSummary
-    Long64_t fN;			/// The number of entries in the AnitaEventSummary chain, access with SummarySet::N()
-    AnitaEventSummary* fSum;		/// Pointer to the current entry in the chain, access with SummarySet::summary()
+    TChain* fChain;				/// The chain of TTrees containing the AnitaEventSummary
+    Long64_t fN;				/// The number of entries in the AnitaEventSummary chain, access with SummarySet::N()
+    AnitaEventSummary* fSum;			/// Pointer to the current entry in the chain, access with SummarySet::summary()
 
-    UInt_t fFirstTime;			/// The realTime of the first entry in the summary chain, useful for booking histograms
-    UInt_t fFirstEventNumber;		/// The eventNumber of the first entry in the summary chain, useful for booking histograms
-    UInt_t fLastTime;			/// The realTime of the last entry in the summary chain, useful for booking histograms
-    UInt_t fLastEventNumber;		/// The eventNumber of the last entry in the summary chain, useful for booking histograms
-    Bool_t fUseProof;			/// Switch on the Parallel ROOT Facility, for speedy histogram plotting
-    TProof* fProof;			/// Pointer to the PROOF session  
+    UInt_t fFirstTime;				/// The realTime of the first entry in the summary chain, useful for booking histograms
+    UInt_t fFirstEventNumber;			/// The eventNumber of the first entry in the summary chain, useful for booking histograms
+    UInt_t fLastTime;				/// The realTime of the last entry in the summary chain, useful for booking histograms
+    UInt_t fLastEventNumber;			/// The eventNumber of the last entry in the summary chain, useful for booking histograms
+    Bool_t fUseProof;				/// Switch on the Parallel ROOT Facility, for speedy histogram plotting
+    TProof* fProof;				/// Pointer to the PROOF session
+    Bool_t fBuiltIndex;				/// Built chain index?
+
+    TChain* fFlagChain;				/// An optional chain of TTrees containing just AnitaEventSummary::EventFlags
+    AnitaEventSummary::EventFlags* fFlags;	/// Pointer to tree entry of optional flags
+    UInt_t fFlagEventNumber;			/// Event number stored with flags to double check event matching
+    TObject* fDrawOutput;                       /// Maybe points to the lasts histogram created by Draw()...
   };
 }
 
 
+#endif //ACCLAIM_SUMMARY_SET_H

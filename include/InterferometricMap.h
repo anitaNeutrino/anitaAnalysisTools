@@ -85,7 +85,25 @@ class InterferometricMap : public TH2D, public GuiParent {
   void addTruthInfo(const TruthAnitaEvent* truth);
   // void addGpsInfo(const UsefulAdu5Pat* usefulPat);
 
-  void project(TProfile2D* proj, double horizonKilometers);
+
+  /** 
+   * @brief Project this peak direction to the surface and draw a summary on the pad
+   * 
+   * Requires the GPS data to work, i.e. #fUsefulPat is non-NULL.
+   * @see addGpsInfo(const Adu5Pat* pat)
+   * 
+   * @param pad is the pad to draw on, makes a new TCanvas if null
+   * 
+   * @return pointer to the new canvas if pad is NULL, pad otherwise
+   */
+  TPad* makeProjectionCanvas(TPad* pad);
+
+  /** 
+   * Version of makeProjectionCanvas(TPad* pad) for ROOT context menu
+   * 
+   * @return same as makeProjectionCanvas(TPad* pad)
+   */
+  TPad* makeProjectionCanvas(){return makeProjectionCanvas(NULL);} //*MENU*
 
   inline Int_t GetNbinsPhi() const {return GetNbinsX();}
   inline Int_t GetNbinsTheta() const {return GetNbinsY();}
@@ -102,6 +120,17 @@ class InterferometricMap : public TH2D, public GuiParent {
   AnitaPol::AnitaPol_t getPol() const {return pol;}
 
   virtual void Reset(Option_t* = "");
+
+  /** 
+   * Sets values for #fSigmaTheta and #fSigmaPhi which allows contours to be drawn in makeProjectionCanvas()
+   * 
+   * @param snr is the estimate of the waveform SNR
+   * 
+   * @see Acclaim::Clustering::ResolutionModel
+   * @see makeProjectionCanvas(TPad* pad)
+   */
+  void setResolutionEstimateFromWaveformSNR(double snr);
+  
     
  protected:
 
@@ -125,6 +154,8 @@ class InterferometricMap : public TH2D, public GuiParent {
   bool fThetaAxisInSinTheta;
   void initializeInternals();
 
+
+
   // doing the zoomed in maps requires knowing a little more information
   // isZoomMap = false, and all other = -1 if doing a coarse map
   bool fIsZoomMap;
@@ -146,9 +177,12 @@ class InterferometricMap : public TH2D, public GuiParent {
   Double_t fPeakReducedChisquare; /// Residual of the peak fit... I hope
   Double_t fPeakSigmaPhi; /// Width of peak in phi
   Double_t fPeakSigmaTheta; /// Width of peak theta
-  Double_t fPeakCovariance; /// Width of peak theta  
+  Double_t fPeakCovariance; /// Width of peak theta
 
-  ClassDef(InterferometricMap, 3);
+  Double_t fSigmaTheta; /// Estimate of the pointing resolution from the waveform SNR @see setResolutionEstimateFromWaveformSNR(double snr)
+  Double_t fSigmaPhi; /// Estimate of of the pointing resultion from the waveform SNR @see setResolutionEstimateFromWaveformSNR(double snr)
+
+  ClassDef(InterferometricMap, 4);
 
   // static members, may end up elsewhere at some point
  public:
@@ -158,6 +192,7 @@ class InterferometricMap : public TH2D, public GuiParent {
   static const std::vector<Double_t>& getFineBinEdgesPhi();
   static Double_t getBin0PhiDeg();
   static Double_t getPhiSectorCenterPhiDeg(int phi);
+  static Int_t getPhiSectorFromPhiRough(double phiRough);
 
  private:
   static const TDecompSVD& getSVD();

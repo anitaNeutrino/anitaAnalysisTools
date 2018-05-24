@@ -6,7 +6,6 @@
 #include <TChain.h>
 #include <TFile.h>
 #include "AnitaEventSummary.h"
-#include "AnalysisCuts.h"
 
 // Use the TTree reader?
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6,0,0)
@@ -18,12 +17,9 @@
 
 class TH1D;
 class TBranch;
+class TCut;
 
 namespace Acclaim {
-
-  // namespace AnalysisCuts {
-  //   class AnalysisCut;
-  // }
 
   /**
    * @class SummarySelector
@@ -52,26 +48,29 @@ namespace Acclaim {
   class SummarySelector : public TSelector {
   public :
 
-    /** Useful in derived classes */
     TTree*				 fChain;			/// The analyzed TTree or TChain
-#ifdef USE_TTREE_READER
-    TTreeReader				 fReader;			/// The tree reader
-    TTreeReaderValue<AnitaEventSummary>	 fSumReaderValue;		/// The TTree reader value
-#else
-    TString fSumBranchName;
-    TBranch* fSumBranch; //!
-#endif
-    AnitaEventSummary*			 fSum;				/// AnitaEventSummary loaded with tree entry by GetEntry(entry)
-    TList*				 fEventSelection;		/// A list of AnalysisCut::AnalysisCuts objects, for event selection (none means selecting all)
+    Int_t                                fDirectionFormulaIndex;        /// Which TTree formula determines the peak direction?    
+    TList*				 fCuts;		/// A list of TCut objects, for event selection (none means selecting all)
+    TList*	                 	 fCutFormulas;	/// A list of TTreeFormula objects, derived from the TCut objects.
+
+    // TString                              fAnalysisCutTreeName;       /// Name of optional tree
+    // TTree*                               fAnalysisCutTree;		/// Optional tree to store the results of all the analysis cuts, default is on
+    Int_t                                fMaxNdata; /// Maximum size of the cut
+    std::vector<std::vector<Int_t> >     fCutReturns;	/// Stores the results as the cuts are processed in sequence
+    std::vector<Int_t> fCumulativeCutReturns;	/// Stores the AND of cut results per iteration processed in sequence
+    // bool fDoAnalysisCutTree;						/// Switches on/sult tree
+
+
 
     /** For demonstration */
-    TH1D*				 fSummarySelectorDemoHist;	/// A histogram of peak[1][0].value
-    bool				 fDoSummarySelectorDemoHist;	/// Set this to true to generate and fill fSummarySelectorDemoHist
+    TTreeFormula*                        fDemoForm;     /// TTree formula produced if making the demonstration histogram
+    TH1D*				 fDemoHist;	/// A histogram of peak[1][0].value
+    bool				 fDoDemoHist;	/// Set this to true to generate and fill fDemoHist
 
     SummarySelector(const char* sumBranchName = "sum");
     virtual ~SummarySelector();
 
-    void addEventSelectionCut(const Acclaim::AnalysisCuts::AnalysisCut* analysisCut);
+    void addCut(const TCut* analysisCut);
     
     virtual void   Begin(TTree *tree);
     virtual void   SlaveBegin(TTree *tree);
@@ -105,6 +104,13 @@ namespace Acclaim {
     {
       return fOutput;
     }
+
+
+  private:
+    // UInt_t fEventNumber;
+    // Int_t fRun;
+    // Double_t fWeight;
+    TTree* fTree;
 
     ClassDef(SummarySelector,0);
 

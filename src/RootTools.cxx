@@ -18,6 +18,10 @@
 #include "Math/Interpolator.h"
 #include "Math/InterpolationTypes.h"
 
+#include "TGClient.h"
+#include "TGWindow.h"
+#include "TROOT.h"
+#include "TFile.h"
 
 #include "RawAnitaHeader.h"
 #include "UsefulAnitaEvent.h"
@@ -348,8 +352,22 @@ void Acclaim::RootTools::subtractOffset(TGraph* gr, Double_t offset){
  * If it looks like there's an insane angle being passed in will return -9999.
 */
 Double_t Acclaim::RootTools::getDeltaAngleDeg(Double_t angle1, Double_t angle2){
-
   Double_t deltaAngle = angle1 - angle2;
+  return getDeltaAngleDeg(deltaAngle);
+}
+
+
+//---------------------------------------------------------------------------------------------------------
+/**
+ * @brief Do angle1-angle2 (in degrees) and +- 360 such that the result lies in -180 < deltaAngle < 180.
+ *
+ * @param deltaAngle is the difference between two angles in degrees
+ * @returns deltaAngle is the difference in the range -180 < deltaAngle < 180
+ *
+ * If it looks like there's an insane angle being passed in will return -9999.
+*/
+Double_t Acclaim::RootTools::getDeltaAngleDeg(Double_t deltaAngle){
+
   Int_t loopCount = 0;
   const Int_t maxLoopCount = 5;
   if(deltaAngle > 180){
@@ -799,6 +817,79 @@ TGraph* Acclaim::RootTools::interpolateWithStartTime(TGraph* grIn, Double_t star
 
 
 
+TString Acclaim::RootTools::nextCanvasName(){
+  const char* defName = gROOT->GetDefCanvasName();
+  TSeqCollection* cans = gROOT->GetListOfCanvases();
+
+  TString name = defName;
+  TObject* c = cans->FindObject(name);
+  Int_t testN = 1;
+  while(c){
+    testN++;
+    name = TString::Format("%s_n%d", defName, testN);
+    c = cans->FindObject(name); 
+  }
+  return name;
+}
+
+
+
+
+TCanvas* Acclaim::RootTools::canvas(Int_t logAxisBitMask, double fracLength, bool forceSquare){
+
+  if(fracLength < 0.1) fracLength = 0.1;
+  else if(fracLength > 1) fracLength = 1;
+ 
+  Int_t  x, y;
+  UInt_t w, h;
+  gVirtualX->GetWindowSize(gClient->GetRoot()->GetId(),x,y,w,h);
+
+  UInt_t cw = ceil(w*fracLength);
+  UInt_t ch = ceil(h*fracLength);
+
+  if(forceSquare){
+    if(cw < ch){
+      ch = cw;
+    }
+    else{
+      cw = ch;
+    }
+  }
+  
+  Int_t nc = gROOT->GetListOfCanvases()->GetEntries();
+  TString name = nextCanvasName();
+
+  const UInt_t dx = w/11;
+  const UInt_t dy = h/11;
+
+  Int_t x1 = nc*dx;
+  Int_t y1 = nc*dy;
+
+  while(x1 < 0 || y1 < 0 || x1+cw >= w || y1+ch >= h){
+    x1 += dx;
+    y1 += dy;
+
+    x1 = x1 % w;
+    y1 = y1 % h;
+  }
+
+  TCanvas* c = new TCanvas(name, name, x1, y1, cw, ch);
+  c->SetLogx((logAxisBitMask & 1));
+  c->SetLogy((logAxisBitMask & 2));
+  c->SetLogz((logAxisBitMask & 4));
+
+  return c;
+}
+
+
+TCanvas* Acclaim::RootTools::squareCanvas(Int_t logAxisBitMask, double fracLength){
+
+  return canvas(logAxisBitMask, fracLength, true);
+}
+
+
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Draws an array of histograms with a rainbow on a single TCanvas
@@ -813,7 +904,7 @@ TGraph* Acclaim::RootTools::interpolateWithStartTime(TGraph* grIn, Double_t star
 TCanvas* Acclaim::RootTools::drawArrayOfHistosPrettily(TH1D* hs[], Int_t numHists, TCanvas* can, Double_t* colWeights){
 
   if(can==NULL){
-    can = new TCanvas();
+    can = canvas();
   }
   can->cd();
 
@@ -916,7 +1007,7 @@ TCanvas* Acclaim::RootTools::drawArrayOfTGraphsPrettily(TGraph* grs[], Int_t num
 					       TString drawOpt, TCanvas* can, Double_t* colWeights){
 
   if(can==NULL){
-    can = new TCanvas();
+    can = canvas();
   }
   can->cd();
 
@@ -1162,13 +1253,26 @@ void Acclaim::RootTools::getLocalMaxToMinWithinLimits(const TGraph* gr,
 */
 void Acclaim::RootTools::saveCanvas(TCanvas* c, TString fileName){
 
-  std::cout << "Saving this canvas as an .eps, .png, and .C file..." << std::endl;
-  TString fName = fileName + ".eps";
-  c->SaveAs(fName);
-  fName = fileName + ".png";
-  c->SaveAs(fName);
-  fName = fileName + ".C";
-  c->SaveAs(fName);
+  const int numTypes = 3;
+  const char* suffixes[numTypes] = {"pdf", "png", "C"};
+
+  
+  std::cout << "Saving this canvas as a ";
+  for(int t=0; t < numTypes; t++){
+    std::cout << suffixes[t];
+    if(t < numTypes - 2){
+      std::cout << ", ";
+    }
+    else if(t < numTypes - 1){
+      std::cout << " and ";
+    }
+  }
+  std::cout << " file..." << std::endl;
+
+  for(int t=0; t < numTypes; t++){
+    TString fName = fileName + "." + TString(suffixes[t]);
+    c->SaveAs(fName);
+  }
   std::cout << "...Complete!" << std::endl;
   c->Update();
 }
@@ -1494,7 +1598,7 @@ Int_t Acclaim::RootTools::getColorFracThroughPalette(Int_t index, Int_t maxVal){
 TCanvas* Acclaim::RootTools::drawHistsWithStatsBoxes(Int_t numHists, TH1D* hs[], TString drawOpt, TString statsOption){
 
   gStyle->SetOptStat(statsOption);
-  TCanvas* theCan = new TCanvas();
+  TCanvas* theCan = canvas();
 
   Double_t boxSize = 0.2; // In normalized coordinates
   const Int_t maxNumBoxes = 1./boxSize;
@@ -1787,4 +1891,63 @@ void Acclaim::RootTools::tokenize(std::vector<TString>& tokenizedOutput, const c
   for(UInt_t k=0; k < inputTokensSoFar.size(); k++){
     tokenizedOutput.push_back(inputTokensSoFar[k]);
   }
+}
+
+
+
+TH1D* Acclaim::RootTools::makeIntegralHist(const TH1* hist, bool ascendingIntegral, bool normalized){
+
+
+  TString name = hist->GetName();
+  TString suffix = ascendingIntegral ? "_int_asc" : "_int_desc";
+  name += suffix;
+
+  const int nx = hist->GetNbinsX();
+  TH1D* hInt = new TH1D(name, hist->GetTitle(), nx, hist->GetXaxis()->GetBinLowEdge(1), hist->GetXaxis()->GetBinUpEdge(nx));
+
+  // double multFactor = normalized ? 1./hist->Integral() : 1; 
+  // double total = ascendingIntegral ? 0 : multFactor*hist->Integral();
+  // double sumFactor = multFactor*(ascendingIntegral ? 1 : -1);
+  int startBin = ascendingIntegral ? 1 : nx;
+  for(int bx=1; bx <= nx; bx++){
+    int bx1 = TMath::Min(startBin, bx);
+    int bx2 = TMath::Max(startBin, bx);
+    double err = 0;
+    double total = hist->IntegralAndError(bx1, bx2, err);
+    hInt->SetBinContent(bx, total);
+    hInt->SetBinError(bx, err);
+
+    // hInt->SetBinError(bx, TMath::Sqrt(total));
+    // total += sumFactor*hist->GetBinContent(bx);
+  }
+  if(normalized){
+    hInt->Scale(1./hist->Integral());
+  }  
+
+  return hInt;  
+  
+}
+
+
+
+TGraphAntarctica* Acclaim::RootTools::flightPath(int anita){
+ 
+  static TGraphAntarctica* gr = NULL;
+  if(anita!=3){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << ", currently only implemented for ANITA-3!" << std::endl;
+    return NULL;
+  }
+
+  const TString theRootPwd = gDirectory->GetPath();
+  TString fName = TString::Format("%s/share/anitaMap/anita%dFlightPath.root", getenv("ANITA_UTIL_INSTALL_DIR"), anita);
+  TFile* f = TFile::Open(fName);
+  if(f){
+    gr = (TGraphAntarctica*) f->Get("grAnita3FlightPath");
+    gDirectory->cd(theRootPwd);
+    return gr;
+  }
+  else{
+    std::cout << "Error in " << __PRETTY_FUNCTION__ << ", unable to find file " << fName << ", is ANITA_UTIL_INSTALL_DIR set?" << std::endl;
+  }
+  return NULL;
 }

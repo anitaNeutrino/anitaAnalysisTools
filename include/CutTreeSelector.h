@@ -5,13 +5,8 @@
 
 class TList;
 class TProofOutputFile;
-class TTreeFormula;
 
 namespace Acclaim {
-
-  namespace AnalysisCuts{
-    class AnalysisCut;
-  }
 
 
   /**
@@ -32,6 +27,7 @@ namespace Acclaim {
     std::vector<Int_t> fIntVals;				/// Where the formula results are written in the case of a int-like variable
     TList* fFormulaStrings;					/// Internal storage of formula strings, set these with setFormulaStrings()
     TList* fFormulas;						/// List of TTreeFormulas created from fFormulaStrings
+    std::vector<Int_t> fIterationFormula;                       /// To force eval instance with an argument
 
     CutTreeSelector(const char* outFileName="CutTreeSelector.root", const char* reducedSumTreeName = "cutTree");
     void setFormulaStrings(const std::vector<const char*>& formulaStrings);

@@ -1,5 +1,6 @@
 #include "AcclaimClustering.h"
 #include "OutputConvention.h"
+#include "DrawStrings.h"
 #include <iostream>
 
 using namespace Acclaim;
@@ -16,6 +17,10 @@ int main(int argc, char* argv[]){
   const char* mcGlob = argc >= 2 ? argv[2] : NULL;
 
   Clustering::LogLikelihoodMethod clusterer;
+  // clusterer.setDebug(true);
+  clusterer.fStoreUnclusteredHistograms = false;
+  clusterer.addCut(!ThermalTree::isAboveHorizontal + ThermalTree::passAllQualityCuts + ThermalTree::isNotTaggedAsPulser + ThermalTree::fisherCut + !ThermalTree::closeToHiCal + ThermalTree::closeToMC);
+
   clusterer.doClustering(dataGlob, mcGlob, outFileName);
 
   return 0;

@@ -40,6 +40,19 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${UTIL_SHARE_DIR}/cmake/modules/")
 
+option(ACCLAIM_OPENMP "Switch on OpenMP in Acclaim" OFF)
+if(ACCLAIM_OPENMP)
+  FIND_PACKAGE(OpenMP REQUIRED)
+  if(OPENMP_FOUND)
+    message("OPENMP FOUND")
+    add_definitions (-DACCLAIM_OPENMP)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  else() 
+    message(FATAL_ERROR "you tried to use openmp but Cmake couldn't find compiler support") 
+  endif() 
+endif()
 
 #---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
 find_package(ROOT REQUIRED COMPONENTS MathMore MathCore RIO Hist Tree TreePlayer Net Minuit Minuit2 Gui Geom Graf3d XMLIO Proof ProofPlayer)
@@ -119,7 +132,7 @@ endif()
 
 file(MAKE_DIRECTORY ${UTIL_SHARE_DIR}/anitaMap)
 file(GLOB IMAGE_FILES
-  "anitaMap/*.png"
+  "anitaMap/*"
   )
 install(FILES ${IMAGE_FILES} DESTINATION ${UTIL_SHARE_DIR}/anitaMap)
 

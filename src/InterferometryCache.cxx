@@ -3,171 +3,139 @@
 #include "AnalysisReco.h"
 
 Acclaim::InterferometryCache::InterferometryCache(){
-  initialized = false;
-  numCombos = 0;
-  nCoarseBinsPhi = 0;
-  nCoarseBinsTheta = 0;
+  fInitialized = false;
+  fNumCombos = 0;
+  fNCoarseBinsPhi = 0;
+  fNCoarseBinsTheta = 0;
 }
 
-
 Acclaim::InterferometryCache::InterferometryCache(CrossCorrelator* cc, const AnalysisReco* reco){
-  initialized = false;
-  numCombos = 0;
-  nCoarseBinsPhi = 0;
-  nCoarseBinsTheta = 0;
+  fInitialized = false;
+  fNumCombos = 0;
+  fNCoarseBinsPhi = 0;
+  fNCoarseBinsTheta = 0;
   populateCache(cc, reco);
   populateFineCache(cc, reco);  
 }
 
-
 void Acclaim::InterferometryCache::init(CrossCorrelator* cc, const AnalysisReco* reco, bool forceCacheRecalculation){
-  if(!initialized || forceCacheRecalculation){
+  if(!fInitialized || forceCacheRecalculation){
     populateCache(cc, reco);
     populateFineCache(cc, reco);
   }
-  initialized = true;
+  fInitialized = true;
 }
-
 
 void Acclaim::InterferometryCache::populateCache(CrossCorrelator* cc, const AnalysisReco* reco){
 
-
-  kUseOffAxisDelay = reco->GetUseOffAxisDelay();
-  // std::cout << "in cache kUseOffAxisDelay " << kUseOffAxisDelay << std::endl;
-  numCombos = cc->numCombos;
+  fUseOffAxisDelay = reco->GetUseOffAxisDelay();
+  // std::cout << "in cache fUseOffAxisDelay " << fUseOffAxisDelay << std::endl;
+  fNumCombos = cc->numCombos;
   
   const std::vector<Double_t> coarsePhiBinEdges = InterferometricMap::getCoarseBinEdgesPhi();
-  nCoarseBinsPhi = coarsePhiBinEdges.size()-1;
+  fNCoarseBinsPhi = coarsePhiBinEdges.size()-1;
 
   const std::vector<Double_t> coarseThetaBinEdges = InterferometricMap::getCoarseBinEdgesTheta();
-  nCoarseBinsTheta = coarseThetaBinEdges.size()-1;
+  fNCoarseBinsTheta = coarseThetaBinEdges.size()-1;
   
 
-  std::vector<Double_t> phiWaveLookup(nCoarseBinsPhi);
-  for(Int_t phiIndex=0; phiIndex < nCoarseBinsPhi; phiIndex++){
+  std::vector<Double_t> phiWaveLookup(fNCoarseBinsPhi);
+  for(Int_t phiIndex=0; phiIndex < fNCoarseBinsPhi; phiIndex++){
     Double_t phiDeg = coarsePhiBinEdges.at(phiIndex);
     Double_t phiWave = TMath::DegToRad()*phiDeg;
     phiWaveLookup[phiIndex] = phiWave;
   }
 
-  std::vector<Double_t> thetaWaves(nCoarseBinsTheta);
+  std::vector<Double_t> thetaWaves(fNCoarseBinsTheta);
 
-  for(Int_t thetaIndex=0; thetaIndex < nCoarseBinsTheta; thetaIndex++){
+  for(Int_t thetaIndex=0; thetaIndex < fNCoarseBinsTheta; thetaIndex++){
     Double_t thetaWaveDeg = coarseThetaBinEdges.at(thetaIndex); 
     Double_t thetaWave = thetaWaveDeg*TMath::DegToRad();
     thetaWaves[thetaIndex] = thetaWave;
   }
 
-  
-  int numDeltaTs = AnitaPol::kNotAPol*numCombos*nCoarseBinsTheta*nCoarseBinsPhi;
-  deltaTs.resize(numDeltaTs); // reserve memory and set the correct size so we use .at() in the loop
+  int numDeltaTs = AnitaPol::kNotAPol*fNumCombos*fNCoarseBinsTheta*fNCoarseBinsPhi;
+  fDeltaTs.resize(numDeltaTs); // reserve memory and set the correct size so we use .at() in the loop
   
   for(Int_t polInd=0; polInd<AnitaPol::kNotAPol; polInd++){
     AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
 
-    for(Int_t combo=0; combo<numCombos; combo++){
+    for(Int_t combo=0; combo<fNumCombos; combo++){
       Int_t ant1 = cc->comboToAnt1s.at(combo);
       Int_t ant2 = cc->comboToAnt2s.at(combo);
 
-      for(Int_t phiBin = 0; phiBin < nCoarseBinsPhi; phiBin++){
+      for(Int_t phiBin = 0; phiBin < fNCoarseBinsPhi; phiBin++){
 	Double_t phiWave = phiWaveLookup[phiBin];
 
-	for(Int_t thetaBin = 0; thetaBin < nCoarseBinsTheta; thetaBin++){
+	for(Int_t thetaBin = 0; thetaBin < fNCoarseBinsTheta; thetaBin++){
 	  Double_t thetaWave = thetaWaves[thetaBin];
-	  deltaTs.at(coarseIndex(pol, combo, phiBin, thetaBin)) = reco->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
+	  fDeltaTs.at(coarseIndex(pol, combo, phiBin, thetaBin)) = reco->getDeltaTExpected(pol, ant1, ant2, phiWave, thetaWave);
 	}
       }
     }
   }
 }
 
-
-
-
-
-
 void Acclaim::InterferometryCache::populateFineCache(CrossCorrelator* cc, const AnalysisReco* reco){
-
-  // std::cerr << "here" << std::endl;
-  
-  // Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
-  // Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
-
-  
-
-  // Double_t minThetaDegZoom = MIN_THETA - THETA_RANGE_ZOOM/2;
-  // Double_t minPhiDegZoom = InterferometricMap::getBin0PhiDeg() - PHI_RANGE_ZOOM/2;
 
   std::vector<double> fineBinsTheta = InterferometricMap::getFineBinEdgesTheta();
   std::vector<double> fineBinsPhi = InterferometricMap::getFineBinEdgesPhi();  
 
-  Double_t minThetaDegZoom = fineBinsTheta.at(0);
-  Double_t minPhiDegZoom = fineBinsPhi.at(0);
-  
-  nFineBinsTheta = fineBinsTheta.size() - 1;
-  nFineBinsPhi = fineBinsPhi.size() - 1;
-  
+  fNFineBinsTheta = fineBinsTheta.size() - 1;
+  fNFineBinsPhi = fineBinsPhi.size() - 1;
 
   // reserve cache and populate with 0s
-  zoomedPhiWaveLookup.resize(nFineBinsPhi);
-  for(unsigned phiIndex=0; phiIndex < zoomedPhiWaveLookup.size(); phiIndex++){
+  fZoomedPhiWaveLookup.resize(fNFineBinsPhi);
+  for(unsigned phiIndex=0; phiIndex < fZoomedPhiWaveLookup.size(); phiIndex++){
     Double_t phiDeg = fineBinsPhi.at(phiIndex);
     // Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
     // zoomedPhiWaveLookup[phiIndex] = phiDeg*TMath::DegToRad();
-    zoomedPhiWaveLookup.at(phiIndex) = phiDeg*TMath::DegToRad();
+    fZoomedPhiWaveLookup.at(phiIndex) = phiDeg*TMath::DegToRad();
   }
   
-  zoomedThetaWaves.resize(nFineBinsTheta);
-  zoomedTanThetaWaves.resize(nFineBinsTheta);
-  zoomedCosThetaWaves.resize(nFineBinsTheta);
-  dtFactors.resize(nFineBinsTheta);
+  fZoomedThetaWaves.resize(fNFineBinsTheta);
+  fZoomedTanThetaWaves.resize(fNFineBinsTheta);
+  fZoomedCosThetaWaves.resize(fNFineBinsTheta);
+  fDtFactors.resize(fNFineBinsTheta);
   
 
-  for(unsigned thetaIndex=0; thetaIndex < zoomedThetaWaves.size(); thetaIndex++){
+  for(unsigned thetaIndex=0; thetaIndex < fZoomedThetaWaves.size(); thetaIndex++){
     // Double_t thetaWaveDeg = minThetaDegZoom + thetaIndex*ZOOM_BIN_SIZE_THETA;
     Double_t thetaWaveDeg = fineBinsTheta.at(thetaIndex);
     Double_t thetaWave = -1*thetaWaveDeg*TMath::DegToRad();
-    zoomedThetaWaves[thetaIndex] = thetaWave;
-    zoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
-    zoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
-    dtFactors[thetaIndex] = zoomedCosThetaWaves[thetaIndex]/(SPEED_OF_LIGHT_NS*cc->correlationDeltaT);
+    fZoomedThetaWaves[thetaIndex] = thetaWave;
+    fZoomedTanThetaWaves[thetaIndex] = tan(thetaWave);
+    fZoomedCosThetaWaves[thetaIndex] = cos(thetaWave);
+    fDtFactors[thetaIndex] = fZoomedCosThetaWaves[thetaIndex]/(SPEED_OF_LIGHT_NS*cc->correlationDeltaT);
   }
 
 
   // std::cerr << "here" << std::endl;
   
-  partBAsZoom.resize(AnitaPol::kNotAPol*numCombos*nFineBinsTheta);
+  fPartBAsZoom.resize(AnitaPol::kNotAPol*fNumCombos*fNFineBinsTheta);
   for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
     for(Int_t combo=0; combo < NUM_COMBOS; combo++){
       Int_t ant1 = cc->comboToAnt1s.at(combo);
       Int_t ant2 = cc->comboToAnt2s.at(combo);
-      for(Int_t thetaIndex=0; thetaIndex < nFineBinsTheta; thetaIndex++){
-	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(zArray[pol].at(ant2)-zArray[pol].at(ant1));
-	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(reco->zArray[pol].at(ant2)-reco->zArray[pol].at(ant1));		
-	partBAsZoom[partBAsIndex(pol, combo, thetaIndex)] = zoomedTanThetaWaves[thetaIndex]*(reco->zArray[pol].at(ant2)-reco->zArray[pol].at(ant1));
-	// partBAsZoom[pol][combo][thetaIndex] = zoomedTanThetaWaves[thetaIndex]*(reco->zArray[pol].at(ant2)-reco->zArray[pol].at(ant1));
+      for(Int_t thetaIndex=0; thetaIndex < fNFineBinsTheta; thetaIndex++){
+	fPartBAsZoom[partBAsIndex(pol, combo, thetaIndex)] = fZoomedTanThetaWaves[thetaIndex]*(reco->fZArray[pol].at(ant2)-reco->fZArray[pol].at(ant1));
       }
     }
   }
 
-  // std::cerr << "here" << std::endl;  
+  fZoomedCosPartLookup.resize(AnitaPol::kNotAPol*NUM_SEAVEYS*fNFineBinsPhi);
 
-  zoomedCosPartLookup.resize(AnitaPol::kNotAPol*NUM_SEAVEYS*nFineBinsPhi);
-
-         offAxisDelays.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);
-  offAxisDelaysDivided.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);  
-           part21sZoom.resize(AnitaPol::kNotAPol*numCombos*nFineBinsPhi);  
+  fOffAxisDelays.resize(AnitaPol::kNotAPol*fNumCombos*fNFineBinsPhi);
+  fOffAxisDelaysDivided.resize(AnitaPol::kNotAPol*fNumCombos*fNFineBinsPhi);  
+  fPart21sZoom.resize(AnitaPol::kNotAPol*fNumCombos*fNFineBinsPhi);  
 
 
   for(Int_t pol=0; pol<AnitaPol::kNotAPol; pol++){
     for(Int_t ant=0; ant<NUM_SEAVEYS; ant++){
-      for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
-	// Double_t phiDeg = minPhiDegZoom + phiIndex*ZOOM_BIN_SIZE_PHI;
+      for(Int_t phiIndex=0; phiIndex < fNFineBinsPhi; phiIndex++){
 	Double_t phiDeg = fineBinsPhi.at(phiIndex);
 	Double_t phiWave = phiDeg*TMath::DegToRad();
-	// zoomedCosPartLookup[pol][ant][phiIndex] = rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*phiArrayDeg[pol].at(ant));
-	// std::cout << pol << "\t" << ant << "\t" << phiIndex << "\t" << zoomedCosPartIndex(pol, ant, phiIndex) << std::endl;
-	zoomedCosPartLookup.at(zoomedCosPartIndex(pol, ant, phiIndex)) = reco->rArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*reco->phiArrayDeg[pol].at(ant));
+	fZoomedCosPartLookup.at(zoomedCosPartIndex(pol, ant, phiIndex)) = reco->fRArray[pol].at(ant)*cos(phiWave-TMath::DegToRad()*reco->fPhiArrayDeg[pol].at(ant));
       }
     }
 
@@ -175,22 +143,17 @@ void Acclaim::InterferometryCache::populateFineCache(CrossCorrelator* cc, const 
       Int_t ant1 = cc->comboToAnt1s.at(combo);
       Int_t ant2 = cc->comboToAnt2s.at(combo);
 
-      for(Int_t phiIndex=0; phiIndex < nFineBinsPhi; phiIndex++){
-	// Double_t phiWave = TMath::DegToRad()*phiIndex*ZOOM_BIN_SIZE_PHI;
+      for(Int_t phiIndex=0; phiIndex < fNFineBinsPhi; phiIndex++){
 	Double_t phiDeg = fineBinsPhi.at(phiIndex);
-	// Double_t offAxisDelay = getOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant1, ant2, phiWave);
-	// offAxisDelays[pol][combo][phiIndex] = offAxisDelay;
 	Double_t offAxisDelay = reco->relativeOffAxisDelay((AnitaPol::AnitaPol_t)pol, ant2, ant1, phiDeg);
 
 	int p21 = part21sIndex(pol, combo, phiIndex);
-	offAxisDelays[p21] = offAxisDelay;
-	offAxisDelaysDivided[p21] = offAxisDelay/cc->correlationDeltaT;
-	part21sZoom[p21] = zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - zoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));
+	fOffAxisDelays[p21] = offAxisDelay;
+	fOffAxisDelaysDivided[p21] = offAxisDelay/cc->correlationDeltaT;
+	fPart21sZoom[p21] = fZoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant2, phiIndex))) - fZoomedCosPartLookup.at((zoomedCosPartIndex(pol, ant1, phiIndex)));
       }
     }
   }
-
-  // std::cout << "done" << std::endl;
 }
   
  

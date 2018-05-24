@@ -16,5 +16,6 @@
         gSystem->Load(libs[i]);
       }
     }
+    gROOT->ProcessLine("#include \"FFTtools.h\"");
   }
 }

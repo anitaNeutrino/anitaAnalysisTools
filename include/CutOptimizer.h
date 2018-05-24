@@ -20,9 +20,6 @@ class TEfficiency;
 
 namespace Acclaim{
 
-  namespace AnalysisCuts{
-    class AnalysisCut;
-  }
   class SummarySet;
 
   /** 
@@ -34,35 +31,34 @@ namespace Acclaim{
 
   public:
 
-    typedef std::pair<const char*, bool> FormulaString;       
-
+    // typedef std::pair<const char*, bool> FormulaString;
 
     static void setDebug(bool db);
     static TString branchifyName(const char* formStr);
   
-    CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL, bool doAllPeaks = false, bool save_trees = false);
+    CutOptimizer(const char* signalGlob, const char* backgroundGlob = NULL);
     virtual ~CutOptimizer();
-    void optimize(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-		  const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
-		  const std::vector<FormulaString>& formulaStrings,
+    void optimize(const std::vector<const TCut*>& signalSelection,
+		  const std::vector<const TCut*>& backgroundSelection,
+		  const std::vector<TString>& formulaStrings,
 		  const char* outFileName = "");
 
 
-    /** 
-     * Add to a list of extra tree for which you wish to calculate the MVA score
-     * 
-     * @param treeName is the name of the tree to create
-     * @param glob is the wildcard filenames for the ROOT files containing AnitaEventSummary trees (named sunTree)
-     * @param spectatorSelection is a vector of AnalysisCut variables used to choose the spectators 
-     * 
-     * @return the number of spectator trees to be prepared
-     */
-    size_t addSpectatorTree(const char* treeName, const char* glob, const std::vector<const AnalysisCuts::AnalysisCut*>& spectatorSelection){
-      fSpecTreeNames.push_back(treeName);
-      fSpecGlobs.push_back(glob);
-      fSpecSelections.push_back(spectatorSelection);
-      return fSpecSelections.size();
-    }
+    // /** 
+    //  * Add to a list of extra tree for which you wish to calculate the MVA score
+    //  * 
+    //  * @param treeName is the name of the tree to create
+    //  * @param glob is the wildcard filenames for the ROOT files containing AnitaEventSummary trees (named sunTree)
+    //  * @param spectatorSelection is a vector of TCut variables used to choose the spectators 
+    //  * 
+    //  * @return the number of spectator trees to be prepared
+    //  */
+    // size_t addSpectatorTree(const char* treeName, const char* glob, const std::vector<const TCut*>& spectatorSelection){
+    //   fSpecTreeNames.push_back(treeName);
+    //   fSpecGlobs.push_back(glob);
+    //   fSpecSelections.push_back(spectatorSelection);
+    //   return fSpecSelections.size();
+    // }
 
   protected:
 
@@ -73,32 +69,30 @@ namespace Acclaim{
     };
 
     TFile* makeOutputFile(const char* outFileName);
-    void generateSignalAndBackgroundTrees(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-					  const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
-					  const std::vector<FormulaString>& treeVars);
-    void generateSignalAndBackgroundTreesProof(const std::vector<const AnalysisCuts::AnalysisCut*>& signalSelection,
-					       const std::vector<const AnalysisCuts::AnalysisCut*>& backgroundSelection,
-					       const std::vector<FormulaString>& treeVars);
-    BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
+    // void generateSignalAndBackgroundTreesProof(const std::vector<const TCut*>& signalSelection,
+    // 					       const std::vector<const TCut*>& backgroundSelection,
+    // 					       const std::vector<FormulaString>& treeVars);
+    // BranchType setBranchFromFormula(TTree* t, const TTreeFormula* f, const char* formulaString, Int_t* intPtr, Float_t* floatPtr);
 
     TString fSignalGlob;
     TString fBackgroundGlob;
     TString fOutFileName;
-    TTree* fSignalTree;
-    TTree* fBackgroundTree;
-    TTree* fRejectedSignalTree;
-    TTree* fRejectedBackgroundTree;
-    Bool_t fDoAllPeaks;
-    Bool_t fSaveTrees;
-    std::vector<Float_t> fSignalFloatVals;
-    std::vector<Float_t> fBackgroundFloatVals;
-    std::vector<Int_t> fSignalIntVals;
-    std::vector<Int_t> fBackgroundIntVals;
+    TFile* fOutFile;
+    TChain* fSignalTree;
+    TChain* fBackgroundTree;
+    // TTree* fRejectedSignalTree;
+    // TTree* fRejectedBackgroundTree;
+    // Bool_t fDoAllPeaks;
+    // Bool_t fSaveTrees;
+    // std::vector<Float_t> fSignalFloatVals;
+    // std::vector<Float_t> fBackgroundFloatVals;
+    // std::vector<Int_t> fSignalIntVals;
+    // std::vector<Int_t> fBackgroundIntVals;
 
-    std::vector<TString> fSpecTreeNames;
-    std::vector<TString> fSpecGlobs;
-    std::vector<std::vector<const AnalysisCuts::AnalysisCut*> > fSpecSelections;
-    std::vector<TTree*> fSpecTrees;
+    // std::vector<TString> fSpecTreeNames;
+    // std::vector<TString> fSpecGlobs;
+    // std::vector<std::vector<const TCut*> > fSpecSelections;
+    // std::vector<TTree*> fSpecTrees;
 
     static const int numEffVars = 2;
     enum{
@@ -122,25 +116,25 @@ namespace Acclaim{
 
 
 
-    /**
-     * @class FormulaHolder
-     * @brief Contains the TTreeFormula and trick TChain into notifying all the formulas
-     */
+    // /**
+    //  * @class FormulaHolder
+    //  * @brief Contains the TTreeFormula and trick TChain into notifying all the formulas
+    //  */
 
-    class FormulaHolder : public TObject {
-    public:
-      FormulaHolder(TChain* c);
-      virtual ~FormulaHolder();
-      virtual Bool_t Notify();
-      virtual size_t add(const char* formulaString);
-      TTreeFormula* at(UInt_t i) {return fForms.at(i);}
-      const char* str(UInt_t i) const {return fFormStrs.at(i);}
-      size_t N(){return fForms.size();}
-    protected:
-      TChain* fChain;
-      std::vector<TTreeFormula*> fForms;
-      std::vector<const char*> fFormStrs;
-    };
+    // class FormulaHolder : public TObject {
+    // public:
+    //   FormulaHolder(TChain* c);
+    //   virtual ~FormulaHolder();
+    //   virtual Bool_t Notify();
+    //   virtual size_t add(const char* formulaString);
+    //   TTreeFormula* at(UInt_t i) {return fForms.at(i);}
+    //   const char* str(UInt_t i) const {return fFormStrs.at(i);}
+    //   size_t N(){return fForms.size();}
+    // protected:
+    //   TChain* fChain;
+    //   std::vector<TTreeFormula*> fForms;
+    //   std::vector<const char*> fFormStrs;
+    // };
 
 
 
@@ -172,7 +166,7 @@ namespace Acclaim{
 	getResultFromXML(fileName);
       }
       TString getFisherFormula() const;
-      TH2D* makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd=0) const;
+      TH2D* makeTimeHist(int nBinsX, int nBinsY, TTree* t, EColor col, int varInd=0, const char* extraName = "") const;
       virtual void Print(Option_t* opt = "") const;
       void getExpressions(std::vector<TString>& expressions) const;
       double getWeight(const char* expression);

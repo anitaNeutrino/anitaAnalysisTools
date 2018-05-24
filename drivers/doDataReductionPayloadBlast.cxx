@@ -1,4 +1,4 @@
-#include "AnalysisCuts.h"
+#include "DrawStrings.h"
 #include "SumTreeReductionSelector.h"
 #include "SummarySet.h"
 #include "OutputConvention.h"
@@ -16,14 +16,12 @@ int main(int argc, char* argv[]){
   OutputConvention oc(1, argv);  
   const char* glob = argv[1];
 
-  AnalysisCuts::setMode(AnalysisCuts::kAcclaimAnalysis); // not that this should matter
-
   SummarySet ss(glob);
   ss.SetUseProof(true);
 
   SumTreeReductionSelector reduce(oc.getOutputFileName(), "sumTree");
 
-  reduce.addEventSelectionCut(&AnalysisCuts::isTaggedAsPayloadBlast);
+  reduce.addCut(&SumTree::isTaggedAsPayloadBlast);
 
   ss.Process(&reduce);
   

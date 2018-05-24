@@ -1,7 +1,7 @@
 #include "CutTreeSelector.h"
 #include "TProofOutputFile.h"
 #include "TTreeFormula.h"
-#include "AnalysisCuts.h"
+#include "DrawStrings.h"
 #include "CutOptimizer.h"
 #include "TList.h"
 
@@ -9,16 +9,16 @@
 /**
  * Default constructor
  *
- * @param outFileName is the name to give the file containing the combined trees
+
  * @param treeName is the name to give the output ttree
  */
 Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* treeName)
   : fOutTree(NULL), fProofOutFile(NULL), fOutFileName("fOutFileName", outFileName), fTreeName("fTreeName", treeName),
-    fFormulaStrings(new TList), fFormulas(NULL)
+    fFormulaStrings(new TList), fFormulas(NULL), fIterationFormula()
 {
 
   fFormulaStrings->SetName("fFormulaStrings");
-
+  fDoDemoHist = false;
 }
 
 
@@ -26,9 +26,15 @@ Acclaim::CutTreeSelector::CutTreeSelector(const char* outFileName, const char* t
  * Not sure if this is necessary...
  * @return true
  */
-Bool_t Acclaim::CutTreeSelector::Notify()
+Bool_t Acclaim::CutTreeSelector::Notify()  
 {
-  // fFormulas->Notify();
+
+  SummarySelector::Notify();
+  TIter next(fFormulas);
+  while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+    form->Notify();
+  }
+  
   return kTRUE;
 }
 
@@ -69,8 +75,6 @@ void Acclaim::CutTreeSelector::Begin(TTree* tree){
  */
 void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
 
-  SummarySelector::SlaveBegin(tree);
-
   fOutFileName = *(dynamic_cast<TNamed*>(fInput->FindObject("fOutFileName")));
   fTreeName = *(dynamic_cast<TNamed*>(fInput->FindObject("fTreeName")));
   fFormulaStrings = dynamic_cast<TList*>(fInput->FindObject("fFormulaStrings"));
@@ -90,6 +94,8 @@ void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
   fIntVals.resize(nForm, 0);
   fFloatVals.resize(nForm, 0);
   fFormulaReturnTypes.resize(nForm, 0);
+
+  SummarySelector::SlaveBegin(tree); // Optional analysisCutTree needs to be booked after TProofOutputFile
 }
 
 
@@ -101,35 +107,57 @@ void Acclaim::CutTreeSelector::SlaveBegin(TTree* tree){
  */
 void Acclaim::CutTreeSelector::Init(TTree* tree){
 
-  SummarySelector::Init(tree);
+  SummarySelector::Init(tree);  
 
-  fFormulas->Delete();
   fFormulas->SetOwner(true);
+  fFormulas->Delete();
+  
+  if(fFormulas->GetEntries()==0){
 
-  const size_t nForm = fFormulaStrings->GetEntries();
-  TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
+    const size_t nForm = fFormulaStrings->GetEntries();
+    TObjArray* fOutBranchList = fOutTree->GetListOfBranches();
+    fIterationFormula.resize(nForm, false);
 
-  for(UInt_t i=0; i < nForm; i++){
-    const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(i))->String();
+    for(UInt_t fInd=0; fInd < nForm; fInd++){
+      const TString& formula = dynamic_cast<TObjString*>(fFormulaStrings->At(fInd))->String();
 
-    TString formName = TString::Format("form%u", i);
-    TTreeFormula* f = new TTreeFormula(formName, formula, tree);
-    fFormulas->Add(f);
+      TString formName = TString::Format("form%u", fInd);
+      TTreeFormula* f = new TTreeFormula(formName, formula, tree);
+      fFormulas->Add(f);
 
+      // std::cout << fInd << "\t" << formula << "\t" << f->GetNdata() << std::endl;
 
-    if(fOutBranchList->GetEntries() < (Int_t)nForm){
-      TString bName = CutOptimizer::branchifyName(formula);
-
-      fFormulaReturnTypes.at(i) = f->IsInteger();
-      if(fFormulaReturnTypes.at(i) > 0){
-	fOutTree->Branch(bName, &fIntVals.at(i));
+      if(formula.Contains("Iteration$")){
+	fIterationFormula[fInd] = true;
+	// std::cout << "the iteration formula index is " << fIterationFormula << std::endl;
       }
-      else{
-	fOutTree->Branch(bName, &fFloatVals.at(i));
+
+      if(fOutBranchList->GetEntries() < (Int_t)nForm){
+	TString bName = CutOptimizer::branchifyName(formula);
+
+	fFormulaReturnTypes.at(fInd) = f->IsInteger();
+	if(fFormulaReturnTypes.at(fInd) > 0){
+	  fOutTree->Branch(bName, &fIntVals.at(fInd));
+	}
+	else{
+	  fOutTree->Branch(bName, &fFloatVals.at(fInd));
+	}
       }
     }
 
+    // if(fIterationFormula==-1){
+    //   std::cout << "the iteration formula index is " << fIterationFormula << std::endl;
+    // }
   }
+  // else{
+  //   std::cout << tree->GetName() << std::endl;
+  //   tree->Show(0);
+  //   TIter next(fFormulas);
+  //   while(TTreeFormula* form = dynamic_cast<TTreeFormula*>(next())){
+  //     form->SetTree(tree);
+  //     // form->UpdateFormulaLeaves();
+  //   }
+  // }
 }
 
 
@@ -146,18 +174,44 @@ Bool_t Acclaim::CutTreeSelector::Process(Long64_t entry){
 
   Bool_t matchesSelection = SummarySelector::Process(entry);
   if(matchesSelection){
-    int i=0;
+    int fInd=0;
     TIter next(fFormulas);
     while(TObject* obj = next()){
       TTreeFormula* f = dynamic_cast<TTreeFormula*>(obj);
-      if(fFormulaReturnTypes.at(i) > 0){
-	fIntVals.at(i) = f->EvalInstance();
+
+      fIntVals.at(fInd) = -9999;
+      fFloatVals.at(fInd) = -9999;
+
+      bool doneAnIteration = false;
+
+      //***************************************************************
+      // this necessary to force the TTree formula to load the data!!!!
+      f->EvalInstance(); 
+      //***************************************************************
+
+      for(int i=0; i < fMaxNdata; i++){
+	if(!doneAnIteration && fCumulativeCutReturns.at(i) > 0){
+
+	  bool requireIteration = fIterationFormula[fInd] || (f->GetNdata() > 1 && i < f->GetNdata());
+	  // std::cout << i << "\t" << fInd << "\t" << fCumulativeCutReturns.at(i) << "\t" << f->GetTitle() << "\t";
+
+	  if(fFormulaReturnTypes.at(fInd) > 0){
+	    fIntVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
+	    // std::cout << "(int) = " << fIntVals.at(fInd) << "\t" << requireIteration << std::endl;
+	  }
+	  else{
+	    fFloatVals.at(fInd) = requireIteration ? f->EvalInstance(i) : f->EvalInstance();
+	    // std::cout << "(flt) = " << fFloatVals.at(fInd) << "\t" << requireIteration << std::endl;
+	  }
+	  doneAnIteration = true;
+	}
       }
-      else{
-	fFloatVals.at(i) = f->EvalInstance();
-      }
-      i++;
+      // std::cout << fInd << "\t" << f->GetTitle() << "\t" << "the return vals are..." << std::endl;
+      fInd++;
     }
+    // std::cout << "will fill those values... " << std::endl;
+    // std::cout << std::endl;
+    
     fOutTree->Fill();
   }
 
@@ -204,17 +258,17 @@ void Acclaim::CutTreeSelector::Terminate(){
   // fFormulaStrings = NULL;  
 
   fProofOutFile = dynamic_cast<TProofOutputFile*>(fOutput->FindObject(fOutFileName.GetTitle()));
-  std::cout << fProofOutFile << std::endl;
+  // std::cout << fProofOutFile << std::endl;
   if(fProofOutFile){
     TFile* f = fProofOutFile->OpenFile("read");
-    std::cout << f << std::endl;    
+    // std::cout << f << std::endl;    
     if(f){
       TTree* t = dynamic_cast<TTree*>(f->Get(fTreeName.GetTitle()));
-      std::cout << t << std::endl;          
+      // std::cout << t << std::endl;          
       if(t){
 	std::cout << "Created " << t->GetName() << " in file " << f->GetName() <<  " has "
 		  << t->GetEntries() << " entries..." << std::endl;
-	t->Print();
+	// t->Print();
       }
       f->Close();
     }

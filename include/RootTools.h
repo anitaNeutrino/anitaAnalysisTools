@@ -29,6 +29,7 @@ class TChain;
 class UsefulAnitaEvent;
 class RawAnitaHeader;
 class Adu5Pat;
+class TGraphAntarctica;
 
 /** @mainpage
  * Yes, the name ACCLAIM is kind of lame, but passed a certain point anitaAnalysisTools was a a bit generic, and it was the best I could do in a lunch break.
@@ -112,6 +113,7 @@ namespace Acclaim
 
     /* Do geometric things */
     Double_t getDeltaAngleDeg(Double_t angle1, Double_t angle2);
+    Double_t getDeltaAngleDeg(Double_t deltaAngleDeg); 
 
 
     /* Modify input */
@@ -157,6 +159,9 @@ namespace Acclaim
     TString getAntName(AnitaPol::AnitaPol_t pol, Int_t antInd);
 
     TPad* makeSubPad(TPad* parentPad, double xlow, double ylow, double xup, double yup, TString suffix);
+    TString nextCanvasName();
+    TCanvas* canvas(Int_t logAxisBitMask = 0, double fracLength = 0.5, bool forceSquare = false);
+    TCanvas* squareCanvas(Int_t logAxisBitMask = 0, double fracLength = 0.5); /// calls canvas()
 
     UsefulAnitaEvent* makeGaussianEvent(UInt_t eventNumber);
 
@@ -176,6 +181,28 @@ namespace Acclaim
 
     void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const char* separator);
     void tokenize(std::vector<TString>& tokenizedOutput, const char* inputString, const std::vector<const char*>& separators);
+
+    template <class T>
+    inline bool vectorContainsValue(const std::vector<T>& vec, const T& value){
+      return std::find(vec.begin(), vec.end(), value)!=vec.end();
+    }
+
+    template <class T>
+    inline T sum(Int_t n, const T* array){
+      T sum = 0;
+      for(int i=0; i < n; i++){
+	sum += array[i];
+      }
+      return sum;
+    }
+
+
+
+    TH1D* makeIntegralHist(const TH1* hist, bool ascendingIntegral = true, bool normalized = true);
+
+    TGraphAntarctica* flightPath(int anita=3);
   }
+
+
 }
 #endif
