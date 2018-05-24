@@ -53,12 +53,16 @@ void Acclaim::AnalysisReco::nicelyDeleteInternalFilteredEvents(){
 
 
 
-void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
+void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol, Int_t peakInd,
                                              AnitaEventSummary::WaveformInfo& info,
                                              const FilteredAnitaEvent* fEv,
                                              AnalysisWaveform** waveStore,
                                              InterferometricMap* h,
-                                             NoiseMonitor* noiseMonitor) {
+                                             NoiseMonitor* noiseMonitor,
+					     std::vector<double>& I,
+					     std::vector<double>& Q,
+					     std::vector<double>& U,
+					     std::vector<double>& V) {
 
 
   ////////////////////////////////////////////////////////////////
@@ -124,17 +128,6 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   const TGraphAligned* gr = coherentWave->even();
   info.peakVal = TMath::MaxElement(gr->GetN(), gr->GetY());
 
-  // Double_t localMaxVolts, localMinVolts, localMaxTime, localMinTime;
-  // RootTools::getLocalMaxToMin(gr, localMaxVolts, localMaxTime, localMinVolts, localMinTime);
-  // info.localMaxToMin = localMaxVolts - localMinVolts;
-  // info.localMaxToMinTime = localMaxTime - localMinTime;
-
-  // Int_t gMaxInd = TMath::LocMax(gr->GetN(), gr->GetY());
-  // Int_t gMinInd = TMath::LocMin(gr->GetN(), gr->GetY());
-  // info.globalMaxToMin = gr->GetY()[gMaxInd] - gr->GetY()[gMinInd];
-  // info.globalMaxToMinTime = gr->GetX()[gMaxInd] - gr->GetX()[gMinInd];
-  
-
   AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
   Double_t largestPeakToPeakXPol = 0;
   AnalysisWaveform* xPolCoherentWave = coherentlySum(fEv, xPol, theAnts, phiDeg, thetaDeg, &largestPeakToPeakXPol, &gr->GetX()[0]); // cross polarisation
@@ -151,8 +144,8 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
   const TGraphAligned* grX = xPolCoherentWave->even();
   info.xPolPeakVal = TMath::MaxElement(grX->GetN(), grX->GetY());
 
-  AnalysisWaveform* hWave = pol == AnitaPol::kHorizontal ? coherentWave : xPolCoherentWave;
-  AnalysisWaveform* vWave = pol == AnitaPol::kHorizontal ? xPolCoherentWave : coherentWave;  
+  const AnalysisWaveform* hWave = pol == AnitaPol::kHorizontal ? coherentWave : xPolCoherentWave;
+  const AnalysisWaveform* vWave = pol == AnitaPol::kHorizontal ? xPolCoherentWave : coherentWave;
 
   const TGraphAligned* grV = vWave->even();
   const TGraphAligned* grH = hWave->even();
@@ -175,6 +168,25 @@ void Acclaim::AnalysisReco::fillWaveformInfo(AnitaPol::AnitaPol_t pol,
                              &info.I,      &info.Q,     &info.U,     &info.V,
 			     &info.max_dI, &info.max_dQ,&info.max_dU,&info.max_dV,
 			     true);
+
+  
+  if(fInstantaneousStokes > 0){
+
+    I.resize(grH->GetN());
+    Q.resize(grH->GetN());
+    U.resize(grH->GetN());
+    V.resize(grH->GetN());
+
+    FFTtools::stokesParameters(grH->GetN(),
+			       grH->GetY(), grH_hilbert->GetY(),
+			       grV->GetY(), grV_hilbert->GetY(),
+			       &info.I,  &info.Q,  &info.U,  &info.V,
+			       I.data(), Q.data(), U.data(), V.data(),
+			       false);
+  }
+  
+  
+
 
   info.totalPower = RootTools::getTimeIntegratedPower(coherentWave->even());
   info.totalPowerXpol = RootTools::getTimeIntegratedPower(xPolCoherentWave->even());
@@ -407,15 +419,21 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
         // coherent_filtered
         // deconvolved
         // deconvolved_filtered
-      
-        fillWaveformInfo(pol, sum->coherent_filtered[pol][peakInd],    fEv,      fCoherentFiltered[pol][peakInd],    h, noiseMonitor);
-        fillWaveformInfo(pol, sum->deconvolved_filtered[pol][peakInd], fEvDeco,  fDeconvolvedFiltered[pol][peakInd], h, noiseMonitor);
+
+	
+        fillWaveformInfo(pol, peakInd, sum->coherent_filtered[pol][peakInd],    fEv,      fCoherentFiltered[pol][peakInd],    h, noiseMonitor,
+			 f_dICoherentFiltered[pol][peakInd], f_dQCoherentFiltered[pol][peakInd],
+			 f_dUCoherentFiltered[pol][peakInd], f_dVCoherentFiltered[pol][peakInd]);
+        fillWaveformInfo(pol, peakInd, sum->deconvolved_filtered[pol][peakInd], fEvDeco,  fDeconvolvedFiltered[pol][peakInd], h, noiseMonitor,
+			 f_dIDeconvolvedFiltered[pol][peakInd], f_dQDeconvolvedFiltered[pol][peakInd],
+			 f_dUDeconvolvedFiltered[pol][peakInd], f_dVDeconvolvedFiltered[pol][peakInd]);
 
 	h->setResolutionEstimateFromWaveformSNR(sum->deconvolved_filtered[pol][peakInd].snr);
 
 	if(fFillUnfiltered != 0){
-	  fillWaveformInfo(pol, sum->coherent[pol][peakInd], fEvMin,        fCoherent[pol][peakInd],            h, noiseMonitor);	
-	  fillWaveformInfo(pol, sum->deconvolved[pol][peakInd], fEvMinDeco, fDeconvolved[pol][peakInd],         h, noiseMonitor);
+	  std::vector<double> dI ,dQ ,dU ,dV;
+	  fillWaveformInfo(pol, peakInd, sum->coherent[pol][peakInd],    fEvMin,     fCoherent[pol][peakInd],    h, noiseMonitor, dI, dQ, dU, dV);
+	  fillWaveformInfo(pol, peakInd, sum->deconvolved[pol][peakInd], fEvMinDeco, fDeconvolved[pol][peakInd], h, noiseMonitor, dI, dQ, dU, dV);
 	}
 
 	// if(sum->eventNumber==60840043){
@@ -448,8 +466,8 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
           }
           else{
             sum->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat.getTriggerTimeNsFromSource(sum->peak[pol][peakInd].latitude,
-                                                                                                                       sum->peak[pol][peakInd].longitude,
-                                                                                                                       sum->peak[pol][peakInd].altitude);
+													      sum->peak[pol][peakInd].longitude,
+													      sum->peak[pol][peakInd].altitude);
           }
         }
       }
@@ -480,7 +498,7 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
     auto pol = (AnitaPol::AnitaPol_t) polInd;
     for(UInt_t phi=0; phi < NUM_PHI; phi++){
       for(UInt_t ring=AnitaRing::kMiddleRing; ring < AnitaRing::kNotARing; ring++){
-  	Int_t ant = ring*NUM_PHI + phi;
+	Int_t ant = ring*NUM_PHI + phi;
 
 	const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
 	const TGraphAligned* grPow = wf->power();
@@ -497,7 +515,7 @@ void Acclaim::AnalysisReco::fillPowerFlags(const FilteredAnitaEvent* fEv, AnitaE
 	  }
 	}
 
-	for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){	
+	for(int band=0; band < AnitaEventSummary::numBlastPowerBands; band++){
 	  if(powThisAnt[band] > flags.middleOrBottomPower[band]){
 	    flags.middleOrBottomPower[band] = powThisAnt[band];
 	    flags.middleOrBottomAnt[band] = ant;
@@ -786,11 +804,11 @@ Acclaim::InterferometricMap* Acclaim::AnalysisReco::getZoomMap(AnitaPol::AnitaPo
 void Acclaim::AnalysisReco::reconstruct(AnitaPol::AnitaPol_t pol, const Adu5Pat* pat) {
 
   if(coarseMaps[pol]==nullptr)
-  {
-    // std::cerr << "new coarse map " << pol << std::endl;
-    // I don't own the map or there isn't one, so I'll make a new one
-    coarseMaps[pol] = new InterferometricMap();
-  }  
+    {
+      // std::cerr << "new coarse map " << pol << std::endl;
+      // I don't own the map or there isn't one, so I'll make a new one
+      coarseMaps[pol] = new InterferometricMap();
+    }  
   else{// I own the map so I can overwrite it to avoid allocating memory
     // std::cerr << "old coarse map " << pol << std::endl;
     coarseMaps[pol]->Reset();
@@ -862,7 +880,7 @@ Int_t Acclaim::AnalysisReco::directlyInsertGeometry(TString pathToLindasFile, An
 
     Int_t surf, chan, ant2;
     AnitaGeomTool::getSurfChanAntFromRingPhiPol(AnitaRing::AnitaRing_t (ant/NUM_PHI), ant%NUM_PHI, pol,
-                                       surf, chan, ant2);
+						surf, chan, ant2);
 
     Double_t newR = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dr;
     Double_t newPhi = geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] + dPhiRad;
@@ -997,7 +1015,7 @@ size_t Acclaim::AnalysisReco::checkWavesAndDtsMatch(std::vector<const AnalysisWa
         dts.push_back(0);
       }
       else{
-        dts.pop_back();	
+        dts.pop_back();
       }
     }
   }
@@ -1052,8 +1070,6 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
         double y = waves[i]->evalEven(tPlusDt, AnalysisWaveform::EVAL_AKIMA);
         if(TMath::IsNaN(y)){ // Hopefully this is a bit redundent
 	  numNan++;
-          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun << ", eventNumber " << fCurrentEventNumber << " interpolation returned " << y << " ignoring sample" << std::endl;
-          // std::cerr << "Warning in " << __PRETTY_FUNCTION__ << " for run " << fCurrentRun << ", eventNumber " << fCurrentEventNumber << " interpolation returned " << y << " for time " << tPlusDt << " for sample " << samp << " of " << grCoherent->GetN() << std::endl;
         }
         else{
           grCoherent->GetY()[samp] += y;
@@ -1070,7 +1086,7 @@ AnalysisWaveform* Acclaim::AnalysisReco::coherentlySum(std::vector<const Analysi
 
   for(int samp=0; samp < grCoherent->GetN(); samp++){
     grCoherent->GetY()[samp]/=waves.size();
-  };    
+  }
 
   return coherentWave;
 }
@@ -1104,9 +1120,12 @@ inline TString nameLargestPeak(Int_t peakInd){
 
 void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol){
 
-  const int numColsForNow = 3;
+  constexpr int numColsForNow = 3;
   EColor peakColors[AnitaPol::kNotAPol][numColsForNow] = {{kBlack, EColor(kMagenta+2), EColor(kViolet+2)},
                                                           {kBlue,  EColor(kSpring+4),  EColor(kPink + 10)}};
+
+  constexpr int nStokesVecs = 4;
+  EColor stokesCols[nStokesVecs] = {kBlack, kRed, kBlue, kGreen};
 
   // will go from top to bottom, like this...
   // 0-1: vpol/hpol Reconstruction
@@ -1174,7 +1193,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   paves.push_back(new TPaveText(fracFinePeak, 0, fracFinePeak+0.5*(1-fracFinePeak)-0.1, 1));
   paves.back()->AddText("Coherent");
   paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
-  if(fDrawXPol != 0){
+  if(fDrawXPol != 0 && fDrawDomain!=kStokesParams){
     double x2 = paves.back()->GetX2();
     double x1 = x2 - xPolTitleBoxWidth;
     paves.back()->SetX2(x1);
@@ -1190,7 +1209,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   paves.back()->AddText("Dedispersed");
   paves.back()->SetTextAlign(kVAlignCenter + kHAlignCenter);
 
-  if(fDrawXPolDedispersed != 0){
+  if(fDrawXPolDedispersed != 0 && fDrawDomain!=kStokesParams){
     double x2 = paves.back()->GetX2();
     double x1 = x2 - xPolTitleBoxWidth;
     paves.back()->SetX2(x1);
@@ -1288,11 +1307,12 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       // if(fDebug) std::cerr << "Draw flags:\t" << fDrawCoherent << "\t" << fDrawXPol << "\t" << fDrawDedispersed << "\t" << fDrawXPolDedispersed << std::endl;
       // if(fDebug) std::cerr << "This gives us " << wavesToDraw.size() << " waveforms" << std::endl;
       TGraphInteractive* gr = nullptr;
-    
+
       for(int i=0; i < wavesToDraw.size(); i++){
+	
 	if(fDrawDomain==kTimeDomain){
-	  const TGraphAligned* gr2 = wavesToDraw[i]->even();
-      
+	  const TGraphAligned* gr2 = wavesToDraw[i]->even();	  
+
 	  auto* gr3 = new TGraphInteractive(gr2, "l");
 	  gr3->SetFillColor(0);
 	  gr3->SetLineColor(waveColors[i]);
@@ -1319,7 +1339,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    gr->GetXaxis()->SetRangeUser(x0, xN);
 	  }
 	}
-	else{ // freq domain
+	else if(fDrawDomain==kFreqDomain){ // freq domain
 	  const TGraphAligned* grPower2 = wavesToDraw[i]->powerdB();
 
 	  auto* grPower = new TGraphInteractive(grPower2, "l");
@@ -1335,7 +1355,7 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    const double maxFreqGHz = 1.3;
 	    gr->GetXaxis()->SetRangeUser(0, maxFreqGHz);
 	    TString title = nameLargestPeak(peakInd);
-	    title += (j == 0 ? "Coherent Waveform" : "Dedispersed Waveform");
+	    title += (j == 0 ? "Coherent Waveform Spectrum" : "Dedispersed Waveform Spectrum");
 	    title += (pol == AnitaPol::kHorizontal ? " HPol" : " VPol");
 	    title += ";Frequency (GHz);Power Spectral Density (dBm/MHz)";
 	    grPower->SetTitle(title);
@@ -1365,6 +1385,60 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
 	    }
 	    gr->addGuiChild(grCoherentPeakMarker);
 	  }
+	}
+	else{ // stokes
+	  auto gr2 = j == 0 ? fCoherentFiltered[pol][peakInd][0]->even() : fDeconvolvedFiltered[pol][peakInd][0]->even();
+	  const double t0 = gr2->GetX()[0];
+	  const double dt = gr2->GetX()[1] - t0;
+
+	  std::vector<double> times;
+	  {
+	    times.reserve(gr2->GetN());
+	    double t = t0;
+	    while(times.size() < times.capacity()){
+	      times.push_back(t);
+	      t += dt;
+	    }
+	  }
+	  
+	  int k=0;
+	  const std::vector<double>& I = (j == 0
+					  ? f_dICoherentFiltered[pol][peakInd]
+					  : f_dIDeconvolvedFiltered[pol][peakInd]);
+	  const std::vector<double>& Q = (j == 0
+					  ? f_dQCoherentFiltered[pol][peakInd]
+					  : f_dQDeconvolvedFiltered[pol][peakInd]);
+	  const std::vector<double>& U = (j == 0
+					  ? f_dUCoherentFiltered[pol][peakInd]
+					  : f_dUDeconvolvedFiltered[pol][peakInd]);
+	  const std::vector<double>& V = (j == 0
+					  ? f_dVCoherentFiltered[pol][peakInd]
+					  : f_dVDeconvolvedFiltered[pol][peakInd]);
+	  
+	  for(const auto& v : {I, Q, U, V}){
+
+	    const int n = v.size();
+	    TGraphInteractive* gr3 = new TGraphInteractive(n, times.data(), v.data());
+	    if(gr==nullptr){
+	      gr = gr3;
+	      TString title = nameLargestPeak(peakInd);
+	      title += (j == 0 ? "Coherent Stokes Parameters" : "Dedispersed Stokes Parameters");
+	      title += (pol == AnitaPol::kHorizontal ? " HPol" : " VPol");
+	      title += ";Time (ns);Amplitude (mV)";
+	      gr->SetTitle(title);
+	      gr->GetXaxis()->SetRangeUser(x0, xN);
+	    }
+	    else{
+	      gr->addGuiChild(gr3);
+	    }
+	    gr3->SetFillColor(0);
+	    gr3->SetLineColor(stokesCols[k]);
+	    gr3->SetBit(kCanDelete);
+	    k++;
+	  }
+	}
+	if(fDrawDomain==kStokesParams){
+	  break;
 	}
       }
       if(j==0){
@@ -1431,32 +1505,81 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
     title->SetLineColor(peakColors[pol][peakInd]);
 
     // TString titleText = pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
-    TString titleText;
-    titleText += TString::Format(" Peak %d", peakInd);    
+    TString titleText = nameLargestPeak(peakInd);
+    if(fDrawDomain==kStokesParams){
+      titleText += "Stokes";
+    }
     title->AddText(titleText);
-    
     title->Draw();
     
-    auto *pt = new TPaveText(xlow, epsilon, xup, 0.9);
-    // pt->SetBorderSize(0);
-    pt->SetBit(kCanDelete, true);
-    pt->SetTextColor(peakColors[pol][peakInd]);
-    pt->SetLineColor(peakColors[pol][peakInd]);
-    
-    pt->AddText(TString::Format("Image peak = %4.4lf", fSummary.peak[pol][peakInd].value));
-    pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", fSummary.peak[pol][peakInd].phi));
-    pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",fSummary.peak[pol][peakInd].theta));
-    pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", fSummary.coherent[pol][peakInd].peakHilbert));            
 
-    pt->AddText(TString::Format("Latitude = %4.2lf #circ", fSummary.peak[pol][peakInd].latitude));
-    pt->AddText(TString::Format("Longitude = %4.2lf #circ", fSummary.peak[pol][peakInd].longitude));
-    pt->AddText(TString::Format("Altitude = %4.2lf #circ", fSummary.peak[pol][peakInd].altitude));                    
-    
-    pt->Draw();
+    if(fDrawDomain!=kStokesParams){
+      auto *pt = new TPaveText(xlow, epsilon, xup, 0.9);
+      // pt->SetBorderSize(0);
+      pt->SetBit(kCanDelete, true);
+      pt->SetTextColor(peakColors[pol][peakInd]);
+      pt->SetLineColor(peakColors[pol][peakInd]);
+      pt->AddText(TString::Format("Image peak = %4.4lf", fSummary.peak[pol][peakInd].value));
+      pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", fSummary.peak[pol][peakInd].phi));
+      pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",fSummary.peak[pol][peakInd].theta));
+      pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", fSummary.coherent[pol][peakInd].peakHilbert));
+
+      pt->AddText(TString::Format("Latitude = %4.2lf #circ", fSummary.peak[pol][peakInd].latitude));
+      pt->AddText(TString::Format("Longitude = %4.2lf #circ", fSummary.peak[pol][peakInd].longitude));
+      pt->AddText(TString::Format("Altitude = %4.2lf #circ", fSummary.peak[pol][peakInd].altitude));
+      pt->Draw();
+    }
+    else{
+      const double width = 0.03;
+      auto e = new TPaveText(xlow, 0.8, xlow+width, 0.9);
+      auto f = new TPaveText(xlow, 0.7, xlow+width, 0.8);
+
+      auto ept =  new TPaveText(xlow, epsilon, xlow+width, 0.7);
+      ept->AddText("I")->SetTextColor(stokesCols[0]);
+      ept->AddText("Q")->SetTextColor(stokesCols[1]);
+      ept->AddText("U")->SetTextColor(stokesCols[2]);
+      ept->AddText("V")->SetTextColor(stokesCols[3]);      
+
+      xlow += width;
+      const double xmid = (xlow + xup)/2;
+      
+      auto lpt_t = new TPaveText(xlow, 0.8, xmid, 0.9);
+      lpt_t->AddText("Coherent");
+      auto lpt_f = new TPaveText(xlow, 0.7, xmid, 0.8);
+      lpt_f->AddText("max (mean)");
+
+      auto rpt_t = new TPaveText(xmid, 0.8, xup, 0.9);
+      rpt_t->AddText("Dedispersed");
+      auto rpt_f = new TPaveText(xmid, 0.7, xup, 0.8);
+      rpt_f->AddText("max (mean)");      
+
+      auto* lpt = new TPaveText(xlow, epsilon, xmid, 0.7);
+      auto& ci = fSummary.coherent_filtered[pol][peakInd];
+      lpt->AddText(TString::Format("%4.2lf (%4.2lf)", ci.max_dI, ci.I))->SetTextColor(stokesCols[0]);
+      lpt->AddText(TString::Format("%4.2lf (%4.2lf)", ci.max_dQ, ci.Q))->SetTextColor(stokesCols[1]);
+      lpt->AddText(TString::Format("%4.2lf (%4.2lf)", ci.max_dU, ci.U))->SetTextColor(stokesCols[2]);
+      lpt->AddText(TString::Format("%4.2lf (%4.2lf)", ci.max_dV, ci.V))->SetTextColor(stokesCols[3]);
+
+      auto* rpt = new TPaveText(xmid, epsilon, xup, 0.7);
+      auto& di = fSummary.deconvolved_filtered[pol][peakInd];
+      rpt->AddText(TString::Format("%4.2lf (%4.2lf)", di.max_dI, di.I))->SetTextColor(stokesCols[0]);
+      rpt->AddText(TString::Format("%4.2lf (%4.2lf)", di.max_dQ, di.Q))->SetTextColor(stokesCols[1]);
+      rpt->AddText(TString::Format("%4.2lf (%4.2lf)", di.max_dU, di.U))->SetTextColor(stokesCols[2]);
+      rpt->AddText(TString::Format("%4.2lf (%4.2lf)", di.max_dV, di.V))->SetTextColor(stokesCols[3]);
+
+
+      for(auto pt : {e, ept, f, lpt_t, rpt_t, lpt_f,  rpt_f, lpt, rpt}){
+	pt->SetBit(kCanDelete, true);
+	pt->SetTextColor(peakColors[pol][peakInd]);
+	pt->SetLineColor(peakColors[pol][peakInd]);
+	pt->SetShadowColor(0);
+	pt->Draw();
+      }
+    }
   }
-  
+
   wholePad->SetBorderSize(2);
-    
+
 }
 
 

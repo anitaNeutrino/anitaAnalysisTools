@@ -34,7 +34,8 @@ namespace Acclaim
 
     enum DrawDomain{
       kTimeDomain = 0,
-      kFreqDomain = 1
+      kFreqDomain = 1,
+      kStokesParams = 2,
     };
 
     /**
@@ -413,14 +414,16 @@ namespace Acclaim
      * Does the calculations and stores the data for the AnitaEventSummary::WaveformInfo object
      *
      * @param pol is the polarisation
+     * @param peakInd is the index of the map peak
      * @param info is the selected WaveformInfo in the ANITA event summary
      * @param fEv is the FilteredAnitaEvent from which we are coherently summing
      * @param waveStore is the internal storage in the AnalysisReco class (used to save a copy for MagicDisplay)
      * @param h is the InterferometricMap which contains the peak direction in which we want to coherently sum
      * @param noiseMonitor Contains the min bias RMS values as a function of time, must be non-NULL to fill SNR values
      */
-    void fillWaveformInfo(AnitaPol::AnitaPol_t pol, AnitaEventSummary::WaveformInfo& info, const FilteredAnitaEvent* fEv,
-			  AnalysisWaveform** waveStore, InterferometricMap* h, NoiseMonitor* noiseMonitor);
+    void fillWaveformInfo(AnitaPol::AnitaPol_t pol, Int_t peakInd, AnitaEventSummary::WaveformInfo& info, const FilteredAnitaEvent* fEv,
+			  AnalysisWaveform** waveStore, InterferometricMap* h, NoiseMonitor* noiseMonitor,
+			  std::vector<double>& I, std::vector<double>& Q, std::vector<double>& U, std::vector<double>& V);
 
 
     /**
@@ -460,6 +463,15 @@ namespace Acclaim
 
     UInt_t fCurrentEventNumber; ///< Assigned at the start of process(), helpful for printing warning/info messages
     Int_t fCurrentRun; ///< Assigned at the start of process(), helpful for printing warning/info messages
+
+    std::vector<double> f_dICoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous I for each source direction for the coherent filtered waveform
+    std::vector<double> f_dQCoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous Q for each source direction for the coherent filtered waveform
+    std::vector<double> f_dUCoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous U for each source direction for the coherent filtered waveform
+    std::vector<double> f_dVCoherentFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous V for each source direction for the coherent filtered waveform
+    std::vector<double> f_dIDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous I for each source direction for the dedispersed filtered waveform
+    std::vector<double> f_dQDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous Q for each source direction for the dedispersed filtered waveform
+    std::vector<double> f_dUDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous U for each source direction for the dedispersed filtered waveform
+    std::vector<double> f_dVDeconvolvedFiltered[AnitaPol::kNotAPol][AnitaEventSummary::maxDirectionsPerPol]; ///< Instantaneous V for each source direction for the dedispersed filtered waveform
 
     /**
      * @fn GetDebug
@@ -677,6 +689,21 @@ namespace Acclaim
      */
     ANALYSIS_SETTING(Int_t, FillUnfiltered);
 
+
+    /**
+     * @fn GetInstantaneousStokes
+     * @brief Get the value of #fInstantaneousStokes
+     */
+    /**
+     * @fn SetInstantaneousStokes
+     * @brief Set the value of #fInstantaneousStokes
+     */
+    /**
+     * @var fInstantaneousStokes
+     * @brief  Whether or not to store instantaneous stokes parameters, currently this is only used for plotting
+     * @see AnalysisSettings
+     */
+    ANALYSIS_SETTING(Int_t, InstantaneousStokes);
 
 
 
