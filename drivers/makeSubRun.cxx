@@ -1,6 +1,7 @@
 #include <getopt.h> // for getopt
 #include <iostream>
 
+#include <algorithm> //for std::sort 
 #include "TString.h"
 #include "TFile.h"
 #include "TTree.h"
