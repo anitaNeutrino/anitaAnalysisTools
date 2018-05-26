@@ -217,7 +217,6 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
-      void extendClustering(const char* dataGlob, const char* subThresholdGlob, const char* outFileName);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
