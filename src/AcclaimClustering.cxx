@@ -193,7 +193,8 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   Double_t dTheta = (thetaSource - theta)/sigmaTheta;
   Double_t dPhi = Acclaim::RootTools::getDeltaAngleDeg(phiSource, phi)/sigmaPhi;
 
-  Double_t ll = dTheta*dTheta + dPhi*dPhi;
+  Double_t ll = dTheta * dTheta + dPhi * dPhi * cos(TMath::DegToRad() * theta) * cos(TMath::DegToRad() * theta) / (cos(TMath::DegToRad() * thetaSource) * cos(TMath::DegToRad() * thetaSource));
+//  Double_t ll = dTheta*dTheta + dPhi*dPhi;
 
   if(fDebug){
     std::cerr << __PRETTY_FUNCTION__ << " for " << eventNumber << ", dTheta = " << dTheta << ", dPhi = " << dPhi << ", ll = " << ll << std::endl;
