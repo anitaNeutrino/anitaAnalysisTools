@@ -63,6 +63,7 @@ namespace Acclaim{
       UInt_t eventNumber;				/// Event number
       Int_t run;					/// Run
       AnitaPol::AnitaPol_t pol;				/// Polarization
+      UInt_t realTime;					/// For elapsed time of transients. Placed analogously as in ThermalChain.h.
       Int_t peakIndex;					/// Which peak in the map does this represent?
 
       Double_t centre[3];//!				/// Cartesian coordinates, does not persist in ROOT
