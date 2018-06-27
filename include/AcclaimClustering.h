@@ -279,9 +279,11 @@ namespace Acclaim{
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
+      void readInPathList();
 
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
+      void setInitialPathClusters();
       void makeSummaryTrees();
       void resetClusters();
       Double_t getSumOfMcWeights();
@@ -298,10 +300,12 @@ namespace Acclaim{
       Int_t removeLargeBasesNearMcMurdo();
 
       void doBaseEventClustering();
+      void doPathEventClustering();
       void doEventEventClustering();
 
       void doMcEventClustering();
       void doMcBaseClustering();
+      void doMcPathClustering();
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
       void nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEvents);
 
@@ -345,6 +349,7 @@ namespace Acclaim{
 
       bool fDebug;
       bool fUseBaseList;
+      bool fUsePathList;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;
@@ -353,6 +358,7 @@ namespace Acclaim{
       Int_t fROOTgErrorIgnoreLevel;
       bool fDrawNewNearbyEventsHistograms;
       bool fReadInBaseList;
+      bool fReadInPathList;
 
       std::vector<TCut> fThermalChainCuts;
     };
