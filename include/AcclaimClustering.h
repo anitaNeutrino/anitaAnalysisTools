@@ -63,7 +63,7 @@ namespace Acclaim{
       UInt_t eventNumber;				/// Event number
       Int_t run;					/// Run
       AnitaPol::AnitaPol_t pol;				/// Polarization
-      UInt_t realTime;					/// For elapsed time of transients. Placed analogously as in ThermalChain.h.
+      UInt_t realTime;					/// Time at which event was detected.
       Int_t peakIndex;					/// Which peak in the map does this represent?
 
       Double_t centre[3];//!				/// Cartesian coordinates, does not persist in ROOT
@@ -141,7 +141,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 14)
+      ClassDef(Event, 15)
     };
 
 
@@ -204,6 +204,25 @@ namespace Acclaim{
     };
 
     
+
+    /** 
+     * @class pathCluster
+     * @brief Same as Cluster, but uses the transient lists 
+     */
+    class pathCluster : public cluster{
+    public:
+
+      PathCluster(Int_t i=-1);
+      PathCluster(const Event& seedEvent, Int_t i=-1);
+      PathCluster(const BaseList::path& path, Int_t i=-1);
+
+      Double_t pathTime;					/// Time at which to evaluate the center of the transient's cluster.
+
+      virtual ~pathCluster(){;}
+	
+      ClassDef(McEvent, 1)
+    }; 
+
     /**
      * @class LogLikelihoodMethod
      * @brief Workhorse class: groups events into clusters around bases and other events using the log likelihood method
