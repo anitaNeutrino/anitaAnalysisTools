@@ -597,7 +597,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
     fMyBackground(),
     fROOTgErrorIgnoreLevel(gErrorIgnoreLevel),
     fDrawNewNearbyEventsHistograms(true),
-    fReadInBaseList(false)
+    fReadInBaseList(false),
+    fReadInPathList(false)
 
 {
   const char* sgeTaskId = getenv("SGE_TASK_ID");

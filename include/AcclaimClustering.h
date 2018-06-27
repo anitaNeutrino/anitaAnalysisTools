@@ -217,10 +217,11 @@ namespace Acclaim{
       PathCluster(const BaseList::path& path, Int_t i=-1);
 
       Double_t pathTime;					/// Time at which to evaluate the center of the transient's cluster.
+      Int_t knownPath;                                          /// Analogous to knownBase in class Cluster, but for transient paths.
 
       virtual ~pathCluster(){;}
 	
-      ClassDef(McEvent, 1)
+      ClassDef(pathCluster, 1)
     }; 
 
     /**
@@ -244,7 +245,7 @@ namespace Acclaim{
       }
 
       bool getUsePathList(){return fUsePathList;}
-      void setUsePathList(bool usePathList) {
+      void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
       }
 
