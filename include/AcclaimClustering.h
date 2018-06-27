@@ -179,6 +179,7 @@ namespace Acclaim{
       Cluster(Int_t i=-1);
       Cluster(const Event& seedEvent, Int_t i=-1);
       Cluster(const BaseList::base& base, Int_t i=-1);
+      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime, Double_t pathTime);
 
       virtual ~Cluster(){ ;}	
 
@@ -191,6 +192,7 @@ namespace Acclaim{
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
+      Int_t knownPath;                                          /// Known transient path = 0, Psuedo-path = 1
       Int_t index;                                              /// Where am I in the cluster array?
       Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
       Double_t llEventCut; /// and what's the value of that cut?
@@ -200,29 +202,10 @@ namespace Acclaim{
 
       void resetClusteringNumbers();
 
-      ClassDef(Cluster, 5)
+      ClassDef(Cluster, 6)
     };
 
-    
 
-    /** 
-     * @class pathCluster
-     * @brief Same as Cluster, but uses the transient lists 
-     */
-    class pathCluster : public cluster{
-    public:
-
-      PathCluster(Int_t i=-1);
-      PathCluster(const Event& seedEvent, Int_t i=-1);
-      PathCluster(const BaseList::path& path, Int_t i=-1);
-
-      Double_t pathTime;					/// Time at which to evaluate the center of the transient's cluster.
-      Int_t knownPath;                                          /// Analogous to knownBase in class Cluster, but for transient paths.
-
-      virtual ~pathCluster(){;}
-	
-      ClassDef(pathCluster, 1)
-    }; 
 
     /**
      * @class LogLikelihoodMethod
