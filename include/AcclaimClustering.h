@@ -243,6 +243,11 @@ namespace Acclaim{
 	fUseBaseList = useBaseList;
       }
 
+      bool getUsePathList(){return fUsePathList;}
+      void setUsePathList(bool usePathList) {
+	fUsePathList = usePathList;
+      }
+
       void setCut(TCut cut){ fCut = cut; }
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
