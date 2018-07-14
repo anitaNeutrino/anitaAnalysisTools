@@ -185,10 +185,6 @@ namespace Acclaim{
 
       Double_t centre[3]; //! Does not persist			/// Center in cartesian
 	
-      Double_t latitude;					/// cluster center latitude
-      Double_t longitude;					/// cluster center longitude
-      Double_t altitude;					/// cluster center altitude
-	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
@@ -200,7 +196,15 @@ namespace Acclaim{
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
       Int_t seedEvent; //!			                /// Which event seeded the cluster?
 
+      void getLongitude(UInt_t realTime);
+      void getLatitude(UInt_t realTime);
+      void getAltitiude(UInt_t realTime);
       void resetClusteringNumbers();
+
+    private:
+      Double_t latitude;					/// cluster center latitude
+      Double_t longitude;					/// cluster center longitude
+      Double_t altitude;					/// cluster center altitude
 
       ClassDef(Cluster, 6)
     };
