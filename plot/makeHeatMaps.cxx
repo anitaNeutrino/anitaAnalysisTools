@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
         }
 
       }
-      if((entry % TGraphAntarctica::defaultGpsTreeStride) == 0){
+      if((entry % AnitaDataset::defaultStrideForGpsTGraphAntarctica) == 0){
         grFlightPath->SetPoint(grFlightPath->GetN(), sum->anitaLocation.longitude, sum->anitaLocation.latitude);
       }      
       p.inc(entry, n);

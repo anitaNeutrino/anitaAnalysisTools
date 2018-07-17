@@ -18,6 +18,7 @@
 #include "RootTools.h"
 #include "DrawStrings.h"
 #include "ThermalChain.h"
+#include "GeoidModel.h"
 #include "Hical2.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -147,7 +148,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
 
     RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
     AnitaGeomTool* geom = AnitaGeomTool::Instance();
-    geom->getCartesianCoords(latitude, longitude, altitude, centre);
+    GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
 
     // std::cerr << eventNumber << "\t" << easting << "\t" << northing << std::endl;
     if(latitude < -90){
@@ -231,7 +232,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   altitude = peak.altitude;
   // RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->getCartesianCoords(latitude, longitude, altitude, centre);
+  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
   theta = peak.theta;
   phi = peak.phi;
   thetaAdjustmentRequired = peak.theta_adjustment_needed;
@@ -559,8 +560,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
     altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
   }
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->getCartesianCoords(latitude, longitude, altitude, centre);
+  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
@@ -575,8 +575,7 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   altitude = event.altitude;
   knownBase = 0;
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  geom->getCartesianCoords(latitude, longitude, altitude, centre);
+  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   index = i;
   llEventCutInd = 0;
@@ -1571,9 +1570,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
             cluster.centre[2]/=eventCounter;
           }
 
-          AnitaGeomTool* geom = AnitaGeomTool::Instance();
-          geom->getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
-              cluster.longitude, cluster.altitude);
+	  GeoidModel::getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
+						      cluster.longitude, cluster.altitude);
 
           if(eventCounter != cluster.numDataEvents){
             std::cerr << "Error in " << __PRETTY_FUNCTION__

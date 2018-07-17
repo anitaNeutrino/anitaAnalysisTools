@@ -4,6 +4,7 @@
 #include "AnitaConventions.h"
 #include "TGraphAntarctica.h"
 #include "AnitaEventSummary.h"
+#include "AnitaDataset.h"
 
 #ifndef ACCLAIM_SUMMARY_SET_H
 #define ACCLAIM_SUMMARY_SET_H
@@ -63,7 +64,7 @@ namespace Acclaim
 
 
     Double_t getTotalSize() const;
-    TGraphAntarctica* makePayloadLocationGraph(int stride = TGraphAntarctica::defaultGpsTreeStride);
+    TGraphAntarctica* makePayloadLocationGraph(int stride = AnitaDataset::defaultStrideForGpsTGraphAntarctica);
 
 
     // If I keep adding these wrapper functions at some point it might make sense to inherit from TChain...
