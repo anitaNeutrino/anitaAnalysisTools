@@ -48,9 +48,10 @@ const double FITTER_OUTPUT_SCALING = 1./FITTER_INPUT_SCALING;
  */
 namespace ResolutionModel{
   const int n = 6;
-  const double phiParams[n]   = {-2.50414e-01,  3.02406e-01, 2.43376e-01, -6.45279e-02,  2.40889e-01, 1.74901e-01}; //A4 is the second set of 3 numbers, A3 is the first set
-  const double thetaParams[n] = {-3.83773e-01, -3.00964e-01, 1.64537e-01, -1.12157e-01, -2.93694e-01, 7.92909e-02}; //A4 is the second set of 3 numbers, A3 is the first set
-  TString formula = "exp([0]*x + [1]) + [2]";
+  const double phiParams[n]   = {-2.50414e-01,  3.02406e-01, 2.43376e-01, 5.09057,  8.01369e-01, 1.}; //A4 is the second set of 3 numbers, A3 is the first set
+  const double thetaParams[n] = {-3.83773e-01, -3.00964e-01, 1.64537e-01, 1.34307, 7.09382e-01, 1.}; //A4 is the second set of 3 numbers, A3 is the first set
+  TString formula = (AnitaVersion::get() == 3) ? "exp([0]*x + [1]) + [2]" : "[0]/(pow(x,[1]) + [2])";
+
 }
 
 
@@ -79,9 +80,9 @@ void Acclaim::Clustering::getAngularResolution(const AnitaEventSummary* sum, Ani
  * @param sigma_phi the calculated phi resolution (degrees)
  */
 void Acclaim::Clustering::getAngularResolution(double x, double& sigma_theta, double& sigma_phi){
-  int versionOffset = (AnitaVersion::get() == 3) ? 0 : 3;
-  sigma_phi = exp(ResolutionModel::phiParams[0+versionOffset]*x + ResolutionModel::phiParams[1+versionOffset]) + ResolutionModel::phiParams[2+versionOffset];
-  sigma_theta = exp(ResolutionModel::thetaParams[0+versionOffset]*x + ResolutionModel::thetaParams[1+versionOffset]) + ResolutionModel::thetaParams[2+versionOffset];
+  sigma_phi = (AnitaVersion::get() == 3) ? exp(ResolutionModel::phiParams[0]*x + ResolutionModel::phiParams[1]) + ResolutionModel::phiParams[2] : ResolutionModel::phiParams[3]/(pow(x, ResolutionModel::phiParams[4]) + ResolutionModel::phiParams[5]);
+  sigma_theta = (AnitaVersion::get() == 3) ? exp(ResolutionModel::thetaParams[0]*x + ResolutionModel::thetaParams[1]) + ResolutionModel::thetaParams[2] : ResolutionModel::thetaParams[3]/(pow(x, ResolutionModel::thetaParams[4]) + ResolutionModel::thetaParams[5]);
+
 }
 
 
@@ -621,7 +622,8 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   llEventCuts.push_back(1);
   llEventCuts.push_back(2);
   llEventCuts.push_back(4);
-  llEventCuts.push_back(7);
+  llEventCuts.push_back(6);
+  llEventCuts.push_back(8);
 
   llEventCuts.push_back(10);
   llEventCuts.push_back(20);
@@ -668,6 +670,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fKDTree = NULL;
   fDebug = false;
   fUseBaseList = true;
+  fPercentOfMC = 0;
   fCut = 0;
   fCutHical = 0;
   fEntryList = 0;
@@ -1826,7 +1829,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
   return n;
 }
 
-Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const char* summaryGlob){
+Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const char* summaryGlob, bool isMC){
 
   Long64_t n = 0;
   if(summaryGlob){
@@ -1934,32 +1937,34 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       t->SetEntryList(fEntryList);
       printf("%lld entries loaded\n", fEntryList->GetN());
 
+      TRandom3 tr(0);
+
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
         t->GetEntry(t->GetEntryNumber(entry));
         eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
-	// looks like adding SNR to isHical broke this line, I've added a zero to help the compiler out, though that probably breaks the clustering!
-        if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi, 0)) continue;
-        if(weight <= 0 && peak_theta > 0)
-	  {
-	    // switches theta convention (i used the UCorrelator convention for theta)
-	    peak_theta = -1* peak_theta;
-	    events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
-				   (double)peak_phi, (double)peak_theta,
-				   (int)llEventCuts.size(), eventNumber, (int)run,
-				   (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-				   (double)coherent_filtered_snr));
-	  }
-        if(weight > 0)
-	  {
-	    // switches theta convention
-	    peak_theta = -1* peak_theta;
-	    mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
-				       (double)peak_phi, (double)peak_theta,
-				       (int)llEventCuts.size(), eventNumber, (int)run,
-				       (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-				       (double)coherent_filtered_snr));
-	  }
+        if(fCutHical && Hical2::isHical(eventNumber, anita_heading - peak_phi, 0), coherent_filtered_snr) continue;
+        if(!isMC && peak_theta > 0)
+        {
+          // switches theta convention (i used the UCorrelator convention for theta)
+          peak_theta = -1* peak_theta;
+          events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
+                (double)peak_phi, (double)peak_theta,
+                (int)llEventCuts.size(), eventNumber, (int)run,
+                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+                (double)coherent_filtered_snr));
+        }
+        if(isMC)
+        {
+          if(tr.Integer(1000) >= fPercentOfMC) continue;
+          // switches theta convention
+          peak_theta = -1* peak_theta;
+          mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
+                (double)peak_phi, (double)peak_theta,
+                (int)llEventCuts.size(), eventNumber, (int)run,
+                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+                (double)coherent_filtered_snr));
+        }
       }
       delete t;
     }
@@ -2736,8 +2741,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles){
 
-  useAcclaimFiles ? readInSummaries(dataGlob) : readInTMVATreeSummaries(dataGlob);
-  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob);
+  useAcclaimFiles ? readInSummaries(dataGlob) : readInTMVATreeSummaries(dataGlob, 0);
+  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob, 1);
   
   std::cout << "Sorting events...";
   std::sort(events.begin(), events.end());
@@ -2770,11 +2775,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   TFile* fOut = useAcclaimFiles ? oc.makeFile() : new TFile(outFileName, "RECREATE");
   std::cout << fOut->GetTitle() << "\t" << fOut->GetName() << std::endl;
 
-  if(!fEventsAlreadyClustered){
-    readInBaseList();
-    doBaseEventClustering();
+  if(fUseBaseList)
+  {
+    if(!fEventsAlreadyClustered){
+      readInBaseList();
+      doBaseEventClustering();
+    }
+    doMcBaseClustering();
   }
-  doMcBaseClustering();
 
   if(!fEventsAlreadyClustered){
     doEventEventClustering();

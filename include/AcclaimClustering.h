@@ -226,6 +226,8 @@ namespace Acclaim{
       void setCut(TCut cut){ fCut = cut; }
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
+      /* set this to only use a portion of the MC events you load in (randomly chosen).  the word percent is misleading, it actually chooses (the integer you put in)/1000 */
+      void setPercentOfMC(Int_t percent){ fPercentOfMC = percent; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -249,7 +251,7 @@ namespace Acclaim{
 
 
       Long64_t readInSummaries(const char* summaryGlob);
-      Long64_t readInTMVATreeSummaries(const char* summaryGlob);
+      Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
@@ -320,6 +322,7 @@ namespace Acclaim{
 
       bool fDebug;
       bool fUseBaseList;
+      Int_t fPercentOfMC;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;
