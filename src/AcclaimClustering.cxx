@@ -147,8 +147,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
     // }
 
     RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
-    AnitaGeomTool* geom = AnitaGeomTool::Instance();
-    GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
+    Geoid::getCartesianCoords(latitude, longitude, altitude, centre);
 
     // std::cerr << eventNumber << "\t" << easting << "\t" << northing << std::endl;
     if(latitude < -90){
@@ -231,8 +230,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   longitude = peak.longitude;
   altitude = peak.altitude;
   // RampdemReader::LonLatToEastingNorthing(longitude, latitude, easting, northing);
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
-  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
+  Geoid::getCartesianCoords(latitude, longitude, altitude, centre);
   theta = peak.theta;
   phi = peak.phi;
   thetaAdjustmentRequired = peak.theta_adjustment_needed;
@@ -560,7 +558,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
     altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
   }
 
-  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
+  Geoid::getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
@@ -575,7 +573,7 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   altitude = event.altitude;
   knownBase = 0;
 
-  GeoidModel::getCartesianCoords(latitude, longitude, altitude, centre);
+  Geoid::getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   index = i;
   llEventCutInd = 0;
@@ -1570,7 +1568,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
             cluster.centre[2]/=eventCounter;
           }
 
-	  GeoidModel::getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
+	  Geoid::getLatLonAltFromCartesian(cluster.centre, cluster.latitude,
 						      cluster.longitude, cluster.altitude);
 
           if(eventCounter != cluster.numDataEvents){

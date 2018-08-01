@@ -55,9 +55,11 @@ namespace Acclaim
      */
     static const char* selectionAsString(selection sel){
       switch(sel){
-      case kAll: return "all";
       case kWaisPulser: return "wais";
       case kDecimated: return "decimated";
+      case kAll:
+      default:
+	return "all";
       }
     }
 
