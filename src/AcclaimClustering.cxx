@@ -4,7 +4,6 @@
 #include "AnitaDataset.h"
 #include "OutputConvention.h"
 #include "AnitaEventSummary.h"
-#include "AntarcticaMapPlotter.h"
 #include "RootTools.h"
 #include "ProgressBar.h"
 #include "TGraphAntarctica.h"
