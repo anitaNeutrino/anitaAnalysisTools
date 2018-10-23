@@ -19,6 +19,8 @@
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
 #include "AcclaimOpenMP.h"
+#include "TRandom3.h"
+#include "TChain.h"
 
 class TTree;
 class TGraphAntarctica;
@@ -97,6 +99,7 @@ namespace Acclaim{
       Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
       UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
       Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
+      UInt_t nearestEventSurfaceLLEventNumber;		/// What's the event number of the nearest surface neighbour by LL?
 
       Int_t antarcticaHistBin;				/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!			/// Only construct this once
@@ -217,6 +220,7 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
+      void testSmallClusters(const char* dataGlob, const char* outFileName, int clusterSizeMin=5, int clusterSizeMax=16, int nAttempts=100);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
@@ -225,7 +229,9 @@ namespace Acclaim{
 
       void setCut(TCut cut){ fCut = cut; }
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
+      void setSelfLLMax(double llmax){ fSelfLLMax = llmax; } 
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
+      void setPercentOfMC(Int_t percent){ fPercentOfMC = percent; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -249,15 +255,20 @@ namespace Acclaim{
 
 
       Long64_t readInSummaries(const char* summaryGlob);
-      Long64_t readInTMVATreeSummaries(const char* summaryGlob);
+      Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
+      void readInSummariesForTesting(const char* summaryGlob);
+      void pickEventsFromList(int n_in_cluster);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
 
+      TRandom3* tr3;
+
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
       void makeSummaryTrees();
+      void addToHistograms(TH2D* h, TH2D* h2);
       void resetClusters();
       Double_t getSumOfMcWeights();
       void initKDTree();
@@ -291,6 +302,7 @@ namespace Acclaim{
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       TCut fCut; /// What to cut on when using tmva trees
       bool fCutHical; /// cut hical? (when using tmva trees)
+      bool fSelfLLMax; /// basically a way of excluding above horizon from sample
       TEntryList* fEntryList; /// Entry list that gets filled by cut when using tmva trees
 
       UInt_t fTestEvent1; /// For debugging
@@ -320,6 +332,8 @@ namespace Acclaim{
 
       bool fDebug;
       bool fUseBaseList;
+      TChain* fChain;
+      Int_t fPercentOfMC;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;
