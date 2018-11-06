@@ -2,8 +2,10 @@
   // two sets of nested brackets for the local scope,
   // so we don't get things left in ROOT memory
   {
-    const int nLibs = 7;
+    const int nLibs = 9;
     const char* libs[nLibs] = {"libRootFftwWrapper.so",
+			       "libAntarcticaRoot.so",
+			       "libAnitaIceMC.so",
                                "libAnitaEvent.so",
                                "libAnitaCorrelator.so",
                                "libAnitaAnalysis.so",

@@ -1,5 +1,6 @@
 
-set(BINARIES testFancyFFTs testFancyTTreeInterpolator testOutputConvention testProgressBar testCmdLineArgs testCutSelector)
+#set(BINARIES testFancyFFTs testFancyTTreeInterpolator testOutputConvention testProgressBar testCmdLineArgs testCutSelector)
+set(BINARIES testFancyFFTs testOutputConvention testProgressBar testCmdLineArgs testCutSelector)
 
 
 foreach(binary ${BINARIES})
