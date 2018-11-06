@@ -12,13 +12,13 @@ void plotSun(const char* glob = "~/ANITA/anita3Analysis/sineSub100Percent/data/d
   }
   ss.SetUseProof(1);
 
-  bool justMinBias = false; true;
+  bool justMinBias = false;
   const double maxSunTheta = 10;
 
   for(int pol=AnitaPol::kHorizontal; pol < AnitaPol::kNotAPol; pol++){
   
-    TString phi   = TString::Format("sum.peak.phi[%d][0]", pol);
-    TString theta = TString::Format("sum.peak.theta[%d][0]", pol);
+    TString phi   = TString::Format("(sum.peak.phi[%d][0])", pol);
+    TString theta = TString::Format("(sum.peak.theta[%d][0])", pol);
   
     TString dPhi = "";
     dPhi += "((sum.sun.phi - " + phi + " > 180)*(sum.sun.phi - " + phi + " - 360) +";
@@ -26,15 +26,16 @@ void plotSun(const char* glob = "~/ANITA/anita3Analysis/sineSub100Percent/data/d
     dPhi += "(fabs(sum.sun.phi - " + phi + ") < 180)*(sum.sun.phi - " + phi + "))";
 
 
-    TString dTheta = theta + "+sum.sun.theta";
+    TString dTheta("-sum.sun.theta - ");
+    dTheta += theta;
   
     TString closeToSun = justMinBias ? "sum.flags.isRF==0"  : "sum.flags.isRF>=0";
     closeToSun += TString::Format(" && -sum.sun.theta < %lf", maxSunTheta);
     closeToSun += " && TMath::Abs(" +  dTheta + ") < 5";
     closeToSun += " && TMath::Abs("  + dPhi + ") < 5";
     
-    const int nBinsTheta = justMinBias ? 16 : 128;
-    const int nBinsPhi = justMinBias ? 256 : 2048;
+    const int nBinsTheta = justMinBias ? 16 : 32;
+    const int nBinsPhi = justMinBias ? 256 : 1024;
     
     auto n_dTheta_theta = TString::Format("h_dTheta_theta_%d(%d,0,%lf,1024,-5,5)", pol,nBinsTheta, maxSunTheta);
     // auto h_dTheta_theta = new TH2D(n_dTheta_theta, "h_dTheta_theta", nBinsTheta, 0, 30,  1024, -5, 5);
