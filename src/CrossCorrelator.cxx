@@ -16,10 +16,12 @@ Acclaim::CrossCorrelator::~CrossCorrelator(){
 std::shared_ptr<const Acclaim::CorrelationSummary> Acclaim::CrossCorrelator::makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta){
   
   int phiSector = InterferometricMap::getPhiSectorFromPhiRough(waisPhi);
+  phiSector = phiSector % NUM_PHI; // enforce wrapping
+  // std::cout << phiSector << std::endl;
 
   eventNumber[pol] = event->getHeader()->eventNumber;  
   getNormalizedInterpolatedTGraphs(event, pol);
-  doFFTs(pol);  
+  doFFTs(pol);
 
   doUpsampledCrossCorrelations(pol, phiSector);
   
