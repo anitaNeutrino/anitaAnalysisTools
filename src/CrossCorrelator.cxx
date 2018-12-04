@@ -1,6 +1,7 @@
 #include "CrossCorrelator.h"
-
+#include "InterferometricMap.h"
 #include "AnitaDataset.h"
+#include "AcclaimCorrelationSummary.h"
 #include "FilterStrategy.h"
 
 Acclaim::CrossCorrelator::CrossCorrelator(){
@@ -11,6 +12,33 @@ Acclaim::CrossCorrelator::CrossCorrelator(){
 Acclaim::CrossCorrelator::~CrossCorrelator(){
 }
 
+
+std::shared_ptr<const Acclaim::CorrelationSummary> Acclaim::CrossCorrelator::makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta){
+  
+  int phiSector = InterferometricMap::getPhiSectorFromPhiRough(waisPhi);
+
+  eventNumber[pol] = event->getHeader()->eventNumber;  
+  getNormalizedInterpolatedTGraphs(event, pol);
+  doFFTs(pol);  
+
+  doUpsampledCrossCorrelations(pol, phiSector);
+  
+  auto summary = std::make_shared<Acclaim::CorrelationSummary>(pol, eventNumber[pol], waisPhi, waisTheta, phiSector);
+
+  const std::vector<Int_t>& combosToUse = combosToUseGlobal[phiSector];
+  for(int combo : combosToUse){
+    int ant1 = comboToAnt1s[combo];
+    int ant2 = comboToAnt2s[combo];
+
+    int maxIndex = RootTools::getIndexOfMaximum(numSamples, crossCorrelationsUpsampled[pol][combo]);
+    double dt = correlationDeltaT*(maxIndex - numSamples/2);
+    double cc = crossCorrelationsUpsampled[pol][combo][maxIndex]/(numSamples*numSamples);
+    // std::cout << ant1 << "\t" << ant2 << "\t" << maxIndex << " of " << numSamples << "\t" << dt << "\t" << cc << std::endl;
+    summary->add(ant1, ant2, dt, cc);
+  }
+  
+  return summary;
+}
 
 
 void Acclaim::CrossCorrelator::initializeVariables(){
@@ -222,13 +250,13 @@ void Acclaim::CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
 void Acclaim::CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
 
 
-  const std::vector<Int_t>* combosToUse = &combosToUseGlobal[phiSector];
-  Int_t numCombosToUpsample = combosToUse->size();
+  const std::vector<Int_t>& combosToUse = combosToUseGlobal[phiSector];
+  Int_t numCombosToUpsample = combosToUse.size();
 
   Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(numSamplesUpsampled, 0));
 
   for(int comboInd=0; comboInd<numCombosToUpsample; comboInd++){
-    Int_t combo = combosToUse->at(comboInd);
+    Int_t combo = combosToUse.at(comboInd);
 
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);

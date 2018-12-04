@@ -555,11 +555,11 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
     // std::cerr << "zmps " << fPeakPhiSector << std::endl;
     cc->doUpsampledCrossCorrelations(pol, fPeakPhiSector);    
     
-    std::vector<Int_t>* combosToUse = &cc->combosToUseGlobal[fPeakPhiSector];
+    std::vector<Int_t>& combosToUse = cc->combosToUseGlobal[fPeakPhiSector];
 
     const Int_t offset = cc->numSamplesUpsampled/2;
-    for(UInt_t comboInd=0; comboInd<combosToUse->size(); comboInd++){
-      Int_t combo = combosToUse->at(comboInd);
+    for(UInt_t comboInd=0; comboInd<combosToUse.size(); comboInd++){
+      Int_t combo = combosToUse.at(comboInd);
       if(cc->kOnlyThisCombo >= 0 && combo!=cc->kOnlyThisCombo){
 	continue;
       }
@@ -604,7 +604,7 @@ void Acclaim::InterferometricMap::Fill(AnitaPol::AnitaPol_t thePol, CrossCorrela
       }
     }
 
-    Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse->size() > 0 ? combosToUse->size() : 1;
+    Double_t normFactor = cc->kOnlyThisCombo < 0 && combosToUse.size() > 0 ? combosToUse.size() : 1;
     // absorb the removed inverse FFT normalization
     normFactor*=(cc->numSamples*cc->numSamples);
 

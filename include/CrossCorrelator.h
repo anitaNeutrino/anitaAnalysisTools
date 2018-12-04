@@ -55,6 +55,7 @@
 
 namespace Acclaim
 {
+  class CorrelationSummary;
 
   /**
    * @class CrossCorrelator
@@ -98,6 +99,7 @@ namespace Acclaim
 
     Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
 
+    std::shared_ptr<const Acclaim::CorrelationSummary> makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta);
 
 
 
@@ -107,7 +109,7 @@ namespace Acclaim
 
     std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMP*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
     Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR]; //!< Cross correlations.
-    Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR*PAD_FACTOR]; //!< Upsampled cross correlations.
+    Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
   
     Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_SAMP*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
     Double_t startTimes[AnitaPol::kNotAPol][NUM_SEAVEYS];
