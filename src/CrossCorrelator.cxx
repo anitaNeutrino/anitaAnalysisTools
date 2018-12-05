@@ -32,10 +32,11 @@ std::shared_ptr<const Acclaim::CorrelationSummary> Acclaim::CrossCorrelator::mak
     int ant1 = comboToAnt1s[combo];
     int ant2 = comboToAnt2s[combo];
 
-    int maxIndex = RootTools::getIndexOfMaximum(numSamples, crossCorrelationsUpsampled[pol][combo]);
-    double dt = correlationDeltaT*(maxIndex - numSamples/2);
+    int maxIndex = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
+
+    double dt = correlationDeltaT*(maxIndex - numSamplesUpsampled/2);
     double cc = crossCorrelationsUpsampled[pol][combo][maxIndex]/(numSamples*numSamples);
-    // std::cout << ant1 << "\t" << ant2 << "\t" << maxIndex << " of " << numSamples << "\t" << dt << "\t" << cc << std::endl;
+    // std::cout << ant1 << "\t" << ant2 << "\t" << maxIndex << " of " << numSamplesUpsampled << "\t" << dt << "\t" << cc << std::endl;
     summary->add(ant1, ant2, dt, cc);
   }
   

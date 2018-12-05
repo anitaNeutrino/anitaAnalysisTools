@@ -65,6 +65,8 @@ int main(int argc, char* argv[]){
 	auto p = s->get(pair);
 	corrPair = const_cast<Acclaim::CorrelationPair*>(&p);
 
+	// std::cout << corrPair->ant1 << "\t" << corrPair->ant2 << "\t" << corrPair->dt << "\t" << corrPair->correlation << std::endl;
+
 	t->Fill();
       }
     }
