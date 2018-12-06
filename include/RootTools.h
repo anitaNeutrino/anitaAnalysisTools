@@ -87,11 +87,11 @@ namespace Acclaim
 
 
     /* Get info about input */
-    Int_t getIndexOfMaximum(Int_t len, Double_t* arr);
-    std::vector<Int_t> getIndicesOfNans(TGraph* gr);
+    Int_t getIndexOfMaximum(Int_t len, const Double_t* arr);
+    std::vector<Int_t> getIndicesOfNans(const TGraph* gr);
     Double_t getSumOfYVals(const TGraph* gr);
     void getMaxMin(const TGraph* gr, Double_t& max, Double_t& min);
-    void getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms);
+    void getMeanAndRms(const TGraph* gr, Double_t& mean, Double_t& rms);
     void getMaxMin(const TGraph* gr, Double_t& maxY, Double_t& maxX, Double_t& minY, Double_t& minX);
     void getMaxMinWithinLimits(const TGraph* gr, Double_t& maxY, Double_t& maxX,
 			       Double_t& minY, Double_t& minX,

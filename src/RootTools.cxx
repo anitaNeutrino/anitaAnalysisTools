@@ -479,7 +479,7 @@ TGraph* Acclaim::RootTools::makeNormalized(TGraph* gr, Double_t& mean, Double_t&
  * @param mean is a reference to a Double_t, updated with the mean value of gr before modification.
  * @param rms is a reference to a Double_t, updated with the rms value of gr before modification.
 */
-void Acclaim::RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms){
+void Acclaim::RootTools::getMeanAndRms(const TGraph* gr, Double_t& mean, Double_t& rms){
   Double_t sum = 0;
   Double_t square = 0;
   for(int i=0; i<gr->GetN(); i++){
@@ -502,7 +502,7 @@ void Acclaim::RootTools::getMeanAndRms(TGraph* gr, Double_t& mean, Double_t& rms
  * @param arr is a pointer to an array of doubles of length len.
  * @returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number.
 */
-Int_t Acclaim::RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
+Int_t Acclaim::RootTools::getIndexOfMaximum(Int_t len, const Double_t* arr){
   Double_t max=-DBL_MAX;
   Int_t maxIndex = -1;
   for(Int_t i=0; i < len; ++i){
@@ -530,7 +530,7 @@ Int_t Acclaim::RootTools::getIndexOfMaximum(Int_t len, Double_t* arr){
  * @param gr is the TGraph you want information about.
  * @returns std::vector<Int_t> containing the indices of the TGraph where is value is not a number
 */
-std::vector<Int_t> Acclaim::RootTools::getIndicesOfNans(TGraph* gr){
+std::vector<Int_t> Acclaim::RootTools::getIndicesOfNans(const TGraph* gr){
   std::vector<Int_t> nanIndices;
   for(Int_t i=0; i<gr->GetN(); i++){
     if(TMath::IsNaN(gr->GetY()[i])){
