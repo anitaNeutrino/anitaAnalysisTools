@@ -84,8 +84,6 @@ namespace Acclaim
 
 
     virtual Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
-    Double_t getTimeOfMaximumUpsampledCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const;
-
     void initializeVariables();
     void getNormalizedInterpolatedTGraphs(const FilteredAnitaEvent* realEvent, AnitaPol::AnitaPol_t pol, bool raw = false);
     void renormalizeFourierDomain(AnitaPol::AnitaPol_t pol, Int_t ant);
@@ -97,21 +95,25 @@ namespace Acclaim
     void fillCombosToUse();
     void do5PhiSectorCombinatorics();
 
-    Double_t getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol, Int_t combo, Double_t deltaT) const;
+    std::shared_ptr<const Acclaim::CorrelationSummary> makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta, Adu5Pat* pat);
 
-    std::shared_ptr<const Acclaim::CorrelationSummary> makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta);
-
-
+    double correlationIndexToTime(bool upsampled, int corrIndex, AnitaPol::AnitaPol_t pol, int combo) const;
+    double correlationIndexToTime(bool upsampled, int corrIndex, AnitaPol::AnitaPol_t pol, int ant1, int ant2) const;
 
     //--------------------------------------------------------------------------------------------------------
     // Public member variables
     //--------------------------------------------------------------------------------------------------------
 
-    std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(NUM_SAMP*PAD_FACTOR)]; //!< FFTs of evenly resampled waveforms.
-    Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR]; //!< Cross correlations.
-    Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][NUM_SAMP*PAD_FACTOR*UPSAMPLE_FACTOR]; //!< Upsampled cross correlations.
+    static constexpr Int_t numSamples = NUM_SAMP*PAD_FACTOR; //!< Number of samples in waveform after padding.
+    static constexpr Int_t numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; //!< Number of samples in waveform after padding and up sampling.
+    static constexpr Double_t nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
+    static constexpr Double_t correlationDeltaT = nominalSamplingDeltaT/UPSAMPLE_FACTOR;; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
+    
+    std::complex<Double_t> ffts[AnitaPol::kNotAPol][NUM_SEAVEYS][GET_NUM_FREQS(numSamples)]; //!< FFTs of evenly resampled waveforms.
+    Double_t crossCorrelations[AnitaPol::kNotAPol][NUM_COMBOS][numSamples]; //!< Cross correlations.
+    Double_t crossCorrelationsUpsampled[AnitaPol::kNotAPol][NUM_COMBOS][numSamplesUpsampled]; //!< Upsampled cross correlations.
   
-    Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][NUM_SAMP*PAD_FACTOR]; //!< Hold the filtered waveforms for padding...
+    Double_t fVolts[AnitaPol::kNotAPol][NUM_SEAVEYS][numSamples]; //!< Hold the filtered waveforms for padding...
     Double_t startTimes[AnitaPol::kNotAPol][NUM_SEAVEYS];
   
     Double_t interpRMS[AnitaPol::kNotAPol][NUM_SEAVEYS]; //!< RMS of interpolated TGraphs.
@@ -119,15 +121,11 @@ namespace Acclaim
     Int_t comboIndices[NUM_SEAVEYS][NUM_SEAVEYS]; //!< Array mapping ant1+ant2 to combo index
 
     UInt_t eventNumber[AnitaPol::kNotAPol]; //!< For tracking event number
-    Double_t nominalSamplingDeltaT; //!< ANITA-3 => 1./2.6 ns, deltaT for evenly resampling.
-    Double_t correlationDeltaT; //!< nominalSamplingDeltaT/UPSAMPLE_FACTOR, deltaT of for interpolation.
-    Int_t numSamples; //!< Number of samples in waveform after padding.
-    Int_t numSamplesUpsampled; //!< Number of samples in waveform after padding and up sampling.
     Int_t numCombos; //!< Number of possible antenna pairs, counted during initialization. Should equal NUM_COMBOS.
 
     std::vector<Int_t> comboToAnt1s; //!< Vector mapping combo index to ant1.
     std::vector<Int_t> comboToAnt2s; //!< Vector mapping combo index to ant2.
-    std::vector<Int_t> combosToUseGlobal[NUM_PHI]; //!< Depends on L3 trigger for global image
+    std::array<std::vector<Int_t>, NUM_PHI>combosToUseGlobal; //!< Depends on L3 trigger for global image
 
 
     Int_t multiplyTopRingByMinusOne; //!< For showing how I'm an idiot with respect to compiling the ANITA-3 prioritizer
@@ -142,36 +140,6 @@ namespace Acclaim
 
 
   };
-
-
-
-  /**
-   * @class TemplateCorrelator
-   * @brief Cross-correlate all channels of an event with a template
-   * 
-   * This class overloads a few member functions while repurposing some member variable
-   * so not really a case of straight forward inheritance...
-   */
-class TemplateCorrelator : public CrossCorrelator {
-
- public:
-  TemplateCorrelator(Int_t run, UInt_t eventNumber);
-  virtual ~TemplateCorrelator();
-  void initTemplate(const FilteredAnitaEvent* fEv);
-  void initTemplate(Int_t run, UInt_t eventNumber);
-  virtual void correlateEvent(const FilteredAnitaEvent* fEv);
-  virtual void correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol);
-
-  TGraph* getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant) const;
-  
-  Double_t getPeakCorrelation(AnitaPol::AnitaPol_t pol, Double_t minOffset=-100, Double_t maxOffset=100, Double_t stepSize=NOMINAL_SAMPLING_DELTAT) const;
-  
-  virtual Double_t getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t deltaT) const;
-
- protected:
-  // double templateAllChannelRMS;
-  
-};
 
 }
 

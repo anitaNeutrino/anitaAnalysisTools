@@ -24,12 +24,23 @@ int main(int argc, char* argv[]){
   FilterStrategy fs;
 
 
+  auto calib = AnitaEventCalibrator::Instance();
+  for(auto& channelsPerSurf : calib->relativePhaseCenterToAmpaDelays){
+    for(auto& chanExtraDt : channelsPerSurf){
+      // std::cout << "Setting " << chanExtraDt << " to ";
+      chanExtraDt = 0;
+      // std::cout << chanExtraDt << std::endl;
+    }
+  }
+
+
+
   TString fileName = TString::Format("AcclaimCorrelationSummary_%d.root", run);
 
   TFile* fOut = new TFile(fileName,  "recreate");
   TTree* t = new TTree("corrTree", "Tree of WAIS correlation pairs");
-  Acclaim::CorrelationPair* corrPair = nullptr;
-  t->Branch("corrPair", &corrPair);
+  Acclaim::CorrelationSummary* cs = nullptr;
+  t->Branch("correlationSummary", &cs);
   
   const Long64_t n = d.N();
   Acclaim::ProgressBar p(n);
@@ -59,16 +70,9 @@ int main(int argc, char* argv[]){
     }
 
     if(pol != AnitaPol::kNotAPol){
-      auto s = cc->makeSummary(pol, &ev,  phi, theta);
-
-      for(int pair = 0; pair < s->N(); pair++){
-	auto p = s->get(pair);
-	corrPair = const_cast<Acclaim::CorrelationPair*>(&p);
-
-	// std::cout << corrPair->ant1 << "\t" << corrPair->ant2 << "\t" << corrPair->dt << "\t" << corrPair->correlation << std::endl;
-
-	t->Fill();
-      }
+      auto s = cc->makeSummary(pol, &ev,  phi, theta, d.gps());
+      cs = const_cast<Acclaim::CorrelationSummary*>(s.get());
+      t->Fill();
     }
     p.inc(entry, n);
   }

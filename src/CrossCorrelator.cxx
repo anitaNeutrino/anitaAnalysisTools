@@ -3,6 +3,7 @@
 #include "AnitaDataset.h"
 #include "AcclaimCorrelationSummary.h"
 #include "FilterStrategy.h"
+#include "TFile.h" ///@todo remove after debugging complete...
 
 Acclaim::CrossCorrelator::CrossCorrelator(){
   initializeVariables();
@@ -13,31 +14,47 @@ Acclaim::CrossCorrelator::~CrossCorrelator(){
 }
 
 
-std::shared_ptr<const Acclaim::CorrelationSummary> Acclaim::CrossCorrelator::makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta){
+double Acclaim::CrossCorrelator::correlationIndexToTime(bool upsampled, int corrIndex, AnitaPol::AnitaPol_t pol, int combo) const { 
+  return correlationIndexToTime(upsampled, corrIndex, pol, comboToAnt1s.at(combo), comboToAnt2s.at(combo));
+}
+
+double Acclaim::CrossCorrelator::correlationIndexToTime(bool upsampled, int corrIndex, AnitaPol::AnitaPol_t pol, int ant1, int ant2) const {
+
+  const int n     = upsampled ? numSamplesUpsampled : numSamples;
+  const double dt = upsampled ? correlationDeltaT : nominalSamplingDeltaT;
+  
+  double deltaT = dt*(corrIndex - n/2);
+  
+  deltaT -= startTimes[pol][ant1];
+  deltaT += startTimes[pol][ant2];
+ 
+  return deltaT;
+}
+
+
+std::shared_ptr<const Acclaim::CorrelationSummary> Acclaim::CrossCorrelator::makeSummary(AnitaPol::AnitaPol_t pol, const FilteredAnitaEvent* event, double waisPhi, double waisTheta,  Adu5Pat* pat){
   
   int phiSector = InterferometricMap::getPhiSectorFromPhiRough(waisPhi);
   phiSector = phiSector % NUM_PHI; // enforce wrapping
   // std::cout << phiSector << std::endl;
-
-  eventNumber[pol] = event->getHeader()->eventNumber;  
-  getNormalizedInterpolatedTGraphs(event, pol);
-  doFFTs(pol);
-
+  correlateEvent(event, pol);
   doUpsampledCrossCorrelations(pol, phiSector);
-  
-  auto summary = std::make_shared<Acclaim::CorrelationSummary>(pol, eventNumber[pol], waisPhi, waisTheta, phiSector);
 
-  const std::vector<Int_t>& combosToUse = combosToUseGlobal[phiSector];
-  for(int combo : combosToUse){
+  auto summary = std::make_shared<Acclaim::CorrelationSummary>(pol, eventNumber[pol], waisPhi, waisTheta, phiSector, pat);
+
+  for(int combo : combosToUseGlobal[phiSector]){
     int ant1 = comboToAnt1s[combo];
     int ant2 = comboToAnt2s[combo];
 
-    int maxIndex = RootTools::getIndexOfMaximum(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
+    const double* cc = crossCorrelationsUpsampled[pol][combo];
+    int maxIndex = RootTools::getIndexOfMaximum(numSamplesUpsampled, cc);
 
-    double dt = correlationDeltaT*(maxIndex - numSamplesUpsampled/2);
-    double cc = crossCorrelationsUpsampled[pol][combo][maxIndex]/(numSamples*numSamples);
+    double maxCC = cc[maxIndex]/(numSamples*numSamples);
+    
+    double deltaT = correlationIndexToTime(true, maxIndex, pol, ant1, ant2);
+    
     // std::cout << ant1 << "\t" << ant2 << "\t" << maxIndex << " of " << numSamplesUpsampled << "\t" << dt << "\t" << cc << std::endl;
-    summary->add(ant1, ant2, dt, cc);
+    summary->add(ant1, ant2, deltaT, maxCC);
   }
   
   return summary;
@@ -59,11 +76,6 @@ void Acclaim::CrossCorrelator::initializeVariables(){
   }
 
   kOnlyThisCombo = -1;
-  numSamples = PAD_FACTOR*NUM_SAMP; // Factor of two for padding. Turns circular xcor into linear xcor.
-  numSamplesUpsampled = numSamples*UPSAMPLE_FACTOR; // For upsampling
-
-  nominalSamplingDeltaT = NOMINAL_SAMPLING_DELTAT;
-  correlationDeltaT = nominalSamplingDeltaT/UPSAMPLE_FACTOR;
 
   do5PhiSectorCombinatorics();
 }
@@ -90,6 +102,7 @@ void Acclaim::CrossCorrelator::do5PhiSectorCombinatorics(){
 	comboIndices[ant2][ant1] = numCombos;
 	comboToAnt1s.push_back(ant1);
 	comboToAnt2s.push_back(ant2);
+
 	numCombos++;
       }
     }
@@ -104,6 +117,7 @@ void Acclaim::CrossCorrelator::do5PhiSectorCombinatorics(){
   }
 
   fillCombosToUse();
+
 }
 
 
@@ -118,7 +132,7 @@ Double_t Acclaim::CrossCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol,
   // std::cerr << ant1 << "\t" << ant2 << "\t" << deltaT << "\t";
 
   deltaT += startTimes[pol][ant1];
-  deltaT -= startTimes[pol][ant2];  
+  deltaT -= startTimes[pol][ant2];
   // deltaT += startTimes[pol][ant2];
   // deltaT -= startTimes[pol][ant1];  
 
@@ -144,6 +158,7 @@ void Acclaim::CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAn
 
   for(Int_t ant=0; ant < NUM_SEAVEYS; ant++){
     const AnalysisWaveform* wf = raw ? fEv->getRawGraph(ant, pol) : fEv->getFilteredGraph(ant, pol);
+    // const AnalysisWaveform* wf = raw ? fEv->getRawGraph(0, pol) : fEv->getFilteredGraph(0, pol);    
     const TGraphAligned* gr = wf->even();
     startTimes[pol][ant] = gr->GetX()[0];
     int n = gr->GetN();
@@ -157,9 +172,9 @@ void Acclaim::CrossCorrelator::getNormalizedInterpolatedTGraphs(const FilteredAn
       sumOfV += V;
     }
 
-    Double_t meanV = sumOfV/n;    
+    Double_t meanV = sumOfV/n;
 
-    Double_t sumOfVSquared = 0;    
+    Double_t sumOfVSquared = 0;
     for(int samp=0; samp < n; samp++){
       fVolts[pol][ant][samp] -= meanV;
       sumOfVSquared += fVolts[pol][ant][samp]*fVolts[pol][ant][samp];
@@ -205,13 +220,10 @@ void Acclaim::CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
 void Acclaim::CrossCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
 
   // Read TGraphs from events into memory (also deletes old TGraphs)
-  // getFftsAndStartTimes(fEv, pol);
   eventNumber[pol] = fEv->getHeader()->eventNumber;
   
   getNormalizedInterpolatedTGraphs(fEv, pol);
   doFFTs(pol);  
-  
-  // std::cout << "here" << std::endl;
   doCrossCorrelations(pol);
 
 }
@@ -236,14 +248,12 @@ void Acclaim::CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
     const int offset = numSamples/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
-    for(Int_t samp=0; samp < numSamples/2; samp++){
+    for(Int_t samp=0; samp < offset; samp++){
       crossCorrelations[pol][combo][samp+offset] = ccInternalArray[samp];
-      // ptr->crossCorrelations[pol][combo][samp+offset] = stash[samp];
     }
     // copies second half of original array (times < 0) into first half of internal storage
-    for(Int_t samp=numSamples/2; samp < numSamples; samp++){
+    for(Int_t samp=0; samp < numSamples; samp++){
       crossCorrelations[pol][combo][samp-offset] = ccInternalArray[samp];
-      // ptr->crossCorrelations[pol][combo][samp-offset] = stash[samp];
     }
   }
   
@@ -252,15 +262,9 @@ void Acclaim::CrossCorrelator::doCrossCorrelations(AnitaPol::AnitaPol_t pol){
 
 void Acclaim::CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t pol, Int_t phiSector){
 
-
-  const std::vector<Int_t>& combosToUse = combosToUseGlobal[phiSector];
-  Int_t numCombosToUpsample = combosToUse.size();
-
   Double_t* ccInternalArray = FancyFFTs::getRealArray(std::pair<int, int>(numSamplesUpsampled, 0));
 
-  for(int comboInd=0; comboInd<numCombosToUpsample; comboInd++){
-    Int_t combo = combosToUse.at(comboInd);
-
+  for(int combo : combosToUseGlobal[phiSector]){
     Int_t ant1 = comboToAnt1s.at(combo);
     Int_t ant2 = comboToAnt2s.at(combo);
 
@@ -275,11 +279,11 @@ void Acclaim::CrossCorrelator::doUpsampledCrossCorrelations(AnitaPol::AnitaPol_t
     const int offset = numSamplesUpsampled/2;
 
     // copies first half of original array (times >= 0) into second half of internal storage
-    for(Int_t samp=0; samp < numSamplesUpsampled/2; samp++){
+    for(Int_t samp=0; samp < offset; samp++){
       crossCorrelationsUpsampled[pol][combo][samp+offset] = ccInternalArray[samp];
     }
     // copies second half of original array (times < 0) into first half of internal storage
-    for(Int_t samp=numSamplesUpsampled/2; samp < numSamplesUpsampled; samp++){
+    for(Int_t samp=offset; samp < numSamplesUpsampled; samp++){
       crossCorrelationsUpsampled[pol][combo][samp-offset] = ccInternalArray[samp];
     }
   }
@@ -315,7 +319,11 @@ Bool_t Acclaim::CrossCorrelator::useCombo(Int_t ant1, Int_t ant2, Int_t phiSecto
     extraCondition = (phiSectorOfAnt1==phiSector || phiSectorOfAnt2==phiSector);
   }
 
-  return (ant1InRange && ant2InRange && extraCondition);
+  bool usePair = (ant1InRange && ant2InRange && extraCondition);
+  // if(usePair){
+  //   std::cout << "Phi-sector " << phiSector << "\t" << ant1 << "\t" << ant2  << "\t(" << comboIndices[ant1][ant2] << ")" << std::endl;
+  // }
+  return usePair;
 }
 
 
@@ -330,6 +338,7 @@ void Acclaim::CrossCorrelator::fillCombosToUse(){
 	  combosToUseGlobal[phiSector].push_back(combo);
 	}
       }
+      // std::cout << "combosToUse[" << phiSector << "].size()==" << combosToUseGlobal[phiSector].size() << std::endl;
     }
   }
 }
@@ -337,40 +346,6 @@ void Acclaim::CrossCorrelator::fillCombosToUse(){
 
 
 
-Double_t Acclaim::CrossCorrelator::getInterpolatedUpsampledCorrelationValue(AnitaPol::AnitaPol_t pol,
-									    Int_t combo, Double_t deltaT) const{
-
-  Int_t offsetLow = floor(deltaT/correlationDeltaT);
-
-  Double_t dt1 = offsetLow*correlationDeltaT;
-  // Double_t dt2 = offsetHigh*ptr->correlationDeltaT;
-
-  const Int_t offset = numSamplesUpsampled/2;
-  offsetLow += offset;
-  Int_t offsetHigh = offsetLow+1;
-
-  // offsetLow = offsetLow < 0 ? offsetLow + numSamplesUpsampled : offsetLow;
-  // offsetHigh = offsetHigh < 0 ? offsetHigh + numSamplesUpsampled : offsetHigh;
-
-  Double_t c1 = crossCorrelationsUpsampled[pol][combo][offsetLow];
-  Double_t c2 = crossCorrelationsUpsampled[pol][combo][offsetHigh];
-
-  Double_t cInterp = (deltaT - dt1)*(c2 - c1)/(correlationDeltaT) + c1;
-
-  return cInterp;
-
-}
-
-
-Double_t Acclaim::CrossCorrelator::getTimeOfMaximumUpsampledCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant1, Int_t ant2) const{
-  Int_t combo = comboIndices[ant1][ant2];
-  if(combo < 0){
-    return -999;
-  }
-  Int_t maxSamp = TMath::LocMax(numSamplesUpsampled, crossCorrelationsUpsampled[pol][combo]);
-  maxSamp = maxSamp > numSamplesUpsampled/2 ? maxSamp - numSamplesUpsampled : maxSamp;
-  return maxSamp*correlationDeltaT;
-}
 
 
 
@@ -430,248 +405,3 @@ TGraph* Acclaim::CrossCorrelator::getUpsampledCrossCorrelationGraph(AnitaPol::An
   return getCrossCorrelationGraphWorker(numSamplesUpsampled, pol, ant1, ant2);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/** 
- * Constructor, Initialize the template correlator
- * 
- * @param run the run of the event to use as a template
- * @param eventNumber of the event to use as a template
- */
-Acclaim::TemplateCorrelator::TemplateCorrelator(Int_t run, UInt_t eventNumber){
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
-  initializeVariables();  
-  initTemplate(run, eventNumber);
-}
-
-/** 
- * Destructor (do nothing)
- * 
- */
-Acclaim::TemplateCorrelator::~TemplateCorrelator(){
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
-}
-
-
-
-
-/** 
- * Initialize the template correlator
- * 
- * @param run the run of the event to use as a template
- * @param eventNumber of the event to use as a template
- */
-void Acclaim::TemplateCorrelator::initTemplate(Int_t run, UInt_t eventNumber){
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;  
-  AnitaDataset d(run);
-  d.getEvent(eventNumber);
-  FilterStrategy fs;
-  FilteredAnitaEvent fEv(d.useful(), &fs, d.gps(), d.header());
-  initTemplate(&fEv);
-}
-
-
-
-/** 
- * Store the template waveforms
- * 
- * @param fEv is the FilteredAnitaEvent to use as the template
- */
-void Acclaim::TemplateCorrelator::initTemplate(const FilteredAnitaEvent* fEv){
-  // std::cerr << __PRETTY_FUNCTION__ << std::endl;
-
-  // std::cerr << fEv->getHeader()->run << "\t" << fEv->getHeader()->eventNumber << std::endl;
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    getNormalizedInterpolatedTGraphs(fEv, pol, true);
-    doFFTs(pol);
-
-    // for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    //   std::cerr << startTimes[pol][ant] << "\t" << interpRMS[pol][ant] << "\t" << interpRMS2[pol][ant] << "\t"
-    //             << (interpRMS[pol][ant]*interpRMS[pol][ant])/(interpRMS2[pol][ant]*interpRMS2[pol][ant]) << std::endl;
-    // }
-  }
-  
-}
-
-
-/** 
- * Loop over polarisations and correlate the event
- * 
- * @param fEv is the FilteredAnitaEvent to correlate with the template
- */
-void Acclaim::TemplateCorrelator::correlateEvent(const FilteredAnitaEvent* fEv){
-  for(int polInd=0; polInd < AnitaPol::kNotAPol; polInd++){
-    AnitaPol::AnitaPol_t pol = (AnitaPol::AnitaPol_t) polInd;
-    this->correlateEvent(fEv, pol);
-  }
-}
-
-
-
-
-
-/** 
- * Correlate the FilteredAnitaEvent to the template
- * 
- * @param fEv is the FilteredAnitaEvent to correlate with the template
- * @param pol is the 
-*/
-void Acclaim::TemplateCorrelator::correlateEvent(const FilteredAnitaEvent* fEv, AnitaPol::AnitaPol_t pol){
-
-  const int nf = GET_NUM_FREQS(numSamples);
-  std::vector<std::complex<double> > fftTemp(nf);
-  std::vector<double> vTemp(numSamples);
-  std::vector<double> ccTemp(numSamples);
-  
-  
-  for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    const AnalysisWaveform* wf = fEv->getRawGraph(ant, pol);
-    const TGraphAligned* gr = wf->even();
-
-    for(int i=0; i < gr->GetN(); i++){
-      vTemp[i] = gr->GetY()[i];
-    }
-    for(int i=gr->GetN(); i < numSamples; i++){
-      vTemp[i] = 0;
-    }
-    FancyFFTs::doFFT(numSamples, &vTemp[0], &fftTemp[0]);
-
-    // This doesn't get used in the template case,
-    // so repurpose this variable in TemplateCorrelator
-    interpRMS2[pol][ant] = gr->GetX()[0];
-    // const FFTWComplex* chanFFT = wf->freq();
-
-    FancyFFTs::normalizeFourierDomain(numSamples, &fftTemp[0]);
-
-    FancyFFTs::crossCorrelatePadded(numSamples,
-				    1,
-                                    &fftTemp[0],
-				    ffts[pol][ant],
-                                    &ccTemp[0],
-				    // crossCorrelations[pol][ant],
-				    true,
-				    0,
-				    false);
-    const int offset = numSamples/2;
-
-    // copies first half of original array (times >= 0) into second half of internal storage
-    for(Int_t samp=0; samp < numSamples/2; samp++){
-      crossCorrelations[pol][ant][samp+offset] = ccTemp[samp];
-    }
-    // copies second half of original array (times < 0) into first half of internal storage
-    for(Int_t samp=numSamples/2; samp < numSamples; samp++){
-      crossCorrelations[pol][ant][samp-offset] = ccTemp[samp];
-    }
-  }
-  // double meanVolts = sumVolts/n;
-  // double wholePolRMS = (sumSqVolts/n) - (meanVolts*meanVolts);
-  // double norm = 1.; ///(wholePolRMS*numSamples*numSamples);
-  double norm = 1./(numSamples*numSamples);
-  
-  for(int ant=0; ant < NUM_SEAVEYS; ant++){
-    for(Int_t samp=0; samp < numSamples; samp++){
-      crossCorrelations[pol][ant][samp]*=norm;
-    }
-  }
-}
-
-
-
-
-/** 
- * Look at the correlation of the template with the channel of the event
- * 
- * @param pol 
- * @param ant 
- * 
- * @return 
- */
-TGraph* Acclaim::TemplateCorrelator::getCrossCorrelationGraph(AnitaPol::AnitaPol_t pol, Int_t ant) const{
-
-  double deltaT = 0;
-  deltaT += interpRMS2[pol][ant];
-  deltaT -= startTimes[pol][ant];
-
-  double offsetTime = -0.5*numSamples*NOMINAL_SAMPLING_DELTAT;
-
-  TGraph* gr = new TGraph(numSamples);
-  TString title = TString::Format("Template Cross-correlation - ant %d ", ant+1);
-  title += pol == AnitaPol::kHorizontal ? "HPol" : "VPol";
-  gr->SetTitle(title);
-  for(int i=0; i < numSamples; i++){
-    gr->SetPoint(i, offsetTime, crossCorrelations[pol][ant][i]);
-    offsetTime += NOMINAL_SAMPLING_DELTAT;
-  }
-
-  return gr;
-}
-
-
-
-
-
-
-
-Double_t Acclaim::TemplateCorrelator::getCrossCorrelation(AnitaPol::AnitaPol_t pol, Int_t ant, Double_t deltaT) const{
-
-  deltaT += interpRMS2[pol][ant];
-  deltaT -= startTimes[pol][ant];
-
-  Int_t offsetLow = floor(deltaT/nominalSamplingDeltaT);
-  Double_t dt1 = offsetLow*nominalSamplingDeltaT;
-  Double_t interpPrefactor = (deltaT - dt1)/nominalSamplingDeltaT;
-  offsetLow += numSamples/2; // account for time ordering correlations in internal memory (i.e. dt=0 is half way thrugh the array)
-
-  Double_t c1 = crossCorrelations[pol][ant][offsetLow];
-  Double_t c2 = crossCorrelations[pol][ant][offsetLow+1];
-  Double_t cInterp = interpPrefactor*(c2 - c1) + c1;
-
-  return cInterp;
-}
-
-
-
-
-
-
-Double_t Acclaim::TemplateCorrelator::getPeakCorrelation(AnitaPol::AnitaPol_t pol, Double_t minOffset, Double_t maxOffset, Double_t stepSize) const{
-
-  double dt = minOffset;
-  double bestDt = 0;
-  double bestCorr = -DBL_MAX;
-  while(dt < maxOffset){
-
-    double thisCorr = 0;
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      thisCorr += this->getCrossCorrelation(pol, ant, dt);      
-    }
-
-    if(thisCorr > bestCorr){
-      bestCorr = thisCorr;
-      bestDt = dt;
-    }
-
-    dt += stepSize;
-  }
-
-  // std::cerr << pol << "\t" << bestDt << "\t" << bestCorr << std::endl;
-  return bestCorr;
-}

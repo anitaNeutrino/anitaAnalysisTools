@@ -11,6 +11,8 @@
 #pragma link C++ namespace Acclaim::FancyFFTs;
 #pragma link C++ class Acclaim::ProgressBar+;
 #pragma link C++ class Acclaim::CorrelationPair+;
+#pragma link C++ class std::vector<Acclaim::CorrelationPair>+;
+#pragma link C++ class Acclaim::CorrelationSummary+;
 
 #pragma link C++ namespace Acclaim::Clustering;
 #pragma link C++ class Acclaim::Clustering::Event+;

@@ -11,6 +11,8 @@
 
 #include "TObject.h"
 #include "AnitaConventions.h"
+#include "Adu5Pat.h"
+
 namespace Acclaim
 {
 
@@ -32,11 +34,11 @@ namespace Acclaim
     int ant2;
     double dt;
     double correlation;
-    double phiDeg;
-    double thetaDeg;
-    UInt_t eventNumber;
+    // double phiDeg;
+    // double thetaDeg;
+    // UInt_t eventNumber;
 
-    ClassDef(CorrelationPair,  1);
+    ClassDef(CorrelationPair,  2);
   };
 
   
@@ -49,14 +51,12 @@ namespace Acclaim
   class CorrelationSummary {
 
   public:
-    CorrelationSummary(AnitaPol::AnitaPol_t pol, UInt_t eventNumber,  double phiDeg, double thetaDeg, int phiSector)
-      : fPol(static_cast<int>(pol)),
-	fEventNumber(eventNumber),
-	fPhiSector(phiSector),
-	fPhiDeg(phiDeg),
-	fThetaDeg(thetaDeg)
-    {}
+    CorrelationSummary();
 
+    CorrelationSummary(AnitaPol::AnitaPol_t pol, UInt_t eventNumber,  double phiDeg, double thetaDeg, int phiSector, Adu5Pat* pat);
+    
+    virtual ~CorrelationSummary();
+    
     inline std::size_t add(int ant1, int ant2, double dt, double rho){
       fPairs.emplace_back(CorrelationPair(ant1, ant2, dt, rho, fPol, fPhiDeg, fThetaDeg, fEventNumber));
       return N();
@@ -71,15 +71,16 @@ namespace Acclaim
       return fPairs.at(i);
     }
 
-  private:
     
     Int_t fPol = -1;
     UInt_t fEventNumber = 0;
     int fPhiSector = -1;
     double fPhiDeg = -999;
     double fThetaDeg = -999;
-
+    Adu5Pat fPat;
     std::vector<CorrelationPair> fPairs;
+
+    ClassDef(CorrelationSummary, 2);
 
   };
 }
