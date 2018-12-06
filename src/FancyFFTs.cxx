@@ -690,7 +690,8 @@ double* Acclaim::FancyFFTs::crossCorrelatePadded(int len, int padFactor, complex
   int numFreqs = getNumFreqs(len);
   for(int i=0; i<numFreqs; i++){
     tempVals[i] = fft1[i]*std::conj(fft2[i]);
-  }
+  }  
+  
   int numPadFreqs = getNumFreqs(padLen);
   for(int i=numFreqs; i < numPadFreqs; i++){
     tempVals[i] = 0;
@@ -768,11 +769,12 @@ std::complex<double>* Acclaim::FancyFFTs::getComplexArray(std::pair<Int_t, Int_t
 void Acclaim::FancyFFTs::normalizeFourierDomain(int n, std::complex<double>* fft){
 
   const int numFreqs = getNumFreqs(n);
+  const bool oddNumFreqs = (numFreqs%2)==1; 
   Double_t sumOfVSquared = 0;
   for(int freqInd=0; freqInd < numFreqs; freqInd++){
     Double_t re = fft[freqInd].real();
     Double_t im = fft[freqInd].imag();
-    Double_t factor = freqInd == numFreqs - 1 ? 0.5 : 1;
+    Double_t factor = oddNumFreqs && freqInd == numFreqs - 1 ? 0.5 : 1;
     sumOfVSquared += factor*(re*re + im*im);
   }
 
