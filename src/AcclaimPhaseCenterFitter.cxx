@@ -7,62 +7,111 @@
 
 Acclaim::PhaseCenterFitter::PhaseCenterFitter(const char* corrTreeFiles){
 
-  fChain = new TChain("corr Tree");
+  fChain = new TChain("corrTree");
   if(corrTreeFiles){
     fChain->Add(corrTreeFiles);
   }
   readInSummaries();
+  makeFunctors();
 
   fMin = ROOT::Math::Factory::CreateMinimizer("Minuit2");
   
-  fFunc = new ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::evalPitchRoll, 2);
-
   fMin->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
-  fMin->SetTolerance(0.0001);
+  fMin->SetTolerance(0.01);
   fMin->SetPrintLevel(0);
-  fMin->SetFunction(*fFunc);
 
-  fMin->SetLimitedVariable(0, "cos(pitch)", 0, 0.001, -1, 1);
-  fMin->SetLimitedVariable(1, "cos(roll)", 0, 0.001, -1, 1);
 }
+
+
+void Acclaim::PhaseCenterFitter::SetFitParameterSpace(ParameterSpace ps){
+
+  fParamSpace = ps;
+  fMin->SetFunction(fFuncs[ps]);
+  switch(fParamSpace){
+  case ParameterSpace::PitchRoll:
+    fMin->SetLimitedVariable(0, "pitch", 0, 0.01, -1, 1);
+    fMin->SetLimitedVariable(1, "roll", 0, 0.01, -1, 1);
+    break;
+  }  
+}
+
+void Acclaim::PhaseCenterFitter::makeFunctors(){
+
+  fFuncs[ParameterSpace::PitchRoll] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 2);
+  
+}
+
 
 
 Acclaim::PhaseCenterFitter::~PhaseCenterFitter(){
   delete fChain;
   delete fMin;
-  delete fFunc;
 }
 
 
-void Acclaim::PhaseCenterFitter::fit(){
+const std::vector<double>& Acclaim::PhaseCenterFitter::fit(){
+
   fMin->Minimize();
+  fResults.clear();
+  const int nDim = fFuncs[fParamSpace].NDim();
+  fResults.reserve(nDim);
+  
+  for(int i=0; i < nDim; i++){
+    fResults.push_back(fMin->X()[i]);
+  }
+  return fResults;
 }
 
 void Acclaim::PhaseCenterFitter::readInSummaries(){
 
   fChain->SetBranchAddress("correlationSummary", &fSum);
-  Long64_t n = fChain->GetEntries();
+   Long64_t n = fChain->GetEntries();
   fSummaries.reserve(n);
   for(Long64_t entry=0; entry < n; entry++){
     fChain->GetEntry(entry);
 
-    std::cout << fSummaries.size() << std::endl;
+    // std::cout << fSummaries.size() << std::endl;
     fSummaries.emplace_back(*fSum);
+  }
+
+  if(fSummaries.size()==0){
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << "No summaries read in!" << std::endl;
   }
 }
 
 
-double Acclaim::PhaseCenterFitter::evalPitchRoll(const double* params){    
+void Acclaim::PhaseCenterFitter::printResults() const {
+  
+  std::cout << "Results = ";
+  const int np = fFuncs.at(fParamSpace).NDim();
+  for(int i=0; i < np; i++){
+    std::cout << fMin->VariableName(i) << " = " << fResults.at(i);
+    if(i < np - 1){
+      std::cout << ", ";
+    }
+  }    
+  
+}
 
-  const double pitch = TMath::RadToDeg()*TMath::ACos(params[0]);
-  const double roll = TMath::RadToDeg()*TMath::ACos(params[1]);
+
+double Acclaim::PhaseCenterFitter::eval(const double* params){    
+
+  // const double pitch = params[0];
+  // const double roll = params[1];
+ 
+  auto geom = AnitaGeomTool::Instance();
+  geom->usePhotogrammetryNumbers(true);
   
   double retVal = 0;
   for(auto& cs : fSummaries){
 
+    if(fParamSpace==ParameterSpace::PitchRoll){    
+      cs.fPat.pitch = params[0];
+      cs.fPat.roll = params[1];
+    }
+
     double thetaWave,  phiWave;
-    cs.fPat.pitch = pitch;
-    cs.fPat.roll = roll;
+    
     UsefulAdu5Pat usefulPat(&cs.fPat, false);
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaWave, phiWave);
 
@@ -90,7 +139,16 @@ double Acclaim::PhaseCenterFitter::evalPitchRoll(const double* params){
     // p.inc(entry,  n);
   }
 
-  std::cout << pitch << "\t" << roll << "\t" << retVal << std::endl;
+  std::cout << "Result: " << retVal << " from params: ";
+  const int np = fFuncs[fParamSpace].NDim();
+  for(int i=0; i < np; i++){
+    std::cout << fMin->VariableName(i) << " = " << params[i];
+    if(i < np - 1){
+      std::cout << ", ";
+    }
+  }
+  std::cout << std::endl;
+
   return retVal;
 }
 

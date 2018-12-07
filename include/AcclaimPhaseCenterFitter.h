@@ -2,13 +2,14 @@
 #define ACCLAIM_PHASE_CENTER_FITTER_H
 
 #include "AcclaimCorrelationSummary.h"
+#include <map>
+#include "Math/Functor.h"
 
 class TChain;
 
 namespace ROOT {
   namespace Math {
     class Minimizer;
-    class Functor;
   }
 }
 
@@ -26,18 +27,26 @@ namespace Acclaim {
     PhaseCenterFitter(const char* corrTreeFiles = nullptr);
     ~PhaseCenterFitter();
 
-    void fit();
+    enum class ParameterSpace {PitchRoll};
 
+    void SetFitParameterSpace(ParameterSpace ps);
+    const std::vector<double>& fit();
+    void printResults() const;
+    
+    
   private:
     void readInSummaries();
-    double evalPitchRoll(const double* params);
+    void makeFunctors();
+    double eval(const double* params);
 
     const double fCorrelationThreshold = 0.4;
     TChain* fChain = nullptr;
     CorrelationSummary* fSum = nullptr;
     std::vector<Acclaim::CorrelationSummary> fSummaries;
     ROOT::Math::Minimizer* fMin = nullptr;
-    ROOT::Math::Functor* fFunc = nullptr;
+    std::vector<double> fResults;
+    std::map<ParameterSpace, ROOT::Math::Functor> fFuncs;
+    ParameterSpace fParamSpace;
     
   };
 }
