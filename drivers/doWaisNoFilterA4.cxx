@@ -23,7 +23,6 @@ int main(int argc, char* argv[]){
   
   FilterStrategy fs;
 
-
   auto calib = AnitaEventCalibrator::Instance();
   for(auto& channelsPerSurf : calib->relativePhaseCenterToAmpaDelays){
     for(auto& chanExtraDt : channelsPerSurf){
@@ -32,7 +31,6 @@ int main(int argc, char* argv[]){
       // std::cout << chanExtraDt << std::endl;
     }
   }
-
 
 
   TString fileName = TString::Format("AcclaimCorrelationSummary_%d.root", run);
