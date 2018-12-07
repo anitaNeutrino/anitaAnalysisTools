@@ -4,7 +4,8 @@
 int main(int argc, char* argv[]){
 
   Acclaim::PhaseCenterFitter fitter("AcclaimCorrelationSummary_*.root");
-  fitter.SetFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::PitchRoll);
+  // fitter.SetFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::PitchRoll);
+  fitter.SetFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::RingR);
   
   auto& results = fitter.fit();
 

@@ -32,12 +32,25 @@ void Acclaim::PhaseCenterFitter::SetFitParameterSpace(ParameterSpace ps){
     fMin->SetLimitedVariable(0, "pitch", 0, 0.01, -1, 1);
     fMin->SetLimitedVariable(1, "roll", 0, 0.01, -1, 1);
     break;
-  }  
+  case ParameterSpace::RingR:
+    {
+      auto geom = AnitaGeomTool::Instance();
+      double top1   = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      double top2   = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      double middle = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      double bottom = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      fMin->SetVariable(0, "Top 1 Ring R", top1, 0.01);
+      fMin->SetVariable(1, "Top 2 Ring R", top2, 0.01);
+      fMin->SetVariable(2, "Middle ring R", middle, 0.01);
+      fMin->SetVariable(3, "Bottom ring R", bottom, 0.01);
+    }
+  }
 }
 
 void Acclaim::PhaseCenterFitter::makeFunctors(){
 
   fFuncs[ParameterSpace::PitchRoll] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 2);
+  fFuncs[ParameterSpace::RingR] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
   
 }
 
@@ -101,18 +114,46 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
  
   auto geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(true);
+
+  // stpre AnitaGeomTool state
+  double originalRs[NUM_SEAVEYS][AnitaPol::kNotAPol] = {{0}};
+  
+  if(fParamSpace==ParameterSpace::RingR){
+    for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
+      for(int ant = 0; ant < NUM_SEAVEYS; ant++){
+
+	int ring = 1 + ant/NUM_PHI;
+	if(ant < NUM_PHI && (ant % 2)==0){
+	  ring -= 1;
+	}
+
+	originalRs[ant][pol] = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+	geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ring];
+      }
+    }
+  }
+
   
   double retVal = 0;
   for(auto& cs : fSummaries){
+    
+    Adu5Pat pat = cs.fPat;
 
     if(fParamSpace==ParameterSpace::PitchRoll){    
-      cs.fPat.pitch = params[0];
-      cs.fPat.roll = params[1];
+      pat.pitch = params[0];
+      pat.roll = params[1];
     }
+    else{
+      // these are the results of fitting pitch/roll with photogrammetry numbers
+      pat.pitch = -0.187282;
+      pat.roll = -0.120191;
+    }
+
+    
 
     double thetaWave,  phiWave;
     
-    UsefulAdu5Pat usefulPat(&cs.fPat, false);
+    UsefulAdu5Pat usefulPat(&pat, false);
     usefulPat.getThetaAndPhiWaveWaisDivide(thetaWave, phiWave);
 
     double eventResidual = 0;
@@ -138,6 +179,16 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
     retVal += eventResidual;
     // p.inc(entry,  n);
   }
+
+  // restore AnitaGeomTool state
+  if(fParamSpace==ParameterSpace::RingR){
+    for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
+      for(int ant = 0; ant < NUM_SEAVEYS; ant++){
+	geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = originalRs[ant][pol];
+      }
+    }
+  }
+  
 
   std::cout << "Result: " << retVal << " from params: ";
   const int np = fFuncs[fParamSpace].NDim();

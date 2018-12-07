@@ -27,7 +27,9 @@ namespace Acclaim {
     PhaseCenterFitter(const char* corrTreeFiles = nullptr);
     ~PhaseCenterFitter();
 
-    enum class ParameterSpace {PitchRoll};
+    enum class ParameterSpace {PitchRoll,
+			       RingR,
+    };
 
     void SetFitParameterSpace(ParameterSpace ps);
     const std::vector<double>& fit();
