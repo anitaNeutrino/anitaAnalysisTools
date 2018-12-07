@@ -371,8 +371,9 @@ void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileN
     // empty strategy does nothing
     fFilterStrat = new FilterStrategy();
   }  
-  
+
   fNoiseMonitor = new NoiseMonitor(fFilterStrat);
+
   fLastEventConsidered = 0;
 }
 

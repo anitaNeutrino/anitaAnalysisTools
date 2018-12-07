@@ -304,6 +304,26 @@ namespace Acclaim
     ENUM_ANALYSIS_SETTING(AnitaDataset::BlindingStrategy, BlindStrat);
 
 
+
+
+    /** 
+     * @fn GetUseNoiseMonitor
+     * @brief Get the value of #fUseNoiseMonitor
+     * @see AnalysisSettings
+     */
+    /** 
+     * @fn SetUseNoiseMonitor
+     * @brief Set the value of #fUseNoiseMonitor
+     * @see AnalysisSettings
+     */
+    /** 
+     * @var fUseNoiseMonitor
+     * @brief Whether or not to use the noise monitor
+     * @see AnalysisSettings
+     */
+    ANALYSIS_SETTING(Int_t, UseNoiseMonitor);
+
+    
     /** 
      * @fn GetNoiseTimeScaleSeconds
      * @brief Get the value of #fNoiseTimeScaleSeconds
