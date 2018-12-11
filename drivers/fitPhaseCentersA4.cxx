@@ -1,18 +1,30 @@
 #include "AcclaimPhaseCenterFitter.h"
 #include <iostream>
+#include "TString.h"
 
 int main(int argc, char* argv[]){
 
   Acclaim::PhaseCenterFitter fitter("AcclaimCorrelationSummary_*.root");
-  // fitter.SetFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::PitchRoll);
-  fitter.SetFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::RingR);
-  
-  auto& results = fitter.fit();
 
-  std::cout << "Results = ";
-  for(auto param : results){
-    std::cout << param << ", ";
+  // fitter.setFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::PitchRollHeading);
+  // fitter.fit(AnitaPol::kNotAPol,  "pitchRollHeadingFit.root");
+  // fitter.printResults();
+  
+  // fitter.setFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::RingR);
+  // // fitter.setPrintOnEval(true);
+  // for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
+  //   TString fName = TString::Format("RingR_%d.root", pol);
+  //   fitter.fit(pol, fName.Data());
+  //   fitter.printResults();
+  // }
+
+  fitter.setFitParameterSpace(Acclaim::PhaseCenterFitter::ParameterSpace::RingZ);
+  // fitter.setPrintOnEval(true);
+  for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
+    TString fName = TString::Format("RingR_%d.root", pol);
+    fitter.fit(pol, fName.Data());
+    fitter.printResults();
   }
-  std::cout << std::endl;
-  return 0;
+  
+
 }
