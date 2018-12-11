@@ -6,19 +6,87 @@
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFitter::PhysicalRing& r){
+  switch(r){
+  case Acclaim::PhaseCenterFitter::PhysicalRing::TopHigh:
+    os << "PhysicalRing::TopHigh";
+    return os;
+  case Acclaim::PhaseCenterFitter::PhysicalRing::TopLow:
+    os << "PhysicalRing::TopLow";
+    return os;
+  case Acclaim::PhaseCenterFitter::PhysicalRing::Middle:
+    os << "PhysicalRing::Middle";
+    return os;
+  case Acclaim::PhaseCenterFitter::PhysicalRing::Bottom:
+    os << "PhysicalRing::Bottom";
+    return os;    
+  }
+  return os;
+}
+
 
 Acclaim::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
 
+  const int numPhysRing = 4;
+  std::array<double, numPhysRing> regR_ring {{1.15333, 1.31832, 2.38709, 2.38694}};
+  std::array<double, numPhysRing> regZ_ring {{2.73599, 3.70029, 0.0343191, -1.06195}};
+  std::array<double, numPhysRing> regPhi_ring {{-0.00558104, -0.00626989, -0.00114436, -0.000663389}};
+
+  regPhi_ring[0] += geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+  regPhi_ring[1] += geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+  regPhi_ring[2] += geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+  regPhi_ring[3] += geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];  
+  
   if(geom){
     for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
       for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	auto key = std::make_pair(pol, ant);
-	fDefaultR[key] = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-	fDefaultZ[key] = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-	fDefaultPhi[key] = geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+	auto photoKey = std::make_pair(pol, ant);
+	fPhotoR[photoKey]   = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+	fPhotoZ[photoKey]   = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+	fPhotoPhi[photoKey] = geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+
+	auto ring = PhaseCenterFitter::antToPhysicalRing(ant);
+	int ringInt = static_cast<int>(ring);	
+	int phiSector = ant%NUM_PHI;
+
+	double phi = regPhi_ring.at(ringInt) + (phiSector-2)*TMath::TwoPi()/NUM_PHI;
+	auto regKey = std::make_pair(pol, ring);
+
+	fRegularPhi[regKey] = phi;
+	fRegularZ[regKey]   = regZ_ring.at(ringInt);
+	fRegularR[regKey]   = regR_ring.at(ringInt);
       }
     }
   }
+
+  // print();
+}
+
+void Acclaim::FakeGeomTool::print() const {
+  std::cout << "Ring\tR\tPhi\tZ" << std::endl;
+  for(auto ring : {PhaseCenterFitter::PhysicalRing::TopHigh,
+		     PhaseCenterFitter::PhysicalRing::TopLow,
+		     PhaseCenterFitter::PhysicalRing::Middle,
+		     PhaseCenterFitter::PhysicalRing::Bottom}){
+    auto pol = AnitaPol::kVertical;
+    auto key = std::make_pair(pol,  ring);
+    std::cout << ring << "\t" << fRegularR.at(key) << "\t" << fRegularPhi.at(key) << "\t" << fRegularZ.at(key) << "\n";
+
+
+    int ant;
+    switch(ring){
+    case PhaseCenterFitter::PhysicalRing::TopHigh: ant = 1; break;
+    case PhaseCenterFitter::PhysicalRing::TopLow:  ant = 0; break;
+    case PhaseCenterFitter::PhysicalRing::Middle: ant = NUM_PHI; break;
+    case PhaseCenterFitter::PhysicalRing::Bottom: ant = 2*NUM_PHI; break;
+    }
+    
+    auto k2 = std::make_pair(pol, ant);
+    std::cout << ring << "\t" << fPhotoR.at(k2) << "\t" << fPhotoPhi.at(k2) << "\t" << fPhotoZ.at(k2) << "\n";
+  }
+
+
+  std::cout << "\n" << std::endl;
 }
 
 
@@ -26,9 +94,9 @@ void Acclaim::FakeGeomTool::restorePhotogrammetryPositionsInAnitaGeomTool(AnitaG
   for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       auto key = std::make_pair(pol, ant);
-      geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fDefaultR.at(key);
-      geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fDefaultZ.at(key);
-      geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fDefaultPhi.at(key);
+      geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fPhotoR.at(key);
+      geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fPhotoZ.at(key);
+      geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fPhotoPhi.at(key);
     }
   }
 }
@@ -77,42 +145,62 @@ void Acclaim::PhaseCenterFitter::setFitParameterSpace(ParameterSpace ps){
       fMin->SetLimitedVariable(0, "pitch", 0, 0.01, -1, 1);
       fMin->SetLimitedVariable(1, "roll", 0, 0.01, -1, 1);
       fMin->SetLimitedVariable(2, "heading_offset", 0, 0.01, -5, 5);
-      break;
     }
+    break;
       
   case ParameterSpace::RingR:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.resize(4);
-      fInputs.at(0) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
-      fInputs.at(2) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fMin->SetVariable(0, "Top 1 Ring R", fInputs.at(0), 0.01);
-      fMin->SetVariable(1, "Top 2 Ring R", fInputs.at(1), 0.01);
-      fMin->SetVariable(2, "Middle ring R",fInputs.at(2), 0.01);
-      fMin->SetVariable(3, "Bottom ring R",fInputs.at(3), 0.01);
+      int var=0;
+      fInputs.resize(4); // 12);
+      for(auto ring : {PhysicalRing::TopHigh, PhysicalRing::TopLow, PhysicalRing::Middle, PhysicalRing::Bottom}){
+	switch(ring){
+	case PhysicalRing::TopHigh:
+	  fInputs.at(var) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+	  fMin->SetVariable(var, "TopHigh Ring R", fInputs.at(var), 0.01); 
+	  break;
+	case PhysicalRing::TopLow:	  
+	  fInputs.at(var) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+	  fMin->SetVariable(var, "TopLow Ring R", fInputs.at(var), 0.01);
+	  break;
+	case PhysicalRing::Middle:
+	  fInputs.at(var) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+	  fMin->SetVariable(var, "Middle Ring R", fInputs.at(var), 0.01);
+	  break;
+	case PhysicalRing::Bottom:
+	  fInputs.at(var) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+	  fMin->SetVariable(var, "Bottom Ring R", fInputs.at(var), 0.01);
+	  break;
+	}
+ 	var++;
+	// fInputs.at(var) = 0;
+	// var++;
+	// fInputs.at(var) = 0;
+	// var++;
+      }
     }
+    break;
   case ParameterSpace::RingZ:
     {
       auto geom = AnitaGeomTool::Instance();
       fInputs.resize(4);
-      fInputs.at(0) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(1) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      fInputs.at(0) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      fInputs.at(1) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
       fInputs.at(2) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
       fInputs.at(3) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fMin->SetVariable(0, "Top 1 Ring Z", fInputs.at(0), 0.01);
-      fMin->SetVariable(1, "Top 2 Ring Z", fInputs.at(1), 0.01);
+      fMin->SetVariable(0, "TopHigh Ring Z", fInputs.at(0), 0.01);
+      fMin->SetVariable(1, "TopLow Ring Z", fInputs.at(1), 0.01);
       fMin->SetVariable(2, "Middle ring Z",fInputs.at(2), 0.01);
       fMin->SetVariable(3, "Bottom ring Z",fInputs.at(3), 0.01);
-    }    
+    }
+    break;
   }
 }
 
 void Acclaim::PhaseCenterFitter::makeFunctors(){
   fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 3);
-  fFuncs[ParameterSpace::RingR]     = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
-  fFuncs[ParameterSpace::RingZ]     = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
+  fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
+  fFuncs[ParameterSpace::RingZ]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
 }
 
 
@@ -278,8 +366,19 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
  
   auto geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(true);
-  FakeGeomTool fakeGeom(geom);
+
+  FakeGeomTool fakeGeom(geom);  
   fakeGeom.overwritePhotogrammetryPositionsInAnitaGeomTool(geom);
+
+  if(fParamSpace==ParameterSpace::RingR){
+    for(auto pol : {AnitaPol::kHorizontal,  AnitaPol::kVertical}){
+      for(int ant=0; ant < NUM_SEAVEYS; ant++){
+	auto ring = antToPhysicalRing(ant);
+	int ringInt = static_cast<int>(ring);
+	geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt];
+      }
+    }
+  }
 
   // reset delta delta T counters
   for(auto& a : fNormalization){a.fill(0);}

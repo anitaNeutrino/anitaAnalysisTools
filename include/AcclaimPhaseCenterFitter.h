@@ -90,42 +90,56 @@ namespace Acclaim {
   public:
     FakeGeomTool(const AnitaGeomTool* geom);
     inline Double_t getAntPhiPositionRelToAftFore(Int_t ant, AnitaPol::AnitaPol_t pol=AnitaPol::kVertical) const {
-      return getFittedIfExists(fFittedPhi, fDefaultPhi, pol, ant);
+      return get(fFittedPhi, fRegularPhi, fPhotoPhi, pol, ant);
     }
     inline Double_t getAntR(Int_t ant, AnitaPol::AnitaPol_t pol=AnitaPol::kVertical) const {
-      return getFittedIfExists(fFittedR, fDefaultR, pol, ant);
+      return get(fFittedR, fRegularR, fPhotoR, pol, ant);
     }
     inline Double_t getAntZ(Int_t ant, AnitaPol::AnitaPol_t pol=AnitaPol::kVertical) const {
-      return getFittedIfExists(fFittedZ, fDefaultZ, pol, ant);
+      return get(fFittedZ, fRegularZ, fPhotoZ, pol, ant);
     }
     void restorePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const;
     void overwritePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const;
-  private:
 
+    void print() const;
+    
+  private:
+    bool fRegularized = true; //false;
     typedef std::map<std::pair<AnitaPol::AnitaPol_t, Int_t>, double> PolAntMap;
-    PolAntMap fDefaultR; /// pol/ant to radial (m)
-    PolAntMap fDefaultZ; /// pol/ant to z position (m)
-    PolAntMap fDefaultPhi; /// pol/ant to phi in radians
+    PolAntMap fPhotoR; /// pol/ant to radial (m)
+    PolAntMap fPhotoZ; /// pol/ant to z position (m)
+    PolAntMap fPhotoPhi; /// pol/ant to phi in radians
 
     typedef std::map<std::pair<AnitaPol::AnitaPol_t, PhaseCenterFitter::PhysicalRing>, double> PolRingMap;
+    PolRingMap fRegularR; /// pol/ant to radial (m)
+    PolRingMap fRegularZ; /// pol/ant to z position (m)
+    PolRingMap fRegularPhi; /// pol/ant to phi in radians
+
     PolRingMap fFittedR; /// pol/ant to radial (m)
     PolRingMap fFittedZ; /// pol/ant to z position (m)
     PolRingMap fFittedPhi; /// pol/ant to phi in radians
 
-    inline double getFittedIfExists(const PolRingMap& fittedVals, const PolAntMap& defaultVals,
+    inline double get(const PolRingMap& fittedVals, const PolRingMap& regularVals, const PolAntMap& defaultVals,
 				    AnitaPol::AnitaPol_t pol, Int_t ant) const {      
       auto fittedKey = std::make_pair(pol, PhaseCenterFitter::antToPhysicalRing(ant));
       if(fittedVals.find(fittedKey)!=fittedVals.end()){
 	return fittedVals.at(fittedKey);
       }
       else{
-	auto defaultKey = std::make_pair(pol, ant);
-	return defaultVals.at(defaultKey);
+	if(fRegularized){
+	  return regularVals.at(fittedKey);
+	}
+	else{
+	  auto defaultKey = std::make_pair(pol, ant);
+	  return defaultVals.at(defaultKey);
+	}
       }
     }
   };
 
   
 }
+
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFitter::PhysicalRing& r);
 
 #endif 
