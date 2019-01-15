@@ -25,6 +25,7 @@ namespace Acclaim
 
   class CorrelationPair {
   public:
+    static constexpr double uninitialized = -999;
     CorrelationPair();
     CorrelationPair(int a1, int a2, double t, double rho,
 		    int pol, double phi, double theta, UInt_t eventNum);
@@ -33,15 +34,11 @@ namespace Acclaim
     int ant1;
     int ant2;
     double dt;
+    double dt_expected;
     double correlation;
-    // double phiDeg;
-    // double thetaDeg;
-    // UInt_t eventNumber;
 
-    ClassDef(CorrelationPair,  2);
+    ClassDef(CorrelationPair,  3);
   };
-
-  
 
   /**
    * @class CorrelationSummary

@@ -1,4 +1,5 @@
 #include "AcclaimPhaseCenterFitter.h"
+#include "AcclaimParameterManager.h"
 #include "TChain.h"
 #include "TFile.h"
 #include "UsefulAdu5Pat.h"
@@ -6,18 +7,20 @@
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 
-std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFitter::PhysicalRing& r){
+
+
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r){
   switch(r){
-  case Acclaim::PhaseCenterFitter::PhysicalRing::TopHigh:
+  case Acclaim::PhaseCenterFit::PhysicalRing::TopHigh:
     os << "PhysicalRing::TopHigh";
     return os;
-  case Acclaim::PhaseCenterFitter::PhysicalRing::TopLow:
+  case Acclaim::PhaseCenterFit::PhysicalRing::TopLow:
     os << "PhysicalRing::TopLow";
     return os;
-  case Acclaim::PhaseCenterFitter::PhysicalRing::Middle:
+  case Acclaim::PhaseCenterFit::PhysicalRing::Middle:
     os << "PhysicalRing::Middle";
     return os;
-  case Acclaim::PhaseCenterFitter::PhysicalRing::Bottom:
+  case Acclaim::PhaseCenterFit::PhysicalRing::Bottom:
     os << "PhysicalRing::Bottom";
     return os;    
   }
@@ -25,7 +28,7 @@ std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFitter::Phy
 }
 
 
-Acclaim::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
+Acclaim::PhaseCenterFit::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
 
   if(geom){
     for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
@@ -38,12 +41,11 @@ Acclaim::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
     }
   }
 
-  // print();
 }
 
 
 
-void Acclaim::FakeGeomTool::restorePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
+void Acclaim::PhaseCenterFit::FakeGeomTool::restorePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
   for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       auto key = std::make_pair(pol, ant);
@@ -54,7 +56,7 @@ void Acclaim::FakeGeomTool::restorePhotogrammetryPositionsInAnitaGeomTool(AnitaG
   }
 }
 
-void Acclaim::FakeGeomTool::overwritePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
+void Acclaim::PhaseCenterFit::FakeGeomTool::overwritePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
   for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
       geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = getAntR(ant, pol);
@@ -66,9 +68,11 @@ void Acclaim::FakeGeomTool::overwritePhotogrammetryPositionsInAnitaGeomTool(Anit
 
 
 
-Acclaim::PhaseCenterFitter::PhaseCenterFitter(const char* corrTreeFiles){
 
-  fChain = new TChain("corrTree");
+
+Acclaim::PhaseCenterFit::Minimizer::Minimizer(const char* corrTreeFiles){
+
+  fChain = std::make_shared<TChain>("corrTree");
   if(corrTreeFiles){
     fChain->Add(corrTreeFiles);
   }
@@ -78,7 +82,7 @@ Acclaim::PhaseCenterFitter::PhaseCenterFitter(const char* corrTreeFiles){
   for(auto& a : fNormalization){a.fill(0);}
   for(auto& a : fDdts){a.fill(0);}  
   
-  fMin = ROOT::Math::Factory::CreateMinimizer("Minuit2");
+  fMin = std::shared_ptr<ROOT::Math::Minimizer>(ROOT::Math::Factory::CreateMinimizer("Minuit2"));
   
   fMin->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
   fMin->SetTolerance(0.01);
@@ -87,11 +91,17 @@ Acclaim::PhaseCenterFitter::PhaseCenterFitter(const char* corrTreeFiles){
 }
 
 
-void Acclaim::PhaseCenterFitter::setFitParameterSpace(ParameterSpace ps){
+void Acclaim::PhaseCenterFit::Minimizer::setParameterSpace(ParameterSpace ps){
 
   fParamSpace = ps;
   fMin->SetFunction(fFuncs[ps]);
   switch(fParamSpace){
+  case ParameterSpace::None:
+    {
+      fInputs.resize(0, 0);
+    }
+    break;
+    
   case ParameterSpace::PitchRollHeading:
     {
       fInputs.resize(3, 0);
@@ -192,89 +202,76 @@ void Acclaim::PhaseCenterFitter::setFitParameterSpace(ParameterSpace ps){
   case ParameterSpace::RingEllipse:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.resize(28);
 
-      fInputs.at(0) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0] - TMath::TwoPi()/NUM_PHI;
-      fInputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0]; // Ra
-      fInputs.at(2) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0]; // Rb
-      fInputs.at(3) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0]; // z
-      fInputs.at(4) = 0; // x0
-      fInputs.at(5) = 0; // y0
-      fInputs.at(6) = 0; // angle of major axis
+      const int n = EllipseParams::N();
+      const int numPhysicalRings = 4;
+      fInputs.resize(n*numPhysicalRings);
       
-      
-      fInputs.at(7) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(8) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(9) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];      
-      fInputs.at(10) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(11) = 0; // x0
-      fInputs.at(12) = 0; // y0
-      fInputs.at(13) = 0; // angle of major axis      
-      
-      fInputs.at(14) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(15) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(16) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];      
-      fInputs.at(17) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(18) = 0; // x0
-      fInputs.at(19) = 0; // y0
-      fInputs.at(20) = 0; // angle of major axis
-      
-      fInputs.at(21)  = geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(22) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(23) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(24) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(25) = 0; // x0
-      fInputs.at(26) = 0; // y0
-      fInputs.at(27) = 0; // angle of major axis
+      int ringInd = 0;
+      for(int ant : {1, 0,  NUM_PHI, 2*NUM_PHI}){
+	fInputs.at(ringInd*n + 0) = 0; // x0
+	fInputs.at(ringInd*n + 1) = 0; // y0
+	fInputs.at(ringInd*n + 2) = 0; // alpha
+	fInputs.at(ringInd*n + 3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // Ra
+	fInputs.at(ringInd*n + 4) = 0; // eccentricity
+	fInputs.at(ringInd*n + 5) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // z
+	ringInd++;
+      }
 
-      const double lim = 5*TMath::DegToRad();
-      fMin->SetLimitedVariable(0, "TopHigh Ring Phi", fInputs.at(0), 0.01, -lim, lim);
-      fMin->SetVariable(1, "TopHigh Ring Ra",         fInputs.at(1), 0.01);
-      fMin->SetVariable(2, "TopHigh Ring Rb",         fInputs.at(2), 0.01);
-      fMin->SetVariable(3, "TopHigh Ring Z",          fInputs.at(3), 0.01);
-      fMin->SetVariable(4, "TopHigh x0",              fInputs.at(4), 0.01);
-      fMin->SetVariable(5, "TopHigh y0",              fInputs.at(5), 0.01);
-      fMin->SetVariable(6, "TopHigh alpha",           fInputs.at(6), 0.01);
+      // const double lim = 5*TMath::DegToRad();
 
-      fMin->SetLimitedVariable(7, "TopLow Ring Phi", fInputs.at(7), 0.01, -lim, lim);
-      fMin->SetVariable(8, "TopLow Ring Ra",         fInputs.at(8), 0.01);
-      fMin->SetVariable(9, "TopLow Ring Rb",         fInputs.at(9), 0.01);
-      fMin->SetVariable(10, "TopLow Ring Z",         fInputs.at(10), 0.01);
-      fMin->SetVariable(11, "TopLow x0",             fInputs.at(11), 0.01);
-      fMin->SetVariable(12, "TopLow y0",             fInputs.at(12), 0.01);
-      fMin->SetVariable(13, "TopLow alpha",          fInputs.at(13), 0.01);
-      
-      fMin->SetLimitedVariable(14, "Middle Ring Phi", fInputs.at(14), 0.01, -lim, lim);
-      fMin->SetVariable(15, "Middle Ring Ra",         fInputs.at(15), 0.01);
-      fMin->SetVariable(16, "Middle Ring Rb",         fInputs.at(16), 0.01);
-      fMin->SetVariable(17, "Middle Ring Z",          fInputs.at(17), 0.01);
-      fMin->SetVariable(18, "Middle x0",              fInputs.at(18), 0.01);
-      fMin->SetVariable(19, "Middle y0",              fInputs.at(19), 0.01);
-      fMin->SetVariable(20, "Middle alpha",           fInputs.at(20), 0.01);
-
-      fMin->SetLimitedVariable(21, "Bottom Ring Phi", fInputs.at(21), 0.01, -lim, lim);
-      fMin->SetVariable(22, "Bottom Ring Ra",         fInputs.at(22), 0.01);
-      fMin->SetVariable(23, "Bottom Ring Rb",         fInputs.at(23), 0.01);
-      fMin->SetVariable(24, "Bottom Ring Z",          fInputs.at(24), 0.01);
-      fMin->SetVariable(25, "Bottom x0",              fInputs.at(25), 0.01);
-      fMin->SetVariable(26, "Bottom y0",              fInputs.at(26), 0.01);
-      fMin->SetVariable(27, "Bottom alpha",           fInputs.at(27), 0.01);
-
+      int varInd=0;
+      for(int ringInd=0; ringInd < numPhysicalRings; ringInd++){
+	std::stringstream ss;
+	ss << static_cast<PhysicalRing>(ringInd);
+	for(int p=0; p < EllipseParams::N(); p++){	  
+	  TString parName = ss.str();
+	  parName += TString::Format("_%s", EllipseParams::name(p));
+	  if(p==4){
+	    fMin->SetLimitedVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01,  0,  1);	  
+	  }
+	  else if(p==2){
+	    fMin->SetLimitedVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01,  -TMath::Pi(),  TMath::Pi());
+	  }
+	  else{
+	    fMin->SetVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01);	  
+	  }
+	  varInd++;
+	}
+      }
     }
     break;
-  }  
+  case ParameterSpace::ExtraDeltaT:
+    fInputs.resize(NUM_SEAVEYS*AnitaPol::kNotAPol, 0);
+    for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
+      const char* polName = pol == AnitaPol::kHorizontal ? "H" : "V";
+      for(int ant=0; ant< NUM_SEAVEYS; ant++){
+	const int varInd = NUM_SEAVEYS*pol + ant;
+	fMin->SetVariable(varInd, TString::Format("%d%s", ant, polName).Data(), fInputs.at(varInd), 0.01);
+	if(ant==0 || (AnitaPol::kVertical && ant==45)){
+	  fMin->FixVariable(varInd);
+	}
+	
+	
+      }
+    }
+    break;
+  }
 }
 
-void Acclaim::PhaseCenterFitter::makeFunctors(){
-  fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 3);
-  fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
-  fFuncs[ParameterSpace::RingPhi]          = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
-  fFuncs[ParameterSpace::RingZ]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 4);
-  fFuncs[ParameterSpace::RingPhiRZ]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFitter::eval, 12);
+void Acclaim::PhaseCenterFit::Minimizer::makeFunctors(){
+  fFuncs[ParameterSpace::None]             = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 0);
+  fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 3);
+  fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingPhi]          = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingZ]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingPhiRZ]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 12);
+  fFuncs[ParameterSpace::RingEllipse]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, EllipseParams::N()*4);
+  fFuncs[ParameterSpace::ExtraDeltaT]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, NUM_SEAVEYS*AnitaPol::kNotAPol);
 }
 
 
-TH2D* Acclaim::PhaseCenterFitter::makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title){
+TH2D* Acclaim::PhaseCenterFit::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title){
   if(pol==AnitaPol::kNotAPol){
     return nullptr;
   }
@@ -303,13 +300,7 @@ TH2D* Acclaim::PhaseCenterFitter::makeDdtHist(AnitaPol::AnitaPol_t pol, const TS
 }
 
 
-Acclaim::PhaseCenterFitter::~PhaseCenterFitter(){
-  delete fChain;
-  delete fMin;
-}
-
-
-const std::vector<double>& Acclaim::PhaseCenterFitter::fit(AnitaPol::AnitaPol_t pol, const char* outFileName){
+const std::vector<double>& Acclaim::PhaseCenterFit::Minimizer::fit(AnitaPol::AnitaPol_t pol, const char* outFileName){
 
   std::cout << "Starting fit!" << std::endl;  
   fFitPol = pol;
@@ -347,13 +338,16 @@ const std::vector<double>& Acclaim::PhaseCenterFitter::fit(AnitaPol::AnitaPol_t 
   }
   fMinimum = fMin->MinValue();
 
+  fSaveResults = true;
   eval(&fResults[0]);
+  fSaveResults = false;
+  
   for(auto pol : pols){
     TString name = TString::Format("hFinal_%d", pol);
     auto h = makeDdtHist(pol, name);
     h->Write();
     delete h;
-  }  
+  }
 
   std::cout << std::endl;
 
@@ -363,7 +357,7 @@ const std::vector<double>& Acclaim::PhaseCenterFitter::fit(AnitaPol::AnitaPol_t 
   return fResults;
 }
 
-void Acclaim::PhaseCenterFitter::readInSummaries(){
+void Acclaim::PhaseCenterFit::Minimizer::readInSummaries(){
 
   fChain->SetBranchAddress("correlationSummary", &fSum);
   Long64_t n = fChain->GetEntries();
@@ -384,7 +378,7 @@ void Acclaim::PhaseCenterFitter::readInSummaries(){
     std::vector<int> keepMe;
     auto oldPairs = sum.fPairs;
     for(auto& pair : oldPairs){
-      double dtExpected = usefulPat.getDeltaTExpected(pair.ant2, pair.ant1, phiWave, thetaWave);    
+      double dtExpected = usefulPat.getDeltaTExpected(pair.ant2, pair.ant1, phiWave, thetaWave);
 
       double dtMeasured = pair.dt;
 
@@ -394,7 +388,7 @@ void Acclaim::PhaseCenterFitter::readInSummaries(){
       }
       else{
 	keepMe.push_back(1);
-      }      
+      }
     }
 
     sum.fPairs.clear();
@@ -406,17 +400,16 @@ void Acclaim::PhaseCenterFitter::readInSummaries(){
 
     if(sum.fPairs.size() > 0){
       fSummaries.emplace_back(sum);
-    }
-    
+    }    
   }
 
   if(fSummaries.size()==0){
-    std::cerr << "Error in " << __PRETTY_FUNCTION__ << "No summaries read in!" << std::endl;
+    std::cerr << "Error in " << __PRETTY_FUNCTION__ << " No summaries read in!" << std::endl;
   }
 }
 
 
-void Acclaim::PhaseCenterFitter::printResults() const {
+void Acclaim::PhaseCenterFit::Minimizer::printResults() const {
 
   std::cout << "Results:\n";
   std::cout  << "Before the fit, the value was " << fInitial << " with:\n";
@@ -431,64 +424,28 @@ void Acclaim::PhaseCenterFitter::printResults() const {
     std::cout << fMin->VariableName(i) << " = " << fResults.at(i) << "\n";
   }
   std::cout << "\n\n" << std::flush;
-  
 }
 
 
-double Acclaim::PhaseCenterFitter::eval(const double* params){
+double Acclaim::PhaseCenterFit::Minimizer::eval(const double* params){
  
   auto geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(true);
 
-  FakeGeomTool fakeGeom(geom);  
+  FakeGeomTool fakeGeom(geom);
   fakeGeom.overwritePhotogrammetryPositionsInAnitaGeomTool(geom);
-
+  
+  fParamManager.update(params);
   if(fApplyParams){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      int phiSector = ant%NUM_PHI;
-      for(auto pol : {AnitaPol::kHorizontal,  AnitaPol::kVertical}){
-	auto ring = antToPhysicalRing(ant);
-	int ringInt = static_cast<int>(ring);
+    fParamManager.applyGeom(geom);
+  }    
 
-	if(fParamSpace==ParameterSpace::RingR){
-	  geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt];
-	}
-	else if(fParamSpace==ParameterSpace::RingPhi){
-	  double phi = params[ringInt] + phiSector*TMath::DegToRad()*22.5;
-	  geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
-	}
-
-	else if(fParamSpace==ParameterSpace::RingPhiRZ){
-	  const int paramsPerRing = 3;
-	  double phi = params[ringInt*paramsPerRing] + phiSector*TMath::DegToRad()*22.5;
-	  geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
-	  geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt*paramsPerRing+1];	
-	  geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt*paramsPerRing+2];
-	}
-	else if(fParamSpace==ParameterSpace::RingEllipse){
-	  const int paramsPerRing = 7;
-	  double Ra = params[ringInt*paramsPerRing + 1];
-	  double Rb = params[ringInt*paramsPerRing + 2];
-	  double x0 = params[ringInt*paramsPerRing + 4];
-	  double y0 = params[ringInt*paramsPerRing + 5];
-	  
-	  double alpha = params[ringInt*paramsPerRing + 6];
-	  double phi = params[ringInt*paramsPerRing] + phiSector*TMath::DegToRad()*22.5 - alpha;
-
-	  double x = Ra*cos(phi);
-	  double y = Rb*sin(phi);
-	  TVector2 v(x, y);
-	  v = v.Rotate(alpha);
-
-	  
-	  
-	  geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
-	  geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt*paramsPerRing+1];	
-	  geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = params[ringInt*paramsPerRing+2];
-	}
-	
-      }
-    }
+  TTree* fOutputTree = nullptr;
+  CorrelationSummary* outputSummary = nullptr;
+  if(fSaveResults){
+    fOutputTree = new TTree("expectedTree", "expectedTree");
+    outputSummary = new CorrelationSummary();
+    fOutputTree->Branch("expected", &outputSummary);
   }
 
   // reset delta delta T counters
@@ -500,38 +457,45 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
 
       Adu5Pat pat = cs.fPat;
       if(fApplyParams){
-	if(fParamSpace==ParameterSpace::PitchRollHeading){
-	  pat.pitch = params[0];
-	  pat.roll = params[1];
-	  pat.heading += params[2];
-	}
-	else{
-	  // these are the results of fitting pitch/roll with photogrammetry numbers
-	  // pitch = -0.199065
-	  // roll = -0.113464
-	  // heading_offset = -0.552301
-	
-	  pat.pitch    = -0.199065;
-	  pat.roll     = -0.113464;
-	  pat.heading += -0.552301;
-	}
+	fParamManager.applyPat(&pat);
       }
       
       double thetaWave, phiWave;
       UsefulAdu5Pat usefulPat(&pat, false);
       usefulPat.getThetaAndPhiWaveWaisDivide(thetaWave, phiWave);
 
+      int pairIndex = -1;
+      if(fSaveResults){
+	*outputSummary = cs;
+	// std::cout << outputSummary->fEventNumber  <<  ", " << cs.fEventNumber << std::endl;
+      }
+      
       for(const auto& corrPair : cs.fPairs){
+	pairIndex++;
 
 	// this channel is just bad...
 	if(cs.fPol==AnitaPol::kVertical && (corrPair.ant1==45||corrPair.ant2==45)){
+	  if(fSaveResults){
+	    outputSummary->fPairs.at(pairIndex).dt = -999;
+	    outputSummary->fPairs.at(pairIndex).dt_expected = -999;
+	  }
 	  continue;
 	}
 
 	double dtExpected = usefulPat.getDeltaTExpected(corrPair.ant2, corrPair.ant1, phiWave, thetaWave);
+	if(fSaveResults){
+	  outputSummary->fPairs.at(pairIndex).dt_expected = dtExpected;
+	}
+	
 	double dtMeasured = corrPair.dt;
-	double ddt = (dtMeasured - dtExpected);
+	if(fApplyParams && fParamSpace==ParameterSpace::ExtraDeltaT){
+	  const int polOffset = cs.fPol*NUM_SEAVEYS;
+	  dtMeasured += params[polOffset + corrPair.ant1];
+	  dtMeasured -= params[polOffset + corrPair.ant2];
+	}
 
+
+	double ddt = (dtMeasured - dtExpected);
 	fNormalization.at(cs.fPol).at(corrPair.ant1)++;
 	fNormalization.at(cs.fPol).at(corrPair.ant2)++;	
 	
@@ -539,10 +503,15 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
 	fDdts.at(cs.fPol).at(corrPair.ant2) += ddt*ddt;
 
 	// std::cout << normalization.at(cs.fPol).at(corrPair.ant1) << "\t"  << ddts.at(cs.fPol).at(corrPair.ant1) << "\t" << ddt << "\n";
-      
+
+      }
+      if(fSaveResults){
+	// std::cout << cs.fPairs.size() << "\t" << outputSummary->fPairs.size() << std::endl;
+	fOutputTree->Fill();
       }
     }
   }
+
 
   double retVal = 0;
   for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
@@ -567,6 +536,17 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
   else{
     std::cout << "." << std::flush;
   }
+
+  if(fOutputTree){
+    fOutputTree->Write();
+    delete fOutputTree;
+    fOutputTree = nullptr;
+
+  }
+  if(outputSummary){
+    delete outputSummary;
+    outputSummary = nullptr;    
+  }
   
   return retVal;
 }
@@ -576,27 +556,3 @@ double Acclaim::PhaseCenterFitter::eval(const double* params){
 
 
 
-void Acclaim::PhaseCenterFitter::EllipseParams::phiToEllipseXY(double phi, double& x, double& y){
-  double t = tFromPhi(phi);
-  x = Ra*TMath::Cos(t);
-  y = Rb*TMath::Sin(t);
-  TVector2 v(x, y);
-  v = v.Rotate(alpha);
-  x = v.X() + x0;
-  y = v.Y() + y0;
-}
-
-double Acclaim::PhaseCenterFitter::EllipseParams::tFromPhi(double phi){
-  // here we find the parametric angle t from the angle phi.
-  double localPhi = phi - alpha; // account for rotation of ellipse
-  double tan_t = (Ra/Rb)*TMath::Tan(localPhi);
-  double t = TMath::ATan(tan_t);
-
-  // get correct quadrant, I hope...
-  if(localPhi > 0.5*TMath::Pi() && localPhi <= 1.5*TMath::Pi()){
-    t += TMath::Pi();
-  }
-  // std::cout << phi*TMath::RadToDeg() << "\t" << localPhi*TMath::RadToDeg() << "\t" << t*TMath::RadToDeg() << std::endl;
-  
-  return t;
-}

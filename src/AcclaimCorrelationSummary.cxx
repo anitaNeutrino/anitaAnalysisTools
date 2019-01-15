@@ -3,7 +3,16 @@
 ClassImp(Acclaim::CorrelationPair)
 ClassImp(Acclaim::CorrelationSummary)
 
-Acclaim::CorrelationPair::CorrelationPair(){;}
+
+Acclaim::CorrelationPair::CorrelationPair()
+: pol(-1),
+  ant1(-1),
+  ant2(-1),
+  dt(uninitialized),
+  dt_expected(uninitialized),
+  correlation(uninitialized)
+{;}
+
 Acclaim::CorrelationPair::~CorrelationPair(){;}
 
 Acclaim::CorrelationPair::CorrelationPair(int a1, int a2, double t, double rho,
@@ -12,6 +21,7 @@ Acclaim::CorrelationPair::CorrelationPair(int a1, int a2, double t, double rho,
 	  ant1(a1),
 	  ant2(a2),
 	  dt(t),
+	  dt_expected(uninitialized),
 	  correlation(rho)
 	  // phiDeg(phi),
 	  // thetaDeg(theta),
