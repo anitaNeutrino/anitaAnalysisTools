@@ -1,11 +1,33 @@
 #include "AcclaimParameterManager.h"
 #include "AnitaGeomTool.h"
 #include "Adu5Pat.h"
+#include "TMath.h"
+
+
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r){
+  switch(r){
+  case Acclaim::PhaseCenterFit::PhysicalRing::TopHigh:
+    os << "PhysicalRing::TopHigh";
+    return os;
+  case Acclaim::PhaseCenterFit::PhysicalRing::TopLow:
+    os << "PhysicalRing::TopLow";
+    return os;
+  case Acclaim::PhaseCenterFit::PhysicalRing::Middle:
+    os << "PhysicalRing::Middle";
+    return os;
+  case Acclaim::PhaseCenterFit::PhysicalRing::Bottom:
+    os << "PhysicalRing::Bottom";
+    return os;
+  }
+  return os;
+}
+
+
 
 Acclaim::PhaseCenterFit::ParameterManager::ParameterManager(ParameterSpace ps,  int nParams, const double* params)
   : fN(nParams), fParams(params), fParamSpace(ps)
 {
-  
+
 }
 
 Acclaim::PhaseCenterFit::ParameterManager::~ParameterManager(){;}
@@ -17,7 +39,7 @@ void Acclaim::PhaseCenterFit::ParameterManager::update(const double* params){
   if(fParamSpace==ParameterSpace::RingEllipse){
     fEllipseParams.clear();
     const int numPhysicalRings = 4;
-    for(int ringInd=0; ringInd < numPhysicalRings; ringInd++){	  
+    for(int ringInd=0; ringInd < numPhysicalRings; ringInd++){
       fEllipseParams.emplace_back(&fParams[ringInd*EllipseParams::N()]);
     }
   }
@@ -40,7 +62,6 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyPat(Adu5Pat* pat) const {
     pat->roll     = -0.113464;
     pat->heading += -0.552301;
   }
-
 }
 
 void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) const {
@@ -63,7 +84,7 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
 	const int paramsPerRing = 3;
 	double phi = fParams[ringInt*paramsPerRing] + phiSector*TMath::DegToRad()*22.5;
 	fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
-	fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt*paramsPerRing+1];	
+	fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt*paramsPerRing+1];
 	fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt*paramsPerRing+2];
       }
       else if(fParamSpace==ParameterSpace::RingEllipse){
@@ -80,7 +101,7 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
       }
     }
   }
-  
+
 }
 
 
@@ -95,7 +116,34 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
 
 
 
+Acclaim::PhaseCenterFit::EllipseParams::EllipseParams(const double* params){
+  if(params){fill(params);}
+}
 
+double Acclaim::PhaseCenterFit::EllipseParams::Rb() const {
+  return Ra* TMath::Sqrt(1 - eccentricity*eccentricity);
+}
+
+void Acclaim::PhaseCenterFit::EllipseParams::fill(const double* params){
+  x0           = params[0];
+  y0           = params[1];
+  alpha        = params[2];
+  Ra           = params[3];
+  eccentricity = params[4];
+  z            = params[5];
+}
+
+const char* Acclaim::PhaseCenterFit::EllipseParams::name(int p) {
+  switch(p){
+  case 0: return "x0";
+  case 1: return "y0";
+  case 2: return "alpha";
+  case 3: return "Ra";
+  case 4: return "eccentricity";
+  case 5: return "z";
+  default: return "Unknown!";
+  }
+}
 
 
 void Acclaim::PhaseCenterFit::EllipseParams::phiToEllipseXY(double phi, double& x, double& y) const {
@@ -126,6 +174,6 @@ double Acclaim::PhaseCenterFit::EllipseParams::tFromPhi(double phi) const {
     t += TMath::Pi();
   }
   // std::cout << phi*TMath::RadToDeg() << "\t" << localPhi*TMath::RadToDeg() << "\t" << t*TMath::RadToDeg() << std::endl;
-  
+
   return t;
 }

@@ -128,6 +128,4 @@ namespace Acclaim {
   }  
 }
 
-std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r);
-
 #endif 

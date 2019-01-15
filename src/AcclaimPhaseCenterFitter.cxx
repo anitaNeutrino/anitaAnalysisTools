@@ -9,23 +9,6 @@
 
 
 
-std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r){
-  switch(r){
-  case Acclaim::PhaseCenterFit::PhysicalRing::TopHigh:
-    os << "PhysicalRing::TopHigh";
-    return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::TopLow:
-    os << "PhysicalRing::TopLow";
-    return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::Middle:
-    os << "PhysicalRing::Middle";
-    return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::Bottom:
-    os << "PhysicalRing::Bottom";
-    return os;    
-  }
-  return os;
-}
 
 
 Acclaim::PhaseCenterFit::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
