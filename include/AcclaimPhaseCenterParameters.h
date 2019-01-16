@@ -80,6 +80,7 @@ namespace Acclaim {
 
       void update(const double* params);
       void setInputs(ROOT::Math::Minimizer* min, std::vector<double>& inputs) const;
+      void applyDelay(double& dt, AnitaPol::AnitaPol_t pol, int ant1, int ant2) const;      
       void applyGeom(AnitaGeomTool* geom) const;
       void applyPat(Adu5Pat* pat) const ;
 
@@ -89,7 +90,7 @@ namespace Acclaim {
     private:
       int fN;
       const double* fParams;
-      const ParameterSpace fParamSpace;
+      ParameterSpace fParamSpace;
       std::vector<EllipseParams> fEllipseParams;
   };
 

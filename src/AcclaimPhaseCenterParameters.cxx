@@ -59,6 +59,8 @@ Acclaim::PhaseCenter::ParameterManager::ParameterManager(ParameterSpace ps)
 Acclaim::PhaseCenter::ParameterManager::~ParameterManager(){;}
 
 
+
+
 void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* min, std::vector<double>& inputs) const {
 
   inputs.resize(N(), 0);
@@ -238,6 +240,15 @@ void Acclaim::PhaseCenter::ParameterManager::update(const double* params){
   }
 }
 
+
+void Acclaim::PhaseCenter::ParameterManager::applyDelay(double& dt, AnitaPol::AnitaPol_t pol, int ant1, int ant2) const {
+
+  if(fParamSpace==ParameterSpace::ExtraDeltaT){
+    const int polOffset = pol*NUM_SEAVEYS;
+    dt += fParams[polOffset + ant1];
+    dt -= fParams[polOffset + ant2];
+  }
+}
 
 void Acclaim::PhaseCenter::ParameterManager::applyPat(Adu5Pat* pat) const {
 

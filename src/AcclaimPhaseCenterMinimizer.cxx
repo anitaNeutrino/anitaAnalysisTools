@@ -35,8 +35,8 @@ Acclaim::PhaseCenter::Minimizer::Minimizer(const char* corrTreeFiles){
 
 void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
 
-  fParamManager = ParameterManager(ps);
-  fParamManager.setInputs(fMin, fInputs);
+  fParamManager = ps;
+  fParamManager.setInputs(fMin.get(), fInputs);
   fMin->SetFunction(ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, fParamManager.N()));
 }
 
@@ -301,13 +301,8 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
 	
 	double dtMeasured = corrPair.dt;
 	if(fApplyParams){
-	  fParamManger.applyDelays(dtMeasured, ant1, ant2);
+	  fParamManager.applyDelay(dtMeasured, static_cast<AnitaPol::AnitaPol_t>(cs.fPol), corrPair.ant1, corrPair.ant2);
 	}
-	// && fParamSpace==ParameterSpace::ExtraDeltaT){
-	//   const int polOffset = cs.fPol*NUM_SEAVEYS;
-	//   dtMeasured += params[polOffset + corrPair.ant1];
-	//   dtMeasured -= params[polOffset + corrPair.ant2];
-	// }
 
 
 	double ddt = (dtMeasured - dtExpected);
