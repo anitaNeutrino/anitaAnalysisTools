@@ -79,7 +79,7 @@ namespace Acclaim {
       virtual ~ParameterManager();
 
       void update(const double* params);
-      void setInputs(ROOT::Math::Minimizer* min, std::vector<double>* inputs) const;
+      void setInputs(ROOT::Math::Minimizer* min, std::vector<double>& inputs) const;
       void applyGeom(AnitaGeomTool* geom) const;
       void applyPat(Adu5Pat* pat) const ;
 

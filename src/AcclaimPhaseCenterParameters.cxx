@@ -59,9 +59,9 @@ Acclaim::PhaseCenter::ParameterManager::ParameterManager(ParameterSpace ps)
 Acclaim::PhaseCenter::ParameterManager::~ParameterManager(){;}
 
 
-void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fMin, std::vector<double>& fInputs) const {
+void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* min, std::vector<double>& inputs) const {
 
-  fInputs.resize(N(), 0);
+  inputs.resize(N(), 0);
   
   switch(fParamSpace){
   case ParameterSpace::None:
@@ -69,16 +69,16 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fM
     
   case ParameterSpace::PitchRoll:
     {
-      fMin->SetLimitedVariable(0, "pitch", 0, 0.1, -5, 5);
-      fMin->SetLimitedVariable(1, "roll", 0, 0.1, -5, 5);
+      min->SetLimitedVariable(0, "pitch", 0, 0.1, -5, 5);
+      min->SetLimitedVariable(1, "roll", 0, 0.1, -5, 5);
     }
     break;
 
   case ParameterSpace::PitchRollHeading:
     {
-      fMin->SetLimitedVariable(0, "pitch", 0, 0.01, -1, 1);
-      fMin->SetLimitedVariable(1, "roll", 0, 0.01, -1, 1);
-      fMin->SetLimitedVariable(2, "heading_offset", 0, 0.01, -5, 5);
+      min->SetLimitedVariable(0, "pitch", 0, 0.01, -1, 1);
+      min->SetLimitedVariable(1, "roll", 0, 0.01, -1, 1);
+      min->SetLimitedVariable(2, "heading_offset", 0, 0.01, -5, 5);
     }
     break;
     
@@ -86,82 +86,82 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fM
   case ParameterSpace::RingR:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.at(0) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
-      fInputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(2) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      inputs.at(0) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      inputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(2) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
       
-      fMin->SetVariable(0, "TopHigh Ring R", fInputs.at(0), 0.01); 
-      fMin->SetVariable(1, "TopLow Ring R", fInputs.at(1), 0.01);
-      fMin->SetVariable(2, "Middle Ring R", fInputs.at(2), 0.01);
-      fMin->SetVariable(3, "Bottom Ring R", fInputs.at(3), 0.01);
+      min->SetVariable(0, "TopHigh Ring R", inputs.at(0), 0.01); 
+      min->SetVariable(1, "TopLow Ring R", inputs.at(1), 0.01);
+      min->SetVariable(2, "Middle Ring R", inputs.at(2), 0.01);
+      min->SetVariable(3, "Bottom Ring R", inputs.at(3), 0.01);
     }
     break;
 
   case ParameterSpace::RingPhi:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.at(0) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0] - TMath::TwoPi()/NUM_PHI;
-      fInputs.at(1) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(2) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(3) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      inputs.at(0) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0] - TMath::TwoPi()/NUM_PHI;
+      inputs.at(1) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(2) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(3) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
 
       const double lim = 5*TMath::DegToRad();
-      fMin->SetLimitedVariable(0, "TopHigh Ring Phi", fInputs.at(0), 0.01, -lim, lim); 
-      fMin->SetLimitedVariable(1, "TopLow Ring Phi", fInputs.at(1), 0.01, -lim, lim);
-      fMin->SetLimitedVariable(2, "Middle Ring Phi", fInputs.at(2), 0.01, -lim, lim);
-      fMin->SetLimitedVariable(3, "Bottom Ring Phi", fInputs.at(3), 0.01, -lim, lim);
+      min->SetLimitedVariable(0, "TopHigh Ring Phi", inputs.at(0), 0.01, -lim, lim); 
+      min->SetLimitedVariable(1, "TopLow Ring Phi", inputs.at(1), 0.01, -lim, lim);
+      min->SetLimitedVariable(2, "Middle Ring Phi", inputs.at(2), 0.01, -lim, lim);
+      min->SetLimitedVariable(3, "Bottom Ring Phi", inputs.at(3), 0.01, -lim, lim);
     }
     break;
     
   case ParameterSpace::RingZ:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.at(0) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
-      fInputs.at(1) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(2) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(3) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fMin->SetVariable(0, "TopHigh Ring Z", fInputs.at(0), 0.01);
-      fMin->SetVariable(1, "TopLow Ring Z", fInputs.at(1), 0.01);
-      fMin->SetVariable(2, "Middle ring Z",fInputs.at(2), 0.01);
-      fMin->SetVariable(3, "Bottom ring Z",fInputs.at(3), 0.01);
+      inputs.at(0) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      inputs.at(1) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(2) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(3) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      min->SetVariable(0, "TopHigh Ring Z", inputs.at(0), 0.01);
+      min->SetVariable(1, "TopLow Ring Z", inputs.at(1), 0.01);
+      min->SetVariable(2, "Middle ring Z",inputs.at(2), 0.01);
+      min->SetVariable(3, "Bottom ring Z",inputs.at(3), 0.01);
     }
     break;
   case ParameterSpace::RingPhiRZ:
     {
       auto geom = AnitaGeomTool::Instance();
-      fInputs.at(0) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0] - TMath::TwoPi()/NUM_PHI;
-      fInputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
-      fInputs.at(2) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      inputs.at(0) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[1][0] - TMath::TwoPi()/NUM_PHI;
+      inputs.at(1) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[1][0];
+      inputs.at(2) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[1][0];
       
-      fInputs.at(3) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(4) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
-      fInputs.at(5) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(3) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(4) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[0][0];
+      inputs.at(5) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[0][0];
       
-      fInputs.at(6) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(7) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
-      fInputs.at(8) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(6) = geom->azPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(7) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
+      inputs.at(8) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[NUM_PHI][0];
       
-      fInputs.at(9)  = geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(10) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
-      fInputs.at(11) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      inputs.at(9)  = geom->azPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      inputs.at(10) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
+      inputs.at(11) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[2*NUM_PHI][0];
 
       const double lim = 5*TMath::DegToRad();
-      fMin->SetLimitedVariable(0, "TopHigh Ring Phi", fInputs.at(0), 0.01, -lim, lim);
-      fMin->SetVariable(1, "TopHigh Ring R", fInputs.at(1), 0.01);
-      fMin->SetVariable(2, "TopHigh Ring Z", fInputs.at(2), 0.01);
+      min->SetLimitedVariable(0, "TopHigh Ring Phi", inputs.at(0), 0.01, -lim, lim);
+      min->SetVariable(1, "TopHigh Ring R", inputs.at(1), 0.01);
+      min->SetVariable(2, "TopHigh Ring Z", inputs.at(2), 0.01);
 
-      fMin->SetLimitedVariable(3, "TopLow Ring Phi", fInputs.at(3), 0.01, -lim, lim);
-      fMin->SetVariable(4, "TopLow Ring R", fInputs.at(4), 0.01);
-      fMin->SetVariable(5, "TopLow Ring Z", fInputs.at(5), 0.01);      
+      min->SetLimitedVariable(3, "TopLow Ring Phi", inputs.at(3), 0.01, -lim, lim);
+      min->SetVariable(4, "TopLow Ring R", inputs.at(4), 0.01);
+      min->SetVariable(5, "TopLow Ring Z", inputs.at(5), 0.01);      
 
-      fMin->SetLimitedVariable(6, "Middle Ring Phi", fInputs.at(6), 0.01, -lim, lim);
-      fMin->SetVariable(7, "Middle Ring R", fInputs.at(7), 0.01);
-      fMin->SetVariable(8, "Middle Ring Z", fInputs.at(8), 0.01);
+      min->SetLimitedVariable(6, "Middle Ring Phi", inputs.at(6), 0.01, -lim, lim);
+      min->SetVariable(7, "Middle Ring R", inputs.at(7), 0.01);
+      min->SetVariable(8, "Middle Ring Z", inputs.at(8), 0.01);
       
-      fMin->SetLimitedVariable(9, "Bottom Ring Phi", fInputs.at(9), 0.01, -lim, lim);
-      fMin->SetVariable(10, "Bottom Ring R", fInputs.at(10), 0.01);
-      fMin->SetVariable(11, "Bottom Ring Z", fInputs.at(11), 0.01);      
+      min->SetLimitedVariable(9, "Bottom Ring Phi", inputs.at(9), 0.01, -lim, lim);
+      min->SetVariable(10, "Bottom Ring R", inputs.at(10), 0.01);
+      min->SetVariable(11, "Bottom Ring Z", inputs.at(11), 0.01);      
     }
     break;
   case ParameterSpace::RingEllipse:
@@ -170,16 +170,16 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fM
 
       const int n = EllipseParams::N();
       const int numPhysicalRings = PhysicalRings.size();
-      fInputs.resize(n*numPhysicalRings);
+      inputs.resize(n*numPhysicalRings);
       
       int ringInd = 0;
       for(int ant : {1, 0,  NUM_PHI, 2*NUM_PHI}){
-	fInputs.at(ringInd*n + 0) = 0; // x0
-	fInputs.at(ringInd*n + 1) = 0; // y0
-	fInputs.at(ringInd*n + 2) = 0; // alpha
-	fInputs.at(ringInd*n + 3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // Ra
-	fInputs.at(ringInd*n + 4) = 0; // eccentricity
-	fInputs.at(ringInd*n + 5) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // z
+	inputs.at(ringInd*n + 0) = 0; // x0
+	inputs.at(ringInd*n + 1) = 0; // y0
+	inputs.at(ringInd*n + 2) = 0; // alpha
+	inputs.at(ringInd*n + 3) = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // Ra
+	inputs.at(ringInd*n + 4) = 0; // eccentricity
+	inputs.at(ringInd*n + 5) = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][0]; // z
 	ringInd++;
       }
 
@@ -193,13 +193,13 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fM
 	  TString parName = ss.str();
 	  parName += TString::Format("_%s", EllipseParams::name(p));
 	  if(p==4){
-	    fMin->SetLimitedVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01,  0,  1);	  
+	    min->SetLimitedVariable(varInd, parName.Data(), inputs.at(varInd), 0.01,  0,  1);	  
 	  }
 	  else if(p==2){
-	    fMin->SetLimitedVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01,  -TMath::Pi(),  TMath::Pi());
+	    min->SetLimitedVariable(varInd, parName.Data(), inputs.at(varInd), 0.01,  -TMath::Pi(),  TMath::Pi());
 	  }
 	  else{
-	    fMin->SetVariable(varInd, parName.Data(), fInputs.at(varInd), 0.01);	  
+	    min->SetVariable(varInd, parName.Data(), inputs.at(varInd), 0.01);	  
 	  }
 	  varInd++;
 	}
@@ -207,14 +207,14 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* fM
     }
     break;
   case ParameterSpace::ExtraDeltaT:
-    fInputs.resize(NUM_SEAVEYS*AnitaPol::kNotAPol, 0);
+    inputs.resize(NUM_SEAVEYS*AnitaPol::kNotAPol, 0);
     for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
       const char* polName = pol == AnitaPol::kHorizontal ? "H" : "V";
       for(int ant=0; ant< NUM_SEAVEYS; ant++){
 	const int varInd = NUM_SEAVEYS*pol + ant;
-	fMin->SetVariable(varInd, TString::Format("%d%s", ant, polName).Data(), fInputs.at(varInd), 0.01);
+	min->SetVariable(varInd, TString::Format("%d%s", ant, polName).Data(), inputs.at(varInd), 0.01);
 	if(ant==0 || (AnitaPol::kVertical && ant==45)){
-	  fMin->FixVariable(varInd);
+	  min->FixVariable(varInd);
 	}
 	
 	
