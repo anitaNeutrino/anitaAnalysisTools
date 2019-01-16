@@ -6,10 +6,21 @@ int main(int argc, char* argv[]){
 
   Acclaim::PhaseCenter::Minimizer fitter("data/AcclaimCorrelationSummary_*.root");
 
-  fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::None);
-  fitter.fit(AnitaPol::kNotAPol,  "None.root");
-  fitter.printResults();
+  // fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::None);
+  // fitter.fit(AnitaPol::kNotAPol, "None.root");
+  // fitter.printResults();
 
+  // fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::None);
+  // fitter.setAllowedPairs(Acclaim::PhaseCenter::Minimizer::AllowedPairs::SamePhiSector);
+  // fitter.fit(AnitaPol::kNotAPol, "None_SamePhiSector.root");
+  // fitter.printResults();
+
+  fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::PitchRoll);
+  fitter.setAllowedPairs(Acclaim::PhaseCenter::Minimizer::AllowedPairs::SamePhiSectorOrHorizontalNeigbour);
+  fitter.setPrintOnEval(true);
+  fitter.fit(AnitaPol::kNotAPol,  "pitchRoll_SamePhiSectorOrHorizontalNeigbour.root");
+  fitter.printResults();
+  
   // fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::PitchRollHeading);
   // fitter.fit(AnitaPol::kNotAPol,  "pitchRollHeading.root");
   // fitter.printResults();

@@ -45,6 +45,14 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
     }
     break;
     
+  case ParameterSpace::PitchRoll:
+    {
+      fInputs.resize(2, 0);
+      fMin->SetLimitedVariable(0, "pitch", 0, 0.1, -5, 5);
+      fMin->SetLimitedVariable(1, "roll", 0, 0.1, -5, 5);
+    }
+    break;
+
   case ParameterSpace::PitchRollHeading:
     {
       fInputs.resize(3, 0);
@@ -53,6 +61,7 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
       fMin->SetLimitedVariable(2, "heading_offset", 0, 0.01, -5, 5);
     }
     break;
+    
       
   case ParameterSpace::RingR:
     {
@@ -147,7 +156,7 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
       auto geom = AnitaGeomTool::Instance();
 
       const int n = EllipseParams::N();
-      const int numPhysicalRings = 4;
+      const int numPhysicalRings = PhysicalRings.size();
       fInputs.resize(n*numPhysicalRings);
       
       int ringInd = 0;
@@ -204,6 +213,7 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
 
 void Acclaim::PhaseCenter::Minimizer::makeFunctors(){
   fFuncs[ParameterSpace::None]             = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 0);
+  fFuncs[ParameterSpace::PitchRoll]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 2);
   fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 3);
   fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 4);
   fFuncs[ParameterSpace::RingPhi]          = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 4);
@@ -211,6 +221,38 @@ void Acclaim::PhaseCenter::Minimizer::makeFunctors(){
   fFuncs[ParameterSpace::RingPhiRZ]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 12);
   fFuncs[ParameterSpace::RingEllipse]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, EllipseParams::N()*4);
   fFuncs[ParameterSpace::ExtraDeltaT]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, NUM_SEAVEYS*AnitaPol::kNotAPol);
+}
+
+
+bool Acclaim::PhaseCenter::Minimizer::allowedPair(int ant1, int ant2) const {
+
+  // ensure ant1 <= ant2
+  if(ant1 > ant2){
+    std::swap(ant1, ant2);
+  }
+  
+  auto samePhiSector = [](int ant1, int ant2)->bool {return (ant1%NUM_PHI)==(ant2%NUM_PHI);};
+  auto horizontalNeighbour = [](int ant1, int ant2)->bool {
+			       bool oneDifferent = ant2 - ant1 == 1;
+			       if((ant1 % NUM_PHI)==0){ //  if ant1 is first number in row
+				 // then ant2 = ant1 + 15 is a horizontal neighbour
+				 bool fifteenDifferent = ant2 - ant1 == NUM_PHI - 1;
+				 return oneDifferent || fifteenDifferent;
+			       }
+			       return oneDifferent;
+			     };
+  
+  switch(fAllowedPairs){
+  case AllowedPairs::Any:
+    return true;
+  case AllowedPairs::SamePhiSector:
+    return samePhiSector(ant1, ant2);
+  case AllowedPairs::SamePhiSectorOrHorizontalNeigbour:
+    return samePhiSector(ant1, ant2) || horizontalNeighbour(ant1, ant2);
+  }
+  
+  // shouldn't get here but suppress compiler warning...
+  return false;
 }
 
 
@@ -415,9 +457,10 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
       
       for(const auto& corrPair : cs.fPairs){
 	pairIndex++;
-
-	// this channel is just bad...
-	if(cs.fPol==AnitaPol::kVertical && (corrPair.ant1==45||corrPair.ant2==45)){
+	  
+	if(allowedPair(corrPair)==false
+	   // Channel 46V (counting from 1, i.e. 45V counting from 0) is just bad
+	   || (cs.fPol==AnitaPol::kVertical && (corrPair.ant1==45||corrPair.ant2==45))){
 	  if(fSaveResults){
 	    outputSummary->fPairs.at(pairIndex).dt = -999;
 	    outputSummary->fPairs.at(pairIndex).dt_expected = -999;

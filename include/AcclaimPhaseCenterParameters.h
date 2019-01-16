@@ -2,6 +2,7 @@
 #define ACCLAIM_PHASE_CENTER_PARAMS_H
 
 #include "AnitaConventions.h"
+#include <array>
 
 class AnitaGeomTool;
 class Adu5Pat;
@@ -11,6 +12,7 @@ namespace Acclaim {
   namespace PhaseCenter {
 
     enum class ParameterSpace {None,
+			       PitchRoll,
 			       PitchRollHeading,
 			       RingR,
 			       RingPhi,
@@ -20,14 +22,15 @@ namespace Acclaim {
 			       ExtraDeltaT
     };
     
-
-
     
     enum class PhysicalRing {TopHigh,
 			     TopLow,
 			     Middle,
 			     Bottom};
-    
+    constexpr std::array<PhysicalRing, 4> PhysicalRings {PhysicalRing::TopHigh,
+							 PhysicalRing::TopLow,
+							 PhysicalRing::Middle,
+							 PhysicalRing::Bottom};
     PhysicalRing antToPhysicalRing(int ant);
 
 

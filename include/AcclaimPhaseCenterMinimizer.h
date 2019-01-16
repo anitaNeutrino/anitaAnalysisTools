@@ -36,12 +36,22 @@ namespace Acclaim {
       Minimizer(const char* corrTreeFiles = nullptr);
     
       void setParameterSpace(ParameterSpace ps);
+
       const std::vector<double>& fit(AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, const char* outFileName = nullptr);
+
       void printResults() const;
+
       void setPrintOnEval(bool print){
 	fPrintOnEval = print;
       }
-    
+
+      enum class AllowedPairs {Any,
+			       SamePhiSector,
+			       SamePhiSectorOrHorizontalNeigbour};
+
+      void setAllowedPairs(AllowedPairs option) {
+	fAllowedPairs = option;
+      }
     
     private:
       void readInSummaries();
@@ -73,7 +83,10 @@ namespace Acclaim {
 
       bool fApplyParams = true;
       bool fSaveResults = false;
+      AllowedPairs fAllowedPairs = AllowedPairs::Any;
 
+      bool allowedPair(int ant1, int ant2) const;
+      template <class T> bool allowedPair(T t) const {return allowedPair(t.ant1, t.ant2);}
       
     };
 

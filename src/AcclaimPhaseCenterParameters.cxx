@@ -35,7 +35,6 @@ Acclaim::PhaseCenter::PhysicalRing Acclaim::PhaseCenter::antToPhysicalRing(int a
 
 
 
-
 Acclaim::PhaseCenter::ParameterManager::ParameterManager(ParameterSpace ps,  int nParams, const double* params)
   : fN(nParams), fParams(params), fParamSpace(ps)
 {
@@ -50,8 +49,7 @@ void Acclaim::PhaseCenter::ParameterManager::update(const double* params){
 
   if(fParamSpace==ParameterSpace::RingEllipse){
     fEllipseParams.clear();
-    const int numPhysicalRings = 4;
-    for(int ringInd=0; ringInd < numPhysicalRings; ringInd++){
+    for(int ringInd=0; ringInd < PhysicalRings.size(); ringInd++){
       fEllipseParams.emplace_back(&fParams[ringInd*EllipseParams::N()]);
     }
   }
@@ -59,7 +57,12 @@ void Acclaim::PhaseCenter::ParameterManager::update(const double* params){
 
 
 void Acclaim::PhaseCenter::ParameterManager::applyPat(Adu5Pat* pat) const {
-  if(fParamSpace==ParameterSpace::PitchRollHeading){
+
+  if(fParamSpace==ParameterSpace::PitchRoll){
+    pat->pitch    = fParams[0];
+    pat->roll     = fParams[1];
+  }
+  else if(fParamSpace==ParameterSpace::PitchRollHeading){
     pat->pitch    = fParams[0];
     pat->roll     = fParams[1];
     pat->heading += fParams[2];
