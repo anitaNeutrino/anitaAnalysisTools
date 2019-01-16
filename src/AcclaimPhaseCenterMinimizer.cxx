@@ -1,5 +1,7 @@
-#include "AcclaimPhaseCenterFitter.h"
+#include "AcclaimPhaseCenterMinimizer.h"
 #include "AcclaimParameterManager.h"
+#include "AcclaimPhaseCenterFakeGeom.h"
+
 #include "TChain.h"
 #include "TFile.h"
 #include "UsefulAdu5Pat.h"
@@ -11,49 +13,8 @@
 
 
 
-Acclaim::PhaseCenterFit::FakeGeomTool::FakeGeomTool(const AnitaGeomTool* geom){
 
-  if(geom){
-    for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
-      for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	auto photoKey = std::make_pair(pol, ant);
-	fPhotoR[photoKey]   = geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-	fPhotoZ[photoKey]   = geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-	fPhotoPhi[photoKey] = geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-      }
-    }
-  }
-
-}
-
-
-
-void Acclaim::PhaseCenterFit::FakeGeomTool::restorePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
-  for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      auto key = std::make_pair(pol, ant);
-      geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fPhotoR.at(key);
-      geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = fPhotoZ.at(key);
-      geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fPhotoPhi.at(key);
-    }
-  }
-}
-
-void Acclaim::PhaseCenterFit::FakeGeomTool::overwritePhotogrammetryPositionsInAnitaGeomTool(AnitaGeomTool* geom) const {
-  for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
-    for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = getAntR(ant, pol);
-      geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol]  = getAntZ(ant, pol);
-      geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = getAntPhi(ant, pol);
-    }
-  }
-}
-
-
-
-
-
-Acclaim::PhaseCenterFit::Minimizer::Minimizer(const char* corrTreeFiles){
+Acclaim::PhaseCenter::Minimizer::Minimizer(const char* corrTreeFiles){
 
   fChain = std::make_shared<TChain>("corrTree");
   if(corrTreeFiles){
@@ -66,15 +27,14 @@ Acclaim::PhaseCenterFit::Minimizer::Minimizer(const char* corrTreeFiles){
   for(auto& a : fDdts){a.fill(0);}  
   
   fMin = std::shared_ptr<ROOT::Math::Minimizer>(ROOT::Math::Factory::CreateMinimizer("Minuit2"));
-  
-  fMin->SetMaxFunctionCalls(1e5); // for Minuit/Minuit2
+  fMin->SetMaxFunctionCalls(1e5);
   fMin->SetTolerance(0.01);
   fMin->SetPrintLevel(0);  
 
 }
 
 
-void Acclaim::PhaseCenterFit::Minimizer::setParameterSpace(ParameterSpace ps){
+void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
 
   fParamSpace = ps;
   fMin->SetFunction(fFuncs[ps]);
@@ -242,19 +202,19 @@ void Acclaim::PhaseCenterFit::Minimizer::setParameterSpace(ParameterSpace ps){
   }
 }
 
-void Acclaim::PhaseCenterFit::Minimizer::makeFunctors(){
-  fFuncs[ParameterSpace::None]             = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 0);
-  fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 3);
-  fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
-  fFuncs[ParameterSpace::RingPhi]          = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
-  fFuncs[ParameterSpace::RingZ]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 4);
-  fFuncs[ParameterSpace::RingPhiRZ]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, 12);
-  fFuncs[ParameterSpace::RingEllipse]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, EllipseParams::N()*4);
-  fFuncs[ParameterSpace::ExtraDeltaT]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenterFit::Minimizer::eval, NUM_SEAVEYS*AnitaPol::kNotAPol);
+void Acclaim::PhaseCenter::Minimizer::makeFunctors(){
+  fFuncs[ParameterSpace::None]             = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 0);
+  fFuncs[ParameterSpace::PitchRollHeading] = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 3);
+  fFuncs[ParameterSpace::RingR]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingPhi]          = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingZ]            = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 4);
+  fFuncs[ParameterSpace::RingPhiRZ]        = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, 12);
+  fFuncs[ParameterSpace::RingEllipse]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, EllipseParams::N()*4);
+  fFuncs[ParameterSpace::ExtraDeltaT]      = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, NUM_SEAVEYS*AnitaPol::kNotAPol);
 }
 
 
-TH2D* Acclaim::PhaseCenterFit::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title){
+TH2D* Acclaim::PhaseCenter::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title){
   if(pol==AnitaPol::kNotAPol){
     return nullptr;
   }
@@ -283,7 +243,7 @@ TH2D* Acclaim::PhaseCenterFit::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, 
 }
 
 
-const std::vector<double>& Acclaim::PhaseCenterFit::Minimizer::fit(AnitaPol::AnitaPol_t pol, const char* outFileName){
+const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaPol_t pol, const char* outFileName){
 
   std::cout << "Starting fit!" << std::endl;  
   fFitPol = pol;
@@ -340,7 +300,7 @@ const std::vector<double>& Acclaim::PhaseCenterFit::Minimizer::fit(AnitaPol::Ani
   return fResults;
 }
 
-void Acclaim::PhaseCenterFit::Minimizer::readInSummaries(){
+void Acclaim::PhaseCenter::Minimizer::readInSummaries(){
 
   fChain->SetBranchAddress("correlationSummary", &fSum);
   Long64_t n = fChain->GetEntries();
@@ -392,7 +352,7 @@ void Acclaim::PhaseCenterFit::Minimizer::readInSummaries(){
 }
 
 
-void Acclaim::PhaseCenterFit::Minimizer::printResults() const {
+void Acclaim::PhaseCenter::Minimizer::printResults() const {
 
   std::cout << "Results:\n";
   std::cout  << "Before the fit, the value was " << fInitial << " with:\n";
@@ -410,7 +370,7 @@ void Acclaim::PhaseCenterFit::Minimizer::printResults() const {
 }
 
 
-double Acclaim::PhaseCenterFit::Minimizer::eval(const double* params){
+double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
  
   auto geom = AnitaGeomTool::Instance();
   geom->usePhotogrammetryNumbers(true);

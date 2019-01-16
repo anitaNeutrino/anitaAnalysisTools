@@ -1,21 +1,21 @@
-#include "AcclaimParameterManager.h"
+#include "AcclaimPhaseCenterParameters.h"
 #include "AnitaGeomTool.h"
 #include "Adu5Pat.h"
 #include "TMath.h"
 
 
-std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r){
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenter::PhysicalRing& r){
   switch(r){
-  case Acclaim::PhaseCenterFit::PhysicalRing::TopHigh:
+  case Acclaim::PhaseCenter::PhysicalRing::TopHigh:
     os << "PhysicalRing::TopHigh";
     return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::TopLow:
+  case Acclaim::PhaseCenter::PhysicalRing::TopLow:
     os << "PhysicalRing::TopLow";
     return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::Middle:
+  case Acclaim::PhaseCenter::PhysicalRing::Middle:
     os << "PhysicalRing::Middle";
     return os;
-  case Acclaim::PhaseCenterFit::PhysicalRing::Bottom:
+  case Acclaim::PhaseCenter::PhysicalRing::Bottom:
     os << "PhysicalRing::Bottom";
     return os;
   }
@@ -23,17 +23,29 @@ std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::Physic
 }
 
 
+Acclaim::PhaseCenter::PhysicalRing Acclaim::PhaseCenter::antToPhysicalRing(int ant){
+  int ring = 1 + ant/NUM_PHI;
+  if(ant < NUM_PHI && (ant % 2)==0){
+    ring -= 1;
+  }
+  return static_cast<Acclaim::PhaseCenter::PhysicalRing>(ring);
+}
 
-Acclaim::PhaseCenterFit::ParameterManager::ParameterManager(ParameterSpace ps,  int nParams, const double* params)
+
+
+
+
+
+Acclaim::PhaseCenter::ParameterManager::ParameterManager(ParameterSpace ps,  int nParams, const double* params)
   : fN(nParams), fParams(params), fParamSpace(ps)
 {
 
 }
 
-Acclaim::PhaseCenterFit::ParameterManager::~ParameterManager(){;}
+Acclaim::PhaseCenter::ParameterManager::~ParameterManager(){;}
 
 
-void Acclaim::PhaseCenterFit::ParameterManager::update(const double* params){
+void Acclaim::PhaseCenter::ParameterManager::update(const double* params){
   fParams = params;
 
   if(fParamSpace==ParameterSpace::RingEllipse){
@@ -46,10 +58,10 @@ void Acclaim::PhaseCenterFit::ParameterManager::update(const double* params){
 }
 
 
-void Acclaim::PhaseCenterFit::ParameterManager::applyPat(Adu5Pat* pat) const {
+void Acclaim::PhaseCenter::ParameterManager::applyPat(Adu5Pat* pat) const {
   if(fParamSpace==ParameterSpace::PitchRollHeading){
-    pat->pitch = fParams[0];
-    pat->roll = fParams[1];
+    pat->pitch    = fParams[0];
+    pat->roll     = fParams[1];
     pat->heading += fParams[2];
   }
   else if(fParamSpace != ParameterSpace::None){
@@ -64,11 +76,11 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyPat(Adu5Pat* pat) const {
   }
 }
 
-void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) const {
+void Acclaim::PhaseCenter::ParameterManager::applyGeom(AnitaGeomTool* fGeom) const {
 
   for(int ant=0; ant < NUM_SEAVEYS; ant++){
     int phiSector = ant%NUM_PHI;
-    for(auto pol : {AnitaPol::kHorizontal,  AnitaPol::kVertical}){
+    for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
       auto ring = antToPhysicalRing(ant);
       int ringInt = static_cast<int>(ring);
 
@@ -79,7 +91,6 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
 	double phi = fParams[ringInt] + phiSector*TMath::DegToRad()*22.5;
 	fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
       }
-
       else if(fParamSpace==ParameterSpace::RingPhiRZ){
 	const int paramsPerRing = 3;
 	double phi = fParams[ringInt*paramsPerRing] + phiSector*TMath::DegToRad()*22.5;
@@ -101,7 +112,6 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
       }
     }
   }
-
 }
 
 
@@ -116,15 +126,17 @@ void Acclaim::PhaseCenterFit::ParameterManager::applyGeom(AnitaGeomTool* fGeom) 
 
 
 
-Acclaim::PhaseCenterFit::EllipseParams::EllipseParams(const double* params){
-  if(params){fill(params);}
+Acclaim::PhaseCenter::EllipseParams::EllipseParams(const double* params){
+  if(params){
+    fill(params);
+  }
 }
 
-double Acclaim::PhaseCenterFit::EllipseParams::Rb() const {
+double Acclaim::PhaseCenter::EllipseParams::Rb() const {
   return Ra* TMath::Sqrt(1 - eccentricity*eccentricity);
 }
 
-void Acclaim::PhaseCenterFit::EllipseParams::fill(const double* params){
+void Acclaim::PhaseCenter::EllipseParams::fill(const double* params){
   x0           = params[0];
   y0           = params[1];
   alpha        = params[2];
@@ -133,7 +145,7 @@ void Acclaim::PhaseCenterFit::EllipseParams::fill(const double* params){
   z            = params[5];
 }
 
-const char* Acclaim::PhaseCenterFit::EllipseParams::name(int p) {
+const char* Acclaim::PhaseCenter::EllipseParams::name(int p) {
   switch(p){
   case 0: return "x0";
   case 1: return "y0";
@@ -146,7 +158,7 @@ const char* Acclaim::PhaseCenterFit::EllipseParams::name(int p) {
 }
 
 
-void Acclaim::PhaseCenterFit::EllipseParams::phiToEllipseXY(double phi, double& x, double& y) const {
+void Acclaim::PhaseCenter::EllipseParams::phiToEllipseXY(double phi, double& x, double& y) const {
   double t = tFromPhi(phi);
   x = Ra  *TMath::Cos(t);
   y = Rb()*TMath::Sin(t);
@@ -156,14 +168,14 @@ void Acclaim::PhaseCenterFit::EllipseParams::phiToEllipseXY(double phi, double& 
   y = v.Y() + y0;
 }
 
-void Acclaim::PhaseCenterFit::EllipseParams::phiToEllipseRZ(double phi, double& r, double& z) const {
+void Acclaim::PhaseCenter::EllipseParams::phiToEllipseRZ(double phi, double& r, double& z) const {
   double x, y;
   phiToEllipseXY(phi, x, y);
   r = TMath::Sqrt(x*x + y*y);
   z = this->z;
 }
 
-double Acclaim::PhaseCenterFit::EllipseParams::tFromPhi(double phi) const {
+double Acclaim::PhaseCenter::EllipseParams::tFromPhi(double phi) const {
   // here we find the parametric angle t from the angle phi.
   double localPhi = phi - alpha; // account for rotation of ellipse
   double tan_t = (Ra/Rb())*TMath::Tan(localPhi);

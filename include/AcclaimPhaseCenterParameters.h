@@ -1,5 +1,5 @@
-#ifndef ACCLAIM_FIT_PARAMS_H
-#define ACCLAIM_FIT_PARAMS_H
+#ifndef ACCLAIM_PHASE_CENTER_PARAMS_H
+#define ACCLAIM_PHASE_CENTER_PARAMS_H
 
 #include "AnitaConventions.h"
 
@@ -8,16 +8,7 @@ class Adu5Pat;
 
 namespace Acclaim {
 
-  namespace PhaseCenterFit {
-
-    enum class PhysicalRing {TopHigh, TopLow, Middle, Bottom};
-    static PhysicalRing antToPhysicalRing(Int_t ant){
-      int ring = 1 + ant/NUM_PHI;
-      if(ant < NUM_PHI && (ant % 2)==0){
-	ring -= 1;
-      }
-      return static_cast<PhysicalRing>(ring);
-    }
+  namespace PhaseCenter {
 
     enum class ParameterSpace {None,
 			       PitchRollHeading,
@@ -28,9 +19,20 @@ namespace Acclaim {
 			       RingEllipse,
 			       ExtraDeltaT
     };
+    
+
+
+    
+    enum class PhysicalRing {TopHigh,
+			     TopLow,
+			     Middle,
+			     Bottom};
+    
+    PhysicalRing antToPhysicalRing(int ant);
 
 
 
+    
     class EllipseParams {
     public:
       double x0 = 0; ///x-coordinate of ellipse center (m)
@@ -41,8 +43,10 @@ namespace Acclaim {
       double z = 0;
 
       EllipseParams(const double* params = nullptr);
+
       static int N(){return 6;}
       inline double Rb() const;
+
       void fill(const double* params);
       static const char* name(int p);
       void phiToEllipseXY(double phi, double& x, double& y) const;
@@ -53,6 +57,8 @@ namespace Acclaim {
 
 
 
+
+    
     /**
      * @class ParameterManager
      * @brief Class to handle the nitty gritty of how the fit params map to AnitaGeomTool/Adu5Pat
@@ -81,7 +87,7 @@ namespace Acclaim {
 }
 
 
-std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenterFit::PhysicalRing& r);
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenter::PhysicalRing& r);
 
 
-#endif // ACCLAIM_FIT_PARAMS_H
+#endif // ACCLAIM_PHASE_CENTER_PARAMS_H
