@@ -17,9 +17,10 @@ int main(int argc, char* argv[]){
   // fitter.printResults();
 
   fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::PitchRoll);
-  fitter.setAllowedPairs(Acclaim::PhaseCenter::Minimizer::AllowedPairs::SamePhiSectorOrHorizontalNeigbour);
-  fitter.setPrintOnEval(true);
-  fitter.fit(AnitaPol::kNotAPol,  "pitchRoll_SamePhiSectorOrHorizontalNeigbour.root");
+  fitter.setAllowedPairs(Acclaim::PhaseCenter::Minimizer::AllowedPairs::SamePhiSector);
+  // fitter.setPrintOnEval(true);
+  // fitter.fit(AnitaPol::kNotAPol,  "pitchRoll_SamePhiSectorOrHorizontalNeigbour.root");
+  fitter.fit(AnitaPol::kNotAPol,  "pitchRoll_SamePhiSector.root");  
   fitter.printResults();
   
   // fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::PitchRollHeading);

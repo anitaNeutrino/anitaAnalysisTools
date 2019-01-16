@@ -75,6 +75,7 @@ namespace Acclaim {
       std::vector<double> fInputs;
 
       ParameterManager fParamManager;
+      ROOT::Math::Functor fFunc;
 
       std::array<std::array<Int_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> fNormalization;
       std::array<std::array<Double_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> fDdts;

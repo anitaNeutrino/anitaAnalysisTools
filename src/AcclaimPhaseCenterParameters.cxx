@@ -230,7 +230,7 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* mi
 
 void Acclaim::PhaseCenter::ParameterManager::update(const double* params){
   fParams = params;
-  std::cout << "Update! " << fParams[0]  << "\t" << fParams[1]  <<  std::endl;
+  // std::cout << "Update! " << fParams[0]  << "\t" << fParams[1]  <<  std::endl;
 
   if(fParamSpace==ParameterSpace::RingEllipse){
     fEllipseParams.clear();
@@ -255,7 +255,7 @@ void Acclaim::PhaseCenter::ParameterManager::applyPat(Adu5Pat* pat) const {
   if(fParamSpace==ParameterSpace::PitchRoll){
     pat->pitch    = fParams[0];
     pat->roll     = fParams[1];
-    std::cout << "apply!" << pat->pitch << "\t" << pat->roll << "\t"  << std::endl;
+    // std::cout << "apply!" << pat->pitch << "\t" << pat->roll << "\t"  << std::endl;
   }
   else if(fParamSpace==ParameterSpace::PitchRollHeading){
     pat->pitch    = fParams[0];

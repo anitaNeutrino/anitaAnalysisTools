@@ -37,7 +37,8 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
 
   fParamManager = ps;
   fParamManager.setInputs(fMin.get(), fInputs);
-  fMin->SetFunction(ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, fParamManager.N()));
+  fFunc = ROOT::Math::Functor(this, &Acclaim::PhaseCenter::Minimizer::eval, fParamManager.N());
+  fMin->SetFunction(fFunc);
 }
 
 
@@ -238,7 +239,7 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
   fakeGeom.overwritePhotogrammetryPositionsInAnitaGeomTool(geom);
   
   fParamManager.update(params);
-  std::cout << "Eval! " << fApplyParams << std::endl;
+  // std::cout << "Eval! " << fApplyParams << std::endl;
   if(fApplyParams){
     fParamManager.applyGeom(geom);
   }    
@@ -255,7 +256,7 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
   for(auto& a : fNormalization){a.fill(0);}
   for(auto& a : fDdts){a.fill(0);}
 
-  bool firstOne = true;
+  // bool firstOne = true;
   for(auto& cs : fSummaries){    
 
     if(fFitPol==AnitaPol::kNotAPol || cs.fPol==fFitPol){
@@ -290,10 +291,10 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
 
 	double dtExpected = usefulPat.getDeltaTExpected(corrPair.ant2, corrPair.ant1, phiWave, thetaWave);
 
-	if(firstOne){
-	  std::cout  << corrPair.ant1 << "\t" << corrPair.ant2 << "\t" << pat.pitch << "\t" << pat.roll << "\t" << dtExpected << std::endl;
-	  firstOne = false;
-	}
+	// if(firstOne){
+	//   std::cout  << corrPair.ant1 << "\t" << corrPair.ant2 << "\t" << pat.pitch << "\t" << pat.roll << "\t" << dtExpected << std::endl;
+	//   firstOne = false;
+	// }
 
 	if(fSaveResults){
 	  outputSummary->fPairs.at(pairIndex).dt_expected = dtExpected;
