@@ -7,6 +7,7 @@ int main(int argc, char* argv[]){
   Acclaim::PhaseCenter::Minimizer fitter("data/AcclaimCorrelationSummary_*.root");
 
   // fitter.setParameterSpace(Acclaim::PhaseCenter::ParameterSpace::None);
+  // fitter.setAllowedPairs(Acclaim::PhaseCenter::Minimizer::AllowedPairs::SamePhiSectorOrHorizontalNeigbour);
   // fitter.fit(AnitaPol::kNotAPol, "None.root");
   // fitter.printResults();
 

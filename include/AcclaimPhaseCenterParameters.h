@@ -7,6 +7,12 @@
 class AnitaGeomTool;
 class Adu5Pat;
 
+namespace ROOT {
+  namespace Math {
+    class Minimizer;
+  }
+}
+
 namespace Acclaim {
 
   namespace PhaseCenter {
@@ -69,16 +75,19 @@ namespace Acclaim {
 
     class ParameterManager {
     public:
-      ParameterManager(ParameterSpace ps = ParameterSpace::None,  int nParams=0, const double* params=nullptr);
+      ParameterManager(ParameterSpace ps = ParameterSpace::None);
       virtual ~ParameterManager();
+
       void update(const double* params);
+      void setInputs(ROOT::Math::Minimizer* min, std::vector<double>* inputs) const;
       void applyGeom(AnitaGeomTool* geom) const;
       void applyPat(Adu5Pat* pat) const ;
+
       const char* name(int param) const;
       int N() const {return fN;}
 
     private:
-      const int fN;
+      int fN;
       const double* fParams;
       const ParameterSpace fParamSpace;
       std::vector<EllipseParams> fEllipseParams;

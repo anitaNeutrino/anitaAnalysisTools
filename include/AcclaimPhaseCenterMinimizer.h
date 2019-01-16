@@ -73,9 +73,7 @@ namespace Acclaim {
 
       double fInitial = 0;
       std::vector<double> fInputs;
-    
-      std::map<ParameterSpace, ROOT::Math::Functor> fFuncs;
-      ParameterSpace   fParamSpace;
+
       ParameterManager fParamManager;
 
       std::array<std::array<Int_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> fNormalization;
