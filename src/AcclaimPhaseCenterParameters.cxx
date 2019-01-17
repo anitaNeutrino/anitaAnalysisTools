@@ -10,21 +10,40 @@
 
 
 std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenter::PhysicalRing& r){
-  switch(r){
-  case Acclaim::PhaseCenter::PhysicalRing::TopHigh:
-    os << "PhysicalRing::TopHigh";
-    return os;
-  case Acclaim::PhaseCenter::PhysicalRing::TopLow:
-    os << "PhysicalRing::TopLow";
-    return os;
-  case Acclaim::PhaseCenter::PhysicalRing::Middle:
-    os << "PhysicalRing::Middle";
-    return os;
-  case Acclaim::PhaseCenter::PhysicalRing::Bottom:
-    os << "PhysicalRing::Bottom";
-    return os;
-  }
+  os << toCString(r);
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Acclaim::PhaseCenter::ParameterSpace& ps){
+  os << toCString(ps);
+  return os;
+}
+
+
+const char* Acclaim::PhaseCenter::toCString(PhysicalRing r){
+  switch(r){
+  case Acclaim::PhaseCenter::PhysicalRing::TopHigh: return "PhysicalRing::TopHigh";
+  case Acclaim::PhaseCenter::PhysicalRing::TopLow:  return "PhysicalRing::TopLow";
+  case Acclaim::PhaseCenter::PhysicalRing::Middle:  return "PhysicalRing::Middle";
+  case Acclaim::PhaseCenter::PhysicalRing::Bottom:  return "PhysicalRing::Bottom";
+  }
+  return nullptr;
+}
+
+
+const char* Acclaim::PhaseCenter::toCString(ParameterSpace ps){
+  switch(ps){
+  case ParameterSpace::None:             return "ParameterSpace::None";
+  case ParameterSpace::PitchRoll:        return "ParameterSpace::PitchRoll";
+  case ParameterSpace::PitchRollHeading: return "ParameterSpace::PitchRollHeading";
+  case ParameterSpace::RingR:            return "ParameterSpace::RingR";
+  case ParameterSpace::RingPhi:          return "ParameterSpace::RingPhi";
+  case ParameterSpace::RingZ:            return "ParameterSpace::RingZ";
+  case ParameterSpace::RingPhiRZ:        return "ParameterSpace::RingPhiRZ";
+  case ParameterSpace::RingEllipse:      return "ParameterSpace::RingEllipse";
+  case ParameterSpace::ExtraDeltaT:      return "ParameterSpace::ExtraDeltaT";
+  }
+  return nullptr;
 }
 
 

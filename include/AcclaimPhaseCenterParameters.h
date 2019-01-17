@@ -27,18 +27,19 @@ namespace Acclaim {
 			       RingEllipse,
 			       ExtraDeltaT
     };
+    const char* toCString(ParameterSpace ps);
     
     
     enum class PhysicalRing {TopHigh,
 			     TopLow,
 			     Middle,
 			     Bottom};
+    const char* toCString(PhysicalRing r);
+    PhysicalRing antToPhysicalRing(int ant);
     constexpr std::array<PhysicalRing, 4> PhysicalRings {PhysicalRing::TopHigh,
 							 PhysicalRing::TopLow,
 							 PhysicalRing::Middle,
 							 PhysicalRing::Bottom};
-    PhysicalRing antToPhysicalRing(int ant);
-
 
 
     
@@ -86,7 +87,7 @@ namespace Acclaim {
 
       const char* name(int param) const;
       int N() const {return fN;}
-
+      ParameterSpace space() const {return fParamSpace;}
     private:
       int fN;
       const double* fParams;

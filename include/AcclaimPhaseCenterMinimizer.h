@@ -26,7 +26,7 @@ namespace Acclaim {
     
     /**
      * @class Minimizer
-     * @brief Well, it fits the phase centers!
+     * @brief Fits the phases centers using ROOT's Minuit minimizer.
      * 
      * Reads the output of make correlation summary
      */
@@ -37,7 +37,7 @@ namespace Acclaim {
     
       void setParameterSpace(ParameterSpace ps);
 
-      const std::vector<double>& fit(AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol, const char* outFileName = nullptr);
+      const std::vector<double>& fit(AnitaPol::AnitaPol_t pol = AnitaPol::kNotAPol);
 
       void printResults() const;
 
@@ -45,13 +45,16 @@ namespace Acclaim {
 	fPrintOnEval = print;
       }
 
-      enum class AllowedPairs {Any,
+      enum class AllowedPairs {All,
 			       SamePhiSector,
 			       SamePhiSectorOrHorizontalNeigbour};
+      static const char* toCString(AllowedPairs ap);
 
       void setAllowedPairs(AllowedPairs option) {
 	fAllowedPairs = option;
       }
+
+      static bool allowedPair(AllowedPairs ap, int ant1, int ant2);
     
     private:
       void readInSummaries();
@@ -82,7 +85,7 @@ namespace Acclaim {
 
       bool fApplyParams = true;
       bool fSaveResults = false;
-      AllowedPairs fAllowedPairs = AllowedPairs::Any;
+      AllowedPairs fAllowedPairs = AllowedPairs::All;
 
       bool allowedPair(int ant1, int ant2) const;
       template <class T> bool allowedPair(T t) const {return allowedPair(t.ant1, t.ant2);}

@@ -1,6 +1,7 @@
 #include "AcclaimPhaseCenterMinimizer.h"
 #include "AcclaimParameterManager.h"
 #include "AcclaimPhaseCenterFakeGeom.h"
+#include "OutputConvention.h"
 
 #include "TChain.h"
 #include "TFile.h"
@@ -9,7 +10,17 @@
 #include "Math/Functor.h"
 #include "Math/Minimizer.h"
 
-
+const char* Acclaim::PhaseCenter::Minimizer::toCString(AllowedPairs ap){
+  switch(ap){
+  case AllowedPairs::All:
+    return "AllowedPairs::All";
+  case AllowedPairs::SamePhiSector:
+    return "AllowedPairs::SamePhiSector";
+  case AllowedPairs::SamePhiSectorOrHorizontalNeigbour:
+    return "AllowedPairs::SamePhiSectorOrHorizontalNeigbour";
+  }
+  return nullptr;
+}
 
 
 
@@ -43,6 +54,11 @@ void Acclaim::PhaseCenter::Minimizer::setParameterSpace(ParameterSpace ps){
 
 
 bool Acclaim::PhaseCenter::Minimizer::allowedPair(int ant1, int ant2) const {
+  return allowedPair(fAllowedPairs, ant1, ant2);
+}
+
+
+bool Acclaim::PhaseCenter::Minimizer::allowedPair(AllowedPairs ap, int ant1, int ant2) {
 
   // ensure ant1 <= ant2
   if(ant1 > ant2){
@@ -60,8 +76,8 @@ bool Acclaim::PhaseCenter::Minimizer::allowedPair(int ant1, int ant2) const {
 			       return oneDifferent;
 			     };
   
-  switch(fAllowedPairs){
-  case AllowedPairs::Any:
+  switch(ap){
+  case AllowedPairs::All:
     return true;
   case AllowedPairs::SamePhiSector:
     return samePhiSector(ant1, ant2);
@@ -103,7 +119,7 @@ TH2D* Acclaim::PhaseCenter::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, con
 }
 
 
-const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaPol_t pol, const char* outFileName){
+const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaPol_t pol){
 
   std::cout << "Starting fit!" << std::endl;  
   fFitPol = pol;
@@ -112,7 +128,25 @@ const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaP
   fInitial = eval(&fInputs[0]); // get the start value.
   fApplyParams = true;
 
-  TString outputFileName = outFileName ? TString(outFileName) : TString::Format("FitterResults_%d", fFitPol);
+  std::vector<const char*> fakeArgv;
+  TString baseName = PhaseCenter::toCString(fParamManager.space());
+  baseName.ReplaceAll("::", "_");
+  fakeArgv.push_back(baseName.Data());
+
+  TString polName;
+  switch(fFitPol){
+  case AnitaPol::kHorizontal : polName = "HPol";     break;
+  case AnitaPol::kVertical   : polName = "VPol";     break;
+  default                    : polName = "BothPols"; break;
+  }  
+  fakeArgv.push_back(polName.Data());
+
+  TString pairName = toCString(fAllowedPairs);
+  pairName.ReplaceAll("::", "_");
+  fakeArgv.push_back(pairName.Data());
+  
+  Acclaim::OutputConvention oc(fakeArgv.size(), const_cast<char**>(&fakeArgv[0]));
+  TString outputFileName = oc.getOutputFileName();;
   TFile f(outputFileName, "recreate");
 
   std::vector<AnitaPol::AnitaPol_t> pols;
@@ -278,7 +312,7 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
       
       for(const auto& corrPair : cs.fPairs){
 	pairIndex++;
-	  
+
 	if(allowedPair(corrPair)==false
 	   // Channel 46V (counting from 1, i.e. 45V counting from 0) is just bad
 	   || (cs.fPol==AnitaPol::kVertical && (corrPair.ant1==45||corrPair.ant2==45))){
