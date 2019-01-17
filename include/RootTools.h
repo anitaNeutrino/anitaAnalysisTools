@@ -151,7 +151,7 @@ namespace Acclaim
 
 
 
-    void saveCanvas(TCanvas* c1, TString fileName);
+    void saveCanvas(TCanvas* c1, const char* fileName = nullptr);
     void setWhiteZeroColorScale();
     void draw2D(TH2D* hist, TString opt);
     Int_t getColorFracThroughPalette(Int_t index, Int_t maxVal);

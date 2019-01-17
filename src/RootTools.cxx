@@ -1251,11 +1251,13 @@ void Acclaim::RootTools::getLocalMaxToMinWithinLimits(const TGraph* gr,
  * @param c is a pointer to the TCanvas
  * @param fileName is the file name. Note that suffixes are added in the function!
 */
-void Acclaim::RootTools::saveCanvas(TCanvas* c, TString fileName){
+void Acclaim::RootTools::saveCanvas(TCanvas* c, const char* fileName){
 
   const int numTypes = 3;
   const char* suffixes[numTypes] = {"pdf", "png", "C"};
 
+  TString baseName = fileName ? fileName : c->GetTitle();
+  baseName.ReplaceAll(" ", "_"); // no spaces please...
   
   std::cout << "Saving this canvas as a ";
   for(int t=0; t < numTypes; t++){
@@ -1270,7 +1272,7 @@ void Acclaim::RootTools::saveCanvas(TCanvas* c, TString fileName){
   std::cout << " file..." << std::endl;
 
   for(int t=0; t < numTypes; t++){
-    TString fName = fileName + "." + TString(suffixes[t]);
+    TString fName = baseName + "." + TString(suffixes[t]);
     c->SaveAs(fName);
   }
   std::cout << "...Complete!" << std::endl;
