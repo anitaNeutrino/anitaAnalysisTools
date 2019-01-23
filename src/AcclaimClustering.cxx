@@ -177,7 +177,7 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
 
 
 /**
- * Evaluate the log-likelihood distance from any event to an arbitrary point
+ * Evaluate the log-likelihood distance from an arbitrary point relative to any event
  *
  * @param sourceLon is the source longitude
  * @param sourceLat is the source latitude
@@ -190,14 +190,16 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
 
   Double_t thetaSource, phiSource;
   usefulPat.getThetaAndPhiWave2(sourceLon, sourceLat, sourceAlt, thetaSource, phiSource);
-  thetaSource = -1*TMath::RadToDeg()*thetaSource;
-  phiSource = TMath::RadToDeg()*phiSource;
+  thetaSource = -1 * TMath::RadToDeg() * thetaSource;
+  phiSource = TMath::RadToDeg() * phiSource;
 
-  Double_t dTheta = (thetaSource - theta)/sigmaTheta;
-  Double_t dPhi = Acclaim::RootTools::getDeltaAngleDeg(phiSource, phi)/sigmaPhi;
+  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * theta) * 1.5 / sigmaPhi;
+  //  Factor of 1.5 comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
+  //  over the definite integral of cos(theta), both over the interval abs(theta) < pi / 2. Factor of -1 in front is ignorable for our purposes,
+  //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
+  Double_t dTheta = (theta - thetaSource) / sigmaTheta;
 
-  Double_t ll = dTheta * dTheta + dPhi * dPhi * cos(TMath::DegToRad() * theta) * cos(TMath::DegToRad() * theta) / (cos(TMath::DegToRad() * thetaSource) * cos(TMath::DegToRad() * thetaSource));
-//  Double_t ll = dTheta*dTheta + dPhi*dPhi;
+  Double_t ll = dPhi * dPhi + dTheta * dTheta;
 
   if(fDebug){
     std::cerr << __PRETTY_FUNCTION__ << " for " << eventNumber << ", dTheta = " << dTheta << ", dPhi = " << dPhi << ", ll = " << ll << std::endl;
