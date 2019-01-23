@@ -193,8 +193,8 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   thetaSource = -1 * TMath::RadToDeg() * thetaSource;
   phiSource = TMath::RadToDeg() * phiSource;
 
-  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * theta) * 1.5 / sigmaPhi;
-  //  Factor of 1.5 comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
+  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * theta) * sqrt(1.5) / sigmaPhi;
+  //  Factor of sqrt(1.5) comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
   //  over the definite integral of cos(theta), both over the interval abs(theta) < pi / 2. Factor of -1 in front is ignorable for our purposes,
   //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
   Double_t dTheta = (theta - thetaSource) / sigmaTheta;
