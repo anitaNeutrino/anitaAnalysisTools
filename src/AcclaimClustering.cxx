@@ -18,7 +18,7 @@
 #include "RootTools.h"
 #include "DrawStrings.h"
 #include "ThermalChain.h"
-#include "GeoidModel.h"
+#include "Geoid.h"
 #include "Hical2.h"
 
 #define ANSI_COLOR_RED     "\x1b[31m"

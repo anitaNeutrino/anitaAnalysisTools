@@ -55,12 +55,12 @@ namespace Acclaim {
       }
 
       static bool allowedPair(AllowedPairs ap, int ant1, int ant2);
+      
     
     private:
       void readInSummaries();
       void makeFunctors();
       double eval(const double* params);
-      TH2D* makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title = nullptr);
 
       const double fCorrelationThreshold = 0.4;
       const double fDeltaDeltaTThreshold = 1.0; /// ns
@@ -79,9 +79,6 @@ namespace Acclaim {
 
       ParameterManager fParamManager;
       ROOT::Math::Functor fFunc;
-
-      std::array<std::array<Int_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> fNormalization;
-      std::array<std::array<Double_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> fDdts;
 
       bool fApplyParams = true;
       bool fSaveResults = false;

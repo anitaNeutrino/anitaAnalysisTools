@@ -1,8 +1,8 @@
+
 #include "AcclaimPhaseCenterMinimizer.h"
 #include "AcclaimParameterManager.h"
 #include "AcclaimPhaseCenterFakeGeom.h"
 #include "OutputConvention.h"
-
 #include "TChain.h"
 #include "TFile.h"
 #include "UsefulAdu5Pat.h"
@@ -33,9 +33,6 @@ Acclaim::PhaseCenter::Minimizer::Minimizer(const char* corrTreeFiles){
   }
   readInSummaries();
 
-  for(auto& a : fNormalization){a.fill(0);}
-  for(auto& a : fDdts){a.fill(0);}  
-  
   fMin = std::shared_ptr<ROOT::Math::Minimizer>(ROOT::Math::Factory::CreateMinimizer("Minuit2"));
   fMin->SetMaxFunctionCalls(1e5);
   fMin->SetTolerance(0.01);
@@ -90,33 +87,6 @@ bool Acclaim::PhaseCenter::Minimizer::allowedPair(AllowedPairs ap, int ant1, int
 }
 
 
-TH2D* Acclaim::PhaseCenter::Minimizer::makeDdtHist(AnitaPol::AnitaPol_t pol, const TString& name, const char* title){
-  if(pol==AnitaPol::kNotAPol){
-    return nullptr;
-  }
-  
-  TString hName(name);
-  TString hTitle(title);
-  hTitle += pol == AnitaPol::kVertical ? "VPol" : "HPol";
-  hTitle += ";#Phi-sector; Ring";
-  TH2D* h = new TH2D(hName, hTitle,
-		     NUM_PHI, 0.5, NUM_PHI+0.5,
-		     AnitaRing::kNotARing, 0, AnitaRing::kNotARing);
-  h->GetYaxis()->SetBinLabel(1, "B");
-  h->GetYaxis()->SetBinLabel(2, "M");
-  h->GetYaxis()->SetBinLabel(3, "T");
-  for(int phi=1; phi <= NUM_PHI; phi++){
-    auto l = TString::Format("%d", phi);
-    h->GetXaxis()->SetBinLabel(phi, l.Data());
-  }
-  for(int ant = 0; ant < NUM_SEAVEYS; ant++){
-    int ring = ant/NUM_PHI;
-    int phi = ant%NUM_PHI;
-    double val = fNormalization.at(pol).at(ant) > 0 ? fDdts.at(pol).at(ant)/fNormalization.at(pol).at(ant) : 0;
-    h->Fill(phi+1, 2 - ring, val);
-  }
-  return h;
-}
 
 
 const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaPol_t pol){
@@ -157,13 +127,6 @@ const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaP
   else{
     pols.push_back(fFitPol);
   }
-
-  for(auto pol : pols){
-    TString name = TString::Format("hInitial_%d", pol);
-    auto h = makeDdtHist(pol, name);
-    h->Write();
-    delete h;
-  }
   
   fMin->Minimize();
   fResults.clear();
@@ -179,13 +142,6 @@ const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaP
   eval(&fResults[0]);
   fSaveResults = false;
   
-  for(auto pol : pols){
-    TString name = TString::Format("hFinal_%d", pol);
-    auto h = makeDdtHist(pol, name);
-    h->Write();
-    delete h;
-  }
-
   std::cout << std::endl;
 
   f.Write();
@@ -276,7 +232,7 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
   // std::cout << "Eval! " << fApplyParams << std::endl;
   if(fApplyParams){
     fParamManager.applyGeom(geom);
-  }    
+  }
 
   TTree* fOutputTree = nullptr;
   CorrelationSummary* outputSummary = nullptr;
@@ -286,11 +242,15 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
     fOutputTree->Branch("expected", &outputSummary);
   }
 
+  std::array<std::array<Int_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> normalization;
+  std::array<std::array<Double_t, NUM_SEAVEYS>, AnitaPol::kNotAPol> ddts;
+
   // reset delta delta T counters
-  for(auto& a : fNormalization){a.fill(0);}
-  for(auto& a : fDdts){a.fill(0);}
+  for(auto& a : normalization){a.fill(0);}
+  for(auto& a : ddts){a.fill(0);}
 
   // bool firstOne = true;
+#pragma omp parallel if(!fSaveResults)
   for(auto& cs : fSummaries){    
 
     if(fFitPol==AnitaPol::kNotAPol || cs.fPol==fFitPol){
@@ -336,20 +296,19 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
 	
 	double dtMeasured = corrPair.dt;
 	if(fApplyParams){
-	  fParamManager.applyDelay(dtMeasured, static_cast<AnitaPol::AnitaPol_t>(cs.fPol), corrPair.ant1, corrPair.ant2);
+	  fParamManager.applyDelay(dtMeasured, static_cast<AnitaPol::AnitaPol_t>(cs.fPol),
+				   corrPair.ant1, corrPair.ant2);
 	}
 
 
 	double ddt = (dtMeasured - dtExpected);
-	fNormalization.at(cs.fPol).at(corrPair.ant1)++;
-	fNormalization.at(cs.fPol).at(corrPair.ant2)++;	
+
+	normalization.at(cs.fPol).at(corrPair.ant1)++;
+	normalization.at(cs.fPol).at(corrPair.ant2)++;	
 	
-	fDdts.at(cs.fPol).at(corrPair.ant1) += ddt*ddt;
-	fDdts.at(cs.fPol).at(corrPair.ant2) += ddt*ddt;
-
-	// std::cout << normalization.at(cs.fPol).at(corrPair.ant1) << "\t"  << ddts.at(cs.fPol).at(corrPair.ant1) << "\t" << ddt << "\n";
-
-      }
+	ddts.at(cs.fPol).at(corrPair.ant1) += ddt*ddt;
+	ddts.at(cs.fPol).at(corrPair.ant2) += ddt*ddt;
+     }
       if(fSaveResults){
 	// std::cout << cs.fPairs.size() << "\t" << outputSummary->fPairs.size() << std::endl;
 	fOutputTree->Fill();
@@ -357,13 +316,11 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
     }
   }
 
-
+  
   double retVal = 0;
   for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
     for(int ant=0; ant < NUM_SEAVEYS; ant++){
-      if(fNormalization.at(pol).at(ant) > 0){
-	retVal += fDdts.at(pol).at(ant)/fNormalization.at(pol).at(ant);
-      }
+      retVal += ddts.at(pol).at(ant)/normalization.at(pol).at(ant);
     }
   }
 

@@ -25,6 +25,8 @@ namespace Acclaim {
 			       RingZ,
 			       RingPhiRZ,
 			       RingEllipse,
+			       AntPhi,
+			       AntPhiRZ,
 			       ExtraDeltaT
     };
     const char* toCString(ParameterSpace ps);
