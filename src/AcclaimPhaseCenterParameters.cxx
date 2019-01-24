@@ -27,6 +27,7 @@ const char* Acclaim::PhaseCenter::toCString(PhysicalRing r){
   case Acclaim::PhaseCenter::PhysicalRing::Middle:  return "PhysicalRing::Middle";
   case Acclaim::PhaseCenter::PhysicalRing::Bottom:  return "PhysicalRing::Bottom";
   }
+  std::cerr << "Warning! No string matching PhysicalRing!" << std::endl;
   return nullptr;
 }
 
@@ -41,8 +42,11 @@ const char* Acclaim::PhaseCenter::toCString(ParameterSpace ps){
   case ParameterSpace::RingZ:            return "ParameterSpace::RingZ";
   case ParameterSpace::RingPhiRZ:        return "ParameterSpace::RingPhiRZ";
   case ParameterSpace::RingEllipse:      return "ParameterSpace::RingEllipse";
+  case ParameterSpace::AntPhi:           return "ParameterSpace::AntPhi";
+  case ParameterSpace::AntPhiRZ:         return "ParameterSpace::AntPhiRZ";
   case ParameterSpace::ExtraDeltaT:      return "ParameterSpace::ExtraDeltaT";
   }
+  std::cerr << "Warning! No string matching ParameterSpace!" << std::endl;
   return nullptr;
 }
 
@@ -63,15 +67,17 @@ Acclaim::PhaseCenter::ParameterManager::ParameterManager(ParameterSpace ps)
   : fParamSpace(ps)
 {
   switch(fParamSpace){
-  case ParameterSpace::None:             fN = 0;                              break;
-  case ParameterSpace::PitchRoll:        fN = 2;                              break;
-  case ParameterSpace::PitchRollHeading: fN = 3;                              break;
-  case ParameterSpace::RingR:            fN = 4;                              break;
-  case ParameterSpace::RingPhi:          fN = 4;                              break;
-  case ParameterSpace::RingZ:            fN = 4;                              break;
-  case ParameterSpace::RingPhiRZ:        fN = 12;                             break;
-  case ParameterSpace::RingEllipse:      fN = EllipseParams::N()*4;           break;
-  case ParameterSpace::ExtraDeltaT:      fN = NUM_SEAVEYS*AnitaPol::kNotAPol; break;
+  case ParameterSpace::None:             fN = 0;                                       break;
+  case ParameterSpace::PitchRoll:        fN = 2;                                       break;
+  case ParameterSpace::PitchRollHeading: fN = 3;                                       break;
+  case ParameterSpace::RingR:            fN = 4;                                       break;
+  case ParameterSpace::RingPhi:          fN = 4;                                       break;
+  case ParameterSpace::RingZ:            fN = 4;                                       break;
+  case ParameterSpace::RingPhiRZ:        fN = 12;                                      break;
+  case ParameterSpace::RingEllipse:      fN = EllipseParams::N()*PhysicalRings.size(); break;
+  case ParameterSpace::AntPhi:           fN = NUM_SEAVEYS;                             break;
+  case ParameterSpace::AntPhiRZ:         fN = NUM_SEAVEYS*3;                           break;
+  case ParameterSpace::ExtraDeltaT:      fN = NUM_SEAVEYS*AnitaPol::kNotAPol;          break;
   }
 }
 
@@ -227,6 +233,47 @@ void Acclaim::PhaseCenter::ParameterManager::setInputs(ROOT::Math::Minimizer* mi
       }
     }
     break;
+
+  case ParameterSpace::AntPhi:
+    {
+      auto geom = AnitaGeomTool::Instance();
+      for(int ant=0; ant < NUM_SEAVEYS; ant++){
+	TString parName = TString::Format("Phi_%d", ant);
+	inputs.at(ant) =  geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][0];
+	min->SetLimitedVariable(ant, parName.Data(), inputs.at(ant), 0.01,
+				inputs.at(ant) - TMath::DegToRad()*5,
+				inputs.at(ant) + TMath::DegToRad()*5);
+      }
+    }
+    break;
+
+
+  case ParameterSpace::AntPhiRZ:
+    {
+      auto geom = AnitaGeomTool::Instance();
+      int varInd = 0;
+      for(int ant=0; ant < NUM_SEAVEYS; ant++){
+	TString parName = TString::Format("Phi_%d", ant);
+	inputs.at(varInd) =  geom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][0];
+	min->SetLimitedVariable(varInd, parName.Data(), inputs.at(varInd), 0.01,
+				inputs.at(ant) - TMath::DegToRad()*5,
+				inputs.at(ant) + TMath::DegToRad()*5);	
+	varInd++;
+
+	parName = TString::Format("R_%d", ant);
+	inputs.at(varInd) =  geom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][0];
+	min->SetVariable(varInd, parName.Data(), inputs.at(varInd), 0.01);	
+	varInd++;
+
+	parName = TString::Format("Z_%d", ant);
+	inputs.at(varInd) =  geom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][0];
+	min->SetVariable(varInd, parName.Data(), inputs.at(varInd), 0.01);	
+	
+	varInd++;	
+      }
+    }
+    break;
+    
   case ParameterSpace::ExtraDeltaT:
     inputs.resize(NUM_SEAVEYS*AnitaPol::kNotAPol, 0);
     for(auto pol : {AnitaPol::kHorizontal, AnitaPol::kVertical}){
@@ -283,13 +330,14 @@ void Acclaim::PhaseCenter::ParameterManager::applyPat(Adu5Pat* pat) const {
   }
   else if(fParamSpace != ParameterSpace::None){
     // these are the results of fitting pitch/roll with photogrammetry numbers
-    // pitch = -0.199065
-    // roll = -0.113464
-    // heading_offset = -0.552301
+    // pat->pitch    = -0.199065;
+    // pat->roll     = -0.113464;
+    // pat->heading += -0.552301;
 
-    pat->pitch    = -0.199065;
-    pat->roll     = -0.113464;
-    pat->heading += -0.552301;
+
+    // from just the vertical pairs!
+    pat->pitch = -0.201669;
+    pat->roll = -0.115879;    
   }
 }
 
@@ -304,6 +352,9 @@ void Acclaim::PhaseCenter::ParameterManager::applyGeom(AnitaGeomTool* fGeom) con
       if(fParamSpace==ParameterSpace::RingR){
 	fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt];
       }
+      if(fParamSpace==ParameterSpace::RingZ){
+	fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt];
+      }      
       else if(fParamSpace==ParameterSpace::RingPhi){
 	double phi = fParams[ringInt] + phiSector*TMath::DegToRad()*22.5;
 	fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = phi;
@@ -316,17 +367,22 @@ void Acclaim::PhaseCenter::ParameterManager::applyGeom(AnitaGeomTool* fGeom) con
 	fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ringInt*paramsPerRing+2];
       }
       else if(fParamSpace==ParameterSpace::RingEllipse){
-
-	for(int ant=0; ant < NUM_SEAVEYS; ant++){
-	  PhysicalRing ring = antToPhysicalRing(ant);
-	  int ringInd = static_cast<int>(ring);
-	  double r, z;
-	  double phi = fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
-	  fEllipseParams.at(ringInd).phiToEllipseRZ(phi, r, z);
-	  fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = r;
-	  fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = z;
-	}
+	double r, z;
+	double phi = fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol];
+	fEllipseParams.at(ringInt).phiToEllipseRZ(phi, r, z);
+	fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = r;
+	fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = z;
       }
+      else if(fParamSpace==ParameterSpace::AntPhi){
+	fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[ant];
+      }
+      else if(fParamSpace==ParameterSpace::AntPhiRZ){
+	int varInd = 3*ant;
+	fGeom->azPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[varInd];
+	fGeom->rPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[varInd+1];
+	fGeom->zPhaseCentreFromVerticalHornPhotogrammetry[ant][pol] = fParams[varInd+2];
+      }
+      
     }
   }
 }
