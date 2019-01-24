@@ -92,9 +92,9 @@ const std::vector<double>& Acclaim::PhaseCenter::Minimizer::fit(AnitaPol::AnitaP
   std::cout << "Starting fit!" << std::endl;  
   fFitPol = pol;
 
-  fApplyParams = false;
+  // fApplyParams = false;
   fInitial = eval(&fInputs[0]); // get the start value.
-  fApplyParams = true;
+  // fApplyParams = true;
 
   std::vector<const char*> fakeArgv;
   TString baseName = PhaseCenter::toCString(fParamManager.space());
@@ -247,8 +247,6 @@ double Acclaim::PhaseCenter::Minimizer::eval(const double* params){
   for(auto& a : normalization){a.fill(0);}
   for(auto& a : ddts){a.fill(0);}
 
-  // bool firstOne = true;
-#pragma omp parallel if(!fSaveResults)
   for(auto& cs : fSummaries){    
 
     if(fFitPol==AnitaPol::kNotAPol || cs.fPol==fFitPol){
