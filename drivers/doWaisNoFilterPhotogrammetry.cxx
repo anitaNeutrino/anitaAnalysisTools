@@ -3,7 +3,6 @@
 #include "AcclaimFilters.h"
 #include "UCFilters.h"
 #include "AcclaimCmdLineArgs.h"
-#include <memory>
 
 using namespace Acclaim;
 
