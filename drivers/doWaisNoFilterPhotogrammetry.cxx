@@ -22,12 +22,12 @@ int main(int argc, char* argv[]){
   
   Acclaim::CmdLineArgs args(argc, argv);
 
-  auto strat = std::make_shared<FilterStrategy>();
+  auto strat = new FilterStrategy();
   // ALFAFilter* alfaFilter = new ALFAFilter(Filters::Bands::alfaLowPassGHz);
   // strat->addOperation(alfaFilter);
   // UCorrelator::fillStrategyWithKey(strat, Acclaim::Filters::getCosminsFavouriteSineSubName());
   
-  AnalysisFlow analysis(&args, strat.get());
+  AnalysisFlow analysis(&args, strat);
   analysis.doAnalysis();
 
   return 0;
