@@ -9,17 +9,7 @@ using namespace Acclaim;
 
 int main(int argc, char* argv[]){
 
-  auto geom = AnitaGeomTool::Instance();
-  geom->usePhotogrammetryNumbers(true);
-  
-  auto calib = AnitaEventCalibrator::Instance();
-  for(auto& channelsPerSurf : calib->relativePhaseCenterToAmpaDelays){
-    for(auto& chanExtraDt : channelsPerSurf){
-      chanExtraDt = 0;
-    }
-  }
-
-  
+  Acclaim::RootTools::setPhotogrammetry(true);
   Acclaim::CmdLineArgs args(argc, argv);
 
   auto strat = new FilterStrategy();

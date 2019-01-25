@@ -32,6 +32,51 @@
 #include "TObjArray.h"
 #include "TObjString.h"
 
+#include "AnitaGeomTool.h"
+#include "AnitaEventCalibrator.h"
+
+
+/** 
+ * Set the various calibrators to use photogrammetry numbers.
+ * 
+ * @param photo true or false
+ */
+void Acclaim::RootTools::setPhotogrammetry(bool photo){
+  
+  auto geom = AnitaGeomTool::Instance();
+  geom->usePhotogrammetryNumbers(photo);
+
+  
+  auto calib = AnitaEventCalibrator::Instance();
+
+  // here we store the extra channel offsets on the first call.
+  // if someone's done this by hand, then this will be nonsense...
+  static std::vector<double> calibDeltaTs;
+  if(calibDeltaTs.size()==0){
+    for(auto& channelsPerSurf : calib->relativePhaseCenterToAmpaDelays){
+      for(auto& chanExtraDt : channelsPerSurf){
+	calibDeltaTs.push_back(chanExtraDt);
+      }
+    }
+  }
+
+  
+  int chanInd = 0;
+  for(auto& channelsPerSurf : calib->relativePhaseCenterToAmpaDelays){
+    for(auto& chanExtraDt : channelsPerSurf){
+      if(photo){
+	chanExtraDt = 0;
+      }
+      else{
+	calibDeltaTs.at(chanInd);
+	chanInd++;
+      }
+    }
+  }
+}
+
+
+
 //---------------------------------------------------------------------------------------------------------
 /**
  * @brief Silly test function to generate a UsefulAnitaEvent

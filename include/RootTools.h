@@ -75,6 +75,8 @@ namespace Acclaim
       }
     }
 
+    void setPhotogrammetry(bool photo=true);
+    
     // for histogramming the whole flight.
     static const UInt_t a3StartTime = 1418869215; //!< Time of first event in ANITA-3 run 352
     static const UInt_t a3EndTime = 1420782770; //!< Time of last event + 1 second
