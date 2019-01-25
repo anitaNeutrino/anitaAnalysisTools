@@ -372,7 +372,9 @@ void Acclaim::AnalysisFlow::prepareEverything(const char* preferredSettingsFileN
     fFilterStrat = new FilterStrategy();
   }  
 
-  fNoiseMonitor = new NoiseMonitor(fFilterStrat);
+  if(fUseNoiseMonitor){
+    fNoiseMonitor = new NoiseMonitor(fFilterStrat);
+  }
 
   fLastEventConsidered = 0;
 }
