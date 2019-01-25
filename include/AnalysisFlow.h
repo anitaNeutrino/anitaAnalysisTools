@@ -148,21 +148,21 @@ namespace Acclaim
     int fNumDivisions;			///< For parallel processing the run is divided into this many portions
     int fDivision;			///< Which portion of the run to process (runs from 0 to fNumDivisions)
 
-    AnitaDataset* fData;		///< Rootified data handler
-    Long64_t fFirstEntry;		///< The first entry to process (derived from fDivision and fNumDivisions)
-    Long64_t fLastEntry;		///< The final entry to process (derived from fDivision and fNumDivisions)
+    AnitaDataset* fData = nullptr;		///< Rootified data handler
+    Long64_t fFirstEntry = 0;		///< The first entry to process (derived from fDivision and fNumDivisions)
+    Long64_t fLastEntry = 0;		///< The final entry to process (derived from fDivision and fNumDivisions)
 
-    AnalysisReco* fReco;		///< The reconstruction class, fills an AnitaEventSummary
-    FilterStrategy* fFilterStrat;	///< Which filter strategy is applied to the events
-    AnalysisSettings* fSettings;	///< Contains configurable numbers parsed from an Acclaim analysis settings file.
-    AnitaEventSummary* fEventSummary;	///< The most recently filled AnitaEventSummary, updated after each event processed
-    FilteredAnitaEvent* fEv;		///< The most recently produced FilteredAnitaEvent, updated after each event processed
-    NoiseMonitor* fNoiseMonitor;	///< Measures the noise
-    UInt_t fLastEventConsidered;	///< Tracks the event numbers processed by the class
+    AnalysisReco* fReco = nullptr;		///< The reconstruction class, fills an AnitaEventSummary
+    FilterStrategy* fFilterStrat = nullptr;	///< Which filter strategy is applied to the events
+    AnalysisSettings* fSettings = nullptr;	///< Contains configurable numbers parsed from an Acclaim analysis settings file.
+    AnitaEventSummary* fEventSummary = nullptr;	///< The most recently filled AnitaEventSummary, updated after each event processed
+    FilteredAnitaEvent* fEv = nullptr;		///< The most recently produced FilteredAnitaEvent, updated after each event processed
+    NoiseMonitor* fNoiseMonitor = nullptr;	///< Measures the noise
+    UInt_t fLastEventConsidered = 0;	///< Tracks the event numbers processed by the class
 
     TString fOutFileBaseName;		///< The meat of the output file name
-    TFile* fOutFile;			///< the output file, will contain TTree of AnitaEventSummary
-    TTree* fSumTree;			///< The produced TTree of AnitaEventSummary
+    TFile* fOutFile = nullptr;			///< the output file, will contain TTree of AnitaEventSummary
+    TTree* fSumTree = nullptr;			///< The produced TTree of AnitaEventSummary
 
     /** 
      * @brief Create the data set if not already done

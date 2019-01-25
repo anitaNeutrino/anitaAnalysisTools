@@ -26,17 +26,7 @@ Acclaim::AnalysisFlow::AnalysisFlow(Acclaim::CmdLineArgs* args, FilterStrategy* 
   }
 
 
-  fSumTree = NULL;
-  fData = NULL;
-  fReco = NULL;
-  fOutFile = NULL;
-  fSettings = NULL;
-  fEventSummary = NULL;
-  fEv = NULL;
 
-  fFirstEntry=0;
-  fLastEntry=0;
-  fLastEventConsidered = 0;
   fDebug = 0;
   fOutFileCompressionLevel = 9;
   fOutFileCompressionAlgo = 2;
