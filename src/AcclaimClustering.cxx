@@ -1051,12 +1051,25 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents2(UInt_t eventInd, st
 
 Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(const Event& event, const Cluster& cluster){
 
-  Double_t deltaThetaDeg, deltaPhiDeg;
-  getDeltaThetaDegDeltaPhiDegEventCluster(event, cluster, deltaThetaDeg, deltaPhiDeg);
+  Double_t phiWave, thetaWave;
+  event.usefulPat.getThetaAndPhiWave2(cluster.longitude, cluster.latitude, cluster.altitude, thetaWave, phiWave);
+  Double_t phiDeg = TMath::RadToDeg() * phiWave;
+  Double_t thetaDeg = -1 * TMath::RadToDeg() * thetaWave;
+  Double_t thetaMean = (thetaDeg + event.theta) / 2;
 
-  Double_t dThetaNorm = deltaThetaDeg/event.sigmaTheta;
-  Double_t dPhiNorm = deltaPhiDeg/event.sigmaPhi;
-  Double_t angSq =  dThetaNorm*dThetaNorm + dPhiNorm*dPhiNorm;
+  Double_t deltaPhiDeg, deltaThetaDeg;
+  getDeltaThetaDegDeltaPhiDegEventCluster(event, cluster, deltaThetaDeg, deltaPhiDeg); 
+
+  Double_t dPhiNorm = -1 * deltaPhiDeg * cos(TMath::DegToRad() * thetaMean) * sqrt(1.5) / event.sigmaPhi;
+  //  Factor of sqrt(1.5) comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
+  //  over the definite integral of cos(theta), both over the interval abs(theta) < pi / 2. Factor of -1 in front is ignorable for our purposes,
+  //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
+  //  dPhi originally weighted by cos(theta) as opposed to cos(thetaMean), but I think the article
+  //  https://en.wikipedia.org/wiki/Geographical_distance#Spherical_Earth_projected_to_a_plane is on to something.
+  Double_t dThetaNorm = deltaThetaDeg / event.sigmaTheta;
+
+  Double_t angSq =  dThetaNorm * dThetaNorm + dPhiNorm * dPhiNorm;
+
   // if(fDebug){
   //   // if(event.cluster < 0 && event.antarcticaHistBin == cluster.antarcticaHistBin){
   //   if(event.cluster < 0 && eventInd == cluster.seedEvent){
@@ -1071,7 +1084,6 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(cons
   //   }
   // }
   // }
-
 
   return angSq;
 }
