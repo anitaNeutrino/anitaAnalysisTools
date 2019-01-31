@@ -1856,7 +1856,138 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
   return n;
 }
 
+
 Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const char* summaryGlob, bool isMC){
+
+  Long64_t n = 0;
+  if(summaryGlob){
+    /**
+     * First, let's try and see if we're reading in the output of a clustering!
+     * This will be the case in the new MC clustering paradigm
+     */
+
+    TFile* f = TFile::Open(summaryGlob);
+    TTree* eventTree = NULL;
+    if(f){
+      eventTree = (TTree*) f->Get("eventTree");
+    }
+
+    /**
+     * Here we enter the viper's nest of resetting the cluster/event info.
+     * This must overwrite the this->llEventCuts vector to match the clusters in this file.
+     */
+    if(eventTree){
+      std::cout << "Info in " << __PRETTY_FUNCTION__ << ": reading in already clustered events: " << summaryGlob << std::endl;
+      Event* event = NULL;
+      eventTree->SetBranchAddress("event", &event);
+      n = eventTree->GetEntries();
+      events.reserve(n);
+      ProgressBar p(n);
+      for(Long64_t entry=0; entry < n; entry++){
+        eventTree->GetEntry(entry);
+        event->setupUsefulPat(false);
+        events.push_back(*event);
+        p.inc(entry);	
+      }
+      std::cout << "Read in " << n << " events." << std::endl;
+
+      clusters.clear();
+      llEventCuts.clear();
+
+      Acclaim::Clustering::Cluster* cluster = NULL;
+      TTree* clusterTree = NULL;
+      Int_t treeInd=0;
+      do {
+        TString treeName = TString::Format("clusterTree%d", treeInd);
+        clusterTree = (TTree*)f->Get(treeName);
+        if(clusterTree){
+          clusterTree->SetBranchAddress("cluster", &cluster);
+          const Long64_t nC = clusterTree->GetEntries();
+
+          clusters.push_back(std::vector<Cluster>());
+          clusters.back().reserve(nC);
+
+          for(Long64_t entry=0; entry < nC; entry++){
+            clusterTree->GetEntry(entry);
+            if(entry==0){
+              llEventCuts.push_back(cluster->llEventCut);
+            }
+            clusters.back().push_back(*cluster);
+          }
+          treeInd++;
+        }
+      } while(clusterTree!=NULL);
+      f->Close();
+
+      std::cout << "Info in " << __PRETTY_FUNCTION__ << ", overwrote llEventCuts to: ";
+      for(UInt_t z=0; z < llEventCuts.size(); z++){
+        std::cout << llEventCuts[z];
+        if(z < llEventCuts.size() - 1){
+          std::cout << ", ";
+        }
+      }
+      std::cout << std::endl;
+
+      // make sure to not do event clustering again, or read in base list,
+      // that hard work was already done...
+      fEventsAlreadyClustered = true;
+      fReadInBaseList = true;
+    } else {
+      TChain* t = new TChain("sumTree");
+      t->Add(summaryGlob);
+
+      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
+      UInt_t eventNumber;
+      Int_t evNum;
+
+      t->SetBranchAddress("pol", &pol);
+      t->SetBranchAddress("ind", &peakInd);
+      t->SetBranchAddress("weight", &weight);
+      t->SetBranchAddress("energy", &mc_energy);
+      t->SetBranchAddress("phi", &peak_phi);
+      t->SetBranchAddress("theta", &peak_theta);
+      t->SetBranchAddress("run", &run);
+      t->SetBranchAddress("anita_latitude", &anita_latitude);
+      t->SetBranchAddress("anita_longitude", &anita_longitude);
+      t->SetBranchAddress("anita_altitude", &anita_altitude);
+      t->SetBranchAddress("anita_heading", &anita_heading);
+      t->SetBranchAddress("snr", &coherent_filtered_snr);
+      t->SetBranchAddress("eventNumber", &evNum);
+      t->SetBranchAddress("lastFewDigits", &lastFew);
+      t->SetBranchAddress("F", &F);
+      t->SetBranchAddress("isWais", &isWais);
+      t->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
+
+      t->Draw(">>fEntryList", fCut, "entrylist");
+      fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
+      t->SetEntryList(fEntryList);
+      printf("%d entries loaded\n", fEntryList->GetN());
+
+      for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
+        n++;
+        t->GetEntry(t->GetEntryNumber(entry));
+        eventNumber = UInt_t( int(evNum / 10000) * 10000 + int(lastFew));
+//        if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
+        if(peak_theta > 0) {
+
+          // switches theta convention (i used the UCorrelator convention for theta)
+          peak_theta = -1* peak_theta;
+          events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
+                (double)peak_phi, (double)peak_theta,
+                (int)llEventCuts.size(), eventNumber, (int)run,
+                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+                (double)coherent_filtered_snr));
+          if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
+        }
+      }
+      delete t;
+    }
+  }
+  return n;
+}
+
+
+Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(const char* summaryGlob){
 
   Long64_t n = 0;
   if(summaryGlob){
@@ -1970,7 +2101,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
         t->GetEntry(t->GetEntryNumber(entry));
         eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
         if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
-        if(!isMC && peak_theta > 0)
+        if(peak_theta > 0)
         {
           // switches theta convention (i used the UCorrelator convention for theta)
           peak_theta = -1* peak_theta;
@@ -1981,23 +2112,13 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
                 (double)coherent_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
         }
-        if(isMC)
-        {
-          if(tr3->Integer(1000) >= fPercentOfMC) continue;
-          // switches theta convention
-          peak_theta = -1* peak_theta;
-          mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
-                (double)peak_phi, (double)peak_theta,
-                (int)llEventCuts.size(), eventNumber, (int)run,
-                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)coherent_filtered_snr));
-        }
       }
       delete t;
     }
   }
   return n;
 }
+
 
 void Acclaim::Clustering::LogLikelihoodMethod::readInSummariesForTesting(const char* summaryGlob){
 
@@ -2040,6 +2161,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSummariesForTesting(const c
   }
   return;
 }
+
 
 void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_cluster)
 {

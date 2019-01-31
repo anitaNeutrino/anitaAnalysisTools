@@ -256,6 +256,7 @@ namespace Acclaim{
 
       Long64_t readInSummaries(const char* summaryGlob);
       Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
+      Long64_t readInSampleTreeSummaries(const char* summaryGlob);
       void readInSummariesForTesting(const char* summaryGlob);
       void pickEventsFromList(int n_in_cluster);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
