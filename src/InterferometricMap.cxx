@@ -936,6 +936,7 @@ TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
     double sourceLon, sourceLat, sourceAlt, thetaAdj;
     
     int success = fUsefulPat->traceBackToContinent3(phiWave, thetaWave, &sourceLon, &sourceLat, &sourceAlt, &thetaAdj);
+    (void) success;
 
     TGraphAntarctica* grSource = new TGraphAntarctica(1, &sourceLon, &sourceLat);
     grSource->SetName("Source");
@@ -983,7 +984,9 @@ TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
     
     TLegend* l = new TLegend(0.79, 0.69, 0.99, 0.99);
     l->AddEntry(grAnita, "ANITA", "p");
-    l->AddEntry(grSource, "Source", "p");
+    double thetaHorizon = fUsefulPat->getThetaHorizon(fPeakPhi*TMath::DegToRad());
+    double dThetaHorizon = -thetaHorizon*TMath::RadToDeg() - fPeakTheta;
+    l->AddEntry(grSource, TString::Format("#delta#theta_{horizon}=%4.2lf", dThetaHorizon), "p");
     l->AddEntry(arr, "Projection", "l");
     l->Draw();
 
@@ -1015,7 +1018,7 @@ TPad* Acclaim::InterferometricMap::makeProjectionCanvas(TPad* pad) {
 	  
 	  double lon, lat, alt, dTheta = 0;
 	  int success = fUsefulPat->traceBackToContinent3(x+x0, y+y0, &lon, &lat, &alt, &dTheta);
-
+	  (void) success;
 	  if(fabs(dTheta) <= 1e-8){
 	    grSigma->SetPoint(grSigma->GetN(), lon, lat);
 	  }

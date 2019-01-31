@@ -12,7 +12,7 @@
 
 ClassImp(Acclaim::AnalysisReco);
 
-
+const double noGoodValue = -9999;
 
 /** 
  * Default constructor
@@ -445,27 +445,27 @@ void Acclaim::AnalysisReco::process(const FilteredAnitaEvent * fEv, AnitaEventSu
 	// }
 
         if(fEv->getGPS() != nullptr){
-          UsefulAdu5Pat usefulPat(fEv->getGPS());
+          fUsefulPat = UsefulAdu5Pat(fEv->getGPS());
           int success = 0;
           if(sum->peak[pol][peakInd].theta < 0){ // work around for bug in traceBackToContinent
             Double_t phiWave = TMath::DegToRad()*sum->peak[pol][peakInd].phi;
             Double_t thetaWave = -1*TMath::DegToRad()*sum->peak[pol][peakInd].theta;
 
-            success = usefulPat.traceBackToContinent3(phiWave, thetaWave,
+            success = fUsefulPat.traceBackToContinent3(phiWave, thetaWave,
 						      &sum->peak[pol][peakInd].longitude,
 						      &sum->peak[pol][peakInd].latitude,
 						      &sum->peak[pol][peakInd].altitude,
 						      &sum->peak[pol][peakInd].theta_adjustment_needed);
           }
           if(success==0){
-            sum->peak[pol][peakInd].longitude = -9999;
-            sum->peak[pol][peakInd].latitude = -9999;
-            sum->peak[pol][peakInd].altitude = -9999;
-            sum->peak[pol][peakInd].theta_adjustment_needed = -9999;
-            sum->peak[pol][peakInd].distanceToSource = -9999;
+            sum->peak[pol][peakInd].longitude = noGoodValue;
+            sum->peak[pol][peakInd].latitude = noGoodValue;
+            sum->peak[pol][peakInd].altitude = noGoodValue;
+            // sum->peak[pol][peakInd].theta_adjustment_needed = noGoodValue;
+            sum->peak[pol][peakInd].distanceToSource = noGoodValue;
           }
           else{
-            sum->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*usefulPat.getTriggerTimeNsFromSource(sum->peak[pol][peakInd].latitude,
+            sum->peak[pol][peakInd].distanceToSource = SPEED_OF_LIGHT_NS*fUsefulPat.getTriggerTimeNsFromSource(sum->peak[pol][peakInd].latitude,
 													      sum->peak[pol][peakInd].longitude,
 													      sum->peak[pol][peakInd].altitude);
           }
@@ -556,8 +556,8 @@ void Acclaim::AnalysisReco::setTriggerInfoFromPeakPhi(const RawAnitaHeader* head
 
   AnitaPol::AnitaPol_t xPol = RootTools::swapPol(pol);
   // const RawAnitaHeader* header = fEv->getHeader();
-  peak.hwAngle = -9999;
-  peak.hwAngleXPol = -9999;
+  peak.hwAngle = noGoodValue;
+  peak.hwAngleXPol = noGoodValue;
 
   for(int phi=0; phi < NUM_PHI; phi++){
     int phiWasTriggered = header->isInL3Pattern(phi, pol);
@@ -1133,11 +1133,11 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
   // 2-3: Fine map layers title
   // 3-4: Fine maps (divided into fDrawNPeaks internally)
   // 4-5: Detailed data tables
-  std::vector<double> wholePadVLayers = {1, 0.95, 0.75, 0.72, 0.3,  0};
+  std::vector<double> wholePadVLayers = {1, 0.95, 0.75, 0.72, 0.3, 0.01};
   Int_t wholePadLayer = 0;
 
   if(fDrawNPeaks==1){ // tweak layout as there's too much space for just 1 fine map
-    wholePadVLayers = {1, 0.95, 0.65, 0.62, 0.35,  0};
+    wholePadVLayers = {1, 0.95, 0.65, 0.62, 0.35,  0.01};
   }
 
   if(wholePad==nullptr){
@@ -1520,13 +1520,26 @@ void Acclaim::AnalysisReco::drawSummary(TPad* wholePad, AnitaPol::AnitaPol_t pol
       pt->SetTextColor(peakColors[pol][peakInd]);
       pt->SetLineColor(peakColors[pol][peakInd]);
       pt->AddText(TString::Format("Image peak = %4.4lf", fSummary.peak[pol][peakInd].value));
-      pt->AddText(TString::Format("#phi_{fine} = %4.2lf#circ", fSummary.peak[pol][peakInd].phi));
-      pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",fSummary.peak[pol][peakInd].theta));
+      pt->AddText(TString::Format("#phi = %4.2lf#circ, #theta = %4.2lf#circ", fSummary.peak[pol][peakInd].phi, fSummary.peak[pol][peakInd].theta));
+      // pt->AddText(TString::Format("#theta_{fine} = %4.2lf#circ",fSummary.peak[pol][peakInd].theta));
       pt->AddText(TString::Format("Hilbert peak = %4.2lf mV, ", fSummary.coherent[pol][peakInd].peakHilbert));
+      if(fSummary.peak[pol][peakInd].latitude != noGoodValue){
+	pt->AddText("Intersects ground at");
+	pt->AddText(TString::Format("Latitude = %4.2lf#circ", fSummary.peak[pol][peakInd].latitude));
+	pt->AddText(TString::Format("Longitude = %4.2lf#circ", fSummary.peak[pol][peakInd].longitude));
+	pt->AddText(TString::Format("Altitude = %d m", static_cast<int>(fSummary.peak[pol][peakInd].altitude)));	
+      }
+      else {
+	pt->AddText("No intersection!");
+	pt->AddText("Latitude = N/A");
+	pt->AddText("Longitude = N/A");
+	pt->AddText("Altitude = N/A");	
+      }
 
-      pt->AddText(TString::Format("Latitude = %4.2lf #circ", fSummary.peak[pol][peakInd].latitude));
-      pt->AddText(TString::Format("Longitude = %4.2lf #circ", fSummary.peak[pol][peakInd].longitude));
-      pt->AddText(TString::Format("Altitude = %4.2lf #circ", fSummary.peak[pol][peakInd].altitude));
+      double thetaHorizon = fUsefulPat.getThetaHorizon(fSummary.peak[pol][peakInd].phi*TMath::DegToRad());
+      std::cout << thetaHorizon << "\t"  << thetaHorizon*TMath::RadToDeg() << std::endl;
+      double dThetaHorizon = -thetaHorizon*TMath::RadToDeg() - fSummary.peak[pol][peakInd].theta;
+      pt->AddText(TString::Format("#delta#theta_{horizon} = %4.2lf#circ", dThetaHorizon));
       pt->Draw();
     }
     else{

@@ -450,6 +450,7 @@ namespace Acclaim
     std::vector<Int_t> fPhiSectorToAnts[NUM_PHI]; ///< Which antennas to use to make coherently summed waveforms depending on the phi-sector of the peak.
 
     AnitaEventSummary fSummary; ///< A copy of the AnitaEventSummary from the most recently processed event.
+    UsefulAdu5Pat fUsefulPat; ///< A copy of useful version of the GPS data from the most recently processed event.
     CrossCorrelator* fCrossCorr; ///< CrossCorrelator generates the set of cross-correlations required to make an InterferometricMap
     bool fSpawnedCrossCorrelator; ///< Did I initialize a CrossCorrelator for #fCrossCorr, or was I given a CrossCorrelator initialized by someone else?
     InterferometryCache fDtCache; ///< Caches antenna delays as a function of incoming angle, for quickly making an Interferometric map
