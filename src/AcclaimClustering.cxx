@@ -56,6 +56,20 @@ namespace ResolutionModel{
 }
 
 
+/**
+ * @namespace VarianceModel
+ * @brief Parameters defining the variance model, where spherical curvature in the interferometric map is considered
+ *
+ * Derivation of these numbers is analogous to what is seen in the macro plotCalPulserResolution.C, except the formula has closer to do with the square of the argument
+ */
+namespace VarianceModel{
+  const int n = 3;
+  const double phiParams[n]   = {5.09057,  8.01369e-01, 1.}; //For now, these numbers have to do with A4 only
+  const double thetaParams[n] = {1.34307, 7.09382e-01, 1.}; //For now, these numbers have to do with A4 only
+  TString formula = "[0]/(pow(x,[1]) + [2])";
+
+}
+
 
 /**
  * @brief Wrapper function to calculate the angular resolution for clustering
@@ -112,6 +126,58 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
 }
 
 
+/**
+ * @brief Wrapper function to calculate the angular variance for clustering
+ *
+ * @param sum is the AnitaEventSummary
+ * @param pol the polarisation of interest
+ * @param peakInd the peak of the map of interest
+ * @param var_theta the calculated theta variance (degrees)
+ * @param var_phi the calculated phi variance (degrees)
+ */
+void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& var_theta, double& var_phi){
+  const double x = sum->coherent_filtered[pol][peakInd].snr;
+  getAngularVariance(x, var_theta, var_phi);
+}
+
+
+/**
+ * @brief Calculate the angular variance for clustering
+ * @todo Currently derived from WAIS pulses, but should probably be from MC
+ *
+ * @param x the parameterization variable
+ * @param var_theta the calculated theta variance (degrees)
+ * @param var_phi the calculated phi variance (degrees)
+ */
+void Acclaim::Clustering::getAngularVariance(double x, double & var_theta, double & var_phi){
+//  TString formula = "[0]/(pow(x,[1]) + [2])";
+  var_phi = VarianceModel::phiParams[0]/(pow(x, VarianceModel::phiParams[1]) + VarianceModel::phiParams[2]);
+  var_theta = VarianceModel::thetaParams[0]/(pow(x, VarianceModel::thetaParams[1]) + VarianceModel::thetaParams[2]);
+}
+
+
+TCanvas* Acclaim::Clustering::drawAngularVarianceModel(double maxSnr){
+  TCanvas* c1 = new TCanvas();
+
+  TF1* fTheta = new TF1("fThetaVarianceModel", VarianceModel::formula, 0, maxSnr);
+  TF1* fPhi = new TF1("fThetaVarianceModel", VarianceModel::formula, 0, maxSnr);
+  for(int i=0; i < ResolutionModel::n; i++){
+    fTheta->SetParameter(i, VarianceModel::thetaParams[i]);
+    fPhi->SetParameter(i, VarianceModel::phiParams[i]);
+  }
+
+  fPhi->Draw();
+  fPhi->SetLineColor(kRed);
+  fTheta->Draw("lsame");
+  fTheta->SetLineColor(kBlue);
+  fPhi->SetBit(kCanDelete);
+  fTheta->SetBit(kCanDelete);
+
+  fPhi->SetMinimum(0.01);
+  c1->Modified();
+  c1->Update();
+  return c1;
+}
 
 
 /**
@@ -194,13 +260,12 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   thetaSource = -1 * TMath::RadToDeg() * thetaSource;
   thetaMean = (theta + thetaSource) / 2;
 
-  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * thetaMean) * sqrt(1.5) / sigmaPhi;
-  //  Factor of sqrt(1.5) comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
-  //  over the definite integral of cos(theta), both over the interval abs(theta) < pi / 2. Factor of -1 in front is ignorable for our purposes,
+  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * thetaMean) / sqrt(varPhi);
+  //  Factor of -1 in front is ignorable for our purposes,
   //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
   //  dPhi originally weighted by cos(theta) as opposed to cos(thetaMean), but I think the article
   //  https://en.wikipedia.org/wiki/Geographical_distance#Spherical_Earth_projected_to_a_plane is on to something.
-  Double_t dTheta = (theta - thetaSource) / sigmaTheta;
+  Double_t dTheta = (theta - thetaSource) / sqrt(varTheta);
 
   Double_t ll = dPhi * dPhi + dTheta * dTheta;
 
@@ -215,7 +280,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
       ll += distOverHorizonM;
     }
     if(fDebug){
-      std::cerr << __PRETTY_FUNCTION__ << " for " << eventNumber << ", we are " << distM/1000 << "km from the source, after horizon penalty, ll = " << ll << std::endl;
+      std::cerr << __PRETTY_FUNCTION__ << " for " << eventNumber << ", we are " << distM / 1000 << "km from the source, after horizon penalty, ll = " << ll << std::endl;
     }
   }
 
@@ -247,6 +312,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
   selfLogLikelihood = -9999;
   anita = sum->anitaLocation;
   getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
+  getAngularVariance(sum, pol, peakInd, varTheta, varPhi);
   antarcticaHistBin = -1;
   fDebug = false;
   nearestKnownBaseLogLikelihood = DBL_MAX;
@@ -289,7 +355,9 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   anita.altitude = anita_altitude;
   anita.heading = anita_heading;
 
-  getAngularResolution(coherent_filtered_snr, sigmaTheta, sigmaPhi);  
+  getAngularResolution(coherent_filtered_snr, sigmaTheta, sigmaPhi);
+
+  getAngularVariance(coherent_filtered_snr, varTheta, varPhi);
 
   // getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
   antarcticaHistBin = -1;
@@ -335,6 +403,8 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   peakIndex = -1;
   sigmaTheta = default_sigma_theta;
   sigmaPhi = default_sigma_phi;
+  varTheta = default_var_theta;
+  varPhi = default_var_phi;
   for(int dim=0; dim < nDim; dim++){
     centre[dim] = 0;
   }
@@ -386,6 +456,9 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
 
   sigmaTheta = event.sigmaTheta;
   sigmaPhi = event.sigmaPhi;
+
+  varTheta = event.varTheta;
+  varPhi = event.varPhi;
 
   if(nThresholds!=event.nThresholds){
     deleteArrays();
@@ -1060,13 +1133,12 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getAngDistSqEventCluster(cons
   Double_t deltaPhiDeg, deltaThetaDeg;
   getDeltaThetaDegDeltaPhiDegEventCluster(event, cluster, deltaThetaDeg, deltaPhiDeg); 
 
-  Double_t dPhiNorm = -1 * deltaPhiDeg * cos(TMath::DegToRad() * thetaMean) * sqrt(1.5) / event.sigmaPhi;
-  //  Factor of sqrt(1.5) comes from expectation value of cos(theta)^2 in denominator, equal to the ratio of the definite integral of cos(theta)^3
-  //  over the definite integral of cos(theta), both over the interval abs(theta) < pi / 2. Factor of -1 in front is ignorable for our purposes,
-  //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
+  Double_t dPhiNorm = -1 * deltaPhiDeg * cos(TMath::DegToRad() * thetaMean) / sqrt(event.varPhi);
+  //  Factor of -1 in front is ignorable for our purposes, but is there to drive home the ANITA angle convention
+  //  in the geometric delays of our interferometic maps.
   //  dPhi originally weighted by cos(theta) as opposed to cos(thetaMean), but I think the article
   //  https://en.wikipedia.org/wiki/Geographical_distance#Spherical_Earth_projected_to_a_plane is on to something.
-  Double_t dThetaNorm = deltaThetaDeg / event.sigmaTheta;
+  Double_t dThetaNorm = deltaThetaDeg / sqrt(event.varTheta);
 
   Double_t angSq =  dThetaNorm * dThetaNorm + dPhiNorm * dPhiNorm;
 
@@ -2099,11 +2171,11 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
         t->GetEntry(t->GetEntryNumber(entry));
-        eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
+        eventNumber = UInt_t(int(evNum/10000) * 10000 + int(lastFew));
         if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
-        if(peak_theta > 0)
-        {
-          // switches theta convention (i used the UCorrelator convention for theta)
+        if(peak_theta > 0) {
+
+          // Switches theta convention (using the UCorrelator convention for theta)
           peak_theta = -1* peak_theta;
           events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
                 (double)peak_phi, (double)peak_theta,

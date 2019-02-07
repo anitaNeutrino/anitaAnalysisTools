@@ -36,12 +36,18 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
+    const Double_t default_var_theta = default_sigma_theta * default_sigma_theta;
+    const Double_t default_var_phi = default_sigma_phi * default_sigma_phi;
     const Double_t default_range_easting_northing = 750e3;
     const Double_t default_horizon_distance = 750e3;
 
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
     TCanvas* drawAngularResolutionModel(double maxSnr);
+
+    void getAngularVariance(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& var_theta, double& var_phi);
+    void getAngularVariance(double snr, double& var_theta, double& var_phi);
+    TCanvas* drawAngularVarianceModel(double maxSnr);
 
     template <class T>
     Bool_t isVaguelyNearMcMurdo(const T& t){
@@ -81,6 +87,9 @@ namespace Acclaim{
 
       Double_t sigmaTheta;				/// resolution associated with this snr?
       Double_t sigmaPhi;				/// resolution associated with this snr?
+
+      Double_t varTheta;				/// variance associated with this snr?
+      Double_t varPhi;				        /// (spherical) variance associated with this snr?
 
       //--------------------------------------------------------------------------------
       // determined by clustering
