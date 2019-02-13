@@ -2141,14 +2141,15 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       TChain* t = new TChain("sumTree");
       t->Add(summaryGlob);
 
-      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
+      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, lastFew;
+//      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
       UInt_t eventNumber;
       Int_t evNum;
 
       t->SetBranchAddress("pol", &pol);
       t->SetBranchAddress("ind", &peakInd);
-      t->SetBranchAddress("weight", &weight);
-      t->SetBranchAddress("energy", &mc_energy);
+//      t->SetBranchAddress("weight", &weight);
+//      t->SetBranchAddress("energy", &mc_energy);
       t->SetBranchAddress("phi", &peak_phi);
       t->SetBranchAddress("theta", &peak_theta);
       t->SetBranchAddress("run", &run);
@@ -2159,9 +2160,9 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       t->SetBranchAddress("snr", &coherent_filtered_snr);
       t->SetBranchAddress("eventNumber", &evNum);
       t->SetBranchAddress("lastFewDigits", &lastFew);
-      t->SetBranchAddress("F", &F);
-      t->SetBranchAddress("isWais", &isWais);
-      t->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
+//      t->SetBranchAddress("F", &F);
+//      t->SetBranchAddress("isWais", &isWais);
+//      t->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
 
       t->Draw(">>fEntryList", fCut, "entrylist");
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
@@ -2172,8 +2173,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
         n++;
         t->GetEntry(t->GetEntryNumber(entry));
         eventNumber = UInt_t(int(evNum/10000) * 10000 + int(lastFew));
-        if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
-        if(peak_theta > 0) {
+//        if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
+//        if(peak_theta > 0) {
 
           // Switches theta convention (using the UCorrelator convention for theta)
           peak_theta = -1* peak_theta;
@@ -2183,7 +2184,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
                 (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
                 (double)coherent_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
-        }
+//        }
       }
       delete t;
     }
