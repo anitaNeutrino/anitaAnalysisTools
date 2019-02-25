@@ -1112,6 +1112,56 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getTruthGraph(){
 }
 
 
+const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getHorizonGraph(){
+
+  const char* name = "grHorizon";
+  TGraphInteractive* grHorizon = const_cast<TGraphInteractive*>(findChild(name));
+
+  if(grHorizon==NULL && fUsefulPat != nullptr){
+    grHorizon = new TGraphInteractive(0, NULL, NULL, "l");
+
+    AntarcticaBackground b;
+    Geoid::Position anita(*fUsefulPat);
+    Geoid::Position pos;
+
+    for(int by=1; by < b.GetNbinsY(); by++){
+      double northing = b.GetYaxis()->GetBinCenter(by);
+      for(int bx=1; bx < b.GetNbinsX(); bx++){
+	double easting = b.GetXaxis()->GetBinCenter(bx);
+
+	double alt = RampdemReader::SurfaceAboveGeoidEN(easting, northing);
+	pos.SetEastingNorthingAlt(easting, northing, alt);
+
+	double d = pos.Distance(anita);
+
+	if(d < 900e3 && d > 500e3){
+	  // std::cout << easting << "\t" << northing << "\t" << d << std::endl;
+
+	  double thetaWave, phiWave;
+	  fUsefulPat->getThetaAndPhiWaveCart(&pos, thetaWave, phiWave);
+
+	  thetaWave*=-TMath::RadToDeg();
+	  phiWave*=TMath::RadToDeg();
+
+	  grHorizon->SetPoint(grHorizon->GetN(), phiWave, thetaWave);
+
+	}
+      }
+    }
+
+    addGuiChild(grHorizon);
+  }
+  grHorizon->SetLineWidth(0);
+  grHorizon->SetLineColor(GetLineColor());
+  grHorizon->SetMarkerColor(kMagenta);
+  grHorizon->SetMarkerSize(1);
+
+  return grHorizon;
+
+}
+
+
+
 const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getEdgeBoxGraph(){
 
   const char* name = "grEdgeBox";

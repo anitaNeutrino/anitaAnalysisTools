@@ -114,6 +114,7 @@ class InterferometricMap : public TH2D, public GuiParent {
   const TGraphInteractive* getEdgeBoxGraph(); // for plotting
   const TGraphInteractive* getSunGraph(); // for plotting
   const TGraphInteractive* getTruthGraph(); // for plotting
+  const TGraphInteractive* getHorizonGraph(); // for plotting
 
   bool isAZoomMap() const {return fIsZoomMap;}
   Int_t getPeakPhiSector() const {return fPeakPhiSector;}
