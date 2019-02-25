@@ -1124,6 +1124,9 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getHorizonGraph()
     Geoid::Position anita(*fUsefulPat);
     Geoid::Position pos;
 
+    double phiLow = GetXaxis()->GetBinLowEdge(1);
+    double phiHigh = GetXaxis()->GetBinUpEdge(GetNbinsX());
+
     for(int by=1; by < b.GetNbinsY(); by++){
       double northing = b.GetYaxis()->GetBinCenter(by);
       for(int bx=1; bx < b.GetNbinsX(); bx++){
@@ -1142,6 +1145,9 @@ const Acclaim::TGraphInteractive* Acclaim::InterferometricMap::getHorizonGraph()
 
 	  thetaWave*=-TMath::RadToDeg();
 	  phiWave*=TMath::RadToDeg();
+
+	  phiWave = phiWave < phiLow ? phiWave + 360 : phiWave;
+	  phiWave = phiWave >= phiHigh ? phiWave - 360 : phiWave;
 
 	  grHorizon->SetPoint(grHorizon->GetN(), phiWave, thetaWave);
 

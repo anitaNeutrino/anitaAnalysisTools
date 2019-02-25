@@ -105,6 +105,8 @@ class InterferometricMap : public TH2D, public GuiParent {
    */
   TPad* makeProjectionCanvas(){return makeProjectionCanvas(NULL);} //*MENU*
 
+  void drawHorizon(){(const_cast<TGraphInteractive*>(getHorizonGraph()))->Draw("psame");} //*MENU*
+
   inline Int_t GetNbinsPhi() const {return GetNbinsX();}
   inline Int_t GetNbinsTheta() const {return GetNbinsY();}
   inline const TAxis* GetPhiAxis() const {return GetXaxis();}
