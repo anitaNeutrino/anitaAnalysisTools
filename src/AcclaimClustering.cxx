@@ -63,10 +63,10 @@ namespace ResolutionModel{
  * Derivation of these numbers is analogous to what is seen in the macro plotCalPulserResolution.C, except the formula has closer to do with the square of the argument
  */
 namespace VarianceModel{
-  const int n = 3;
-  const double phiParams[n]   = {5.09057,  8.01369e-01, 1.}; //For now, these numbers have to do with A4 only
-  const double thetaParams[n] = {1.34307, 7.09382e-01, 1.}; //For now, these numbers have to do with A4 only
-  TString formula = "[0]/(pow(x,[1]) + [2])";
+  const int n = 5;
+  const double phiParams[n]   = {6.18369,  -3.64632e-01, 1.27008e-02, -1.63839e-04, 1.30766e-01};  //  For now, these numbers have to do with A4 only
+  const double thetaParams[n] = {1.24369e-01, -7.91671e-02, -9.80560e-06, -9.89399e-07, 1.56511e-02};  //  For now, these numbers have to do with A4 only
+  TString formula = "[0] * exp([1] * x + [2] * x^2 + [3] * x^3) + [4]";
 
 }
 
@@ -136,7 +136,8 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
  * @param var_phi the calculated phi variance (degrees)
  */
 void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& var_theta, double& var_phi){
-  const double x = sum->coherent_filtered[pol][peakInd].snr;
+  const double x = sum -> mostImpulsiveDeconvolvedFiltered(2).snr;
+//  const double x = sum -> deconvolved_filtered[pol][peakInd].snr;
   getAngularVariance(x, var_theta, var_phi);
 }
 
@@ -150,9 +151,9 @@ void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, Anita
  * @param var_phi the calculated phi variance (degrees)
  */
 void Acclaim::Clustering::getAngularVariance(double x, double & var_theta, double & var_phi){
-//  TString formula = "[0]/(pow(x,[1]) + [2])";
-  var_phi = VarianceModel::phiParams[0]/(pow(x, VarianceModel::phiParams[1]) + VarianceModel::phiParams[2]);
-  var_theta = VarianceModel::thetaParams[0]/(pow(x, VarianceModel::thetaParams[1]) + VarianceModel::thetaParams[2]);
+//  TString formula = "[0] * exp([1] * x + [2] * x^2 + [3] * x^3) + [4]";
+  var_phi = VarianceModel::phiParams[0] * exp(VarianceModel::phiParams[1] * x + VarianceModel::phiParams[2] * pow(x, 2) + VarianceModel::phiParams[3] * pow(x, 3)) + VarianceModel::phiParams[4];
+  var_theta = VarianceModel::thetaParams[0] * exp(VarianceModel::thetaParams[1] * x + VarianceModel::phiParams[2] * pow(x, 2) + VarianceModel::phiParams[3] * pow(x, 3)) + VarianceModel::PhiParams[4];
 }
 
 
