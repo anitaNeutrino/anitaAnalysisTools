@@ -63,10 +63,10 @@ namespace ResolutionModel{
  * Derivation of these numbers is analogous to what is seen in the macro plotCalPulserResolution.C, except the formula has closer to do with the square of the argument
  */
 namespace VarianceModel{
-  const int n = 5;
-  const double phiParams[n]   = {6.18369,  -3.64632e-01, 1.27008e-02, -1.63839e-04, 1.30766e-01};  //  For now, these numbers have to do with A4 only
-  const double thetaParams[n] = {1.24369e-01, -7.91671e-02, -9.80560e-06, -9.89399e-07, 1.56511e-02};  //  For now, these numbers have to do with A4 only
-  TString formula = "[0] * exp([1] * x + [2] * x^2 + [3] * x^3) + [4]";
+  const int n = 6;
+  const double phiParams[n]   = {6.20398e-01,  -8.06561e-02, 1.25041e-01, 8.04528e-01, -6.55123e-02, 1.15454e-01};  //  For now, these numbers have to do with A4 only. First set of three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
+  const double thetaParams[n] = {1.16119e-01, -1.10243e-01, 1.64300e-02, 8.24582e-01, -6.39075e-02, 1.13893e-01};  //  For now, these numbers have to do with A4 only. First three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
+  TString formula = "[0] * exp([1] * x) + [2]";
 
 }
 
@@ -136,8 +136,7 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
  * @param var_phi the calculated phi variance (degrees)
  */
 void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& var_theta, double& var_phi){
-//  const double x = sum -> mostImpulsiveDeconvolvedFiltered(2).snr;
-  const double x = sum -> deconvolved_filtered[pol][peakInd].snr;
+  const double x = sum -> coherent_filtered[pol][peakInd].snr;
   getAngularVariance(x, var_theta, var_phi);
 }
 
@@ -151,9 +150,9 @@ void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, Anita
  * @param var_phi the calculated phi variance (degrees)
  */
 void Acclaim::Clustering::getAngularVariance(double x, double & var_theta, double & var_phi){
-//  TString formula = "[0] * exp([1] * x + [2] * x^2 + [3] * x^3) + [4]";
-  var_phi = VarianceModel::phiParams[0] * exp(VarianceModel::phiParams[1] * x + VarianceModel::phiParams[2] * pow(x, 2) + VarianceModel::phiParams[3] * pow(x, 3)) + VarianceModel::phiParams[4];
-  var_theta = VarianceModel::thetaParams[0] * exp(VarianceModel::thetaParams[1] * x + VarianceModel::thetaParams[2] * pow(x, 2) + VarianceModel::thetaParams[3] * pow(x, 3)) + VarianceModel::thetaParams[4];
+//  TString formula = "[0] * exp([1] * x) + [2]";
+  var_phi = VarianceModel::phiParams[0] * exp(VarianceModel::phiParams[1] * x) + VarianceModel::phiParams[2];
+  var_theta = VarianceModel::thetaParams[0] * exp(VarianceModel::thetaParams[1] * x) + VarianceModel::thetaParams[2];
 }
 
 
@@ -2142,7 +2141,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       TChain* t = new TChain("sumTree");
       t->Add(summaryGlob);
 
-      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, deconvolved_filtered_snr, lastFew;
+      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
 //      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
       UInt_t eventNumber;
       Int_t evNum;
@@ -2158,8 +2157,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       t->SetBranchAddress("anita_longitude", &anita_longitude);
       t->SetBranchAddress("anita_altitude", &anita_altitude);
       t->SetBranchAddress("anita_heading", &anita_heading);
-      t->SetBranchAddress("snr", &deconvolved_filtered_snr);
-//      t->SetBranchAddress("snr", &coherent_filtered_snr);
+      t->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+      t->SetBranchAddress("deconvovled_filtered_snr", &deconvolved_filtered_snr);
       t->SetBranchAddress("eventNumber", &evNum);
       t->SetBranchAddress("lastFewDigits", &lastFew);
 //      t->SetBranchAddress("F", &F);
@@ -2184,8 +2183,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
                 (double)peak_phi, (double)peak_theta,
                 (int)llEventCuts.size(), eventNumber, (int)run,
                 (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)deconvolved_filtered_snr));
-//                (double)coherent_filtered_snr));
+                (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
 //        }
       }
@@ -2251,7 +2249,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
       fChain = new TChain("sumTree");
       fChain->Add(summaryGlob);
 
-      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, deconvolved_filtered_snr, lastFew;
+      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
 //      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, deconvolved_filtered_snr, F, lastFew, weight, mc_energy, isWais;
       UInt_t eventNumber;
       Int_t evNum;
@@ -2267,7 +2265,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
       fChain->SetBranchAddress("anita_longitude", &anita_longitude);
       fChain->SetBranchAddress("anita_altitude", &anita_altitude);
       fChain->SetBranchAddress("anita_heading", &anita_heading);
-      fChain->SetBranchAddress("snr", &deconvolved_filtered_snr);
+      fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+      fChain->SetBranchAddress("deconvolved_filtered_snr", &deconvolved_filtered_snr);
       fChain->SetBranchAddress("eventNumber", &evNum);
       fChain->SetBranchAddress("lastFewDigits", &lastFew);
 //      fChain->SetBranchAddress("F", &F);
@@ -2334,7 +2333,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
 
 void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in_cluster)
 {
-  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, deconvolved_filtered_snr, lastFew;
+  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
 //  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
   UInt_t eventNumber;
   Int_t evNum;
@@ -2350,8 +2349,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
   fChain->SetBranchAddress("anita_longitude", &anita_longitude);
   fChain->SetBranchAddress("anita_altitude", &anita_altitude);
   fChain->SetBranchAddress("anita_heading", &anita_heading);
-  fChain->SetBranchAddress("snr", &deconvolved_filtered_snr);
-//  fChain->SetBranchAddress("snr", &coherent_filtered_snr);
+  fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+  fChain->SetBranchAddress("deconvolved_filtered_snr", &deconvolved_filtered_snr);
   fChain->SetBranchAddress("eventNumber", &evNum);
   fChain->SetBranchAddress("lastFewDigits", &lastFew);
 //  fChain->SetBranchAddress("F", &F);
@@ -2376,8 +2375,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
             (double)peak_phi, (double)peak_theta,
             (int)llEventCuts.size(), eventNumber, (int)run,
             (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-            (double)deconvolved_filtered_snr));
-//            (double)coherent_filtered_snr));
+            (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
     }
   }
   delete bits;
