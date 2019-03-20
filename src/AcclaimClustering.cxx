@@ -334,7 +334,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
 
 
 Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr)// ,
+    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr, double deconvolved_filtered_snr)// ,
 // double longitude, double latitude, double altitude)
 : nThresholds(0), cluster(NULL),
   dThetaCluster(NULL), dPhiCluster(NULL)
@@ -607,9 +607,9 @@ Acclaim::Clustering::McEvent::McEvent(Int_t nT)
 
 
 Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr)
+    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr, double deconvolved_filtered_snr)
 :  Event(pol, peakInd, peak_phi, peak_theta, nT, eventNumber, run,
-    anita_longitude, anita_latitude, anita_altitude, anita_heading, coherent_filtered_snr)
+    anita_longitude, anita_latitude, anita_altitude, anita_heading, coherent_filtered_snr, deconvolved_filtered_snr)
 {
   this->weight = weight;
   this->energy = energy;
@@ -1912,14 +1912,16 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
                 tc.peak_phi, tc.peak_theta,
                 (int)llEventCuts.size(), tc.eventNumber, tc.run,
                 tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
-                tc.coherent_filtered_snr));
+                tc.coherent_filtered_snr, tc.deconvolved_filtered_snr));
+//                tc.coherent_filtered_snr));
         }
         else{
           mcEvents.push_back(McEvent(tc.weight, tc.mc_energy, static_cast<int>(tc.pol), static_cast<int>(tc.peakInd),
                 tc.peak_phi, tc.peak_theta,
                 (int)llEventCuts.size(), tc.eventNumber, tc.run,
                 tc.anita_longitude, tc.anita_latitude, tc.anita_altitude, tc.anita_heading,
-                tc.coherent_filtered_snr));
+                tc.coherent_filtered_snr, tc.deconvolved_filtered_snr));
+//                tc.coherent_filtered_snr));
         }
         p.inc(entry);
       }
@@ -2008,7 +2010,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       TChain* t = new TChain("sumTree");
       t->Add(summaryGlob);
 
-      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
+      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, F, lastFew, weight, mc_energy, isWais;
       UInt_t eventNumber;
       Int_t evNum;
 
@@ -2048,7 +2050,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
                 (double)peak_phi, (double)peak_theta,
                 (int)llEventCuts.size(), eventNumber, (int)run,
                 (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)coherent_filtered_snr));
+		(double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+//                (double)coherent_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
         }
       }
@@ -2184,6 +2187,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
                 (int)llEventCuts.size(), eventNumber, (int)run,
                 (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
                 (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+//                (double)coherent_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
 //        }
       }
@@ -2284,7 +2288,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
 
 void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_cluster)
 {
-  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
+  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, F, lastFew, weight, mc_energy, isWais;
   UInt_t eventNumber;
   Int_t evNum;
 
@@ -2324,7 +2328,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
             (double)peak_phi, (double)peak_theta,
             (int)llEventCuts.size(), eventNumber, (int)run,
             (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-            (double)coherent_filtered_snr));
+            (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+//            (double)coherent_filtered_snr));
     }
   }
   delete bits;
@@ -2376,6 +2381,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
             (int)llEventCuts.size(), eventNumber, (int)run,
             (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
             (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+//            (double)coherent_filtered_snr));
     }
   }
   delete bits;

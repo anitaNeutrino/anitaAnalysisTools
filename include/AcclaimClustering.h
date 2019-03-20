@@ -119,7 +119,8 @@ namespace Acclaim{
       Event(const Event& event);
       Event& operator=(const Event& event);
       Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
+	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
+            double coherent_filtered_snr, double deconvolved_filtered_snr);
 
 
       TArrowAntarctica* makeArrowFromAnitaToEvent();
@@ -169,7 +170,8 @@ namespace Acclaim{
       McEvent(Int_t nT = 0);
       McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
       McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
+	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
+              double coherent_filtered_snr, double deconvolved_filtered_snr);
 
       virtual ~McEvent(){;}
 	
