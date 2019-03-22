@@ -267,7 +267,7 @@ namespace Acclaim{
 
       Long64_t readInSummaries(const char* summaryGlob);
       Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
-      Long64_t readInSampleTreeSummaries(const char* summaryGlob);
+      Long64_t readInSampleSummaries(const char* summaryGlob);
       void readInSummariesForTesting(const char* summaryGlob);
       void readInSampleSummariesForTesting(const char* summaryGlob);
       void pickEventsFromList(int n_in_cluster);

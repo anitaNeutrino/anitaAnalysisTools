@@ -2062,7 +2062,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
 }
 
 
-Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(const char* summaryGlob){
+Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const char* summaryGlob){
 
   Long64_t n = 0;
   if(summaryGlob){
@@ -2141,29 +2141,60 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
     } else {
-      TChain* t = new TChain("sumTree");
-      t->Add(summaryGlob);
 
-      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
+      TString summaryGlobStr(summaryGlob);
+      TString sampleStr;
+
+      if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
+      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
+      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
+      else if (summaryGlobStr.Contains("refinedHiCal2A")) sampleStr = "refinedHiCal2A";
+      else if (summaryGlobStr.Contains("refinedHiCal2B")) sampleStr = "refinedHiCal2B";
+      else if (summaryGlobStr.Contains("refinedWAISHPol")) sampleStr = "refinedWAISHPol";
+      else if (summaryGlobStr.Contains("refinedWAISVPol")) sampleStr = "refinedWAISVPol";
+      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
+      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
+      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
+
+      TChain * t = new TChain(sampleStr);
+//      TChain* t = new TChain("sumTree");
+      t -> Add(summaryGlob);
+
+      AnitaEventSummary * sampleSum = 0;
+      t -> SetBranchAddress("summary", & sampleSum);
+      
+      int & run = sampleSum -> run;
+      unsigned int & eventNumber = sampleSum -> eventNumber;
+      float & anita_longitude = sampleSum -> anitaLocation.longitude;
+      float & anita_latitude = sampleSum -> anitaLocation.latitude;
+      float & anita_altitude = sampleSum -> anitaLocation.altitude;
+      float & anita_heading = sampleSum -> anitaLocation.heading;
+
+      //  Variables from AnitaEventSummary which can't be referenced like those above.
+      int pol, peakInd;
+      double peak_theta, peak_phi;
+      double coherent_filtered_snr, deconvolved_filtered_snr;
+      
+//      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
 //      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
-      UInt_t eventNumber;
-      Int_t evNum;
-
-      t->SetBranchAddress("pol", &pol);
-      t->SetBranchAddress("ind", &peakInd);
+//      UInt_t eventNumber;
+//      Int_t evNum;
+//
+//      t->SetBranchAddress("pol", &pol);
+//      t->SetBranchAddress("ind", &peakInd);
 //      t->SetBranchAddress("weight", &weight);
 //      t->SetBranchAddress("energy", &mc_energy);
-      t->SetBranchAddress("phi", &peak_phi);
-      t->SetBranchAddress("theta", &peak_theta);
-      t->SetBranchAddress("run", &run);
-      t->SetBranchAddress("anita_latitude", &anita_latitude);
-      t->SetBranchAddress("anita_longitude", &anita_longitude);
-      t->SetBranchAddress("anita_altitude", &anita_altitude);
-      t->SetBranchAddress("anita_heading", &anita_heading);
-      t->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
-      t->SetBranchAddress("deconvovled_filtered_snr", &deconvolved_filtered_snr);
-      t->SetBranchAddress("eventNumber", &evNum);
-      t->SetBranchAddress("lastFewDigits", &lastFew);
+//      t->SetBranchAddress("phi", &peak_phi);
+//      t->SetBranchAddress("theta", &peak_theta);
+//      t->SetBranchAddress("run", &run);
+//      t->SetBranchAddress("anita_latitude", &anita_latitude);
+//      t->SetBranchAddress("anita_longitude", &anita_longitude);
+//      t->SetBranchAddress("anita_altitude", &anita_altitude);
+//      t->SetBranchAddress("anita_heading", &anita_heading);
+//      t->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+//      t->SetBranchAddress("deconvovled_filtered_snr", &deconvolved_filtered_snr);
+//      t->SetBranchAddress("eventNumber", &evNum);
+//      t->SetBranchAddress("lastFewDigits", &lastFew);
 //      t->SetBranchAddress("F", &F);
 //      t->SetBranchAddress("isWais", &isWais);
 //      t->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
@@ -2175,18 +2206,31 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleTreeSummaries(con
 
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
-        t->GetEntry(t->GetEntryNumber(entry));
-        eventNumber = UInt_t(int(evNum/10000) * 10000 + int(lastFew));
+        t -> GetEntry(t->GetEntryNumber(entry));
+//        eventNumber = UInt_t(int(evNum/10000) * 10000 + int(lastFew));
 //        if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
 //        if(peak_theta > 0) {
 
-          // Switches theta convention (using the UCorrelator convention for theta)
-          peak_theta = -1* peak_theta;
+          pol = sampleSum -> mostImpulsivePolAsInt(2);
+          peakInd = sampleSum -> mostImpulsiveInd(2);
+          peak_theta = sampleSum -> mostImpulsivePeak(2).theta;
+          peak_theta *= -1;  //  Switches theta convention (using the UCorrelator convention for theta).
+          peak_phi = sampleSum -> mostImpulsivePeak(2).phi;
+          coherent_filtered_snr = sampleSum -> mostImpulsiveCoherent(2).snr;
+          deconvolved_filtered_snr = sampleSum -> mostImpulsiveDeconvolved(2).snr;
+//          // Switches theta convention (using the UCorrelator convention for theta)
+//          peak_theta = -1* peak_theta;
+
           events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
-                (double)peak_phi, (double)peak_theta,
-                (int)llEventCuts.size(), eventNumber, (int)run,
-                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-                (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+                peak_phi, peak_theta,
+                (int) llEventCuts.size(), eventNumber, run,
+                (double) anita_longitude, (double) anita_latitude, (double) anita_altitude, (double) anita_heading,
+                coherent_filtered_snr, deconvolved_filtered_snr));
+//          events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
+//                (double)peak_phi, (double)peak_theta,
+//                (int)llEventCuts.size(), eventNumber, (int)run,
+//                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+//                (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
 //                (double)coherent_filtered_snr));
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
 //        }
@@ -2250,36 +2294,29 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
      * This will be the case in the new MC clustering paradigm
      */
 
-      fChain = new TChain("sumTree");
-      fChain->Add(summaryGlob);
+      TString summaryGlobStr(summaryGlob);
+      TString sampleStr;
 
-      float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
-//      float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, deconvolved_filtered_snr, F, lastFew, weight, mc_energy, isWais;
-      UInt_t eventNumber;
-      Int_t evNum;
+      if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
+      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
+      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
+      else if (summaryGlobStr.Contains("refinedHiCal2A")) sampleStr = "refinedHiCal2A";
+      else if (summaryGlobStr.Contains("refinedHiCal2B")) sampleStr = "refinedHiCal2B";
+      else if (summaryGlobStr.Contains("refinedWAISHPol")) sampleStr = "refinedWAISHPol";
+      else if (summaryGlobStr.Contains("refinedWAISVPol")) sampleStr = "refinedWAISVPol";
+      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
+      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
+      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
 
-      fChain->SetBranchAddress("pol", &pol);
-      fChain->SetBranchAddress("ind", &peakInd);
-//      fChain->SetBranchAddress("weight", &weight);
-//      fChain->SetBranchAddress("energy", &mc_energy);
-      fChain->SetBranchAddress("phi", &peak_phi);
-      fChain->SetBranchAddress("theta", &peak_theta);
-      fChain->SetBranchAddress("run", &run);
-      fChain->SetBranchAddress("anita_latitude", &anita_latitude);
-      fChain->SetBranchAddress("anita_longitude", &anita_longitude);
-      fChain->SetBranchAddress("anita_altitude", &anita_altitude);
-      fChain->SetBranchAddress("anita_heading", &anita_heading);
-      fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
-      fChain->SetBranchAddress("deconvolved_filtered_snr", &deconvolved_filtered_snr);
-      fChain->SetBranchAddress("eventNumber", &evNum);
-      fChain->SetBranchAddress("lastFewDigits", &lastFew);
-//      fChain->SetBranchAddress("F", &F);
-//      fChain->SetBranchAddress("isWais", &isWais);
-//      fChain->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
+      TChain * fChain = new TChain(sampleStr);
+      fChain -> Add(summaryGlob);
 
-      fChain->Draw(">>fEntryList", fCut, "entrylist");
+      AnitaEventSummary * sampleSum = 0;
+      fChain -> SetBranchAddress("summary", & sampleSum);
+
+      fChain -> Draw(">>fEntryList", fCut, "entrylist");
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
-      fChain->SetEntryList(fEntryList);
+      fChain -> SetEntryList(fEntryList);
       printf("%d entries loaded\n", fEntryList->GetN());
   }
   return;
@@ -2338,10 +2375,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
 
 void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in_cluster)
 {
-  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr, lastFew;
+  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr;
 //  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
   UInt_t eventNumber;
-  Int_t evNum;
+//  Int_t evNum;
 
   fChain->SetBranchAddress("pol", &pol);
   fChain->SetBranchAddress("ind", &peakInd);
@@ -2356,8 +2393,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
   fChain->SetBranchAddress("anita_heading", &anita_heading);
   fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
   fChain->SetBranchAddress("deconvolved_filtered_snr", &deconvolved_filtered_snr);
-  fChain->SetBranchAddress("eventNumber", &evNum);
-  fChain->SetBranchAddress("lastFewDigits", &lastFew);
+  fChain->SetBranchAddress("eventNumber", & eventNumber);
+//  fChain->SetBranchAddress("eventNumber", &evNum);
+//  fChain->SetBranchAddress("lastFewDigits", &lastFew);
 //  fChain->SetBranchAddress("F", &F);
 //  fChain->SetBranchAddress("isWais", &isWais);
 //  fChain->SetBranchAddress("decoImpulsivity", &decoImpulsivity);
@@ -2370,7 +2408,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
     if(bits->TestBitNumber(j)) continue;
     bits->SetBitNumber(j);
     fChain->GetEntry(fChain->GetEntryNumber(j));
-    eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
+//    eventNumber = UInt_t(int(evNum/10000)*10000 + int(lastFew));
     if(peak_theta > 0)
     {
       i++;
@@ -3167,7 +3205,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles){
 
-  useAcclaimFiles ? readInSummaries(dataGlob) : readInSampleTreeSummaries(dataGlob);
+  useAcclaimFiles ? readInSummaries(dataGlob) : readInSampleSummaries(dataGlob);
 //  useAcclaimFiles ? readInSummaries(dataGlob) : readInTMVATreeSummaries(dataGlob, 0);
 //  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob, 1);
   std::cout << "Sorting events...";
