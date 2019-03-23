@@ -2375,9 +2375,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
 
 void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in_cluster)
 {
-  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr;
+  int pol, peakInd, run;
+  unsigned int eventNumber;
+  float anita_longitude, anita_latitude, anita_altitude, anita_heading;
+  double peak_phi, peak_theta;
+  double coherent_filtered_snr, deconvolved_filtered_snr;
+//  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr;
 //  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
-  UInt_t eventNumber;
+//  UInt_t eventNumber;
 //  Int_t evNum;
 
   fChain->SetBranchAddress("pol", &pol);
@@ -2415,10 +2420,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
       // switches theta convention (i used the UCorrelator convention for theta)
       peak_theta = -1* peak_theta;
       events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
-            (double)peak_phi, (double)peak_theta,
-            (int)llEventCuts.size(), eventNumber, (int)run,
+            peak_phi, peak_theta,
+            (int)llEventCuts.size(), eventNumber, run,
             (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
-            (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
+            coherent_filtered_snr, deconvolved_filtered_snr));
 //            (double)coherent_filtered_snr));
     }
   }
