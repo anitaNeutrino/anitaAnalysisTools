@@ -2163,6 +2163,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       AnitaEventSummary * sampleSum = 0;
       t -> SetBranchAddress("summary", & sampleSum);
       
+      t -> GetEntry(0);
+
       int & run = sampleSum -> run;
       unsigned int & eventNumber = sampleSum -> eventNumber;
       float & anita_longitude = sampleSum -> anitaLocation.longitude;
@@ -2313,6 +2315,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
 
       AnitaEventSummary * sampleSum = 0;
       fChain -> SetBranchAddress("summary", & sampleSum);
+
+      fChain -> GetEntry(0);
 
       fChain -> Draw(">>fEntryList", fCut, "entrylist");
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
