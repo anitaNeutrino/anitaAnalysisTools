@@ -2213,29 +2213,32 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 //        if(fCutHical && Hical2::isHical(eventNumber, FFTtools::wrap(anita_heading - peak_phi, 360, 0), coherent_filtered_snr)) continue;
 //        if(peak_theta > 0) {
 
-          pol = sampleSum -> mostImpulsivePolAsInt(2);
-          peakInd = sampleSum -> mostImpulsiveInd(2);
-          peak_theta = sampleSum -> mostImpulsivePeak(2).theta;
-          peak_theta *= -1;  //  Switches theta convention (using the UCorrelator convention for theta).
-          peak_phi = sampleSum -> mostImpulsivePeak(2).phi;
-          coherent_filtered_snr = sampleSum -> mostImpulsiveCoherent(2).snr;
-          deconvolved_filtered_snr = sampleSum -> mostImpulsiveDeconvolved(2).snr;
-//          // Switches theta convention (using the UCorrelator convention for theta)
-//          peak_theta = -1* peak_theta;
+        pol = sampleSum -> mostImpulsivePolAsInt(2);
+        peakInd = sampleSum -> mostImpulsiveInd(2);
+        peak_theta = sampleSum -> mostImpulsivePeak(2).theta;
+        peak_theta *= -1;  //  Switches theta convention from UCorrelator convention.
+        peak_phi = sampleSum -> mostImpulsivePeak(2).phi;
+        coherent_filtered_snr = sampleSum -> mostImpulsiveCoherent(2).snr;
+        deconvolved_filtered_snr = sampleSum -> mostImpulsiveDeconvolved(2).snr;
+//        // Switches theta convention (using the UCorrelator convention for theta)
+//        peak_theta = -1* peak_theta;
+
+	if (peak_theta < 0) {
 
           events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
-                peak_phi, peak_theta,
-                (int) llEventCuts.size(), eventNumber, run,
-                (double) anita_longitude, (double) anita_latitude, (double) anita_altitude, (double) anita_heading,
-                coherent_filtered_snr, deconvolved_filtered_snr));
+                 peak_phi, peak_theta,
+                 (int) llEventCuts.size(), eventNumber, run,
+                 (double) anita_longitude, (double) anita_latitude, (double) anita_altitude, (double) anita_heading,
+                 coherent_filtered_snr, deconvolved_filtered_snr));
 //          events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
 //                (double)peak_phi, (double)peak_theta,
 //                (int)llEventCuts.size(), eventNumber, (int)run,
 //                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
 //                (double)coherent_filtered_snr, (double)deconvolved_filtered_snr));
 //                (double)coherent_filtered_snr));
+
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
-//        }
+        }
       }
       delete t;
     }
