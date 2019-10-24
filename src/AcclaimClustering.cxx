@@ -2062,7 +2062,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
 }
 
 
-Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const char* summaryGlob){
+Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const char* summaryGlob, bool isMC){
 
   Long64_t n = 0;
   if(summaryGlob){
@@ -2143,20 +2143,21 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
     } else {
 
       TString summaryGlobStr(summaryGlob);
-      TString sampleStr;
+//      TString sampleStr;
+//
+//      if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
+//      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
+//      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
+//      else if (summaryGlobStr.Contains("refinedHiCal2A")) sampleStr = "refinedHiCal2A";
+//      else if (summaryGlobStr.Contains("refinedHiCal2B")) sampleStr = "refinedHiCal2B";
+//      else if (summaryGlobStr.Contains("refinedWAISHPol")) sampleStr = "refinedWAISHPol";
+//      else if (summaryGlobStr.Contains("refinedWAISVPol")) sampleStr = "refinedWAISVPol";
+//      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
+//      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
+//      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
 
-      if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
-      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
-      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
-      else if (summaryGlobStr.Contains("refinedHiCal2A")) sampleStr = "refinedHiCal2A";
-      else if (summaryGlobStr.Contains("refinedHiCal2B")) sampleStr = "refinedHiCal2B";
-      else if (summaryGlobStr.Contains("refinedWAISHPol")) sampleStr = "refinedWAISHPol";
-      else if (summaryGlobStr.Contains("refinedWAISVPol")) sampleStr = "refinedWAISVPol";
-      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
-      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
-      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
-
-      TChain * t = new TChain(sampleStr);
+      TChain * t = new TChain("sampleA4");
+//      TChain * t = new TChain(sampleStr);
 //      TChain* t = new TChain("sumTree");
       t -> Add(summaryGlob);
 
@@ -2171,6 +2172,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       float & anita_latitude = sampleSum -> anitaLocation.latitude;
       float & anita_altitude = sampleSum -> anitaLocation.altitude;
       float & anita_heading = sampleSum -> anitaLocation.heading;
+      double & mc_weight = sampleSum -> mc.weight;
+      double & mc_energy = sampleSum -> mc.energy;
 
       //  Variables from AnitaEventSummary which can't be referenced like those above.
       int pol, peakInd;
@@ -2223,7 +2226,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 //        // Switches theta convention (using the UCorrelator convention for theta)
 //        peak_theta = -1* peak_theta;
 
-	if (peak_theta < 0) {
+	if (!isMC && peak_theta < 0) {
 
           events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
                  peak_phi, peak_theta,
@@ -2239,6 +2242,23 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
         }
+	if(isMC) {
+
+          if(tr3->Integer(1000) >= fPercentOfMC) continue;
+//          // switches theta convention
+//          peak_theta = -1* peak_theta;
+          mcEvents.push_back(McEvent((double) mc_weight, (double) mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
+                peak_phi, peak_theta,
+                (int)llEventCuts.size(), eventNumber, (int)run,
+                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+                coherent_filtered_snr, deconvolved_filtered_snr));
+//          mcEvents.push_back(McEvent((double)weight, (double)mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
+//                (double)peak_phi, (double)peak_theta,
+//                (int)llEventCuts.size(), eventNumber, (int)run,
+//                (double)anita_longitude, (double)anita_latitude, (double)anita_altitude, (double)anita_heading,
+//                (double)coherent_filtered_snr));
+        }
+
       }
       delete t;
     }
@@ -2300,20 +2320,22 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummariesForTesting(c
      */
 
       TString summaryGlobStr(summaryGlob);
-      TString sampleStr;
+//      TString sampleStr;
+//
+//      if (summaryGlobStr.Contains("iceMC")) sampleStr = "iceMC";
+//      else if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
+//      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
+//      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
+//      else if (summaryGlobStr.Contains("HiCal2A")) sampleStr = "HiCal2A";
+//      else if (summaryGlobStr.Contains("HiCal2B")) sampleStr = "HiCal2B";
+//      else if (summaryGlobStr.Contains("WAISHPol")) sampleStr = "WAISHPol";
+//      else if (summaryGlobStr.Contains("WAISVPol")) sampleStr = "WAISVPol";
+//      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
+//      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
+//      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
 
-      if (summaryGlobStr.Contains("minBias")) sampleStr = "minBias";
-      else if (summaryGlobStr.Contains("other")) sampleStr = "other";
-      else if (summaryGlobStr.Contains("payloadBlast")) sampleStr = "payloadBlast";
-      else if (summaryGlobStr.Contains("refinedHiCal2A")) sampleStr = "refinedHiCal2A";
-      else if (summaryGlobStr.Contains("refinedHiCal2B")) sampleStr = "refinedHiCal2B";
-      else if (summaryGlobStr.Contains("refinedWAISHPol")) sampleStr = "refinedWAISHPol";
-      else if (summaryGlobStr.Contains("refinedWAISVPol")) sampleStr = "refinedWAISVPol";
-      else if (summaryGlobStr.Contains("signal")) sampleStr = "signal";
-      else if (summaryGlobStr.Contains("strongCW")) sampleStr = "strongCW";
-      else if (summaryGlobStr.Contains("thermal")) sampleStr = "thermal";
-
-      TChain * fChain = new TChain(sampleStr);
+      TChain * fChain = new TChain("sampleA4");
+//      TChain * fChain = new TChain(sampleStr);
       fChain -> Add(summaryGlob);
 
       AnitaEventSummary * sampleSum = 0;
@@ -3217,7 +3239,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 
 void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles){
 
-  useAcclaimFiles ? readInSummaries(dataGlob) : readInSampleSummaries(dataGlob);
+  useAcclaimFiles ? readInSummaries(dataGlob) : readInSampleSummaries(dataGlob, false);
+  useAcclaimFiles ? readInSummaries(mcGlob) : readInSampleSummaries(mcGlob, true);
 //  useAcclaimFiles ? readInSummaries(dataGlob) : readInTMVATreeSummaries(dataGlob, 0);
 //  useAcclaimFiles ? readInSummaries(mcGlob) : readInTMVATreeSummaries(mcGlob, 1);
   std::cout << "Sorting events...";
