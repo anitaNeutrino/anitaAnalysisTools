@@ -3,6 +3,7 @@
 #include "TTreeFormula.h"
 #include "DrawStrings.h"
 #include "CutOptimizer.h"
+#include "TObjString.h"
 #include "TList.h"
 
 
