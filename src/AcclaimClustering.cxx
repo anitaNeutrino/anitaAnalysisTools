@@ -695,7 +695,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   grTestMinimizerWalk = NULL;
   grTestMinimizerValue = NULL;
 
-  for(Int_t i = 1; i <= 20; ++i) llEventCuts.push_back(i * i);
+  for(Int_t i = 1; i <= 25; ++i) llEventCuts.push_back(i * i);
   
 /*  
   surfaceDistThresholdKm = 30;
