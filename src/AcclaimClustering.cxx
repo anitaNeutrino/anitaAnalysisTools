@@ -65,7 +65,7 @@ namespace ResolutionModel{
 namespace VarianceModel{
   const int n = 6;
   const double phiParams[n]   = {24.3899,  2.42610, 2.87562, 6.23746, 2.80852, 2.87583};  //  For now, these numbers have to do with A4 only. First set of three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
-  const double thetaParams[n] = {8.44809, 2.59002, 0.117500, 2.77454, 3.4051, 0.0963945};  //  For now, these numbers have to do with A4 only. First three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
+  const double thetaParams[n] = {8.44809, 2.59002, 0.117500, 2.68443, 3.50107, 0.117376};  //  For now, these numbers have to do with A4 only. First three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
   TString formula = "[0] * TMath::Gaus(x, 0, [1]) + [2]";
 
 }
