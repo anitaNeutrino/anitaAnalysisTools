@@ -151,8 +151,8 @@ void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, Anita
  */
 void Acclaim::Clustering::getAngularVariance(double x, double & var_theta, double & var_phi){
 //  TString formula = "[0] * exp([1] * x) + [2]";
-  var_phi = VarianceModel::phiParams[0] * exp(VarianceModel::phiParams[1] * x) + VarianceModel::phiParams[2];
-  var_theta = VarianceModel::thetaParams[0] * exp(VarianceModel::thetaParams[1] * x) + VarianceModel::thetaParams[2];
+  var_phi = VarianceModel::phiParams[0] * TMath::Gaus(x, 0, VarianceModel::phiParams[1]) + VarianceModel::phiParams[2];
+  var_theta = VarianceModel::thetaParams[0] * TMath::Gaus(x, 0, VarianceModel::thetaParams[1]) + VarianceModel::thetaParams[2];
 }
 
 
@@ -1747,7 +1747,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
 
   for(UInt_t z = 0; z < llEventCuts.size(); z++){
-    TString treeName = TString::Format("clusterTree%u", z);
+    TString treeName = TString::Format("clusterTree%u", z + 1);
     TString treeTitle = TString::Format("Tree of clusters with llEventCut = %lf", llEventCuts[z]);
     //TTree* clusterTree = new TTree(treeName, "Tree of clusters");
     TTree* clusterTree = new TTree(treeName, treeTitle);
