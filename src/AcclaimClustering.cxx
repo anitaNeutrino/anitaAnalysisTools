@@ -1835,7 +1835,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
       Acclaim::Clustering::Cluster* cluster = NULL;
       TTree* clusterTree = NULL;
-      Int_t treeInd=0;
+      Int_t treeInd=1;
       do {
         TString treeName = TString::Format("clusterTree%d", treeInd);
         clusterTree = (TTree*)f->Get(treeName);
