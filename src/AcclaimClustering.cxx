@@ -105,7 +105,7 @@ TCanvas* Acclaim::Clustering::drawAngularResolutionModel(double maxSnr){
   TCanvas* c1 = new TCanvas();
 
   TF1* fTheta = new TF1("fThetaResolutionModel", ResolutionModel::formula, 0, maxSnr);
-  TF1* fPhi = new TF1("fThetaResolutionModel", ResolutionModel::formula, 0, maxSnr);
+  TF1* fPhi = new TF1("fPhiResolutionModel", ResolutionModel::formula, 0, maxSnr);
   int versionOffset = (AnitaVersion::get() == 3) ? 0 : 3;
   for(int i=0; i < ResolutionModel::n; i++){
     fTheta->SetParameter(i, ResolutionModel::thetaParams[i+versionOffset]);
@@ -160,7 +160,7 @@ TCanvas* Acclaim::Clustering::drawAngularVarianceModel(double maxSnr){
   TCanvas* c1 = new TCanvas();
 
   TF1* fTheta = new TF1("fThetaVarianceModel", VarianceModel::formula, 0, maxSnr);
-  TF1* fPhi = new TF1("fThetaVarianceModel", VarianceModel::formula, 0, maxSnr);
+  TF1* fPhi = new TF1("fPhiVarianceModel", VarianceModel::formula, 0, maxSnr);
   for(int i=0; i < ResolutionModel::n; i++){
     fTheta->SetParameter(i, VarianceModel::thetaParams[i]);
     fPhi->SetParameter(i, VarianceModel::phiParams[i]);
