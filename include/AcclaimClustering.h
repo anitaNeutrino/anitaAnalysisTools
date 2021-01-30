@@ -203,7 +203,7 @@ namespace Acclaim{
 	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
-      Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
+      Int_t knownBase;						/// Known base == 1, Pseudo-base == 0
       Int_t index;                                              /// Where am I in the cluster array?
       Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
       Double_t llEventCut; /// and what's the value of that cut?
@@ -217,7 +217,7 @@ namespace Acclaim{
     };
 
     
-    /**
+    /**tr3
      * @class LogLikelihoodMethod
      * @brief Workhorse class: groups events into clusters around bases and other events using the log likelihood method
      *
