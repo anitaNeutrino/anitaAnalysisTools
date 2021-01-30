@@ -3254,18 +3254,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
   initKDTree();
   // fEventsAlreadyClustered = false;
 
-
   if(fUseBaseList){
-    if(!fEventsAlreadyClustered){
-      readInBaseList();
-      doBaseEventClustering();
-    }
+  
+    readInBaseList();
+  
+    if (!fEventsAlreadyClustered) doBaseEventClustering();
+    
     doMcBaseClustering();
   }
 
-  if(!fEventsAlreadyClustered){
-    doEventEventClustering();
-  }
+  if(!fEventsAlreadyClustered) doEventEventClustering();
+  
   doMcEventClustering();
 
   makeSummaryTrees();
