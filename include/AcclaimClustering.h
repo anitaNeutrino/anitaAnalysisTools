@@ -347,7 +347,7 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       TChain* fChain;
-      Int_t fPercentOfMC;
+      Int_t fPermyriadOfMC;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;
