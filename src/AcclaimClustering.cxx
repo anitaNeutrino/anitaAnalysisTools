@@ -751,7 +751,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fKDTree = NULL;
   fDebug = false;
   fUseBaseList = true;
-  fPercentOfMC = 0;
+  fPermyriadOfMC = 0;
   fCut = 0;
   fCutHical = 0;
   fSelfLLMax = -1;
@@ -2243,7 +2243,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
         }
 	if(isMC) {
 
-          if(tr3->Integer(1000) >= fPercentOfMC) continue;
+          if(tr3->Integer(10000) >= fPermyriadOfMC) continue;
 //          // switches theta convention
 //          peak_theta = -1* peak_theta;
           mcEvents.push_back(McEvent((double) mc_weight, (double) mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),

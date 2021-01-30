@@ -242,7 +242,7 @@ namespace Acclaim{
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
       void setSelfLLMax(double llmax){ fSelfLLMax = llmax; } 
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
-      void setPercentOfMC(Int_t percent){ fPercentOfMC = percent; }
+      void setPermyriadOfMC(Int_t permyriad){ fPermyriadOfMC = permyriad; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
