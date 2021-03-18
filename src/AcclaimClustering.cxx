@@ -1752,7 +1752,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
 
 
   for(UInt_t z = 0; z < llEventCuts.size(); z++){
-    TString treeName = TString::Format("clusterTree%u", z + 1);
+    TString treeName = TString::Format("clusterTree%u", z);
     TString treeTitle = TString::Format("Tree of clusters with llEventCut = %lf", llEventCuts[z]);
     //TTree* clusterTree = new TTree(treeName, "Tree of clusters");
     TTree* clusterTree = new TTree(treeName, treeTitle);
@@ -1840,7 +1840,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
 
       Acclaim::Clustering::Cluster* cluster = NULL;
       TTree* clusterTree = NULL;
-      Int_t treeInd=1;
+      Int_t treeInd=0;
       do {
         TString treeName = TString::Format("clusterTree%d", treeInd);
         clusterTree = (TTree*)f->Get(treeName);
@@ -2105,7 +2105,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
       Acclaim::Clustering::Cluster* cluster = NULL;
       TTree* clusterTree = NULL;
-      Int_t treeInd=1;
+      Int_t treeInd=0;
       do {
         TString treeName = TString::Format("clusterTree%d", treeInd);
         clusterTree = (TTree*)f->Get(treeName);
