@@ -2413,6 +2413,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
   float anita_longitude, anita_latitude, anita_altitude, anita_heading;
   double peak_phi, peak_theta;
   double coherent_filtered_snr, deconvolved_filtered_snr;
+  float weight, mc_energy;
 //  float pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, deconvolved_filtered_snr;
 //  float decoImpulsivity, pol, peakInd, run, anita_longitude, anita_latitude, anita_altitude, anita_heading, peak_phi, peak_theta, coherent_filtered_snr, F, lastFew, weight, mc_energy, isWais;
 //  UInt_t eventNumber;
@@ -2420,8 +2421,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
 
   fChain->SetBranchAddress("pol", &pol);
   fChain->SetBranchAddress("ind", &peakInd);
-//  fChain->SetBranchAddress("weight", &weight);
-//  fChain->SetBranchAddress("energy", &mc_energy);
+  fChain->SetBranchAddress("weight", &weight);
+  fChain->SetBranchAddress("energy", &mc_energy);
   fChain->SetBranchAddress("phi", &peak_phi);
   fChain->SetBranchAddress("theta", &peak_theta);
   fChain->SetBranchAddress("run", &run);
