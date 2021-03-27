@@ -3161,8 +3161,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
 
           for(int z=0; z < event1.nThresholds; z++){
             if(surfaceDist < surfaceDistThresholdKm || ll < llEventCuts.at(z)){
-//              clusters[z][event1Ind].sumMcWeights += event1.weight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.
-              std::cout << z << " " << event1Ind << " " << clusters[z][event1Ind].sumMcWeights << std::endl;
+              clusters[z][event1Ind].sumMcWeights += event1.weight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.
+//              std::cout << z << " " << event1Ind << " " << clusters[z][event1Ind].sumMcWeights << std::endl;
               event1.cluster[z] = event2.cluster[z];
             }
           }
