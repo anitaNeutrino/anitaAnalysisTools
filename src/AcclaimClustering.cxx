@@ -3307,7 +3307,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::testSmallClusters(const char* dat
   for(int i = 0; i < nAttempts; i++)
   {
     Int_t n_in_cluster = tr3->Uniform(clusterSizeMin, clusterSizeMax);
-    pickEventsFromList(n_in_cluster);
+    pickSampleEventsFromList(n_in_cluster);
+//    pickEventsFromList(n_in_cluster);
     std::sort(events.begin(), events.end());
     initKDTree();
     doEventEventClustering();
