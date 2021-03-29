@@ -595,6 +595,8 @@ Acclaim::Clustering::McEvent::McEvent(Int_t nT)
   : Event(nT){
     weight = 0;
     energy=0;
+    
+    std::cout << "Is this called?" << std::endl;
   }
 
   Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT)
@@ -603,6 +605,8 @@ Acclaim::Clustering::McEvent::McEvent(Int_t nT)
   weight = sum->mc.weight;
   energy = sum->mc.energy;
   // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
+  
+  std::cout << "Or this called?" << std::endl;
 }
 
 
@@ -614,6 +618,8 @@ Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int
   this->weight = weight;
   this->energy = energy;
   // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
+  
+  std::cout << "How about this?" << std::endl;
 }
 
 Acclaim::Clustering::Cluster::Cluster(Int_t i) {
@@ -1170,6 +1176,9 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::getSumOfMcWeights(){
   for(int i=0; i < (int)mcEvents.size(); i++){
     sumOfWeights += mcEvents.at(i).weight;
   }
+  
+  std::cout << "Is this sum of weights function ever used?" << std::endl;
+  
   return sumOfWeights;
 }
 
