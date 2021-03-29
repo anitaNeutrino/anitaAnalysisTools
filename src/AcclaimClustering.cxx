@@ -2393,7 +2393,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
     {
       i++;
       // switches theta convention (i used the UCorrelator convention for theta)
-      peak_theta = -1* peak_theta;
+      peak_theta *= -1;
       events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
             (double)peak_phi, (double)peak_theta,
             (int)llEventCuts.size(), eventNumber, (int)run,
@@ -2452,7 +2452,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
     {
       i++;
       // switches theta convention (i used the UCorrelator convention for theta)
-      peak_theta = -1* peak_theta;
+      peak_theta *= -1;
       events.push_back(Event(static_cast<int>(pol), static_cast<int>(peakInd),
             peak_phi, peak_theta,
             (int)llEventCuts.size(), eventNumber, run,
@@ -3304,7 +3304,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::testSmallClusters(const char* dat
   readInSampleSummariesForTesting(dataGlob);
 //  readInSummariesForTesting(dataGlob);
 
-  std::cout << "Is this function called by default?" << std::endl;
+//  std::cout << "Is this function called by default? No, it's not." << std::endl;
 
   for(int i = 0; i < nAttempts; i++)
   {
