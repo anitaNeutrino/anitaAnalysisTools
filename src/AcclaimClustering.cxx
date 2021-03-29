@@ -3304,6 +3304,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::testSmallClusters(const char* dat
   readInSampleSummariesForTesting(dataGlob);
 //  readInSummariesForTesting(dataGlob);
 
+  std::cout << "Is this function called by default?" << std::endl;
+
   for(int i = 0; i < nAttempts; i++)
   {
     Int_t n_in_cluster = tr3->Uniform(clusterSizeMin, clusterSizeMax);
