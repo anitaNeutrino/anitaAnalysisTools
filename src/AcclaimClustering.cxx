@@ -2402,6 +2402,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickEventsFromList(int n_in_clust
 //            (double)coherent_filtered_snr));
     }
   }
+  
+  std::cout << "Is this function called in standard processing?" << std::endl;
+  
   delete bits;
 }
 
@@ -2462,7 +2465,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
     }
   }
   
-  std::cout << "Is this function called in standard processing?" << std::endl;
+//  std::cout << "Is this function called in standard processing?" << std::endl;
   
   delete bits;
 }
