@@ -614,8 +614,6 @@ Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int
   this->weight = weight;
   this->energy = energy;
   // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
-  
-  std::cout << "Do these fill? " <<  weight << " " << energy << std::endl;
 }
 
 Acclaim::Clustering::Cluster::Cluster(Int_t i) {
