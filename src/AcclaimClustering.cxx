@@ -2462,7 +2462,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::pickSampleEventsFromList(int n_in
     }
   }
   
-  std::cout << "Is this function called in standard processing?" << std::end;
+  std::cout << "Is this function called in standard processing?" << std::endl;
   
   delete bits;
 }
