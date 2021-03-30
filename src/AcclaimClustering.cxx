@@ -3275,12 +3275,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     
       readInBaseList();
       doBaseEventClustering();
+      
+      std::cout << "Is this still called with additional iceMC clustering afterwards?" << std::endl;
     }
     
     doMcBaseClustering();
   }
 
-  if(!fEventsAlreadyClustered) doEventEventClustering();
+  if(!fEventsAlreadyClustered) {
+  
+    doEventEventClustering();
+  
+    std::cout << "Is this also still called with additional iceMC clustering afterwards?" << std::endl;
+  }
   
   doMcEventClustering();
 
