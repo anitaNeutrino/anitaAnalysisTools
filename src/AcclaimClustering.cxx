@@ -3239,7 +3239,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 
           for(int z=0; z < mcEvent->nThresholds; z++){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownBaseSurfaceSeparationKm < surfaceDistThresholdKm)){
-//              clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
+              clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
               mcEvent->cluster[z] = clusterInd;
             }
           }
