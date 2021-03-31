@@ -2248,7 +2248,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
           if(fSelfLLMax > 0 && events.back().selfLogLikelihood > fSelfLLMax) events.pop_back();
         }
 
-	if (isMC && peak_theta < 0) {
+	if (isMC) {
 
           if(tr3->Integer(10001) > fPermyriadOfMC) continue;
 //          // switches theta convention
