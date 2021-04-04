@@ -1255,7 +1255,7 @@ Acclaim::Clustering::Event* Acclaim::Clustering::LogLikelihoodMethod::nextEvent(
       if(event.antarcticaHistBin==globalMaxBin && event.cluster[0] < 0){
         Double_t dN = event.northing - meanNorthing;        
         Double_t meanN = (event.northing + meanNorthing) / 2;
-        Double_t dE = FFTtools::wrap(event.easting - meanEasting, 360, 0) * cos(TMath::Deg2Rad() * meanN);
+        Double_t dE = FFTtools::wrap(event.easting - meanEasting, 360, 0) * cos(TMath::DegToRad() * meanN);
 
         Double_t surfaceSeparationSquared = dN * dN + dE * dE;
 
