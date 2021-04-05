@@ -1065,11 +1065,9 @@ bool Acclaim::Clustering::LogLikelihoodMethod::considerBin(const Event& event, I
   northing = northing > event.northing ? northing - halfBinWidthNorthing : northing + halfBinWidthNorthing;
   double dNorthing = northing - event.northing;
   
-  double meanNorthing = (northing + event.northing) / 2;
-
   easting = fMyBackground.GetXaxis()->GetBinCenter(bx);
   easting = easting > event.easting ? easting - halfBinWidthEasting : easting + halfBinWidthEasting;
-  double dEasting = FFTtools::wrap(easting - event.easting, 360, 0) * cos(TMath::DegToRad() * meanNorthing);
+  double dEasting = easting - event.easting;
 
   const double distSq = dNorthing * dNorthing + dEasting * dEasting;
   const double maxRangeSq = default_horizon_distance * default_horizon_distance;
@@ -1254,8 +1252,7 @@ Acclaim::Clustering::Event* Acclaim::Clustering::LogLikelihoodMethod::nextEvent(
       Event& event = events.at(eventInd);
       if(event.antarcticaHistBin==globalMaxBin && event.cluster[0] < 0){
         Double_t dN = event.northing - meanNorthing;        
-        Double_t meanN = (event.northing + meanNorthing) / 2;
-        Double_t dE = FFTtools::wrap(event.easting - meanEasting, 360, 0) * cos(TMath::DegToRad() * meanN);
+        Double_t dE = event.easting - meanEasting;
 
         Double_t surfaceSeparationSquared = dN * dN + dE * dE;
 
