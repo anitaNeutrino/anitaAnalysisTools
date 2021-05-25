@@ -2251,7 +2251,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
 	if (isMC) {
 
-          if(tr3->Integer(10001) > fPermyriadOfMC) continue;
+          if(tr3->Integer(10001) >= fPermyriadOfMC) continue;
 //          // switches theta convention
 //          peak_theta = -1* peak_theta;
           mcEvents.push_back(McEvent((double) mc_weight, (double) mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
@@ -3173,7 +3173,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
             
               double eventWeight = event1.weight;
               event1.cluster[z] = event2.cluster[z];
-//              clusters[z][event1.cluster[z]].sumMcWeights += eventWeight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.             
+              clusters[z][event1.cluster[z]].sumMcWeights += eventWeight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.             
             }
           }
           numConsidered++;
