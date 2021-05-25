@@ -3173,7 +3173,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
             
               double eventWeight = event1.weight;
               event1.cluster[z] = event2.cluster[z];
-              clusters[z][event1.cluster[z]].sumMcWeights += eventWeight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.             
+//              clusters[z][event1.cluster[z]].sumMcWeights += eventWeight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.             
             }
           }
           numConsidered++;
