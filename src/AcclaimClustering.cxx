@@ -63,11 +63,15 @@ namespace ResolutionModel{
  * Derivation of these numbers is analogous to what is seen in the macro plotCalPulserResolution.C, except the formula has closer to do with the square of the argument
  */
 namespace VarianceModel{
-  const int n = 6;
-  const double phiParams[n]   = {25.19,  2.42, 2.876, 5.361, 3.674, 2.869};  //  For now, these numbers have to do with A4 only. First set of three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
-  const double thetaParams[n] = {9.14, 2.556, 0.1189, 2.685, 3.501, 0.1174};  //  For now, these numbers have to do with A4 only. First three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
-  TString formula = "[0] * TMath::Gaus(x, 0, [1]) + [2]";
-
+  const int n = 4;
+  //  For now, the following numbers have to do with A4 only. First set of three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
+  const double phiParams[n]   = {8.34,  1.203, 13.54, 1.273};
+  const double thetaParams[n] = {0.7114, 1.049, 1.472, 1.192};
+  TString formula = "[0] / x^[1]";
+//  const int n = 6;
+//  const double phiParams[n]   = {25.19,  2.42, 2.876, 5.361, 3.674, 2.869};
+//  const double thetaParams[n] = {9.14, 2.556, 0.1189, 2.685, 3.501, 0.1174};
+//  TString formula = "[0] * TMath::Gaus(x, 0, [1]) + [2]";
 }
 
 
@@ -150,9 +154,11 @@ void Acclaim::Clustering::getAngularVariance(const AnitaEventSummary* sum, Anita
  * @param var_phi the calculated phi variance (degrees)
  */
 void Acclaim::Clustering::getAngularVariance(double x, double & var_theta, double & var_phi){
+  var_phi = VarianceModel::phiParams[0] / pow(x, VarianceModel::phiParams[1]);
+  var_theta = VarianceModel::thetaParams[0] / pow(x, VarianceModel::thetaParams[1]);
 //  TString formula = "[0] * exp([1] * x) + [2]";
-  var_phi = VarianceModel::phiParams[0] * TMath::Gaus(x, 0, VarianceModel::phiParams[1]) + VarianceModel::phiParams[2];
-  var_theta = VarianceModel::thetaParams[0] * TMath::Gaus(x, 0, VarianceModel::thetaParams[1]) + VarianceModel::thetaParams[2];
+//  var_phi = VarianceModel::phiParams[0] * TMath::Gaus(x, 0, VarianceModel::phiParams[1]) + VarianceModel::phiParams[2];
+//  var_theta = VarianceModel::thetaParams[0] * TMath::Gaus(x, 0, VarianceModel::thetaParams[1]) + VarianceModel::thetaParams[2];
 }
 
 
@@ -161,7 +167,7 @@ TCanvas* Acclaim::Clustering::drawAngularVarianceModel(double maxSnr){
 
   TF1* fTheta = new TF1("fThetaVarianceModel", VarianceModel::formula, 0, maxSnr);
   TF1* fPhi = new TF1("fPhiVarianceModel", VarianceModel::formula, 0, maxSnr);
-  for(int i=0; i < ResolutionModel::n; i++){
+  for(int i=0; i < VarianceModel::n; i++){
     fTheta->SetParameter(i, VarianceModel::thetaParams[i]);
     fPhi->SetParameter(i, VarianceModel::phiParams[i]);
   }
