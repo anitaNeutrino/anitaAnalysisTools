@@ -243,6 +243,7 @@ namespace Acclaim{
       void setSelfLLMax(double llmax){ fSelfLLMax = llmax; } 
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
       void setPermyriadOfMC(Int_t permyriad){ fPermyriadOfMC = permyriad; }
+      void setApproxNumOfMC(Int_t approxNumOfMC){ fApproxNumOfMC = approxNumOfMC; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -348,6 +349,7 @@ namespace Acclaim{
       bool fUseBaseList;
       TChain* fChain;
       Int_t fPermyriadOfMC;
+      Int_t fApproxNumOfMC;
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;

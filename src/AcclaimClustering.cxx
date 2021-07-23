@@ -766,6 +766,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fDebug = false;
   fUseBaseList = true;
   fPermyriadOfMC = 0;
+  fApproxNumOfMC = 0;
   fCut = 0;
   fCutHical = 0;
   fSelfLLMax = -1;
@@ -2260,7 +2261,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
 	if (isMC) {
 
-          if(tr3->Integer(10001) >= fPermyriadOfMC) continue;
+          if(tr3 -> Integer(10001) >= fPermyriadOfMC || tr3 -> Rndm() >= fApproxNumOfMC / double(fEntryList -> GetN())) continue;
 //          // switches theta convention
 //          peak_theta = -1* peak_theta;
           mcEvents.push_back(McEvent((double) mc_weight, (double) mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
