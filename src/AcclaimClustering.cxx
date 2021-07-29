@@ -2228,7 +2228,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       //  Create vector of length fEntryList -> GetN() with randomly shuffled indices.
       std::vector<int> entryListIdx(fEntryList -> GetN());
       std::iota(std::begin(entryListIdx), std::end(entryListIdx), 0);
-      std::shuffle(std::begin(entryListIdx), std::end(entryListIdx), std::mt18837_64(0));
+      std::shuffle(std::begin(entryListIdx), std::end(entryListIdx), std::mt19937_64(0));
 
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
