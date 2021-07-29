@@ -766,7 +766,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fDebug = false;
   fUseBaseList = true;
   fPermyriadOfMC = 0;
-  fApproxNumOfMC = 0;
+  fNumOfMC = 0;
   fCut = 0;
   fCutHical = 0;
   fSelfLLMax = -1;
@@ -2224,6 +2224,11 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       fEntryList = (TEntryList*) gDirectory->Get("fEntryList");
       t->SetEntryList(fEntryList);
       printf("%d entries loaded\n", fEntryList->GetN());
+      
+      //  Create vector of length fEntryList -> GetN() with randomly shuffled indices.
+      std::vector<int> entryListIdx(fEntryList -> GetN());
+      std::iota(std::begin(entryListIdx), std::end(entryListIdx), 0);
+      std::shuffle(std::begin(entryListIdx), std::end(entryListIdx), std::mt18837_64(0));
 
       for(Long64_t entry=0; entry < fEntryList->GetN(); entry++){
         n++;
@@ -2261,8 +2266,10 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
 	if (isMC) {
 
-          if (tr3 -> Integer(10001) >= fPermyriadOfMC && !fApproxNumOfMC) continue; 
-          if (!fPermyriadOfMC && tr3 -> Integer(fEntryList -> GetN()) >= fApproxNumOfMC) continue;
+          if (fPermyriadOfMC && fNumOfMC) continue;
+          if (tr3 -> Integer(10001) >= fPermyriadOfMC && !fNumOfMC) continue; 
+          if (!fPermyriadOfMC && entryListIdx[entry] > fNumOfMC) continue;
+//          if (!fPermyriadOfMC && tr3 -> Integer(fEntryList -> GetN()) >= fNumOfMC) continue;
 //          // switches theta convention
 //          peak_theta = -1* peak_theta;
           mcEvents.push_back(McEvent((double) mc_weight, (double) mc_energy, static_cast<int>(pol), static_cast<int>(peakInd),
