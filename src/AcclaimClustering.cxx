@@ -2268,7 +2268,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
           if (fPermyriadOfMC && fNumOfMC) continue;
           if (tr3 -> Integer(10001) >= fPermyriadOfMC && !fNumOfMC) continue; 
-          if (!fPermyriadOfMC && entryListIdx[entry] > fNumOfMC) continue;
+          if (!fPermyriadOfMC && entryListIdx[entry] >= fNumOfMC) continue;
 //          if (!fPermyriadOfMC && tr3 -> Integer(fEntryList -> GetN()) >= fNumOfMC) continue;
 //          // switches theta convention
 //          peak_theta = -1* peak_theta;
