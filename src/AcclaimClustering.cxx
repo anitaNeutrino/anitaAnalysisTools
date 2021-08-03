@@ -3164,7 +3164,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       
         event2Inds.resize(numNeighbours, -1);
         event2EastingNorthingDistances.resize(numNeighbours, -1);
-        fKDTree->FindNearestNeighbors(lookup, numNeighbours, &event2Inds[0], &event2EastingNorthingDistances[0]);
+        fKDTree->FindNearestNeighbors(lookup, numNeighbours, & event2Inds[0], &event2EastingNorthingDistances[0]);
 
         for (UInt_t i=lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++) {
         
@@ -3173,7 +3173,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
 
           if (event2EastingNorthingDistances[i] > furthestConsidered) furthestConsidered = event2EastingNorthingDistances[i];
 
-          double ll = dMin(&event1, &event2);
+          double ll = dMin(& event1, & event2);
           Double_t surfaceDist = 1e-3 * event1.cartesianSeparation(event2);
           
           if (ll > llFitThreshold && surfaceDist > surfaceDistThresholdKm) ll = dFit(& event1, & event2);
@@ -3204,7 +3204,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         }
         
         lastNumNeighbours = numNeighbours;
-        if (events.size() > initNumNeighbours) numNeighbours *= 2;
+        numNeighbours *= 2;
+        if (events.size() > initNumNeighbours) continue;
       }
       
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
