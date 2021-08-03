@@ -3143,66 +3143,74 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
   gErrorIgnoreLevel = 1001;
 
   ProgressBar p(mcEvents.size());
-  for(UInt_t event1Ind=0; event1Ind < mcEvents.size(); event1Ind++){
+  
+  for(UInt_t event1Ind=0; event1Ind < mcEvents.size(); event1Ind++) {
+  
     McEvent& event1 = mcEvents.at(event1Ind);
-    if(event1.eventEventClustering){
+    
+    if (event1.eventEventClustering) {
 
       double lookup[2] = {event1.easting, event1.northing};
       // look up nearby DATA events, not MC, don't want to cluster MC to MC...
       std::vector<Int_t> event2Inds;
       std::vector<Double_t> event2EastingNorthingDistances;
       UInt_t lastNumNeighbours = 0;
-      UInt_t numNeighbours = min(2048, (int) pow(2, (int) log2(mcEvents.size())));  //  To avoid running out of vector range, choose smaller base 2 number.
-
+      UInt_t initNumNeighbours = 2048;
+      UInt_t numNeighbours = min(initNumNeighbours, events.size());  //  To avoid running out of vector range, choose event size when it's smaller than 2048.
       Double_t furthestConsidered = 0;
       Int_t numConsidered = 0;
 
-      while(furthestConsidered < default_horizon_distance && event1.cluster[0] < 0){
+      while (furthestConsidered < default_horizon_distance && event1.cluster[0] < 0) {
+      
         event2Inds.resize(numNeighbours, -1);
         event2EastingNorthingDistances.resize(numNeighbours, -1);
         fKDTree->FindNearestNeighbors(lookup, numNeighbours, &event2Inds[0], &event2EastingNorthingDistances[0]);
 
-        for(UInt_t i=lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++){
+        for (UInt_t i=lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++) {
+        
           UInt_t event2Ind = event2Inds.at(i);
           const Event& event2 = events.at(event2Ind);
 
-          if(event2EastingNorthingDistances[i] > furthestConsidered){
-            furthestConsidered = event2EastingNorthingDistances[i];
-          }
+          if (event2EastingNorthingDistances[i] > furthestConsidered) furthestConsidered = event2EastingNorthingDistances[i];
 
           double ll = dMin(&event1, &event2);
-          Double_t surfaceDist = 1e-3*event1.cartesianSeparation(event2);
+          Double_t surfaceDist = 1e-3 * event1.cartesianSeparation(event2);
           
-          if(ll > llFitThreshold && surfaceDist > surfaceDistThresholdKm){
-            ll = dFit(&event1, &event2);
-          }
+          if (ll > llFitThreshold && surfaceDist > surfaceDistThresholdKm) ll = dFit(& event1, & event2);
 
-          if(ll < event1.nearestEventSurfaceLogLikelihood){
+          if (ll < event1.nearestEventSurfaceLogLikelihood) {
+          
             event1.nearestEventSurfaceLogLikelihood = ll;
             event1.nearestEventSurfaceLLEventNumber = event2.eventNumber;
           }
 
-          if(surfaceDist < event1.nearestEventSurfaceDistanceKm){
+          if (surfaceDist < event1.nearestEventSurfaceDistanceKm) {
+          
             event1.nearestEventSurfaceDistanceKm = surfaceDist;
             event1.nearestEventSurfaceEventNumber = event2.eventNumber;
           }
 
-          for(int z=0; z < event1.nThresholds; z++){
-            if(surfaceDist < surfaceDistThresholdKm || ll < llEventCuts.at(z)){
+          for (int z=0; z < event1.nThresholds; z++) {
+          
+            if (surfaceDist < surfaceDistThresholdKm || ll < llEventCuts.at(z)) {
             
               double eventWeight = event1.weight;
               event1.cluster[z] = event2.cluster[z];
               clusters[z][event1.cluster[z]].sumMcWeights += eventWeight;  //  Comparing to doMcBaseClustering, this should fill iceMC event weights where neccessary.             
             }
           }
+          
           numConsidered++;
         }
+        
         lastNumNeighbours = numNeighbours;
-        numNeighbours *= 2;
+        if (events.size() > initNumNeighbours) numNeighbours *= 2;
       }
+      
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
-      std::cerr << prefix << " a match after " << numConsidered << " events" << std::endl;
+      std::cerr << prefix << " a match after " << numConsidered << " events" << std::endl; 
     }
+    
     p.inc(event1Ind);
   }
 
