@@ -3156,7 +3156,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       std::vector<Double_t> event2EastingNorthingDistances;
       UInt_t lastNumNeighbours = 0;
       UInt_t initNumNeighbours = 2048;
-      UInt_t numNeighbours = min(initNumNeighbours, events.size());  //  To avoid running out of vector range, choose event size when it's smaller than 2048.
+      UInt_t numNeighbours = min(initNumNeighbours, (unsigned int) events.size());  //  To avoid running out of vector range, choose event size when it's smaller than 2048.
       Double_t furthestConsidered = 0;
       Int_t numConsidered = 0;
 
