@@ -3155,8 +3155,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       std::vector<Int_t> event2Inds;
       std::vector<Double_t> event2EastingNorthingDistances;
       UInt_t lastNumNeighbours = 0;
-      UInt_t initNumNeighbours = 2048;
-      UInt_t numNeighbours = min(initNumNeighbours, (unsigned int) events.size());  //  To avoid running out of vector range, choose event size when it's smaller than 2048.
+      UInt_t numNeighbours = 2048;
       Double_t furthestConsidered = 0;
       Int_t numConsidered = 0;
 
@@ -3164,7 +3163,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       
         event2Inds.resize(numNeighbours, -1);
         event2EastingNorthingDistances.resize(numNeighbours, -1);
-        fKDTree->FindNearestNeighbors(lookup, numNeighbours, & event2Inds[0], &event2EastingNorthingDistances[0]);
+        fKDTree->FindNearestNeighbors(lookup, numNeighbours, & event2Inds[0], & event2EastingNorthingDistances[0]);
 
         for (UInt_t i=lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++) {
         
@@ -3205,7 +3204,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         
         lastNumNeighbours = numNeighbours;
         numNeighbours *= 2;
-        if (events.size() > initNumNeighbours) continue;
+        
+        if (numNeighbours >= events.size()) continue;
       }
       
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
