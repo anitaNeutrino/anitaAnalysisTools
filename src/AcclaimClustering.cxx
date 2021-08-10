@@ -3204,7 +3204,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         
         lastNumNeighbours = numNeighbours;
         numNeighbours *= 2;
-        if (numNeighbours > events.size()) numNeigbours = events.size();
+        if (numNeighbours > events.size()) numNeighbours = events.size();
       }
       
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
