@@ -3155,7 +3155,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       std::vector<Int_t> event2Inds;
       std::vector<Double_t> event2EastingNorthingDistances;
       UInt_t lastNumNeighbours = 0;
-      UInt_t numNeighbours = 2048;
+      UInt_t numNeighbours = events.size() >= 2048 ? 2048 : pow(2, (int) log2(events.size()));
       Double_t furthestConsidered = 0;
       Int_t numConsidered = 0;
 
@@ -3204,8 +3204,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         
         lastNumNeighbours = numNeighbours;
         numNeighbours *= 2;
-        
-        if (numNeighbours >= events.size()) continue;
       }
       
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
