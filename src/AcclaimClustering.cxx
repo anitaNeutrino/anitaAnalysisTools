@@ -3203,7 +3203,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         }
         
         lastNumNeighbours = numNeighbours;
-        if (numNeigbhours > events.size()) break;
+        if (numNeighbours > events.size()) break;
         numNeighbours *= 2;
       }
       
