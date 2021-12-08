@@ -19,6 +19,8 @@
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
 #include "AcclaimOpenMP.h"
+#include "TRandom3.h"
+#include "TChain.h"
 
 class TTree;
 class TGraphAntarctica;
@@ -34,12 +36,18 @@ namespace Acclaim{
 
     const Double_t default_sigma_theta = 0.25;
     const Double_t default_sigma_phi = 0.5;
+    const Double_t default_var_theta = default_sigma_theta * default_sigma_theta;
+    const Double_t default_var_phi = default_sigma_phi * default_sigma_phi;
     const Double_t default_range_easting_northing = 750e3;
     const Double_t default_horizon_distance = 750e3;
 
     void getAngularResolution(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& sigma_theta, double& sigma_phi);
     void getAngularResolution(double snr, double& sigma_theta, double& sigma_phi);
     TCanvas* drawAngularResolutionModel(double maxSnr);
+
+    void getAngularVariance(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, double& var_theta, double& var_phi);
+    void getAngularVariance(double snr, double& var_theta, double& var_phi);
+    TCanvas* drawAngularVarianceModel(double maxSnr);
 
     template <class T>
     Bool_t isVaguelyNearMcMurdo(const T& t){
@@ -81,6 +89,9 @@ namespace Acclaim{
       Double_t sigmaTheta;				/// resolution associated with this snr?
       Double_t sigmaPhi;				/// resolution associated with this snr?
 
+      Double_t varTheta;				/// variance associated with this snr?
+      Double_t varPhi;				        /// (spherical) variance associated with this snr?
+
       //--------------------------------------------------------------------------------
       // determined by clustering
       //--------------------------------------------------------------------------------
@@ -98,6 +109,7 @@ namespace Acclaim{
       Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
       UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
       Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
+      UInt_t nearestEventSurfaceLLEventNumber;		/// What's the event number of the nearest surface neighbour by LL?
 
       Int_t antarcticaHistBin;				/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!			/// Only construct this once
@@ -108,7 +120,8 @@ namespace Acclaim{
       Event(const Event& event);
       Event& operator=(const Event& event);
       Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
+	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
+            double coherent_filtered_snr, double deconvolved_filtered_snr);
 
 
       TArrowAntarctica* makeArrowFromAnitaToEvent();
@@ -158,7 +171,8 @@ namespace Acclaim{
       McEvent(Int_t nT = 0);
       McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
       McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr);
+	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
+              double coherent_filtered_snr, double deconvolved_filtered_snr);
 
       virtual ~McEvent(){;}
 	
@@ -187,9 +201,10 @@ namespace Acclaim{
 	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
-      Int_t knownBase;						/// Known base == 0, Pseudo-base == 1
-      Int_t knownPath;                                          /// Known transient path = 0, Psuedo-path = 1
-      Int_t index;                                              /// Where am I in the cluster array?
+      Int_t knownBase;						/// Known base == 1, Pseudo-base == 0
+      Int_t knownPath;                                        /// Known transient path = 1, Psuedo-path = 0
+      Int_t knownAbstractBase;                                /// Either known base == 1 or known transient path == 1
+      Int_t index;                                            /// Where am I in the cluster array?
       Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
       Double_t llEventCut; /// and what's the value of that cut?
 
@@ -209,8 +224,6 @@ namespace Acclaim{
       ClassDef(Cluster, 6)
     };
 
-
-
     /**
      * @class LogLikelihoodMethod
      * @brief Workhorse class: groups events into clusters around bases and other events using the log likelihood method
@@ -225,6 +238,7 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
+      void testSmallClusters(const char* dataGlob, const char* outFileName, int clusterSizeMin=5, int clusterSizeMax=16, int nAttempts=100);
       
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
@@ -238,7 +252,10 @@ namespace Acclaim{
 
       void setCut(TCut cut){ fCut = cut; }
       void setCutHical(bool hc){ fCutHical = hc; } // *TOGGLE *GETTER=GetCutHical
+      void setSelfLLMax(double llmax){ fSelfLLMax = llmax; } 
       void setSurfaceDistThresholdKm(Double_t dist){ surfaceDistThresholdKm = dist; }
+      void setPermyriadOfMC(Int_t permyriad){ fPermyriadOfMC = permyriad; }
+      void setNumOfMC(Int_t numOfMC){ fNumOfMC = numOfMC; }
 
       bool getDebug(){return fDebug;}
       void setDebug(bool db){fDebug = db;} // *TOGGLE *GETTER=GetDebug
@@ -262,17 +279,25 @@ namespace Acclaim{
 
 
       Long64_t readInSummaries(const char* summaryGlob);
-      Long64_t readInTMVATreeSummaries(const char* summaryGlob);
+      Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
+      Long64_t readInSampleSummaries(const char* summaryGlob, bool isMC);
+      void readInSummariesForTesting(const char* summaryGlob);
+      void readInSampleSummariesForTesting(const char* summaryGlob);
+      void pickEventsFromList(int n_in_cluster);
+      void pickSampleEventsFromList(int n_in_cluster);
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
       void readInPathList();
 
+      TRandom3* tr3;
+
       void assignMcEventsToClusters();
       void setInitialBaseClusters();
       void setInitialPathClusters();
       void makeSummaryTrees();
+      void addToHistograms(TH2D* h, TH2D* h2);
       void resetClusters();
       Double_t getSumOfMcWeights();
       void initKDTree();
@@ -308,6 +333,7 @@ namespace Acclaim{
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
       TCut fCut; /// What to cut on when using tmva trees
       bool fCutHical; /// cut hical? (when using tmva trees)
+      bool fSelfLLMax; /// basically a way of excluding above horizon from sample
       TEntryList* fEntryList; /// Entry list that gets filled by cut when using tmva trees
 
       UInt_t fTestEvent1; /// For debugging
@@ -338,6 +364,11 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       bool fUsePathList;
+
+      TChain* fChain;
+      Int_t fPermyriadOfMC;
+      Int_t fNumOfMC;
+
       TGraph* grTestMinimizerWalk;
       TGraph* grTestMinimizerValue;
       TGraph* grTestMinimumPosition;

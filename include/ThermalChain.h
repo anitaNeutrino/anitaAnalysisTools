@@ -57,6 +57,7 @@ namespace Acclaim {
     Float_t anita_altitude;
     Float_t anita_heading;
     Float_t coherent_filtered_snr;
+    Float_t deconvolved_filtered_snr;
     Float_t weight;
     Float_t mc_energy;
     Float_t peak_value;

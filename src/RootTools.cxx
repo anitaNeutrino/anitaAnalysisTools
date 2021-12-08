@@ -31,6 +31,7 @@
 #include <numeric>
 #include "TObjArray.h"
 #include "TObjString.h"
+#include "TVirtualX.h"
 
 //---------------------------------------------------------------------------------------------------------
 /**

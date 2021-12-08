@@ -77,6 +77,7 @@ void Acclaim::ThermalChain::setBranches(){
   fChain->SetBranchAddress("anitaLocation_altitude", &anita_altitude);
   fChain->SetBranchAddress("anitaLocation_heading", &anita_heading);
   fChain->SetBranchAddress("coherent_filtered_snr", &coherent_filtered_snr);
+  fChain->SetBranchAddress("deconvolved_filtered_snr", &deconvolved_filtered_snr);
   fChain->SetBranchAddress("weight", &weight);
   fChain->SetBranchAddress("mc_energy", &mc_energy);
 
