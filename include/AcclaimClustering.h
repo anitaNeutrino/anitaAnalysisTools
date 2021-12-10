@@ -70,7 +70,7 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       UInt_t eventNumber;				/// Event number
       Int_t run;					/// Run
-      AnitaPol::AnitaPol_t pol;				/// Polarization
+      AnitaPol::AnitaPol_t pol;			/// Polarization
       UInt_t realTime;					/// Time at which event was detected.
       Int_t peakIndex;					/// Which peak in the map does this represent?
 
@@ -78,9 +78,9 @@ namespace Acclaim{
       Double_t latitude;				/// latitude
       Double_t longitude;				/// longitude
       Double_t altitude;				/// longitude
-      Double_t easting;					/// easting
+      Double_t easting;				/// easting
       Double_t northing;				/// northing
-      AnitaEventSummary::PayloadLocation anita;		/// Anita's position
+      AnitaEventSummary::PayloadLocation anita;	/// Anita's position
 
       Double_t theta;					/// reconstructed theta
       Double_t phi;					/// reconstructed phi
@@ -101,17 +101,21 @@ namespace Acclaim{
       Double_t* dPhiCluster;//[nThresholds]		/// phi distance to cluster
 
       Bool_t eventEventClustering;			/// Remove huge clusters near MCM before doing event-to-event clustering
-      Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base?
-      Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base?
-      Int_t nearestKnownBaseCluster;			/// How far to the nearest known base?
-      Int_t nearestKnownBaseClusterSurface;		/// How far to the nearest known base?
+      Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base in terms of log-likelihood between event and base?
+      Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base in terms of surface separation in km between event and base?
+      Int_t nearestKnownBaseCluster;			/// Index of nearest base cluster relative to log-likelihood
+      Int_t nearestKnownBaseClusterSurface;		/// Index of nearest base cluser relative to surface separation in km
+      Double_t nearestKnownPathLogLikelihood;		/// How far to the nearest known path in terms of log-likelihood between event and path?
+      Double_t nearestKnownPathSurfaceSeparationKm;	/// How far to the nearest known path in terms of surface separation in km between event and path?
+      Int_t nearestKnownPathCluster;			/// Index of nearest known path cluster in terms of log-likelihood
+      Int_t nearestKnownPathClusterSurface;		/// Index of nearest known path cluster in terms of surface separation in km
       Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero
       Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
       UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
       Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
-      UInt_t nearestEventSurfaceLLEventNumber;		/// What's the event number of the nearest surface neighbour by LL?
+      UInt_t nearestEventSurfaceLLEventNumber;	/// What's the event number of the nearest surface neighbour by LL?
 
-      Int_t antarcticaHistBin;				/// Which global bin in the TH2DAntarctica?
+      Int_t antarcticaHistBin;			/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!			/// Only construct this once
       mutable Bool_t fDebug; //!
 
@@ -119,7 +123,7 @@ namespace Acclaim{
       Event(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
       Event(const Event& event);
       Event& operator=(const Event& event);
-      Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+      Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run, UInt_t realTime,
 	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
             double coherent_filtered_snr, double deconvolved_filtered_snr);
 
@@ -154,7 +158,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 15)
+      ClassDef(Event, 16)
     };
 
 
@@ -170,13 +174,13 @@ namespace Acclaim{
 
       McEvent(Int_t nT = 0);
       McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT=0);
-      McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+      McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run, UInt_t realTime,
 	      double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
               double coherent_filtered_snr, double deconvolved_filtered_snr);
 
       virtual ~McEvent(){;}
 	
-      ClassDef(McEvent, 1)
+      ClassDef(McEvent, 2)
     };    
 
 
@@ -193,7 +197,7 @@ namespace Acclaim{
       Cluster(Int_t i=-1);
       Cluster(const Event& seedEvent, Int_t i=-1);
       Cluster(const BaseList::base& base, Int_t i=-1);
-      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime, Double_t pathTime);
+      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime);
 
       virtual ~Cluster(){ ;}	
 
