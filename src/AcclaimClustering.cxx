@@ -340,8 +340,7 @@ Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, 
 
 
 
-Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
-    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr, double deconvolved_filtered_snr)// ,
+Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run, UInt_t realTime, double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr, double deconvolved_filtered_snr)// ,
 // double longitude, double latitude, double altitude)
 : nThresholds(0), cluster(NULL),
   dThetaCluster(NULL), dPhiCluster(NULL)
@@ -349,6 +348,7 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
 
   this->eventNumber = eventNumber;
   this->run = run;
+  this->realTime = realTime;
   this->pol = (AnitaPol::AnitaPol_t) pol;
   peakIndex = peakInd;
   // AnitaGeomTool* geom = AnitaGeomTool::Instance();
@@ -371,6 +371,9 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   fDebug = false;
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
+
+  nearestKnownPathLogLikelihood = DBL_MAX;
+  nearestKnownPathCluster = -1;
 
   setNThresholds(nT);
   resetClusteringNumbers();
@@ -406,6 +409,7 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   anita.reset();
   eventNumber = 0;
   run = 0;
+  realTime = 0;
   pol = AnitaPol::kNotAPol;
   peakIndex = -1;
   sigmaTheta = default_sigma_theta;
@@ -422,6 +426,11 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
   nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
+  
+  nearestKnownPathLogLikelihood = DBL_MAX;
+  nearestKnownPathCluster = -1;
+  nearestKnownPathSurfaceSeparationKm = DBL_MAX;
+  
   nearestEventSurfaceDistanceKm = DBL_MAX;
   nearestEventSurfaceEventNumber = 0;
   nearestEventSurfaceLogLikelihood = DBL_MAX;
@@ -443,6 +452,8 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
 
   eventNumber = event.eventNumber;
   run = event.run;
+  realTime = event.realTime;
+  
   pol = event.pol;
   peakIndex = event.peakIndex;
 
@@ -474,17 +485,22 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
     dThetaCluster = new Double_t[nThresholds];
     dPhiCluster = new Double_t[nThresholds];
   }
+  
   for(int z=0; z < nThresholds; z++){
     cluster[z] = event.cluster[z];
     dThetaCluster[z] = event.dThetaCluster[z];
     dPhiCluster[z] = event.dPhiCluster[z];
   }
 
-
   eventEventClustering = event.eventEventClustering;
   nearestKnownBaseLogLikelihood = event.nearestKnownBaseLogLikelihood;
   nearestKnownBaseSurfaceSeparationKm = event.nearestKnownBaseSurfaceSeparationKm;
   nearestKnownBaseCluster = event.nearestKnownBaseCluster;
+  
+  nearestKnownPathLogLikelihood = event.nearestKnownPathLogLikelihood;
+  nearestKnownPathSurfaceSeparationKm = event.nearestKnownPathSurfaceSeparationKm;
+  nearestKnownPathCluster = event.nearestKnownPathCluster;
+  
   selfLogLikelihood = event.selfLogLikelihood;
   nearestEventSurfaceDistanceKm = event.nearestEventSurfaceDistanceKm;
   nearestEventSurfaceEventNumber = event.nearestEventSurfaceEventNumber;
@@ -580,11 +596,13 @@ void Acclaim::Clustering::Event::resetClusteringNumbers(){
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
   nearestKnownBaseCluster = -1;
+  nearestKnownPathLogLikelihood = DBL_MAX;
+  nearestKnownPathSurfaceSeparationKm = DBL_MAX;
+  nearestKnownPathCluster = -1;
   selfLogLikelihood = 0;
   nearestEventSurfaceDistanceKm = DBL_MAX;
   nearestEventSurfaceEventNumber = 0;
   nearestEventSurfaceLogLikelihood = DBL_MAX;
-
 }
 
 
@@ -631,6 +649,8 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
   longitude = 0;
   altitude = 0;
   knownBase = 0;
+  knownPath = 0;
+  knownAbstractBase = 0;
   resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
@@ -643,6 +663,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
   longitude = ac.y;
   altitude = ac.z;
   knownBase = 1;
+  knownPath = 0;
+  knownAbstractBase = 1;
 
   if(altitude == -999){
     altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
@@ -663,6 +685,8 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   longitude = event.latitude;
   altitude = event.altitude;
   knownBase = 0;
+  knownPath = 0;
+  knownAbstractBase = 0;
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
@@ -1283,8 +1307,6 @@ Acclaim::Clustering::Event* Acclaim::Clustering::LogLikelihoodMethod::nextEvent(
 }
 
 
-
-
 void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
@@ -1553,14 +1575,167 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 // }
 
 
+void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
+
+  std::cout << __PRETTY_FUNCTION__ << std::endl;
+
+  const int nPaths = BaseList::getNumPaths();
+
+  const Long64_t nEvents = events.size();
+  ProgressBar p(nEvents);
+
+  // I like to call this vector constructor bullshit
+  std::vector< std::vector<std::vector<Int_t> > > matchedClusters(llEventCuts.size(), std::vector< std::vector<Int_t > >(nBases, std::vector<Int_t>()));
+
+  for(Long64_t eventInd=0; eventInd < nEvents; eventInd++){
+    Event* event = &events.at(eventInd);
+
+    std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
+    for(int clusterInd=0; clusterInd < nPaths; clusterInd++){
+      Cluster& cluster = clusters.at(0).at(clusterInd);
+      if(cluster.knownBase){
+        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        if(distM < default_horizon_distance){
+          double ll = event->logLikelihoodFromPoint(cluster.longitude, cluster.latitude, cluster.altitude, true);
+          double surfaceSeparationKm = 1e-3*event->cartesianSeparation(cluster);
+
+          if(surfaceSeparationKm < surfaceDistThresholdKm){ // then true for all cluster sizes
+            for(int z=0; z < llEventCuts.size(); z++){
+              matchedClustersThisEvent[z].push_back(clusterInd);
+            }
+          }
+          else{
+            for(int z=0; z < llEventCuts.size(); z++){
+              if(ll < llEventCuts.at(z)){
+                matchedClustersThisEvent[z].push_back(clusterInd);
+              }
+            }
+          }
+
+          if(ll < event->nearestKnownPathLogLikelihood){
+            event->nearestKnownPathLogLikelihood = ll;
+            event->nearestKnownPathCluster = clusterInd;
+          }
+          if(surfaceSeparationKm < event->nearestKnownPathSurfaceSeparationKm){
+            event->nearestKnownPathSurfaceSeparationKm = surfaceSeparationKm;
+            event->nearestKnownPathClusterSurface = clusterInd;
+          }
+        }
+      }
+      else{
+        std::cerr << "You shouldn't get here!!!" << std::endl;
+      }
+    }
+    for(int z=0; z < llEventCuts.size(); z++){
+      if(matchedClustersThisEvent[z].size() > 0){
+
+        // for all matched clusters
+        for(int i = 0; i < matchedClustersThisEvent[z].size(); i++){
+          Int_t matchedCluster = matchedClustersThisEvent[z][i];
+
+          // add other matched clusters to their list...
+          for(int j = 0; j < matchedClustersThisEvent[z].size(); j++){
+            Int_t matchedCluster2 = matchedClustersThisEvent[z][j];
+
+            if(!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster], matchedCluster2)){
+              matchedClusters[z][matchedCluster].push_back(matchedCluster2);
+            }
+          }
+        }	
+      }
+    }
+
+    p.inc(eventInd);
+  }
+
+  for(int z=0; z < llEventCuts.size(); z++){
+    std::vector<Int_t> reassignedTo(0);
+    reassignedTo.reserve(nPaths);
+    for(int i=0; i < nPaths; i++){
+      reassignedTo.push_back(i);
+    }
+
+    for(int b=0; b < nPaths; b++){
+      if(matchedClusters[z][b].size() > 0){
+
+        // here we try and gather all the matched clusters...
+        int lastNMatched = 0;
+        int nMatches = 0;
+        do{
+          lastNMatched = nMatches;
+          nMatches = matchedClusters[z][b].size();
+          for(int i=lastNMatched; i < nMatches; i++){
+
+            int b2 = matchedClusters[z][b][i];
+
+            for(int j=0; j < matchedClusters[z][b2].size(); j++){
+              int b3 = matchedClusters[z][b2][j];
+
+              if(!RootTools::vectorContainsValue(matchedClusters[z][b], b3)){
+                matchedClusters[z][b].push_back(b3);
+              }
+            }
+          }
+        }
+        while(lastNMatched!=nMatches);
+
+        if(fDebug){
+          std::cout << "At llEventCut = " << llEventCuts[z] << ", base " << b << " was matched with: " << matchedClusters[z][b].size() << " bases" << std::endl;
+          if(matchedClusters[z][b].size() < 20){
+            std::cout << "They are: ";
+            std::sort(matchedClusters[z][b].begin(), matchedClusters[z][b].end());
+            for(UInt_t i=0; i < matchedClusters[z][b].size(); i++){
+              std::cout << matchedClusters[z][b][i];
+              if(i != matchedClusters[z][b].size() - 1){
+                std::cout << ", ";
+              }
+            }
+            std::cout<< std::endl;
+          }
+        }
+
+        for(int i=0; i < matchedClusters[z][b].size(); i++){
+          int cluster = matchedClusters[z][b][i];
+
+          if(cluster < reassignedTo[b]){
+            reassignedTo[b] = cluster;
+          }
+        }
+      }
+    }
 
 
+    if(fDebug){
+      bool printed = false;
+      for(int b=0; b < nBases; b++){
+        if(b!=reassignedTo[b]){
+          if(printed == false){
+            std::cout << "At llEventCut = " << llEventCuts[z] << ", the known base cluster reassignments are as follows:" << std::endl;
+            printed = true;
+          }
+          std::cout << b << "->" << reassignedTo[b] << "\n";
+        }
+      }
+    }
 
+    for(int eventInd=0; eventInd < events.size(); eventInd++){
+      Event& event = events.at(eventInd);
+      int clusterInd = -1;
+      if(event.nearestKnownPathLogLikelihood < llEventCuts.at(z)){
+        clusterInd = event.nearestKnownPathCluster;
+      }
+      else if(event.nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm){
+        clusterInd = event.nearestKnownPathClusterSurface;
+      }
+      if(clusterInd >= 0){
 
-
-
-
-
+        Int_t reassignedCluster = reassignedTo[clusterInd];
+        event.cluster[z] = reassignedCluster;
+        clusters.at(z).at(reassignedCluster).numDataEvents++;
+      }
+    }
+  }
+}
 
 
 size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
@@ -1571,22 +1746,12 @@ size_t Acclaim::Clustering::LogLikelihoodMethod::addMcEvent(const AnitaEventSumm
 }
 
 
-
-
-
-
 size_t Acclaim::Clustering::LogLikelihoodMethod::addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd){
 
   events.push_back(Event(sum, pol, peakInd, llEventCuts.size()));
 
   return events.size();
 }
-
-
-
-
-
-
 
 
 /** 
