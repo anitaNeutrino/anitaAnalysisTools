@@ -610,9 +610,9 @@ Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::An
 }
 
 
-Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run,
+Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int peakInd, double peak_phi, double peak_theta, int nT, UInt_t eventNumber, Int_t run, UInt_t realTime,
     double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading, double coherent_filtered_snr, double deconvolved_filtered_snr)
-:  Event(pol, peakInd, peak_phi, peak_theta, nT, eventNumber, run,
+:  Event(pol, peakInd, peak_phi, peak_theta, nT, eventNumber, run, realTime,
     anita_longitude, anita_latitude, anita_altitude, anita_heading, coherent_filtered_snr, deconvolved_filtered_snr)
 {
   this->weight = weight;
@@ -661,8 +661,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const PathList::path& path, Int_t i) {
-  AntarcticCoord ac = path.position.as(AntarcticCoord::WGS84);
+Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_t realTime) {
+  AntarcticCoord ac = path.getPosition(realTime).as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
@@ -1766,7 +1766,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(){
     for(UInt_t z=0; z < llEventCuts.size(); z++){
       for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPaths(); clusterInd++){
         const BaseList::path& path = BaseList::getPath(clusterInd);
-        clusters.at(z).push_back(Cluster(base, clusters.at(z).size()));
+        clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
         clusters.at(z).back().llEventCutInd = z;
         clusters.at(z).back().llEventCut = llEventCuts.at(z);
       }

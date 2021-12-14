@@ -58,6 +58,7 @@ namespace Acclaim{
       return t.longitude >= -90 && t.longitude < 90;
     }
 
+
     /**
      * @class Event
      * @brief Minimum required information about an ANITA event to be clustered
@@ -127,7 +128,6 @@ namespace Acclaim{
 	    double anita_longitude, double anita_latitude, double anita_altitude, double anita_heading,
             double coherent_filtered_snr, double deconvolved_filtered_snr);
 
-
       TArrowAntarctica* makeArrowFromAnitaToEvent();
       void setupUsefulPat(bool calculateNow = true);
       void resetClusteringNumbers();
@@ -162,7 +162,6 @@ namespace Acclaim{
     };
 
 
-
     /** 
      * @class McEvent
      * @brief Same as event, but with an energy and a weight
@@ -184,9 +183,6 @@ namespace Acclaim{
     };    
 
 
-
-
-
     //--------------------------------------------------------------------------------------------------------
     /**
      * @class Cluster
@@ -197,11 +193,15 @@ namespace Acclaim{
       Cluster(Int_t i=-1);
       Cluster(const Event& seedEvent, Int_t i=-1);
       Cluster(const BaseList::base& base, Int_t i=-1);
-      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime);
+      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime = 0);
 
       virtual ~Cluster(){ ;}	
 
       Double_t centre[3]; //! Does not persist			/// Center in cartesian
+
+      Double_t latitude;					/// cluster center latitude
+      Double_t longitude;					/// cluster center longitude
+      Double_t altitude;					/// cluster center altitude
 	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
@@ -215,18 +215,11 @@ namespace Acclaim{
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
       Int_t seedEvent; //!			                /// Which event seeded the cluster?
 
-      void getLongitude(UInt_t realTime);
-      void getLatitude(UInt_t realTime);
-      void getAltitiude(UInt_t realTime);
       void resetClusteringNumbers();
-
-    private:
-      Double_t latitude;					/// cluster center latitude
-      Double_t longitude;					/// cluster center longitude
-      Double_t altitude;					/// cluster center altitude
 
       ClassDef(Cluster, 6)
     };
+
 
     /**
      * @class LogLikelihoodMethod
@@ -236,7 +229,7 @@ namespace Acclaim{
     class LogLikelihoodMethod {
     public:
 
-      static const Int_t SmallClusterSizeThreshold = 100;
+      static const Int_t SmallClusterSizeThreshold = 125;
 
       LogLikelihoodMethod();
       virtual ~LogLikelihoodMethod();
@@ -280,7 +273,6 @@ namespace Acclaim{
       Double_t getDistSqEventCluster(const Event& event, const Cluster& cluster);
       Double_t getAngDistSqEventCluster(const Event& event, const Cluster& cluster);
       void getDeltaThetaDegDeltaPhiDegEventCluster(const Event& event, const Cluster& cluster, Double_t& deltaThetaDeg, Double_t& deltaPhiDeg);
-
 
       Long64_t readInSummaries(const char* summaryGlob);
       Long64_t readInTMVATreeSummaries(const char* summaryGlob, bool isMC);
@@ -329,9 +321,6 @@ namespace Acclaim{
       void makeAndWriteNSquaredEventEventHistograms();
       Double_t evalPairLogLikelihoodAtLonLat(const Double_t* params);
 
-
-
-
       std::vector<const Acclaim::Clustering::Event*> fFitEvent1s; /// First event in the pairwise fit
       std::vector<const Acclaim::Clustering::Event*> fFitEvent2s; /// Second event in the pairwise fit
       Int_t fMaxFitterAttempts; /// How many times should I try if I don't reach a good minimum?
@@ -357,7 +346,6 @@ namespace Acclaim{
       std::vector<Acclaim::Clustering::McEvent> mcEvents;	/// Vector of Monte Carlo events
       std::vector<std::vector<std::vector<UInt_t> > > fLookupEN;/// Event index lookup
       AntarcticaBackground fMyBackground;
-
 
       TKDTreeID* fKDTree;                     /// ROOT's implementation of a KDTree, typedef'd for int/double
       std::vector<Double_t> fEventEastings;
