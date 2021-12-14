@@ -303,6 +303,7 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   this->eventNumber = sum->eventNumber;
   this->run = sum->run;
   this->pol = pol;
+  this->realTime = realTime;
   peakIndex = peakInd;
   const AnitaEventSummary::PointingHypothesis& peak = sum->peak[pol][peakInd];
   latitude = peak.latitude;
@@ -797,6 +798,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fKDTree = NULL;
   fDebug = false;
   fUseBaseList = true;
+  fUsePathList = true;
   fPermyriadOfMC = 0;
   fNumOfMC = 0;
   fCut = 0;
@@ -1119,7 +1121,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents2(UInt_t eventInd, st
   const Event& event = events.at(eventInd);
   std::vector<bool> found(events.size(), 0);
 
-
   for(Int_t by=1; by <= ny; by++){
     for(Int_t bx=1; bx <= nx; bx++){
       double easting, northing;
@@ -1145,8 +1146,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::nearbyEvents2(UInt_t eventInd, st
       nearbyEventInds.push_back(eventInd);
     }
   }
-
-
 }
 
 
@@ -1659,7 +1658,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
         while(lastNMatched!=nMatches);
 
         if(fDebug){
-          std::cout << "At llEventCut = " << llEventCuts[z] << ", base " << b << " was matched with: " << matchedClusters[z][b].size() << " bases" << std::endl;
+          std::cout << "At llEventCut = " << llEventCuts[z] << ", path " << b << " was matched with: " << matchedClusters[z][b].size() << " paths" << std::endl;
           if(matchedClusters[z][b].size() < 20){
             std::cout << "They are: ";
             std::sort(matchedClusters[z][b].begin(), matchedClusters[z][b].end());
@@ -1688,7 +1687,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
       for(int b=0; b < nPaths; b++){
         if(b!=reassignedTo[b]){
           if(printed == false){
-            std::cout << "At llEventCut = " << llEventCuts[z] << ", the known base cluster reassignments are as follows:" << std::endl;
+            std::cout << "At llEventCut = " << llEventCuts[z] << ", the known path cluster reassignments are as follows:" << std::endl;
             printed = true;
           }
           std::cout << b << "->" << reassignedTo[b] << "\n";
@@ -2421,7 +2420,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
 
 	if (isMC) {
 
-          if (fPermyriadOfMC && fNumOfMC) continue;
+          if (fPermyriadOfMC && fNumOfMC) continue;  //  Have only one or the other set, not both.
           if (tr3 -> Integer(10001) >= fPermyriadOfMC && !fNumOfMC) continue; 
           if (!fPermyriadOfMC && entryListIdx[entry] >= fNumOfMC) continue;
 //          if (!fPermyriadOfMC && tr3 -> Integer(fEntryList -> GetN()) >= fNumOfMC) continue;
@@ -3375,7 +3374,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::setInitialPathClusters(){
     if(clusterInd >= 0){
       for(int z=0; z < event.nThresholds; z++){
         Cluster& cluster = clusters.at(z).at(clusterInd);
-        if(event.nearestKnownBaseLogLikelihood < cluster.llEventCut){
+        if(event.nearestKnownPathLogLikelihood < cluster.llEventCut){
           cluster.numDataEvents++;
           event.cluster[z] = cluster.index;
           // std::cout << eventInd << "\t" << z << "\t" << cluster.index << "\t" << event.nearestKnownBaseLogLikelihood << "\t" << cluster.llEventCut << "\t" << cluster.numDataEvents << std::endl;
