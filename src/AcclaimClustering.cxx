@@ -1580,7 +1580,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
   // I like to call this vector constructor bullshit
   std::vector< std::vector<std::vector<Int_t> > > matchedClusters(llEventCuts.size(), std::vector< std::vector<Int_t > >(nPaths, std::vector<Int_t>()));
 
-  for(Long64_t eventInd=0; eventInd < nEvents; eventInd++) {
+  for(Long64_t eventInd = 0; eventInd < nEvents; eventInd++) {
   
     Event* event = &events.at(eventInd);
     UInt_t realTime = event -> realTime;
@@ -1609,7 +1609,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
             
           } else {
           
-            for (int z=0; z < llEventCuts.size(); z++) {
+            for (int z = 0; z < llEventCuts.size(); z++) {
             
               if (ll < llEventCuts.at(z)) matchedClustersThisEvent[z].push_back(clusterInd);
             }
@@ -1646,7 +1646,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
             
             if (!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster - indOffset], matchedCluster2)) matchedClusters[z][matchedCluster - indOffset].push_back(matchedCluster2);
           }
-        }	
+        }
       }
     }
 
@@ -1664,9 +1664,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
 //      reassignedTo.push_back(i);
 //    }
 
-    for(int b=0; b < nPaths; b++) {
-    
-      if(matchedClusters[z][b].size() > 0){
+    for (int b = 0; b < nPaths; b++) {
+
+      if (matchedClusters[z][b].size() > 0){
 
         // here we try and gather all the matched clusters...
         int lastNMatched = 0;
@@ -1679,17 +1679,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
           
           for (int i = lastNMatched; i < nMatches; i++){
 
-            int b2 = matchedClusters[z][b][i];
+            int b2 = matchedClusters[z][b][i] - indOffset;
 
             for (int j = 0; j < matchedClusters[z][b2].size(); j++){
             
               int b3 = matchedClusters[z][b2][j];
 
-              if(!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
+              if (!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
             }
           }
           
-        } while(lastNMatched!=nMatches);
+        } while (lastNMatched != nMatches);
 
         if(fDebug){
           std::cout << "At llEventCut = " << llEventCuts[z] << ", path " << b << " was matched with: " << matchedClusters[z][b].size() << " paths" << std::endl;
@@ -3507,10 +3507,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
           
             mcEvent->nearestKnownPathSurfaceSeparationKm = surfaceSeparationKm;
 
-            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownBaseCluster = clusterInd;
+            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
           }
 
-          if(ll < mcEvent->nearestKnownPathLogLikelihood && mcEvent->nearestKnownPathSurfaceSeparationKm >= surfaceDistThresholdKm) mcEvent->nearestKnownBaseCluster = clusterInd;
+          if(ll < mcEvent->nearestKnownPathLogLikelihood && mcEvent->nearestKnownPathSurfaceSeparationKm >= surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
 
           for(int z=0; z < mcEvent->nThresholds; z++){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm)){
