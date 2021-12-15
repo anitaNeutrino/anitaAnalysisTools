@@ -315,6 +315,7 @@ namespace Acclaim{
       void doMcEventClustering();
       void doMcBaseClustering();
       void doMcPathClustering();
+      
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
       void nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEvents);
 
