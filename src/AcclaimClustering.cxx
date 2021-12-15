@@ -1644,9 +1644,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
           
             Int_t matchedCluster2 = matchedClustersThisEvent[z][j];
             
-            std::cout << matchedCluster << " " << matchedCluster2 << std::endl;
-
-//            if (!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster], matchedCluster2)) matchedClusters[z][matchedCluster].push_back(matchedCluster2);
+            if (!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster - indOffset], matchedCluster2)) matchedClusters[z][matchedCluster - indOffSet].push_back(matchedCluster2);
           }
         }	
       }
