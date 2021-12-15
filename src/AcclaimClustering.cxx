@@ -2065,13 +2065,14 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       }
       std::cout << std::endl;
 
-      // make sure to not do event clustering again, or read in base list,
+      // make sure to not do event clustering again, or read in base or path lists,
       // that hard work was already done...
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
-    }
-
-    else{
+      fReadInPathList = true;
+      
+    } else {
+    
       ThermalChain tc(summaryGlob);
       ProgressBar pElist(1);
 
@@ -2196,11 +2197,14 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       }
       std::cout << std::endl;
 
-      // make sure to not do event clustering again, or read in base list,
+      // make sure to not do event clustering again, or read in base or path lists,
       // that hard work was already done...
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
+      fReadInPathList = true;
+      
     } else {
+    
       TChain* t = new TChain("sumTree");
       t->Add(summaryGlob);
 
@@ -2329,10 +2333,12 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       }
       std::cout << std::endl;
 
-      // make sure to not do event clustering again, or read in base list,
+      // make sure to not do event clustering again, or read in base or path lists,
       // that hard work was already done...
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
+      fReadInPathList = true;
+      
     } else {
 
       TString summaryGlobStr(summaryGlob);
