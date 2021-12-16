@@ -639,18 +639,17 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
-  AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
+Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_t realTime) {
+
+  AntarcticCoord ac = path.getPosition(realTime).as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
-  knownBase = 1;
-  knownPath = 0;
+  knownBase = 0;
+  knownPath = 1;
   knownAbstractBase = 1;
 
-  if(altitude == -999){
-    altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
-  }
+  if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
@@ -662,18 +661,17 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_t realTime) {
-  AntarcticCoord ac = path.getPosition(realTime).as(AntarcticCoord::WGS84);
+Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
+
+  AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
-  knownBase = 0;
-  knownPath = 1;
+  knownBase = 1;
+  knownPath = 0;
   knownAbstractBase = 1;
 
-  if(altitude == -999){
-    altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
-  }
+  if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
@@ -686,6 +684,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 
 
 Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
+
   latitude = event.longitude;
   longitude = event.latitude;
   altitude = event.altitude;
@@ -702,6 +701,7 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
 
 
 void Acclaim::Clustering::Cluster::resetClusteringNumbers(){
+
   numDataEvents = 0;
   sumMcWeights = 0;
 }
@@ -1614,8 +1614,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       // make sure to not do event clustering again, or read in base or path lists,
       // that hard work was already done...
       fEventsAlreadyClustered = true;
-      fReadInBaseList = true;
       fReadInPathList = true;
+      fReadInBaseList = true;
       
     } else {
     
@@ -1882,8 +1882,8 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       // make sure to not do event clustering again, or read in base or path lists,
       // that hard work was already done...
       fEventsAlreadyClustered = true;
-      fReadInBaseList = true;
       fReadInPathList = true;
+      fReadInBaseList = true;
       
     } else {
 
@@ -3067,7 +3067,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       const int mt = OpenMP::getMaxThreads();
       std::vector<std::vector<UInt_t> > event2Inds[mt]; // [t][z].size()==numMatchedClusters
       std::vector<std::vector<Int_t> > matchedClusters[mt]; // [t][z].size()==numMatchedClusters
-      for(int t=0; t < mt; t++) {
+      for(int t = 0; t < mt; t++) {
       
         matchedClusters[t] = std::vector<std::vector<Int_t> >(event1->nThresholds, std::vector<Int_t>());
         event2Inds[t] = std::vector<std::vector<UInt_t> >(event1->nThresholds, std::vector<UInt_t>());
@@ -3076,15 +3076,15 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       // Add event1 event to the list of "matched clusters"
       for (int z = 0; z < event1 -> nThresholds; z++) {
       
-        if (event1->cluster[z] > -1) {
+        if (event1 -> cluster[z] > -1) {
         
           if (z == 0) {
           
             std::cerr << "I think this is false for all events and this statement should never get printed..." << std::endl;
-            std::cerr << event1->eventNumber << "\t" << event1->cluster[0] << std::endl;
+            std::cerr << event1 -> eventNumber << "\t" << event1 -> cluster[0] << std::endl;
           }
           
-          for (int t=0; t < mt; t++) matchedClusters[t][z].push_back(event1->cluster[z]);
+          for (int t = 0; t < mt; t++) matchedClusters[t][z].push_back(event1->cluster[z]);
         }
       }
 
@@ -3319,6 +3319,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::setInitialPathClusters(){
         if(event.nearestKnownPathLogLikelihood < cluster.llEventCut){
           cluster.numDataEvents++;
           event.cluster[z] = cluster.index;
+          event.eventEventClustering = false;
           // std::cout << eventInd << "\t" << z << "\t" << cluster.index << "\t" << event.nearestKnownBaseLogLikelihood << "\t" << cluster.llEventCut << "\t" << cluster.numDataEvents << std::endl;
         }
       }
@@ -3353,20 +3354,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
 
   ProgressBar p(mcEvents.size());
   const int nPaths = BaseList::getNumPaths();
-  const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;
 
   for (UInt_t eventInd = 0; eventInd < mcEvents.size(); eventInd++){
   
     McEvent* mcEvent = &mcEvents.at(eventInd);
     UInt_t realTime = mcEvent -> realTime;
     
-    for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
+    for (int clusterInd = 0; clusterInd < nPaths; clusterInd++){
     
       Cluster& cluster = clusters.at(0).at(clusterInd);
       
       if (cluster.knownPath){
       
-        const BaseList::path& path = BaseList::getPath(clusterInd - indOffset);
+        const BaseList::path& path = BaseList::getPath(clusterInd);
         cluster = Cluster(path, clusterInd, realTime);
       
         double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
@@ -3389,6 +3389,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm)){
               clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
               mcEvent->cluster[z] = clusterInd;
+              mcEvent->eventEventClustering = false;
             }
           }
         }

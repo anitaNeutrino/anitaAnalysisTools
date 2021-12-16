@@ -284,8 +284,8 @@ namespace Acclaim{
       size_t addEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
-      void readInBaseList();
       void readInPathList();
+      void readInBaseList();
 
       TRandom3* tr3;
 
@@ -355,8 +355,8 @@ namespace Acclaim{
       std::vector<TH2DAntarctica*> hUnclusteredEvents;	/// Histograms of events clustered to non-base clusters
 
       bool fDebug;
-      bool fUseBaseList;
       bool fUsePathList;
+      bool fUseBaseList;
 
       TChain* fChain;
       Int_t fPermyriadOfMC;
@@ -369,8 +369,8 @@ namespace Acclaim{
       std::vector<ROOT::Math::Functor> fFunctors;
       Int_t fROOTgErrorIgnoreLevel;
       bool fDrawNewNearbyEventsHistograms;
-      bool fReadInBaseList;
       bool fReadInPathList;
+      bool fReadInBaseList;
 
       std::vector<TCut> fThermalChainCuts;
     };
