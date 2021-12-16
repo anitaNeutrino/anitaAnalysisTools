@@ -1637,14 +1637,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
         // for all matched clusters
         for(int i = 0; i < matchedClustersThisEvent[z].size(); i++) {
 
-          Int_t matchedCluster = matchedClustersThisEvent[z][i];
+          Int_t matchedCluster = matchedClustersThisEvent[z][i] - indOffset;
 
           // add other matched clusters to their list...
           for(int j = 0; j < matchedClustersThisEvent[z].size(); j++) {
           
             Int_t matchedCluster2 = matchedClustersThisEvent[z][j];
             
-            if (!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster - indOffset], matchedCluster2)) matchedClusters[z][matchedCluster - indOffset].push_back(matchedCluster2);
+            if (!RootTools::vectorContainsValue(matchedClusters[z][matchedCluster], matchedCluster2)) matchedClusters[z][matchedCluster].push_back(matchedCluster2);
           }
         }
       }
