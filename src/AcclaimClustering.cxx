@@ -3319,7 +3319,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::setInitialPathClusters(){
         if(event.nearestKnownPathLogLikelihood < cluster.llEventCut){
           cluster.numDataEvents++;
           event.cluster[z] = cluster.index;
-          event.eventEventClustering = false;
           // std::cout << eventInd << "\t" << z << "\t" << cluster.index << "\t" << event.nearestKnownBaseLogLikelihood << "\t" << cluster.llEventCut << "\t" << cluster.numDataEvents << std::endl;
         }
       }
@@ -3389,7 +3388,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm)){
               clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
               mcEvent->cluster[z] = clusterInd;
-              mcEvent->eventEventClustering = false;
             }
           }
         }
