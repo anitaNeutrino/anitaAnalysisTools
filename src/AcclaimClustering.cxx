@@ -1691,22 +1691,25 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
           
         } while (lastNMatched != nMatches);
 
-        if(fDebug){
+        if (fDebug) {
+
           std::cout << "At llEventCut = " << llEventCuts[z] << ", path " << b << " was matched with: " << matchedClusters[z][b].size() << " paths" << std::endl;
-          if(matchedClusters[z][b].size() < 20){
+
+          if(matchedClusters[z][b].size() < 20) {
+
             std::cout << "They are: ";
             std::sort(matchedClusters[z][b].begin(), matchedClusters[z][b].end());
-            for(UInt_t i=0; i < matchedClusters[z][b].size(); i++){
+
+            for(UInt_t i = 0; i < matchedClusters[z][b].size(); i++) {
+
               std::cout << matchedClusters[z][b][i];
-              if(i != matchedClusters[z][b].size() - 1){
-                std::cout << ", ";
-              }
+              if (i != matchedClusters[z][b].size() - 1) std::cout << ", ";
             }
-            std::cout<< std::endl;
+            std::cout << std::endl;
           }
         }
 
-        for (int i=0; i < matchedClusters[z][b].size(); i++) {
+        for (int i = 0; i < matchedClusters[z][b].size(); i++) {
         
           int cluster = matchedClusters[z][b][i];
 
@@ -1715,33 +1718,35 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
       }
     }
 
-    if(fDebug){
+    if (fDebug) {
+
       bool printed = false;
-      for(int b=0; b < nPaths; b++){
-        if(b!=reassignedTo[b]){
-          if(printed == false){
+
+      for (int b = indOffset; b < nPaths + indOffset; b++) {
+
+        if (b != reassignedTo[b - indOffset]) {
+
+          if (printed == false){
+
             std::cout << "At llEventCut = " << llEventCuts[z] << ", the known path cluster reassignments are as follows:" << std::endl;
             printed = true;
           }
-          std::cout << b << "->" << reassignedTo[b] << "\n";
+          std::cout << b << "->" << reassignedTo[b - indOffset] << "\n";
         }
       }
     }
 
-    for(int eventInd = 0; eventInd < events.size(); eventInd++) {
+    for (int eventInd = 0; eventInd < events.size(); eventInd++) {
     
       Event& event = events.at(eventInd);
       int clusterInd = -1;
       
-      if(event.nearestKnownPathLogLikelihood < llEventCuts.at(z)){
-        clusterInd = event.nearestKnownPathCluster;
-      }
-      else if(event.nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm){
-        clusterInd = event.nearestKnownPathClusterSurface;
-      }
-      if(clusterInd >= 0){
+      if (event.nearestKnownPathLogLikelihood < llEventCuts.at(z)) clusterInd = event.nearestKnownPathCluster;
+      else if (event.nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) clusterInd = event.nearestKnownPathClusterSurface;
 
-        Int_t reassignedCluster = reassignedTo[clusterInd];
+      if (clusterInd >= 0){
+
+        Int_t reassignedCluster = reassignedTo[clusterInd - indOffset];
         event.cluster[z] = reassignedCluster;
         clusters.at(z).at(reassignedCluster).numDataEvents++;
       }
