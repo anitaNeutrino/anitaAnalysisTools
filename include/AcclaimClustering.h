@@ -102,14 +102,14 @@ namespace Acclaim{
       Double_t* dPhiCluster;//[nThresholds]		/// phi distance to cluster
 
       Bool_t eventEventClustering;			/// Remove huge clusters near MCM before doing event-to-event clustering
-      Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base in terms of log-likelihood between event and base?
-      Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base in terms of surface separation in km between event and base?
-      Int_t nearestKnownBaseCluster;			/// Index of nearest base cluster relative to log-likelihood
-      Int_t nearestKnownBaseClusterSurface;		/// Index of nearest base cluser relative to surface separation in km
       Double_t nearestKnownPathLogLikelihood;		/// How far to the nearest known path in terms of log-likelihood between event and path?
       Double_t nearestKnownPathSurfaceSeparationKm;	/// How far to the nearest known path in terms of surface separation in km between event and path?
       Int_t nearestKnownPathCluster;			/// Index of nearest known path cluster in terms of log-likelihood
       Int_t nearestKnownPathClusterSurface;		/// Index of nearest known path cluster in terms of surface separation in km
+      Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base in terms of log-likelihood between event and base?
+      Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base in terms of surface separation in km between event and base?
+      Int_t nearestKnownBaseCluster;			/// Index of nearest base cluster relative to log-likelihood
+      Int_t nearestKnownBaseClusterSurface;		/// Index of nearest base cluser relative to surface separation in km
       Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero
       Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
       UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
@@ -158,7 +158,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 16)
+      ClassDef(Event, 17)
     };
 
 
@@ -192,8 +192,8 @@ namespace Acclaim{
     public:
       Cluster(Int_t i=-1);
       Cluster(const Event& seedEvent, Int_t i=-1);
-      Cluster(const BaseList::base& base, Int_t i=-1);
       Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime = 0);
+      Cluster(const BaseList::base& base, Int_t i=-1);
 
       virtual ~Cluster(){ ;}	
 
@@ -205,9 +205,9 @@ namespace Acclaim{
 	
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
-      Int_t knownBase;						/// Known base == 1, Pseudo-base == 0
       Int_t knownPath;                                        /// Known transient path = 1, Psuedo-path = 0
-      Int_t knownAbstractBase;                                /// Either known base == 1 or known transient path == 1
+      Int_t knownBase;						/// Known base == 1, Pseudo-base == 0
+      Int_t knownAbstractBase;                                /// Either known transient path == 1 or known base == 1
       Int_t index;                                            /// Where am I in the cluster array?
       Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
       Double_t llEventCut; /// and what's the value of that cut?
@@ -217,7 +217,7 @@ namespace Acclaim{
 
       void resetClusteringNumbers();
 
-      ClassDef(Cluster, 6)
+      ClassDef(Cluster, 7)
     };
 
 
@@ -236,15 +236,15 @@ namespace Acclaim{
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
       void testSmallClusters(const char* dataGlob, const char* outFileName, int clusterSizeMin=5, int clusterSizeMax=16, int nAttempts=100);
-      
-      bool getUseBaseList(){return fUseBaseList;}
-      void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
-	fUseBaseList = useBaseList;
-      }
 
       bool getUsePathList(){return fUsePathList;}
       void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
+      }
+      
+      bool getUseBaseList(){return fUseBaseList;}
+      void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
+	fUseBaseList = useBaseList;
       }
 
       void setCut(TCut cut){ fCut = cut; }
@@ -290,8 +290,8 @@ namespace Acclaim{
       TRandom3* tr3;
 
       void assignMcEventsToClusters();
-      void setInitialBaseClusters();
       void setInitialPathClusters();
+      void setInitialBaseClusters();
       void makeSummaryTrees();
       void addToHistograms(TH2D* h, TH2D* h2);
       void resetClusters();
@@ -308,13 +308,13 @@ namespace Acclaim{
       void testSmallClustersFromPointSource();
       Int_t removeLargeBasesNearMcMurdo();
 
-      void doBaseEventClustering();
       void doPathEventClustering();
+      void doBaseEventClustering();
       void doEventEventClustering();
 
-      void doMcEventClustering();
-      void doMcBaseClustering();
       void doMcPathClustering();
+      void doMcBaseClustering();      
+      void doMcEventClustering();
       
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
       void nearbyEvents2(UInt_t eventInd, std::vector<UInt_t>& nearbyEvents);
