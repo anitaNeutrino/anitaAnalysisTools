@@ -3239,8 +3239,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 	//  Avoid merging clusters associated with transients.
 	if (fUsePathList && thisCluster < BaseList::getNumPaths()) {
 	
-	  event1 -> eventEventClustering = false;
-	  continue;
+	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
+	  
+	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
 	}
 
         // Mark event1 as in the minCluster
