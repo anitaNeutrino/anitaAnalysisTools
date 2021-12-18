@@ -3204,11 +3204,10 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
       }
 
       // Now look at the clusters of the matched events (for each threshold)
-      for(UInt_t z=0; z < llEventCuts.size(); z++){
+      for (UInt_t z = 0; z < llEventCuts.size(); z++){
 
         // for speed, sort the matched event numbers
         std::sort(event2Inds[0][z].begin(), event2Inds[0][z].end());
-
 
         // Int_t canICount = 0;
         // for(UInt_t clusterInd=0; clusterInd < clusters.at(z).size(); clusterInd++){
@@ -3235,14 +3234,16 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
          * since the bases populate the start of the list.
          */
 
-        Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), &matchedClusters[0][z][0]);
+        Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), & matchedClusters[0][z][0]);
+
+	//  Avoid merging clusters associated with transients.
+	if (fUsePathList && thisCluster < BaseList::getNumPaths()) continue;
 
         // Mark event1 as in the minCluster
         Int_t oldCluster1Ind = event1->cluster[z];
-        if(oldCluster1Ind > -1){
-          if(z==0){
-            std::cerr << "Do we ever get here?" << std::endl; // no we don't
-          }
+        if (oldCluster1Ind > -1) {
+        
+          if (z == 0)std::cerr << "Do we ever get here?" << std::endl; // no we don't
           clusters.at(z).at(oldCluster1Ind).numDataEvents--;
         }
         event1->cluster[z] = thisCluster;
@@ -3252,7 +3253,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
 
         // Now reassign all matched events or events in matched clusters to the new cluster
         UInt_t matchedEventIndex=0;
-        for(UInt_t event2Ind=0; event2Ind < events.size(); event2Ind++){
+        for (UInt_t event2Ind = 0; event2Ind < events.size(); event2Ind++) {
+        
           Event& event2 = events.at(event2Ind);
 
           // check if this event is contained in the matched events or the matched clusters
@@ -3464,7 +3466,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
 
   ProgressBar p(mcEvents.size());
   
-  for(UInt_t event1Ind=0; event1Ind < mcEvents.size(); event1Ind++) {
+  for (UInt_t event1Ind = 0; event1Ind < mcEvents.size(); event1Ind++) {
   
     McEvent& event1 = mcEvents.at(event1Ind);
     
@@ -3485,7 +3487,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         event2EastingNorthingDistances.resize(numNeighbours, -1);
         fKDTree->FindNearestNeighbors(lookup, numNeighbours, & event2Inds[0], & event2EastingNorthingDistances[0]);
 
-        for (UInt_t i=lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++) {
+        for (UInt_t i = lastNumNeighbours; i < event2Inds.size() && event1.cluster[0] < 0 && furthestConsidered < default_horizon_distance; i++) {
         
           UInt_t event2Ind = event2Inds.at(i);
           const Event& event2 = events.at(event2Ind);
