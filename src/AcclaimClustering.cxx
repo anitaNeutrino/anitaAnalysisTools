@@ -2733,6 +2733,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
         Int_t reassignedCluster = reassignedTo[clusterInd];
         event.cluster[z] = reassignedCluster;
         clusters.at(z).at(reassignedCluster).numDataEvents++;
+        event.eventEventClustering = false;
       }
     }
   }
@@ -3237,12 +3238,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
         Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), & matchedClusters[0][z][0]);
 
 	//  Avoid merging clusters associated with transients.
-	if (fUsePathList && thisCluster < BaseList::getNumPaths()) {
-	
-	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
-	  
-	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
-	}
+//	if (fUsePathList && thisCluster < BaseList::getNumPaths()) {
+//	
+//	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
+//	  
+//	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
+//	}
 
         // Mark event1 as in the minCluster
         Int_t oldCluster1Ind = event1 -> cluster[z];
@@ -3393,6 +3394,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm)){
               clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
               mcEvent->cluster[z] = clusterInd;
+              mcEvent -> eventEventClustering = false;
             }
           }
         }
