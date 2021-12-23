@@ -100,7 +100,8 @@ namespace Acclaim{
       Int_t * cluster;//[nThresholds]			/// which cluster am I associated with?
       Double_t * dThetaCluster;//[nThresholds]		/// theta distance to cluster
       Double_t * dPhiCluster;//[nThresholds]		/// phi distance to cluster
-      Bool_t * eventEventClustering;//[nThresholds]	/// Remove huge clusters near MCM before doing event-to-event clustering
+      
+      Bool_t eventEventClustering;			/// Remove huge clusters near MCM before doing event-to-event clustering
       
       Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero      
       

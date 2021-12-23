@@ -2731,7 +2731,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
         Int_t reassignedCluster = reassignedTo[clusterInd];
         event.cluster[z] = reassignedCluster;
         clusters.at(z).at(reassignedCluster).numDataEvents++;
-        event.eventEventClustering = false;
+//        event.eventEventClustering = false;
       }
     }
   }
@@ -3392,7 +3392,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
             if(mcEvent->cluster[z] < 0 && (ll < llEventCuts.at(z) || mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm)){
               clusters[z][clusterInd].sumMcWeights += mcEvent->weight;
               mcEvent->cluster[z] = clusterInd;
-              mcEvent -> eventEventClustering = false;
+//              mcEvent -> eventEventClustering = false;
             }
           }
         }
@@ -3583,9 +3583,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     doMcBaseClustering();
   }
 
-  if (!fEventsAlreadyClustered) doEventEventClustering();
+//  if (!fEventsAlreadyClustered) doEventEventClustering();
   
-  doMcEventClustering();
+//  doMcEventClustering();
 
   makeSummaryTrees();
 
