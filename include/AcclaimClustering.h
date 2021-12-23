@@ -97,24 +97,27 @@ namespace Acclaim{
       // determined by clustering
       //--------------------------------------------------------------------------------
       Int_t nThresholds;                        
-      Int_t* cluster;//[nThresholds]			/// which cluster am I associated with?
-      Double_t* dThetaCluster;//[nThresholds]		/// theta distance to cluster
-      Double_t* dPhiCluster;//[nThresholds]		/// phi distance to cluster
-
-      Bool_t eventEventClustering;			/// Remove huge clusters near MCM before doing event-to-event clustering
+      Int_t * cluster;//[nThresholds]			/// which cluster am I associated with?
+      Double_t * dThetaCluster;//[nThresholds]		/// theta distance to cluster
+      Double_t * dPhiCluster;//[nThresholds]		/// phi distance to cluster
+      Bool_t * eventEventClustering;//[nThresholds]	/// Remove huge clusters near MCM before doing event-to-event clustering
+      
+      Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero      
+      
       Double_t nearestKnownPathLogLikelihood;		/// How far to the nearest known path in terms of log-likelihood between event and path?
       Double_t nearestKnownPathSurfaceSeparationKm;	/// How far to the nearest known path in terms of surface separation in km between event and path?
       Int_t nearestKnownPathCluster;			/// Index of nearest known path cluster in terms of log-likelihood
       Int_t nearestKnownPathClusterSurface;		/// Index of nearest known path cluster in terms of surface separation in km
+      
       Double_t nearestKnownBaseLogLikelihood;		/// How far to the nearest known base in terms of log-likelihood between event and base?
       Double_t nearestKnownBaseSurfaceSeparationKm;	/// How far to the nearest known base in terms of surface separation in km between event and base?
       Int_t nearestKnownBaseCluster;			/// Index of nearest base cluster relative to log-likelihood
       Int_t nearestKnownBaseClusterSurface;		/// Index of nearest base cluser relative to surface separation in km
-      Double_t selfLogLikelihood;			/// If the event is above the continent surface, this may be non-zero
-      Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
-      UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
+
       Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
+      Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
       UInt_t nearestEventSurfaceLLEventNumber;	/// What's the event number of the nearest surface neighbour by LL?
+      UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
 
       Int_t antarcticaHistBin;			/// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!			/// Only construct this once
@@ -158,7 +161,7 @@ namespace Acclaim{
       }
 
       virtual ~Event();
-      ClassDef(Event, 17)
+      ClassDef(Event, 18)
     };
 
 
@@ -289,9 +292,9 @@ namespace Acclaim{
 
       TRandom3* tr3;
 
-      void assignMcEventsToClusters();
       void setInitialPathClusters();
       void setInitialBaseClusters();
+      
       void makeSummaryTrees();
       void addToHistograms(TH2D* h, TH2D* h2);
       void resetClusters();

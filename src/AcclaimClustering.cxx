@@ -402,9 +402,7 @@ Acclaim::Clustering::Event::Event(Int_t nT)
   sigmaPhi = default_sigma_phi;
   varTheta = default_var_theta;
   varPhi = default_var_phi;
-  for(int dim=0; dim < nDim; dim++){
-    centre[dim] = 0;
-  }
+  for (int dim = 0; dim < nDim; dim++) centre[dim] = 0;
   antarcticaHistBin = -1;
   fDebug = false;
 
@@ -439,9 +437,7 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
   pol = event.pol;
   peakIndex = event.peakIndex;
 
-  for(int i=0; i < 3; i++){
-    centre[i] = event.centre[i];
-  }
+  for (int i = 0; i < 3; i++) centre[i] = event.centre[i];
   latitude = event.latitude;
   longitude = event.longitude;
   altitude = event.altitude;
@@ -460,7 +456,8 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
   varTheta = event.varTheta;
   varPhi = event.varPhi;
 
-  if(nThresholds!=event.nThresholds){
+  if (nThresholds != event.nThresholds) {
+  
     deleteArrays();
     nThresholds = event.nThresholds;
     cluster = new Int_t[nThresholds];
@@ -468,7 +465,8 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
     dPhiCluster = new Double_t[nThresholds];
   }
   
-  for(int z=0; z < nThresholds; z++){
+  for (int z = 0; z < nThresholds; z++) {
+  
     cluster[z] = event.cluster[z];
     dThetaCluster[z] = event.dThetaCluster[z];
     dPhiCluster[z] = event.dPhiCluster[z];
