@@ -678,7 +678,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
-  resetClusteringNumbers();
+  if (!realTime) resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
   index = i;
@@ -3572,8 +3572,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
       readInBaseList();
       doBaseEventClustering();
     }
-    
-    doMcBaseClustering();
+      
+    if (!mcEvents.empty()) doMcBaseClustering();
   }
 
   if (fUsePathList) {
@@ -3584,12 +3584,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
       doPathEventClustering();
     }
     
-    doMcPathClustering();
+    if (!mcEvents.empty()) doMcPathClustering();
   }
 
 //  if (!fEventsAlreadyClustered) doEventEventClustering();
   
-//  doMcEventClustering();
+//  if (!mcEvents.empty()) doMcEventClustering();
 
   makeSummaryTrees();
 
