@@ -678,7 +678,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 
   AnitaGeomTool* geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
-  if (!realTime) resetClusteringNumbers();
+  resetClusteringNumbers();
   antarcticaHistBin = -1;
   seedEvent = -1;
   index = i;
@@ -2645,7 +2645,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
   for (int z = 0; z < llEventCuts.size(); z++){
   
     std::vector<Int_t> reassignedTo(nBases);
-    for (int i = 0; i < nBases; ++i) reassignedTo.push_back(i);
+    for (int i = 0; i < nBases; ++i) reassignedTo[i] = i;
   
     for (int b = 0; b < nBases; b++) {
     
@@ -2933,7 +2933,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
   for(int z = 0; z < llEventCuts.size(); z++){
   
     std::vector<Int_t> reassignedTo(nPaths);
-    for (int i = indOffset; i < nPaths + indOffset; i++) reassignedTo.push_back(i);
+    for (int i = indOffset; i < nPaths + indOffset; i++) reassignedTo[i - indOffset] = i;
   
     for (int b = 0; b < nPaths; b++) {
 
@@ -3488,7 +3488,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
       Double_t furthestConsidered = 0;
       Int_t numConsidered = 0;
 
-      while (furthestConsidered < default_horizon_distance && event1.cluster[0] < 0) {
+      while (furthestConsidered < default_horizon_distance && event1.cluster[0] < 0 && numNeighbours <= events.size()) {
       
         event2Inds.resize(numNeighbours, -1);
         event2EastingNorthingDistances.resize(numNeighbours, -1);
@@ -3533,7 +3533,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcEventClustering(){
         
         lastNumNeighbours = numNeighbours;
         numNeighbours *= 2;
-        if (numNeighbours > events.size()) break;
       }
       
       const char* prefix = event1.cluster[0] < 0 ? "Did not find" : "Found";
