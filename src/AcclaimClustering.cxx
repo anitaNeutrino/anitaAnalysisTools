@@ -2849,7 +2849,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
   const int nPaths = BaseList::getNumPaths();
-  const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;  //  Path list indices come first, if base list is used.
+  const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;  //  Base list indices come first when base list used.
   
   const Long64_t nEvents = events.size();
   ProgressBar p(nEvents);
@@ -2867,10 +2867,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
     
       Cluster& cluster = clusters.at(0).at(clusterInd);
-      
+            
       if (cluster.knownPath) {
       
         const BaseList::path & path = BaseList::getPath(clusterInd);
+      
         cluster = Cluster(path, clusterInd, realTime);
       
         double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
@@ -3240,12 +3241,19 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
         Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), & matchedClusters[0][z][0]);
 
 	//  Avoid merging clusters associated with transients.
-//	if (fUsePathList && thisCluster < BaseList::getNumPaths()) {
-//	
-//	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
-//	  
-//	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
-//	}
+	if (!fUseBaseList && fUsePathList && thisCluster < BaseList::getNumPaths()) {
+	
+	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
+	  
+	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
+	}
+	
+	if (fUseBaseList && fUsePathList && thisCluster >= BaseList::getNumBases() && thisCluster < BaseList::getNumPaths() + BaseList::getNumBases()) {
+	
+	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() + BaseList::getNumBases() - 1);
+	  
+	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
+	}
 
         // Mark event1 as in the minCluster
         Int_t oldCluster1Ind = event1 -> cluster[z];
@@ -3586,9 +3594,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     if (!mcEvents.empty()) doMcPathClustering();
   }
 
-//  if (!fEventsAlreadyClustered) doEventEventClustering();
+  if (!fEventsAlreadyClustered) doEventEventClustering();
   
-//  if (!mcEvents.empty()) doMcEventClustering();
+  if (!mcEvents.empty()) doMcEventClustering();
 
   makeSummaryTrees();
 
