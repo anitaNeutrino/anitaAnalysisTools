@@ -561,7 +561,8 @@ void Acclaim::Clustering::Event::setNThresholds(Int_t n){
 
 void Acclaim::Clustering::Event::resetClusteringNumbers(){
 
-  for(Int_t z=0; z<nThresholds; z++){
+  for (Int_t z = 0; z<nThresholds; z++) {
+  
     cluster[z] = -1;
     dThetaCluster[z] = -999;
     dPhiCluster[z] = -999;    
@@ -593,7 +594,8 @@ void Acclaim::Clustering::Event::resetClusteringNumbers(){
  *
  * @return the TArrowAntarctica
  */
-TArrowAntarctica* Acclaim::Clustering::Event::makeArrowFromAnitaToEvent(){
+TArrowAntarctica * Acclaim::Clustering::Event::makeArrowFromAnitaToEvent() {
+
   return new TArrowAntarctica(anita.longitude, anita.latitude, longitude, latitude);
 }
 
@@ -601,15 +603,15 @@ TArrowAntarctica* Acclaim::Clustering::Event::makeArrowFromAnitaToEvent(){
 Acclaim::Clustering::McEvent::McEvent(Int_t nT)
   : Event(nT){
     weight = 0;
-    energy=0;
+    energy = 0;
 }
 
 
 Acclaim::Clustering::McEvent::McEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd, Int_t nT)
 : Event(sum, pol,  peakInd, nT)
 {
-  weight = sum->mc.weight;
-  energy = sum->mc.energy;
+  weight = sum -> mc.weight;
+  energy = sum -> mc.energy;
   // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
 }
 
@@ -619,16 +621,15 @@ Acclaim::Clustering::McEvent::McEvent(double weight, double energy, int pol, int
 :  Event(pol, peakInd, peak_phi, peak_theta, nT, eventNumber, run, realTime,
     anita_longitude, anita_latitude, anita_altitude, anita_heading, coherent_filtered_snr, deconvolved_filtered_snr)
 {
-  this->weight = weight;
-  this->energy = energy;
+  this -> weight = weight;
+  this -> energy = energy;
   // std::cout << longitude << "\t" << latitude << "\t" << altitude << std::endl;
 }
 
 
 Acclaim::Clustering::Cluster::Cluster(Int_t i) {
-  for(int dim=0; dim < nDim; dim++){
-    centre[dim] = 0;
-  }
+
+  for (int dim = 0; dim < nDim; dim++) centre[dim] = 0;
   latitude = 0;
   longitude = 0;
   altitude = 0;
@@ -654,7 +655,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
 
   if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  AnitaGeomTool * geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   antarcticaHistBin = -1;
@@ -676,7 +677,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 
   if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
 
-  AnitaGeomTool* geom = AnitaGeomTool::Instance();
+  AnitaGeomTool * geom = AnitaGeomTool::Instance();
   geom->getCartesianCoords(latitude, longitude, altitude, centre);
   resetClusteringNumbers();
   antarcticaHistBin = -1;
@@ -2866,7 +2867,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
     
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
     
-      Cluster& cluster = clusters.at(0).at(clusterInd);
+      Cluster & cluster = clusters.at(0).at(clusterInd);
             
       if (cluster.knownPath) {
       
@@ -3239,21 +3240,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doEventEventClustering(){
          */
 
         Int_t thisCluster = TMath::MinElement(matchedClusters[0][z].size(), & matchedClusters[0][z][0]);
-
-	//  Avoid merging clusters associated with transients.
-	if (!fUseBaseList && fUsePathList && thisCluster < BaseList::getNumPaths()) {
-	
-	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() - 1);
-	  
-	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
-	}
-	
-	if (fUseBaseList && fUsePathList && thisCluster >= BaseList::getNumBases() && thisCluster < BaseList::getNumPaths() + BaseList::getNumBases()) {
-	
-	  vector<Int_t>::iterator thisClusterLow = std::lower_bound(matchedClusters[0][z].begin(), matchedClusters[0][z].end(), BaseList::getNumPaths() + BaseList::getNumBases() - 1);
-	  
-	  thisCluster = matchedClusters[0][z][thisClusterLow - matchedClusters[0][z].begin()];
-	}
 
         // Mark event1 as in the minCluster
         Int_t oldCluster1Ind = event1 -> cluster[z];

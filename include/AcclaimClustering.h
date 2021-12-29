@@ -195,13 +195,13 @@ namespace Acclaim{
     class Cluster{
     public:
       Cluster(Int_t i=-1);
-      Cluster(const Event& seedEvent, Int_t i=-1);
-      Cluster(const BaseList::path& path, Int_t i=-1, UInt_t realTime = 0);
-      Cluster(const BaseList::base& base, Int_t i=-1);
+      Cluster(const BaseList::base & base, Int_t i = -1);
+      Cluster(const BaseList::path & path, Int_t i = -1, UInt_t realTime = 0);
+      Cluster(const Event& seedEvent, Int_t i = -1);
 
       virtual ~Cluster(){ ;}	
 
-      Double_t centre[3]; //! Does not persist			/// Center in cartesian
+      Double_t centre[3]; //! Does not persist		/// Center in cartesian
 
       Double_t latitude;					/// cluster center latitude
       Double_t longitude;					/// cluster center longitude
@@ -213,15 +213,15 @@ namespace Acclaim{
       Int_t knownPath;                                        /// Known transient path = 1, Psuedo-path = 0
       Int_t knownAbstractBase;                                /// Either known transient path == 1 or known base == 1
       Int_t index;                                            /// Where am I in the cluster array?
-      Int_t llEventCutInd; /// which entry in the llEventCut array does this correspond to?
-      Double_t llEventCut; /// and what's the value of that cut?
+      Int_t llEventCutInd;					/// which entry in the llEventCut array does this correspond to?
+      Double_t llEventCut;					/// and what's the value of that cut?
 
       Int_t antarcticaHistBin; //!				/// Which global bin in the TH2DAntarctica?
       Int_t seedEvent; //!			                /// Which event seeded the cluster?
 
       void resetClusteringNumbers();
 
-      ClassDef(Cluster, 8)
+      ClassDef(Cluster, 9)
     };
 
 
@@ -239,7 +239,7 @@ namespace Acclaim{
       virtual ~LogLikelihoodMethod();
 
       void doClustering(const char* dataGlob, const char* mcGlob, const char* outFileName, bool useAcclaimFiles=true);
-      void testSmallClusters(const char* dataGlob, const char* outFileName, int clusterSizeMin=5, int clusterSizeMax=16, int nAttempts=100);
+      void testSmallClusters(const char * dataGlob, const char * outFileName, int clusterSizeMin = 5, int clusterSizeMax = 16, int nAttempts = 100);
 
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
