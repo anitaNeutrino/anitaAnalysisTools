@@ -247,8 +247,9 @@ namespace Acclaim{
       }
 
       bool getUsePathList(){return fUsePathList;}
-      void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
+      void setUsePathList(bool usePathList, bool asBases = false) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
+	fAsBases = asBases;
       }
       
       void setCut(TCut cut){ fCut = cut; }
@@ -289,7 +290,7 @@ namespace Acclaim{
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
-      void readInPathList();
+      void readInPathList(bool asBases = false);
 
       TRandom3* tr3;
 
@@ -313,11 +314,11 @@ namespace Acclaim{
       Int_t removeLargeBasesNearMcMurdo();
 
       void doBaseEventClustering();
-      void doPathEventClustering();
+      void doPathEventClustering(bool asBases = false);
       void doEventEventClustering();
 
       void doMcBaseClustering();      
-      void doMcPathClustering();
+      void doMcPathClustering(bool asBases = false);
       void doMcEventClustering();
       
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
@@ -361,6 +362,7 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       bool fUsePathList;
+      bool fAsBases;
 
       TChain* fChain;
       Int_t fPermyriadOfMC;

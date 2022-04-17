@@ -1331,7 +1331,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInBaseList(){
 /** 
  * Puts an entry in each of the cluster[z] vectors for each of the known paths
  */
-void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(){
+void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(bool asBases){
 
   if(!fReadInPathList){
     std::cout << "Info in " << __FUNCTION__ << ": Initializing path list..." << std::endl;
@@ -2845,7 +2845,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 // }
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
+void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(bool asBases){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
@@ -3398,7 +3398,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 }
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
+void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(bool asBases){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
