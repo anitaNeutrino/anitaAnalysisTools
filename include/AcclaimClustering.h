@@ -294,7 +294,7 @@ namespace Acclaim{
 
       TRandom3* tr3;
 
-      void setInitialPathClusters();
+      void setInitialPathClusters(bool asBases = false);
       void setInitialBaseClusters();
       
       void makeSummaryTrees();
