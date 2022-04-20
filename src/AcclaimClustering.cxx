@@ -1337,12 +1337,26 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(bool asBases){
     std::cout << "Info in " << __FUNCTION__ << ": Initializing path list..." << std::endl;
 
     // make a copy for each llCut, just to ease the book keeping later
-    for(UInt_t z=0; z < llEventCuts.size(); z++){
-      for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPaths(); clusterInd++){
-        const BaseList::path& path = BaseList::getPath(clusterInd);
-        clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
-        clusters.at(z).back().llEventCutInd = z;
-        clusters.at(z).back().llEventCut = llEventCuts.at(z);
+    if (!asBases) {
+    
+      for(UInt_t z=0; z < llEventCuts.size(); z++){
+        for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPaths(); clusterInd++){
+          const BaseList::path& path = BaseList::getPath(clusterInd);
+          clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
+          clusters.at(z).back().llEventCutInd = z;
+          clusters.at(z).back().llEventCut = llEventCuts.at(z);
+        }
+      }
+      
+    } else {
+    
+      for(UInt_t z=0; z < llEventCuts.size(); z++){
+        for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPathsAsBases(); clusterInd++){
+          const BaseList::base & base = BaseList::getPathAsBase(clusterInd);
+          clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
+          clusters.at(z).back().llEventCutInd = z;
+          clusters.at(z).back().llEventCut = llEventCuts.at(z);
+        }
       }
     }
   }

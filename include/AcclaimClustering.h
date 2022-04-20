@@ -290,7 +290,7 @@ namespace Acclaim{
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
-      void readInPathList();
+      void readInPathList(bool asBases);
 
       TRandom3* tr3;
 
