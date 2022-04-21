@@ -1331,13 +1331,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInBaseList(){
 /** 
  * Puts an entry in each of the cluster[z] vectors for each of the known paths
  */
-void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(bool asBases){
+void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(){
 
   if(!fReadInPathList){
     std::cout << "Info in " << __FUNCTION__ << ": Initializing path list..." << std::endl;
 
     // make a copy for each llCut, just to ease the book keeping later
-    if (!asBases) {
+    if (!fAsBases) {
     
       for(UInt_t z=0; z < llEventCuts.size(); z++){
         for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPaths(); clusterInd++){
@@ -1353,7 +1353,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(bool asBases){
       for(UInt_t z=0; z < llEventCuts.size(); z++){
         for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPathsAsBases(); clusterInd++){
           const BaseList::base & base = BaseList::getPathAsBase(clusterInd);
-          clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
+          clusters.at(z).push_back(Cluster(base, clusters.at(z).size()));
           clusters.at(z).back().llEventCutInd = z;
           clusters.at(z).back().llEventCut = llEventCuts.at(z);
         }
@@ -2600,7 +2600,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
       
       if (cluster.knownBase) {
       
-        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -2859,11 +2859,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
 // }
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(bool asBases){
+void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-  const int nPaths = BaseList::getNumPaths();
+  const int nPaths = fAsBases ? BaseList::getNumPathsAsBases() : BaseList::getNumPaths();
   const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;  //  Base list indices come first when base list used.
   
   const Long64_t nEvents = events.size();
@@ -2885,11 +2885,14 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(bool asBase
             
       if (cluster.knownPath) {
       
-        const BaseList::path & path = BaseList::getPath(clusterInd);
+        if (!fAsBases) {
+
+          const BaseList::path & path = BaseList::getPath(clusterInd);
       
-        cluster = Cluster(path, clusterInd, realTime);
-      
-        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+          cluster = Cluster(path, clusterInd, realTime);        
+        }
+
+        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -3380,7 +3383,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
       
       if (cluster.knownBase) {
       
-        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -3412,7 +3415,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
 }
 
 
-void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(bool asBases){
+void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
@@ -3434,7 +3437,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(bool asBases){
         const BaseList::path& path = BaseList::getPath(clusterInd);
         cluster = Cluster(path, clusterInd, realTime);
       
-        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         

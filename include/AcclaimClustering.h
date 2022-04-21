@@ -247,6 +247,7 @@ namespace Acclaim{
       }
 
       bool getUsePathList(){return fUsePathList;}
+      bool getPathsAsBases(){return fAsBases;}
       void setUsePathList(bool usePathList, bool asBases = false) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
 	fAsBases = asBases;
@@ -290,11 +291,11 @@ namespace Acclaim{
       size_t addMcEvent(const AnitaEventSummary* sum, AnitaPol::AnitaPol_t pol, Int_t peakInd);      
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
-      void readInPathList(bool asBases);
+      void readInPathList();
 
       TRandom3* tr3;
 
-      void setInitialPathClusters(bool asBases = false);
+      void setInitialPathClusters();
       void setInitialBaseClusters();
       
       void makeSummaryTrees();
@@ -314,11 +315,11 @@ namespace Acclaim{
       Int_t removeLargeBasesNearMcMurdo();
 
       void doBaseEventClustering();
-      void doPathEventClustering(bool asBases = false);
+      void doPathEventClustering();
       void doEventEventClustering();
 
       void doMcBaseClustering();      
-      void doMcPathClustering(bool asBases = false);
+      void doMcPathClustering();
       void doMcEventClustering();
       
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
