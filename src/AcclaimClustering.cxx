@@ -643,7 +643,7 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::base & base, Int_t i) {
 
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
@@ -665,7 +665,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_t realTime) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::path & path, Int_t i, UInt_t realTime) {
 
   AntarcticCoord ac = path.getPosition(realTime).as(AntarcticCoord::WGS84);
   latitude = ac.x;
@@ -687,7 +687,7 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
+Acclaim::Clustering::Cluster::Cluster(const Event & event, Int_t i) {
 
   latitude = event.longitude;
   longitude = event.latitude;
@@ -3434,7 +3434,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
       
       if (cluster.knownPath){
       
-        const BaseList::path& path = BaseList::getPath(clusterInd);
+        const BaseList::path & path = BaseList::getPath(clusterInd);
         cluster = Cluster(path, clusterInd, realTime);
       
         double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
