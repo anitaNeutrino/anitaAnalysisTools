@@ -2598,7 +2598,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
     
       Cluster& cluster = clusters.at(0).at(clusterInd);
       
-      if (cluster.knownBase) {
+      if (cluster.knownBase || (fAsBases && cluster.knownPath)) {
       
         double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
