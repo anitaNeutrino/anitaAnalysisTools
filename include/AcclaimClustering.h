@@ -247,10 +247,8 @@ namespace Acclaim{
       }
 
       bool getUsePathList(){return fUsePathList;}
-      bool getPathsAsBases(){return fAsBases;}
-      void setUsePathList(bool usePathList, bool asBases = false) { // *TOGGLE *GETTER=GetUsePathList
+      void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
-	fAsBases = asBases;
       }
       
       void setCut(TCut cut){ fCut = cut; }
@@ -363,7 +361,6 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       bool fUsePathList;
-      bool fAsBases;
 
       TChain* fChain;
       Int_t fPermyriadOfMC;
