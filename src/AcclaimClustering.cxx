@@ -2586,7 +2586,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doBaseEventClustering(){
       
       if (cluster.knownBase) {
       
-        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -2875,7 +2875,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
       
         cluster = Cluster(path, clusterInd, realTime);
       
-        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -3366,7 +3366,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
       
       if (cluster.knownBase) {
       
-        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
@@ -3420,7 +3420,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
         const BaseList::path& path = BaseList::getPath(clusterInd);
         cluster = Cluster(path, clusterInd, realTime);
       
-        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.latitude);
+        double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
         
