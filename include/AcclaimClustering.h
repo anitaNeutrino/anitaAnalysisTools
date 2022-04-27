@@ -71,17 +71,17 @@ namespace Acclaim{
       //--------------------------------------------------------------------------------
       UInt_t eventNumber;				/// Event number
       Int_t run;					/// Run
-      AnitaPol::AnitaPol_t pol;			/// Polarization
+      AnitaPol::AnitaPol_t pol;			        /// Polarization
       UInt_t realTime;					/// Time at which event was detected.
       Int_t peakIndex;					/// Which peak in the map does this represent?
 
-      Double_t centre[3];//!				/// Cartesian coordinates, does not persist in ROOT
+      Double_t centre[3];				/// Cartesian coordinates, does not persist in ROOT
       Double_t latitude;				/// latitude
       Double_t longitude;				/// longitude
-      Double_t altitude;				/// longitude
-      Double_t easting;				/// easting
+      Double_t altitude;				/// altitude
+      Double_t easting;				        /// easting
       Double_t northing;				/// northing
-      AnitaEventSummary::PayloadLocation anita;	/// Anita's position
+      AnitaEventSummary::PayloadLocation anita;	        /// Anita's position
 
       Double_t theta;					/// reconstructed theta
       Double_t phi;					/// reconstructed phi
