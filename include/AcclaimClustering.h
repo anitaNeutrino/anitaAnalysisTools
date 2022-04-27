@@ -75,7 +75,7 @@ namespace Acclaim{
       UInt_t realTime;					/// Time at which event was detected.
       Int_t peakIndex;					/// Which peak in the map does this represent?
 
-      Double_t centre[3];				/// Cartesian coordinates, does not persist in ROOT
+      Double_t centre[3];//!				/// Cartesian coordinates, does not persist in ROOT
       Double_t latitude;				/// latitude
       Double_t longitude;				/// longitude
       Double_t altitude;				/// altitude
@@ -117,10 +117,10 @@ namespace Acclaim{
       
       Double_t nearestEventSurfaceLogLikelihood;	/// What's the fitted log likelihood to the nearest surface neighbour?
       Double_t nearestEventSurfaceDistanceKm;		/// How far away to the nearest event, in kilometers?
-      UInt_t nearestEventSurfaceLLEventNumber;	/// What's the event number of the nearest surface neighbour by LL?
+      UInt_t nearestEventSurfaceLLEventNumber;	        /// What's the event number of the nearest surface neighbour by LL?
       UInt_t nearestEventSurfaceEventNumber;		/// What's the event number of the nearest surface neighbour?
 
-      Int_t antarcticaHistBin;			/// Which global bin in the TH2DAntarctica?
+      Int_t antarcticaHistBin;			        /// Which global bin in the TH2DAntarctica?
       UsefulAdu5Pat usefulPat; //!			/// Only construct this once
       mutable Bool_t fDebug; //!
 
