@@ -247,10 +247,10 @@ namespace Acclaim{
       }
 
       bool getUsePathList(){return fUsePathList;}
-      bool getAsBases(){return fAsBases;}
-      void setUsePathList(bool usePathList, bool asBases = false) { // *TOGGLE *GETTER=GetUsePathList
+      bool getAsWaypoints(){return fAsWaypoints;}
+      void setUsePathList(bool usePathList, bool asWaypoints = false) { // *TOGGLE *GETTER=GetUsePathList
 	fUsePathList = usePathList;
-	fAsBases = asBases;
+	fAsWaypoints = asWaypoints;
       }
       
       void setCut(TCut cut){ fCut = cut; }
@@ -377,7 +377,7 @@ namespace Acclaim{
       bool fDrawNewNearbyEventsHistograms;
       bool fReadInBaseList;
       bool fReadInPathList;
-      bool fAsBases;
+      bool fAsWaypoints;
 
       std::vector<TCut> fThermalChainCuts;
     };
