@@ -687,12 +687,12 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, double source_longitude, double source_latitude, double source_altitude) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, double sourceCoords[3]) {
 
 //  AntarcticCoord ac = path.getPosition(realTime).as(AntarcticCoord::WGS84);
 //  latitude = ac.x;
 //  longitude = ac.y;
-  altitude = ac.z;
+//  altitude = ac.z;
   knownBase = 0;
   knownPath = 1;
   knownAbstractBase = 1;

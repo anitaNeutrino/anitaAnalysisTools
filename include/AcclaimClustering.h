@@ -194,15 +194,15 @@ namespace Acclaim{
      */
     class Cluster{
     public:
-      Cluster(Int_t i=-1);
+      Cluster(Int_t i = -1);
       Cluster(const BaseList::base & base, Int_t i = -1);
       Cluster(const BaseList::path & path, Int_t i = -1, UInt_t realTime = 0);
-      Cluster(const BaseList::path & path, Int_t i = -1, double source_logitude, double source_latitude, double source_altitude)
+      Cluster(const BaseList::path & path, Int_t i = -1, double sourceCoords[3] = {});
       Cluster(const Event& seedEvent, Int_t i = -1);
 
       virtual ~Cluster(){ ;}	
 
-      Double_t centre[3]; //! Does not persist		/// Center in cartesian
+      Double_t centre[3]; //! Does not persist		        /// Center in cartesian
 
       Double_t latitude;					/// cluster center latitude
       Double_t longitude;					/// cluster center longitude
@@ -211,9 +211,9 @@ namespace Acclaim{
       Int_t numDataEvents;					/// How many data events does this cluster contain?
       Double_t sumMcWeights;					/// How many MC events does this cluster contain?
       Int_t knownBase;						/// Known base == 1, Pseudo-base == 0
-      Int_t knownPath;                                        /// Known transient path = 1, Psuedo-path = 0
-      Int_t knownAbstractBase;                                /// Either known transient path == 1 or known base == 1
-      Int_t index;                                            /// Where am I in the cluster array?
+      Int_t knownPath;                                          /// Known transient path = 1, Psuedo-path = 0
+      Int_t knownAbstractBase;                                  /// Either known transient path == 1 or known base == 1
+      Int_t index;                                              /// Where am I in the cluster array?
       Int_t llEventCutInd;					/// which entry in the llEventCut array does this correspond to?
       Double_t llEventCut;					/// and what's the value of that cut?
 
