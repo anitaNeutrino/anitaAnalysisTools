@@ -197,7 +197,6 @@ namespace Acclaim{
       Cluster(Int_t i = -1);
       Cluster(const BaseList::base & base, Int_t i = -1);
       Cluster(const BaseList::path & path, Int_t i = -1, UInt_t realTime = 0);
-      Cluster(const BaseList::path & path, Int_t i = -1, double sourceCoords[3] = {});
       Cluster(const Event& seedEvent, Int_t i = -1);
 
       virtual ~Cluster(){ ;}	
