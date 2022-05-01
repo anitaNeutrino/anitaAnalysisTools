@@ -643,14 +643,23 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i, bool asBases) {
 
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
-  knownBase = 1;
-  knownPath = 0;
+  if (!asBases) {
+  
+    knownBase = 1;
+    knownPath = 0;
+    
+  } else {
+  
+    knownBase = 0;
+    knownPath = 1;
+  }
+
   knownAbstractBase = 1;
 
   if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
