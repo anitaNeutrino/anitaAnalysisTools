@@ -195,7 +195,7 @@ namespace Acclaim{
     class Cluster{
     public:
       Cluster(Int_t i = -1);
-      Cluster(const BaseList::base & base, Int_t i = -1);
+      Cluster(const BaseList::base & base, Int_t i = -1, bool asBases = false);
       Cluster(const BaseList::path & path, Int_t i = -1, UInt_t realTime = 0);
       Cluster(const Event& seedEvent, Int_t i = -1);
 
@@ -221,7 +221,7 @@ namespace Acclaim{
 
       void resetClusteringNumbers();
 
-      ClassDef(Cluster, 9)
+      ClassDef(Cluster, 10)
     };
 
 
