@@ -243,6 +243,7 @@ namespace Acclaim{
 
       bool getUseBaseList(){return fUseBaseList;}
       void setUseBaseList(bool useBaseList){ // *TOGGLE *GETTER=GetUseBaseList
+
 	fUseBaseList = useBaseList;
       }
 
@@ -322,10 +323,12 @@ namespace Acclaim{
 
       void doBaseEventClustering();
       void doPathEventClustering();
+      void doPathAsBaseEventClustering();
       void doEventEventClustering();
 
       void doMcBaseClustering();      
       void doMcPathClustering();
+      void doMcPathAsBaseClustering();
       void doMcEventClustering();
       
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
