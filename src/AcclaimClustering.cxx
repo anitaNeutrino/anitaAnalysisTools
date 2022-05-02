@@ -643,13 +643,13 @@ Acclaim::Clustering::Cluster::Cluster(Int_t i) {
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i, bool asBases) {
+Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i, bool pathsAsBases) {
 
   AntarcticCoord ac = base.position.as(AntarcticCoord::WGS84);
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
-  if (!asBases) {
+  if (!pathsAsBases) {
   
     knownBase = 1;
     knownPath = 0;
@@ -728,6 +728,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
     fDrawNewNearbyEventsHistograms(true),
     fReadInBaseList(false),
     fReadInPathList(false),
+    fReadInPathAsBaseList(false),
     fStoreUnclusteredHistograms(true)
 
 {
@@ -810,6 +811,7 @@ Acclaim::Clustering::LogLikelihoodMethod::LogLikelihoodMethod()
   fDebug = false;
   fUseBaseList = true;
   fUsePathList = true;
+  fUsePathAsBaseList = true;
   fPermyriadOfMC = 0;
   fNumOfMC = 0;
   fCut = 0;
@@ -1359,6 +1361,28 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(){
 }
 
 
+/**
+ * Puts an entry in each of the cluster[z] vectors for each of the known path waypoints as bases
+ */
+void Acclaim::Clustering::LogLikelihoodMethod::readInPathAsBaseList(){
+
+  if(!fReadInPathAsBaseList){
+    std::cout << "Info in " << __FUNCTION__ << ": Initializing path as base list..." << std::endl;
+
+    // make a copy for each llCut, just to ease the book keeping later
+    for(UInt_t z=0; z < llEventCuts.size(); z++){
+      for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPathsAsBases(); clusterInd++){
+        const BaseList::base& pathAsBase = BaseList::getPathAsBase(clusterInd);
+        clusters.at(z).push_back(Cluster(pathAsBase, clusters.at(z).size()));
+        clusters.at(z).back().llEventCutInd = z;
+        clusters.at(z).back().llEventCut = llEventCuts.at(z);
+      }
+    }
+  }
+  fReadInPathAsBaseList = true;
+}
+
+
 void Acclaim::Clustering::LogLikelihoodMethod::resetClusters(){
 
   for(UInt_t eventInd=0; eventInd < events.size(); eventInd++){
@@ -1628,6 +1652,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSummaries(const char* s
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
       fReadInPathList = true;
+      fReadInPathAsBaseList = true;
       
     } else {
     
