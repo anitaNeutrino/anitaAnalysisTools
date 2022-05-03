@@ -251,11 +251,13 @@ namespace Acclaim{
       void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
       
 	fUsePathList = usePathList;
+	fUsePathAsBaseList = false;
       }
       
       bool getusePathAsBaseList(){return fUsePathAsBaseList;}
       void setUsePathAsBaseList(bool usePathAsBaseList) {
       
+        fUsePathList = false;
 	fUsePathAsBaseList = usePathAsBaseList;      
       }
       

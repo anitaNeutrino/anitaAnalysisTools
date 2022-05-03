@@ -242,9 +242,8 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
       eventEventClustering = true;
     }
 
-    // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
-    // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, true);
     selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
+    // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, true);
   }
 }
 
@@ -901,8 +900,6 @@ Double_t Acclaim::Clustering::LogLikelihoodMethod::evalPairLogLikelihoodAtLonLat
   Double_t ll = 0;
   ll += fFitEvent1s.at(t)->logLikelihoodFromPoint(sourceLon, sourceLat, sourceAlt, true);
   ll += fFitEvent2s.at(t)->logLikelihoodFromPoint(sourceLon, sourceLat, sourceAlt, true);
-  // ll += fFitEvent1s.at(t)->logLikelihoodFromPoint(sourceLon, sourceLat, sourceAlt, true);
-  // ll += fFitEvent2s.at(t)->logLikelihoodFromPoint(sourceLon, sourceLat, sourceAlt, true);
 
   if(fFitEvent1s.at(t)->eventNumber==fTestEvent1){
     if(fFitEvent2s.at(t)->eventNumber==fTestEvent2){
@@ -1373,7 +1370,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathAsBaseList(){
     for(UInt_t z=0; z < llEventCuts.size(); z++){
       for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPathsAsBases(); clusterInd++){
         const BaseList::base& pathAsBase = BaseList::getPathAsBase(clusterInd);
-        clusters.at(z).push_back(Cluster(pathAsBase, clusters.at(z).size()));
+        clusters.at(z).push_back(Cluster(pathAsBase, clusters.at(z).size(), true));
         clusters.at(z).back().llEventCutInd = z;
         clusters.at(z).back().llEventCut = llEventCuts.at(z);
       }
@@ -3066,7 +3063,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
 
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
-  const int nPaths = BaseList::getNumPaths();
+  const int nPaths = BaseList::getNumPathsAsBases();
   const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;  //  Base list indices come first when base list used.
   
   const Long64_t nEvents = events.size();
@@ -3078,7 +3075,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
   for(Long64_t eventInd = 0; eventInd < nEvents; eventInd++) {
   
     Event * event = & events.at(eventInd);
-    UInt_t realTime = event -> realTime;
     
     std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
     
@@ -3087,11 +3083,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
       Cluster & cluster = clusters.at(0).at(clusterInd);
             
       if (cluster.knownPath) {
-      
-        const BaseList::path & path = BaseList::getPath(clusterInd);
-      
-        cluster = Cluster(path, clusterInd, realTime);
-      
+            
         double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
         if (distM < default_horizon_distance) {
@@ -3673,22 +3665,18 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathAsBaseClustering(){
   std::cout << __PRETTY_FUNCTION__ << std::endl;
 
   ProgressBar p(mcEvents.size());
-  const int nPaths = BaseList::getNumPaths();
+  const int nPaths = BaseList::getNumPathsAsBases();
   const int indOffset = fUseBaseList ? BaseList::getNumBases() : 0;
 
   for (UInt_t eventInd = 0; eventInd < mcEvents.size(); eventInd++){
   
     McEvent* mcEvent = &mcEvents.at(eventInd);
-    UInt_t realTime = mcEvent -> realTime;
     
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
     
       Cluster& cluster = clusters.at(0).at(clusterInd);
       
       if (cluster.knownPath){
-      
-        const BaseList::path& path = BaseList::getPath(clusterInd);
-        cluster = Cluster(path, clusterInd, realTime);
       
         double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
@@ -3848,6 +3836,17 @@ void Acclaim::Clustering::LogLikelihoodMethod::doClustering(const char* dataGlob
     }
     
     if (!mcEvents.empty()) doMcPathClustering();
+  }
+  
+  if (fUsePathAsBaseList) {
+  
+    if (!fEventsAlreadyClustered) {
+    
+      readInPathAsBaseList();
+      doPathAsBaseEventClustering();
+    }
+    
+    if (!mcEvents.empty()) doMcPathAsBaseClustering();
   }
 
   if (!fEventsAlreadyClustered) doEventEventClustering();
