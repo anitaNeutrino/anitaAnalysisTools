@@ -695,6 +695,26 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 }
 
 
+Acclaim::Clustering::Cluster::Cluster(const BaseList::path & path, Int_t i, double lon, double lat, double alt) {
+
+  AntarcticCoord ac = path.getPosition(lat, lon, alt);
+  latitude = ac.x;
+  longitude = ac.y;
+  altitude = ac.z;
+  knownBase = 0;
+  knownPath = 1;
+  knownAbstractBase = 1;
+
+  AnitaGeomTool * geom = AnitaGeomTool::Instance();
+  geom->getCartesianCoords(latitude, longitude, altitude, centre);
+  resetClusteringNumbers();
+  antarcticaHistBin = -1;
+  seedEvent = -1;
+  index = i;
+  llEventCutInd = 0;
+}
+
+
 Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
 
   latitude = event.longitude;
@@ -2892,8 +2912,13 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
   for(Long64_t eventInd = 0; eventInd < nEvents; eventInd++) {
   
     Event * event = & events.at(eventInd);
-    UInt_t realTime = event -> realTime;
     
+    double longitude = event -> longitude;
+    double latitude = event -> latitude;
+    double altitude = event -> altitude;
+    
+//    UInt_t realTime = event -> realTime;
+        
     std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
     
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
@@ -2904,7 +2929,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
       
         const BaseList::path & path = BaseList::getPath(clusterInd);
       
-        cluster = Cluster(path, clusterInd, realTime);
+        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
+//        cluster = Cluster(path, clusterInd, realTime);
       
         double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
@@ -3618,7 +3644,12 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
   for (UInt_t eventInd = 0; eventInd < mcEvents.size(); eventInd++){
   
     McEvent* mcEvent = &mcEvents.at(eventInd);
-    UInt_t realTime = mcEvent -> realTime;
+
+    double longitude = mcEvent -> longitude;
+    double latitude = mcEvent -> latitude;
+    double altitude = mcEvent -> altitude;
+
+//    UInt_t realTime = mcEvent -> realTime;
     
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
     
@@ -3627,7 +3658,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
       if (cluster.knownPath){
       
         const BaseList::path& path = BaseList::getPath(clusterInd);
-        cluster = Cluster(path, clusterInd, realTime);
+
+        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
+//        cluster = Cluster(path, clusterInd, realTime);
       
         double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
