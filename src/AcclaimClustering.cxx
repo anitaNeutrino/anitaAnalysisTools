@@ -3198,8 +3198,6 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
             }
           }
           
-          std::cout << lastNMatched << " " << nMatches << std::endl;
-          
         } while (lastNMatched != nMatches);
 
         if (fDebug) {
