@@ -3197,7 +3197,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
               if (!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
             }
           }
-        } while (lastNMatched != nMatches);
+        } while (lastNMatched < nMatches);
 
         if (fDebug) {
 
