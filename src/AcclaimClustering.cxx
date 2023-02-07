@@ -3198,9 +3198,9 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathAsBaseEventClustering(){
             }
           }
           
-          std::cout << "Does the loop end? " << lastNMatched << " " << nMatches << std::endl;
+          std::cout << lastNMatched << " " << nMatches << std::endl;
           
-        } while (lastNMatched < nMatches);
+        } while (lastNMatched != nMatches);
 
         if (fDebug) {
 
