@@ -260,18 +260,15 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
  */
 Double_t Acclaim::Clustering::Event::logLikelihoodFromPoint(Double_t sourceLon, Double_t sourceLat, Double_t sourceAlt, bool addOverHorizonPenalty) const {
 
-  Double_t phiSource, thetaSource, thetaMean;
+  Double_t phiSource, thetaSource;
   usefulPat.getThetaAndPhiWave2(sourceLon, sourceLat, sourceAlt, thetaSource, phiSource);
   phiSource = TMath::RadToDeg() * phiSource;
   thetaSource = -1 * TMath::RadToDeg() * thetaSource;
-  thetaMean = (theta + thetaSource) / 2;
 
-  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) * cos(TMath::DegToRad() * thetaMean) / sqrt(varPhi);
+  Double_t dPhi = -1 * Acclaim::RootTools::getDeltaAngleDeg(phi, phiSource) / sigmaPhi;
   //  Factor of -1 in front is ignorable for our purposes,
   //  but is there to drive home the ANITA angle convention in the geometric delays of our interferometic maps.
-  //  dPhi originally weighted by cos(theta) as opposed to cos(thetaMean), but I think the article
-  //  https://en.wikipedia.org/wiki/Geographical_distance#Spherical_Earth_projected_to_a_plane is on to something.
-  Double_t dTheta = (theta - thetaSource) / sqrt(varTheta);
+  Double_t dTheta = (theta - thetaSource) / sigmaTheta;
 
   Double_t ll = dPhi * dPhi + dTheta * dTheta;
 
