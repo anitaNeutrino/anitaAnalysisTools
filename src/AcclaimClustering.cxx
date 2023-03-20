@@ -2928,7 +2928,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
             
       if (cluster.knownPath) {
       
-        const BaseList::path & path = BaseList::getPath(clusterInd);
+        const BaseList::path & path = BaseList::getPath(clusterInd - indOffset);
       
         cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
 //        cluster = Cluster(path, clusterInd, realTime);
@@ -2974,7 +2974,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
         // for all matched clusters
         for(int i = 0; i < matchedClustersThisEvent[z].size(); i++) {
 
-          Int_t matchedCluster = matchedClustersThisEvent[z][i] - indOffset;
+          Int_t matchedCluster = matchedClustersThisEvent[z][i];
 
           // add other matched clusters to their list...
           for(int j = 0; j < matchedClustersThisEvent[z].size(); j++) {
@@ -3658,7 +3658,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
       
       if (cluster.knownPath){
       
-        const BaseList::path& path = BaseList::getPath(clusterInd);
+        const BaseList::path& path = BaseList::getPath(clusterInd - indOffset);
 
         cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
 //        cluster = Cluster(path, clusterInd, realTime);
