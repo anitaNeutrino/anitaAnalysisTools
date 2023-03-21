@@ -65,7 +65,7 @@ namespace ResolutionModel{
  */
 namespace VarianceModel{
   const int n = 4;
-  //  For now, the following numbers have to do with A4 only. First set of three are for coherent filtered SNR, second set are for deconvolved filtered SNR.
+  //  For now, the following numbers have to do with A4 only. First two array entries are for coherent filtered SNR, second set of entries are for deconvolved filtered SNR.
   const double phiParams[n]   = {8.34,  1.203, 13.54, 1.273};
   const double thetaParams[n] = {0.7114, 1.049, 1.472, 1.192};
   TString formula = "[0] / x^[1]";
