@@ -3012,10 +3012,11 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
           for (int i = lastNMatched; i < nMatches; i++){
 
             int b2 = matchedClusters[z][b][i];
+            int b2Ind = b2 - indOffset;
 
-            for (int j = 0; j < matchedClusters[z][b2].size(); j++){
+            for (int j = 0; j < matchedClusters[z][b2Ind].size(); j++){
             
-              int b3 = matchedClusters[z][b2][j];
+              int b3 = matchedClusters[z][b2Ind][j];
 
               if (!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
             }
