@@ -244,6 +244,8 @@ void Acclaim::Clustering::Event::setupUsefulPat(bool calculateSource){
 
     selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, false);
     // selfLogLikelihood = logLikelihoodFromPoint(longitude, latitude, altitude, true);
+    
+    delete geom;
   }
 }
 
@@ -330,6 +332,8 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   setupUsefulPat();
 
   // std::cout << eventNumber << "\t" << nThresholds << "\t" << cluster[0] << std::endl;
+  
+  delete geom;
 }
 
 
@@ -670,6 +674,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i, bool 
   seedEvent = -1;
   index = i;
   llEventCutInd = 0;
+  
+  delete geom;
 }
 
 
@@ -692,6 +698,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
   seedEvent = -1;
   index = i;
   llEventCutInd = 0;
+  
+  delete geom;
 }
 
 
@@ -712,6 +720,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path & path, Int_t i, doub
   seedEvent = -1;
   index = i;
   llEventCutInd = 0;
+  
+  delete geom;
 }
 
 
@@ -729,6 +739,8 @@ Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
   resetClusteringNumbers();
   index = i;
   llEventCutInd = 0;
+  
+  delete geom;
 }
 
 
@@ -1505,6 +1517,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::makeSummaryTrees(){
               << " in cluster " << clusterInd << ", but counted "
               << eventCounter << std::endl;
           }
+          
+          delete geom;
         }
         // std::cout << "in summary making " << z << "\t" << clusterInd << "\t" << cluster.numDataEvents << std::endl;
       }
