@@ -2932,7 +2932,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
     double latitude = event -> latitude;
     double altitude = event -> altitude;
     
-//    UInt_t realTime = event -> realTime;
+    UInt_t realTime = event -> realTime;
         
     std::vector<std::vector<Int_t> > matchedClustersThisEvent(llEventCuts.size(), std::vector<Int_t>());
     
@@ -2944,8 +2944,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
       
         const BaseList::path & path = BaseList::getPath(clusterInd - indOffset);
       
-        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
-//        cluster = Cluster(path, clusterInd, realTime);
+//        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
+        cluster = Cluster(path, clusterInd, realTime);
       
         double distM = event->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
