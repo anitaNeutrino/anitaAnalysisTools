@@ -195,7 +195,6 @@ namespace Acclaim{
     class Cluster{
     public:
       Cluster(Int_t i = -1);
-      Cluster(const BaseList::base & base, Int_t i = -1, bool pathsAsBases = false);
       Cluster(const BaseList::path & path, Int_t i = -1, UInt_t realTime = 0);
       Cluster(const BaseList::path & path, Int_t i = -1, double lon = 0, double lat = 90, double alt = 0);
       Cluster(const Event& seedEvent, Int_t i = -1);
@@ -252,14 +251,6 @@ namespace Acclaim{
       void setUsePathList(bool usePathList) { // *TOGGLE *GETTER=GetUsePathList
       
 	fUsePathList = usePathList;
-	fUsePathAsBaseList = false;
-      }
-      
-      bool getusePathAsBaseList(){return fUsePathAsBaseList;}
-      void setUsePathAsBaseList(bool usePathAsBaseList) {
-      
-        fUsePathList = false;
-	fUsePathAsBaseList = usePathAsBaseList;      
       }
       
       void setCut(TCut cut){ fCut = cut; }
@@ -301,7 +292,6 @@ namespace Acclaim{
       void assignSingleEventToCloserCluster(Int_t eventInd, Int_t isMC, Cluster& cluster, Int_t z, double llEventCut = -1);
       void readInBaseList();
       void readInPathList();
-      void readInPathAsBaseList();
 
       TRandom3* tr3;
 
@@ -326,12 +316,10 @@ namespace Acclaim{
 
       void doBaseEventClustering();
       void doPathEventClustering();
-      void doPathAsBaseEventClustering();
       void doEventEventClustering();
 
       void doMcBaseClustering();      
       void doMcPathClustering();
-      void doMcPathAsBaseClustering();
       void doMcEventClustering();
       
       bool considerBin(const Event& event, Int_t bx, Int_t by, double& easting, double& northing);
@@ -375,7 +363,6 @@ namespace Acclaim{
       bool fDebug;
       bool fUseBaseList;
       bool fUsePathList;
-      bool fUsePathAsBaseList;
 
       TChain* fChain;
       Int_t fPermyriadOfMC;
@@ -390,7 +377,6 @@ namespace Acclaim{
       bool fDrawNewNearbyEventsHistograms;
       bool fReadInBaseList;
       bool fReadInPathList;
-      bool fReadInPathAsBaseList;
 
       std::vector<TCut> fThermalChainCuts;
     };
