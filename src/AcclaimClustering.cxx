@@ -3667,7 +3667,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
     double latitude = mcEvent -> latitude;
     double altitude = mcEvent -> altitude;
 
-//    UInt_t realTime = mcEvent -> realTime;
+    UInt_t realTime = mcEvent -> realTime;
     
     for (int clusterInd = indOffset; clusterInd < nPaths + indOffset; clusterInd++){
     
@@ -3677,8 +3677,8 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
       
         const BaseList::path& path = BaseList::getPath(clusterInd - indOffset);
 
-        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
-//        cluster = Cluster(path, clusterInd, realTime);
+//        cluster = Cluster(path, clusterInd, longitude, latitude, altitude);
+        cluster = Cluster(path, clusterInd, realTime);
       
         double distM = mcEvent->usefulPat.getDistanceFromSource(cluster.latitude, cluster.longitude, cluster.altitude);
         
