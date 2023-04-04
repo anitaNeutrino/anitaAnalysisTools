@@ -1347,7 +1347,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::readInPathList(){
     for(UInt_t z=0; z < llEventCuts.size(); z++){
       for(UInt_t clusterInd=0; clusterInd < BaseList::getNumPaths(); clusterInd++){
         const BaseList::path& path = BaseList::getPath(clusterInd);
-        clusters.at(z).push_back(Cluster(path, clusters.at(z).size(), 0, 90, 0));
+        clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
 //        clusters.at(z).push_back(Cluster(path, clusters.at(z).size()));
         clusters.at(z).back().llEventCutInd = z;
         clusters.at(z).back().llEventCut = llEventCuts.at(z);
