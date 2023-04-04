@@ -652,8 +652,8 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::base& base, Int_t i) {
   latitude = ac.x;
   longitude = ac.y;
   altitude = ac.z;
-  knownBase = 0;
-  knownPath = 1;
+  knownBase = 1;
+  knownPath = 0;
   knownAbstractBase = 1;
 
   if (altitude == -999) altitude = RampdemReader::BilinearInterpolatedSurfaceAboveGeoid(longitude, latitude);
