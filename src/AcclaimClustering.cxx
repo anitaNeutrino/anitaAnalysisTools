@@ -694,28 +694,6 @@ Acclaim::Clustering::Cluster::Cluster(const BaseList::path& path, Int_t i, UInt_
 }
 
 
-Acclaim::Clustering::Cluster::Cluster(const BaseList::path & path, Int_t i, double lon, double lat, double alt) {
-
-  AntarcticCoord ac = path.getPosition(lat, lon, alt);
-  latitude = ac.x;
-  longitude = ac.y;
-  altitude = ac.z;
-  knownBase = 0;
-  knownPath = 1;
-  knownAbstractBase = 1;
-
-  AnitaGeomTool * geom = AnitaGeomTool::Instance();
-  geom->getCartesianCoords(latitude, longitude, altitude, centre);
-  resetClusteringNumbers();
-  antarcticaHistBin = -1;
-  seedEvent = -1;
-  index = i;
-  llEventCutInd = 0;
-  
-//  delete geom;
-}
-
-
 Acclaim::Clustering::Cluster::Cluster(const Event& event, Int_t i) {
 
   latitude = event.longitude;
