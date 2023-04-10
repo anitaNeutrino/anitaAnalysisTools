@@ -1834,6 +1834,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInTMVATreeSummaries(const
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
       fReadInPathList = true;
+      fReadInPathAsBaseList = true;
       
     } else {
     
@@ -1970,6 +1971,7 @@ Long64_t Acclaim::Clustering::LogLikelihoodMethod::readInSampleSummaries(const c
       fEventsAlreadyClustered = true;
       fReadInBaseList = true;
       fReadInPathList = true;
+      fReadInPathAsBaseList = true;
       
     } else {
 
