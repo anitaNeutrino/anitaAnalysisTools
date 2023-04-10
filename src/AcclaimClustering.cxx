@@ -366,10 +366,16 @@ Acclaim::Clustering::Event::Event(int pol, int peakInd, double peak_phi, double 
   // getAngularResolution(sum, pol, peakInd, sigmaTheta, sigmaPhi);
   antarcticaHistBin = -1;
   fDebug = false;
+  
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
+  nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
+  nearestKnownBaseClusterSurface = -1;
+  
   nearestKnownPathLogLikelihood = DBL_MAX;
   nearestKnownPathCluster = -1;
+  nearestKnownPathSurfaceSeparationKm = DBL_MAX;
+  nearestKnownPathClusterSurface = -1;
 
   setNThresholds(nT);
   resetClusteringNumbers();
@@ -412,10 +418,12 @@ Acclaim::Clustering::Event::Event(Int_t nT)
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
   nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
+  nearestKnownBaseClusterSurface = DBL_MAX;
   
   nearestKnownPathLogLikelihood = DBL_MAX;
   nearestKnownPathCluster = -1;
   nearestKnownPathSurfaceSeparationKm = DBL_MAX;
+  nearestKnownPathClusterSurface = -1;
   
   nearestEventSurfaceDistanceKm = DBL_MAX;
   nearestEventSurfaceEventNumber = 0;
@@ -482,10 +490,12 @@ Acclaim::Clustering::Event& Acclaim::Clustering::Event::operator=(const Event& e
   nearestKnownBaseLogLikelihood = event.nearestKnownBaseLogLikelihood;
   nearestKnownBaseSurfaceSeparationKm = event.nearestKnownBaseSurfaceSeparationKm;
   nearestKnownBaseCluster = event.nearestKnownBaseCluster;
+  nearestKnownBaseClusterSurface = event.nearestKnownBaseClusterSurface;
   
   nearestKnownPathLogLikelihood = event.nearestKnownPathLogLikelihood;
   nearestKnownPathSurfaceSeparationKm = event.nearestKnownPathSurfaceSeparationKm;
   nearestKnownPathCluster = event.nearestKnownPathCluster;
+  nearestKnownPathClusterSurface = event.nearestKnownPathClusterSurface;
 
   nearestEventSurfaceLogLikelihood = event.nearestEventSurfaceLogLikelihood;
   nearestEventSurfaceDistanceKm = event.nearestEventSurfaceDistanceKm;
@@ -581,10 +591,12 @@ void Acclaim::Clustering::Event::resetClusteringNumbers(){
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
   nearestKnownBaseCluster = -1;
+  nearestKnownBaseClusterSurface = -1;
   
   nearestKnownPathLogLikelihood = DBL_MAX;
   nearestKnownPathSurfaceSeparationKm = DBL_MAX;
   nearestKnownPathCluster = -1;
+  nearestKnownPathClusterSurface = -1;
 
   nearestEventSurfaceLogLikelihood = DBL_MAX;
   nearestEventSurfaceDistanceKm = DBL_MAX;
@@ -3630,7 +3642,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcBaseClustering(){
           
             mcEvent->nearestKnownBaseSurfaceSeparationKm = surfaceSeparationKm;
 
-            if (mcEvent->nearestKnownBaseSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownBaseCluster = clusterInd;
+            if (mcEvent->nearestKnownBaseSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownBaseClusterSurface = clusterInd;
           }
 
           if(ll < mcEvent->nearestKnownBaseLogLikelihood && mcEvent->nearestKnownBaseSurfaceSeparationKm >= surfaceDistThresholdKm) mcEvent -> nearestKnownBaseCluster = clusterInd;
@@ -3691,7 +3703,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathClustering(){
           
             mcEvent->nearestKnownPathSurfaceSeparationKm = surfaceSeparationKm;
 
-            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
+            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownPathClusterSurface = clusterInd;
           }
 
           if (ll < mcEvent->nearestKnownPathLogLikelihood && mcEvent->nearestKnownPathSurfaceSeparationKm >= surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
@@ -3740,7 +3752,7 @@ void Acclaim::Clustering::LogLikelihoodMethod::doMcPathAsBaseClustering(){
           
             mcEvent->nearestKnownPathSurfaceSeparationKm = surfaceSeparationKm;
 
-            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
+            if (mcEvent->nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) mcEvent->nearestKnownPathClusterSurface = clusterInd;
           }
 
           if (ll < mcEvent->nearestKnownPathLogLikelihood && mcEvent->nearestKnownPathSurfaceSeparationKm >= surfaceDistThresholdKm) mcEvent->nearestKnownPathCluster = clusterInd;
