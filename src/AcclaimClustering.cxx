@@ -324,8 +324,13 @@ Acclaim::Clustering::Event::Event(const AnitaEventSummary* sum, AnitaPol::AnitaP
   fDebug = false;
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
+  nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
+  nearestKnownBaseClusterSurface = -1;
+
   nearestKnownPathLogLikelihood = DBL_MAX;
   nearestKnownPathCluster = -1;
+  nearestKnownPathSurfaceSeparationKm = DBL_MAX;
+  nearestKnownPathClusterSurface = -1;
 
   setNThresholds(nT);
   resetClusteringNumbers();
@@ -418,7 +423,7 @@ Acclaim::Clustering::Event::Event(Int_t nT)
   nearestKnownBaseLogLikelihood = DBL_MAX;
   nearestKnownBaseCluster = -1;
   nearestKnownBaseSurfaceSeparationKm = DBL_MAX;
-  nearestKnownBaseClusterSurface = DBL_MAX;
+  nearestKnownBaseClusterSurface = -1;
   
   nearestKnownPathLogLikelihood = DBL_MAX;
   nearestKnownPathCluster = -1;
