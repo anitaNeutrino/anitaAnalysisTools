@@ -3024,100 +3024,100 @@ void Acclaim::Clustering::LogLikelihoodMethod::doPathEventClustering(){
     p.inc(eventInd);
   }
 
-  for(int z = 0; z < llEventCuts.size(); z++){
-  
-    std::vector<Int_t> reassignedTo(nPaths);
-    for (int i = indOffset; i < nPaths + indOffset; i++) reassignedTo[i - indOffset] = i;
-  
-    for (int b = 0; b < nPaths; b++) {
-
-      if (matchedClusters[z][b].size() > 0){
-
-        // here we try and gather all the matched clusters...
-        int lastNMatched = 0;
-        int nMatches = 0;
-        
-        do {
-        
-          lastNMatched = nMatches;
-          nMatches = matchedClusters[z][b].size();
-          
-          for (int i = lastNMatched; i < nMatches; i++){
-
-            int b2 = matchedClusters[z][b][i];
-            int b2Ind = b2 - indOffset;
-
-            for (int j = 0; j < matchedClusters[z][b2Ind].size(); j++){
-            
-              int b3 = matchedClusters[z][b2Ind][j];
-
-              if (!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
-            }
-          }
-        } while (lastNMatched != nMatches);
-
-        if (fDebug) {
-
-          std::cout << "At llEventCut = " << llEventCuts[z] << ", path " << b << " was matched with: " << matchedClusters[z][b].size() << " paths" << std::endl;
-
-          if (matchedClusters[z][b].size() < 20) {
-
-            std::cout << "They are: ";
-            std::sort(matchedClusters[z][b].begin(), matchedClusters[z][b].end());
-
-            for (UInt_t i = 0; i < matchedClusters[z][b].size(); i++) {
-
-              std::cout << matchedClusters[z][b][i];
-              if (i != matchedClusters[z][b].size() - 1) std::cout << ", ";
-            }
-            std::cout << std::endl;
-          }
-        }
-
-        for (int i = 0; i < matchedClusters[z][b].size(); i++) {
-        
-          int cluster = matchedClusters[z][b][i];
-
-          if (cluster < reassignedTo[b]) reassignedTo[b] = cluster;
-        }
-      }
-    }
-
-    if (fDebug) {
-
-      bool printed = false;
-
-      for (int b = indOffset; b < nPaths + indOffset; b++) {
-
-        if (b != reassignedTo[b - indOffset]) {
-
-          if (printed == false){
-
-            std::cout << "At llEventCut = " << llEventCuts[z] << ", the known path cluster reassignments are as follows:" << std::endl;
-            printed = true;
-          }
-          std::cout << b << "->" << reassignedTo[b - indOffset] << "\n";
-        }
-      }
-    }
-
-    for (int eventInd = 0; eventInd < events.size(); eventInd++) {
-    
-      Event& event = events.at(eventInd);
-      int clusterInd = -1;
-      
-      if (event.nearestKnownPathLogLikelihood < llEventCuts.at(z)) clusterInd = event.nearestKnownPathCluster;
-      else if (event.nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) clusterInd = event.nearestKnownPathClusterSurface;
-
-      if (clusterInd > -1){
-
-        Int_t reassignedCluster = reassignedTo[clusterInd - indOffset];
-        event.cluster[z] = reassignedCluster;
-        clusters.at(z).at(reassignedCluster).numDataEvents++;
-//        event.eventEventClustering = false;
-      }
-    }
-  }
+//  for(int z = 0; z < llEventCuts.size(); z++){
+//
+//    std::vector<Int_t> reassignedTo(nPaths);
+//    for (int i = indOffset; i < nPaths + indOffset; i++) reassignedTo[i - indOffset] = i;
+//
+//    for (int b = 0; b < nPaths; b++) {
+//
+//      if (matchedClusters[z][b].size() > 0){
+//
+//        // here we try and gather all the matched clusters...
+//        int lastNMatched = 0;
+//        int nMatches = 0;
+//
+//        do {
+//
+//          lastNMatched = nMatches;
+//          nMatches = matchedClusters[z][b].size();
+//
+//          for (int i = lastNMatched; i < nMatches; i++){
+//
+//            int b2 = matchedClusters[z][b][i];
+//            int b2Ind = b2 - indOffset;
+//
+//            for (int j = 0; j < matchedClusters[z][b2Ind].size(); j++){
+//
+//              int b3 = matchedClusters[z][b2Ind][j];
+//
+//              if (!RootTools::vectorContainsValue(matchedClusters[z][b], b3)) matchedClusters[z][b].push_back(b3);
+//            }
+//          }
+//        } while (lastNMatched != nMatches);
+//
+//        if (fDebug) {
+//
+//          std::cout << "At llEventCut = " << llEventCuts[z] << ", path " << b << " was matched with: " << matchedClusters[z][b].size() << " paths" << std::endl;
+//
+//          if (matchedClusters[z][b].size() < 20) {
+//
+//            std::cout << "They are: ";
+//            std::sort(matchedClusters[z][b].begin(), matchedClusters[z][b].end());
+//
+//            for (UInt_t i = 0; i < matchedClusters[z][b].size(); i++) {
+//
+//              std::cout << matchedClusters[z][b][i];
+//              if (i != matchedClusters[z][b].size() - 1) std::cout << ", ";
+//            }
+//            std::cout << std::endl;
+//          }
+//        }
+//
+//        for (int i = 0; i < matchedClusters[z][b].size(); i++) {
+//
+//          int cluster = matchedClusters[z][b][i];
+//
+//          if (cluster < reassignedTo[b]) reassignedTo[b] = cluster;
+//        }
+//      }
+//    }
+//
+//    if (fDebug) {
+//
+//      bool printed = false;
+//
+//      for (int b = indOffset; b < nPaths + indOffset; b++) {
+//
+//        if (b != reassignedTo[b - indOffset]) {
+//
+//          if (printed == false){
+//
+//            std::cout << "At llEventCut = " << llEventCuts[z] << ", the known path cluster reassignments are as follows:" << std::endl;
+//            printed = true;
+//          }
+//          std::cout << b << "->" << reassignedTo[b - indOffset] << "\n";
+//        }
+//      }
+//    }
+//
+//    for (int eventInd = 0; eventInd < events.size(); eventInd++) {
+//
+//      Event& event = events.at(eventInd);
+//      int clusterInd = -1;
+//
+//      if (event.nearestKnownPathLogLikelihood < llEventCuts.at(z)) clusterInd = event.nearestKnownPathCluster;
+//      else if (event.nearestKnownPathSurfaceSeparationKm < surfaceDistThresholdKm) clusterInd = event.nearestKnownPathClusterSurface;
+//
+//      if (clusterInd > -1){
+//
+//        Int_t reassignedCluster = reassignedTo[clusterInd - indOffset];
+//        event.cluster[z] = reassignedCluster;
+//        clusters.at(z).at(reassignedCluster).numDataEvents++;
+////        event.eventEventClustering = false;
+//      }
+//    }
+//  }
 }
 
 
